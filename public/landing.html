@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Generator for Shopify</title>
+  
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+  </div>
+  <!-- Hero -->
+  <section class="bg-white py-16 text-center shadow">
+    <div class="max-w-3xl mx-auto">
+      <h1 class="text-4xl font-bold mb-4">Create Custom PDFs from Shopify</h1>
+      <p class="text-sm inline-block bg-green-100 text-green-700 font-medium px-3 py-1 rounded-full mt-2">
+        💚 Built for Shopify Developers
+      </p>
+      <p class="text-lg mb-6">No app install. Just send HTML, get back a PDF.</p>
+      <a href="#get-started" id="getStartedButton" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition">Get Started</a>
+    </div>
+  </section>
+
+  <!-- How it works -->
+  <section class="py-16 bg-gray-100">
+    <div class="max-w-4xl mx-auto px-4">
+      <h2 class="text-2xl font-bold mb-6 text-center">How It Works</h2>
+      <ol class="space-y-4 text-lg">
+        <li>1. Register and get your unique API token.</li>
+        <li>2. Send HTML content via our API endpoint.</li>
+        <li>3. Receive a downloadable PDF in response.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="py-16">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h2 class="text-2xl font-bold mb-4">✨ Beautiful Invoice Example</h2>
+      <p class="text-lg mb-6">Crafted to look great in emails, print, and downloads. Fully responsive PDF layout.</p>
+      <img src="/demo/invoice-thumbnail.jpg" alt="Invoice Preview" class="mx-auto rounded-lg shadow-lg border border-gray-300">
+      <a href="/demo/Invoice.pdf" class="mt-4 inline-block text-blue-600 hover:underline text-sm">Download PDF</a>
+    </div>
+  </section>
+
+  <!-- Shopify Integration -->
+  <section class="py-16">
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
+      <div class="max-w-3xl mx-auto text-sm font-mono overflow-x-auto">
+        <pre><code>
+  fetch("https://your-api.com/api/generate-pdf", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_API_TOKEN"
+    },
+    body: JSON.stringify({
+      html: "&lt;h1&gt;Invoice for {{ order.name }}&lt;/h1&gt;"
+    })
+  });
+        </code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+<section class="py-16 bg-gray-100">
+  <div class="max-w-4xl mx-auto px-8 text-center"> 
+    <h2 class="text-2xl font-bold mb-6 text-center">Features</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-lg">
+      <div>🧾 HTML to PDF conversion</div>
+      <div>🔐 Secure token-based access</div>
+      <div>🎨 Fully customizable templates</div>
+      <div>⚡ Works in Shopify themes and scripts</div>
+      <div>📦 No app installation required</div>
+      <div>💳 Stripe-based premium plans</div>
+    </div>
+  </div>
+</section>
+<!-- Pricing -->
+<section class="py-16">
+  <div class="max-w-4xl mx-auto px-4 text-center">
+    <h2 class="text-2xl font-bold mb-6">Simple Pricing</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Free Plan -->
+      <div class="border p-6 rounded shadow hover:shadow-lg transition cursor-pointer">
+        <h3 class="text-xl font-bold mb-2">Free</h3>
+        <p class="mb-4">Up to 20 PDFs/month</p>
+        <p class="text-2xl font-bold">€0</p>
+      </div>
+
+ <!-- Premium Plan -->
+<div class="border p-6 rounded shadow bg-blue-50 hover:shadow-lg hover:bg-blue-100 transition cursor-pointer">
+  <h3 class="text-xl font-bold mb-2">Premium</h3>
+  <p class="mb-4">Unlimited PDFs, priority support</p>
+  <p class="text-2xl font-bold">€4.99/mo</p>
+</div>
+    </div>
+  </div>
+</section>
+  </section>
+
+  <!-- Get Started -->
+  <section id="get-started" class="py-16 bg-blue-600 text-white text-center">
+    <h2 class="text-3xl font-bold mb-4">Start Generating PDFs Today</h2>
+    <p class="mb-6">Sign up and get your API key instantly.</p>
+    <a href="/create-user-page" id="signUpButton" class="bg-white text-blue-600 px-6 py-3 rounded font-bold hover:bg-gray-100 transition">Sign Up</a>
+  </section>
+
+  <!-- Footer -->
+  <footer class="text-center text-sm text-gray-500 py-6">
+    &copy; 2025 PDFify by Lidija Jokić. All rights reserved.
+  </footer>
+</body>
+</html>
+
+
+
+<script>
+ 
+
+document.getElementById("signUpButton").addEventListener("click", (event) => {
+  event.preventDefault();
+  const targetUrl = event.target.href;
+
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "flex"; 
+  console.log("Spinner shown for Sign Up button");
+
+  setTimeout(() => {
+    console.log("Navigating to:", targetUrl);
+    window.location.href = targetUrl; 
+  }, 500); 
+});
+
+  document.getElementById("getStartedButton").addEventListener("click", (event) => {
+    event.preventDefault(); 
+    const targetUrl = event.target.href; 
+
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    loadingOverlay.style.display = "flex"; 
+    console.log("Spinner shown for Get Started button");
+
+    setTimeout(() => {
+      console.log("Navigating to:", targetUrl);
+      loadingOverlay.style.display = "none";
+      window.location.href = targetUrl; 
+    }, 500); 
+  });
+
+
+  window.addEventListener("load", () => {
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    loadingOverlay.style.display = "none";
+    console.log("Spinner hidden on page load");
+  });
+
+
+
+  
+</script>
+
+<style>
+
+
+.hover\:shadow-lg:hover {
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+
+  .hover\:bg-blue-100:hover {
+    background-color: #ebf8ff;
+  }
+
+  .cursor-pointer {
+    cursor: pointer;
+  }
+
+  .transition {
+    transition: all 0.3s ease-in-out;
+  }
+
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+
+
+
+</style>

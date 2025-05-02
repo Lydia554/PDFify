@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create User</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+  </div>
+  <div class="container">
+    <h1>Create User</h1>
+
+    <!-- User creation form -->
+    <form id="createUserForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" placeholder="Enter your email" required>
+
+      <label for="password">Password</label>
+      <div class="password-container">
+        <input type="password" id="password" placeholder="Enter your password" required>
+        <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
+      </div>
+
+      <button type="submit">Create User</button>
+      <button type="button" id="loginButton">Already have an account? Login</button>
+    </form>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    document.getElementById("togglePassword").addEventListener("click", () => {
+      const passwordField = document.getElementById("password");
+      const toggleButton = document.getElementById("togglePassword");
+      if (passwordField.type === "password") {
+        passwordField.type = "text";
+        toggleButton.textContent = "🙈"; 
+      } else {
+        passwordField.type = "password";
+        toggleButton.textContent = "👁️"; 
+      }
+    });
+
+    document.getElementById("loginButton").addEventListener("click", () => {
+      window.location.href = "/login.html";
+    });
+
+    document.getElementById("createUserForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const result = document.getElementById("result");
+
+      if (!email || !password) {
+        result.innerText = "Please enter both email and password.";
+        result.className = "result error"; 
+        result.style.display = "block";
+        return;
+      }
+
+      try {
+        const response = await axios.post("http://localhost:3000/api/user/create-user", { email, password });
+        result.innerText = `🎉 Success: ${response.data.message}`;
+        result.className = "result success"; 
+        result.style.display = "block";
+
+        setTimeout(() => {
+          window.location.href = response.data.redirect;
+        }, 2000);
+      } catch (error) {
+        result.innerText = `❌ Error: ${error.response?.data?.error || "Something went wrong"}`;
+        result.className = "result error"; 
+        result.style.display = "block";
+      }
+    });
+
+    window.addEventListener("load", () => {
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "none"; 
+      console.log("Spinner hidden on page load");
+    });
+  </script>
+
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 450px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #5e60ce;
+      margin-bottom: 20px;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    label {
+      text-align: left;
+      display: block;
+      font-weight: 600;
+      margin: 12px 0 6px;
+      font-size: 16px;
+      color: #333;
+    }
+
+    input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      background-color: #f9f9f9;
+    }
+
+    input:focus {
+      border-color: #5e60ce;
+      box-shadow: 0 0 4px rgba(94, 96, 206, 0.5);
+      outline: none;
+    }
+
+    button {
+      background-color: #5e60ce;
+      color: white;
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.2s;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    button:hover {
+      background-color: #4b4dbf;
+      transform: translateY(-2px);
+    }
+
+    .password-container {
+      position: relative;
+    }
+
+    .toggle-btn {
+      position: absolute;
+      right: 10px; 
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px; 
+      color: #5e60ce;
+      padding: 0; 
+      line-height: 1; 
+    }
+
+    .toggle-btn:hover {
+      color: #4b4dbf;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-size: 16px;
+      padding: 15px;
+      border-radius: 8px;
+      display: none; 
+    }
+
+    .result.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .result.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 30px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      label {
+        font-size: 14px;
+      }
+
+      input, button {
+        padding: 12px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</body>
+</html>

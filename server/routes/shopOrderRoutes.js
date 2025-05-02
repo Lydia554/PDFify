@@ -1,0 +1,177 @@
+const express = require('express');
+const puppeteer = require('puppeteer');
+const path = require('path');
+const router = express.Router();
+const fs = require("fs");
+const authenticate = require("../middleware/authenticate");
+
+
+if (typeof ReadableStream === "undefined") {
+  global.ReadableStream = require("web-streams-polyfill").ReadableStream;
+}
+
+
+const log = (message, data = null) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(message, data);
+  }
+};
+
+
+function generateShopOrderHTML(data) {
+  return `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: 'Arial', sans-serif;
+            padding: 40px;
+            color: #333;
+            background-color: #f9f9f9;
+            margin: 0;
+            box-sizing: border-box;
+          }
+          h1 {
+            text-align: center;
+            color: #5e60ce;
+            margin-bottom: 20px;
+          }
+          h2 {
+            color: #2d2d2d;
+          }
+          p {
+            line-height: 1.6;
+            margin: 10px 0;
+          }
+          .section {
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+          }
+          .label {
+            font-weight: bold;
+            color: #333;
+          }
+          .order-details {
+            margin-top: 10px;
+            border-top: 2px solid #5e60ce;
+            padding-top: 20px;
+          }
+          .products-list {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            background-color: #f4f7fb;
+          }
+          .products-list li {
+            margin-bottom: 8px;
+          }
+          .total {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #5e60ce;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #777;
+            border-top: 1px dashed #ccc;
+            padding-top: 20px;
+          }
+          .footer a {
+            color: #5e60ce;
+            text-decoration: none;
+          }
+          .footer a:hover {
+            text-decoration: underline;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Shop Order: ${data.shopName}</h1>
+        
+        <div class="section">
+          <p><span class="label">Customer:</span> ${data.customer.name}</p>
+          <p><span class="label">Email:</span> ${data.customer.email}</p>
+          <p><span class="label">Order ID:</span> ${data.orderId}</p>
+          <p><span class="label">Date:</span> ${data.date}</p>
+        </div>
+
+        <div class="section">
+          <h2>Products</h2>
+          <ul class="products-list">
+            ${data.products.map(product => `
+              <li>${product.name} (x${product.quantity}) - ${product.price}</li>
+            `).join('')}
+          </ul>
+        </div>
+
+        <div class="order-details">
+          <p class="total"><span class="label">Total:</span> ${data.total}</p>
+        </div>
+
+        <div class="footer">
+          <p>Thank you for your order! We hope to serve you again soon.</p>
+          <p>If you have questions, contact us at <a href="mailto:support@pdfgeneratorapp.gmail.com">support@pdfgeneratorapp.gmail.com</a>.</p>
+          <p>&copy; 2025 TetaFit Store — All rights reserved.</p>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+
+router.post("/generate-shop-order", authenticate, async (req, res) => {
+  const { data } = req.body;
+  log("Received data for shop order generation:", data);
+
+  if (!data || !data.shopName) {
+    log("Invalid shop order data:", data);
+    return res.status(400).json({ error: "Missing shop order data" });
+  }
+
+  const pdfPath = path.join(__dirname, `../pdfs/shop_order_${Date.now()}.pdf`);
+
+  try {
+    log("Launching Puppeteer...");
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+    log("Puppeteer launched successfully.");
+
+    const page = await browser.newPage();
+    log("New page created.");
+
+    const html = generateShopOrderHTML(data);
+    log("Generated HTML for shop order:", html);
+
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    log("HTML content set on the page.");
+
+    await page.pdf({ path: pdfPath, format: "A4" });
+    log("PDF generated successfully at:", pdfPath);
+
+    await browser.close();
+    log("Browser closed.");
+
+    req.user.usageCount++;
+    await req.user.save();
+    log("User usage count updated:", req.user.usageCount);
+
+    res.download(pdfPath, (err) => {
+      if (err) {
+        console.error("Error sending file:", err);
+      }
+      fs.unlinkSync(pdfPath); 
+    });
+  } catch (error) {
+    console.error("Shop order PDF generation failed:", error);
+    res.status(500).json({ error: "PDF generation failed" });
+  }
+});
+
+module.exports = router;
