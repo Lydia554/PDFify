@@ -135,12 +135,11 @@
     }
     
     fetchUserUsage();
+    
     function updateJsonForEndpoint(endpoint) {
-  const baseUrl = process.env.BASE_URL; // Fetch from environment variable
-
-  let jsonData = "";
-
-  if (endpoint === "generate-recipe") {
+      let jsonData = "";
+    
+      if (endpoint === "generate-recipe") {
     jsonData = `{
       "data": {
         "recipeName": "Cheese Pie",
@@ -161,106 +160,105 @@
       }
     }`;
 
-  } else if (endpoint === "generate-therapy-report") {
-    jsonData = `{
-      "data": {
-        "childName": "Anna Moore",
-        "birthDate": "2021-02-14",
-        "sessionDate": "2025-03-25",
-        "therapyType": "Speech Therapy",
-        "observations": "The child shows progress in articulating sounds.",
-        "recommendations": "Continue home exercises for 10 minutes daily. Next check-up in 4 weeks.",
-        "milestones": [
-          { "name": "Pronounce B", "progress": "Improved" },
-          { "name": "Pronounce M", "progress": "Satisfactory" },
-          { "name": "Pronounce P", "progress": "Excellent" }
-        ],
-        "milestonesData": [60, 70, 90],
-        "logoUrl": "${baseUrl}/images/Logo.png"
-      }
-    }`;
-
-  } else if (endpoint === "generate-shop-order") {
-    jsonData = `{
-      "data": {
-        "shopName": "TetaFit Store",
-        "customer": {
-          "name": "Anna Moore",
-          "email": "anna@example.com"
-        },
-        "orderId": "ORD-98765",
-        "date": "2025-03-25",
-        "products": [
-          { "name": "Protein Bar", "quantity": 2, "price": "4.00€" },
-          { "name": "Yoga Mat", "quantity": 1, "price": "19.99€" }
-        ],
-        "total": "27.99€"
-      }
-    }`;
-
-  } else if (endpoint === "generate-invoice") {
-    jsonData = `{
-      "data": {
-        "customerName": "Anna Moore",
-        "customerEmail": "anna@example.com",
-        "orderId": "12345",
-        "date": "2025-03-25",
-        "items": [
-          { "name": "PDF Template", "quantity": 1, "price": "10.00€", "total": "10.00" },
-          { "name": "Extra Support", "quantity": 1, "price": "5.00€", "total": "5.00" }
-        ],
-        "subtotal": "15.00€",
-        "tax": "3.15€",
-        "total": "18.15€"
-      }
-    }`;
-
-  } else if (endpoint === "generate-pdf-from-html") {
-    jsonData = JSON.stringify({
-      html: `
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              h1 { color: #333; text-align: center; }
-              p { line-height: 1.6; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f4f7fb; }
-            </style>
-          </head>
-          <body>
-            <h1>Sample Raw HTML</h1>
-            <p>This is a sample PDF generated from raw HTML.</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Quantity</th>
-                  <th>Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Sample Item 1</td>
-                  <td>2</td>
-                  <td>$10.00</td>
-                </tr>
-                <tr>
-                  <td>Sample Item 2</td>
-                  <td>1</td>
-                  <td>$5.00</td>
-                </tr>
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `
-    }, null, 2);
+      } else if (endpoint === "generate-therapy-report") {
+  jsonData = `{
+  "data": {
+    "childName": "Anna Moore",
+    "birthDate": "2021-02-14",
+    "sessionDate": "2025-03-25",
+    "therapyType": "Speech Therapy",
+    "observations": "The child shows progress in articulating sounds.",
+    "recommendations": "Continue home exercises for 10 minutes daily. Next check-up in 4 weeks.",
+    "milestones": [
+      { "name": "Pronounce B", "progress": "Improved" },
+      { "name": "Pronounce M", "progress": "Satisfactory" },
+      { "name": "Pronounce P", "progress": "Excellent" }
+    ],
+    "milestonesData": [60, 70, 90],
+    "logoUrl": "http://localhost:3000/images/Logo.png"
   }
+}`;
 
- 
 
+
+      } else if (endpoint === "generate-shop-order") {
+  jsonData = `{
+  "data": {
+    "shopName": "TetaFit Store",
+    "customer": {
+      "name": "Anna Moore",
+      "email": "anna@example.com"
+    },
+    "orderId": "ORD-98765",
+    "date": "2025-03-25",
+    "products": [
+      { "name": "Protein Bar", "quantity": 2, "price": "4.00€" },
+      { "name": "Yoga Mat", "quantity": 1, "price": "19.99€" }
+    ],
+    "total": "27.99€"
+  }
+}`;
+      }else if (endpoint === "generate-invoice") {
+  jsonData = `{
+    "data": {
+      "customerName": "Anna Moore",
+      "customerEmail": "anna@example.com",
+      "orderId": "12345",
+      "date": "2025-03-25",
+      "items": [
+        { "name": "PDF Template", "quantity": 1, "price": "10.00€", "total": "10.00" },
+        { "name": "Extra Support", "quantity": 1, "price": "5.00€", "total": "5.00" }
+      ],
+      "subtotal": "15.00€",
+      "tax": "3.15€",
+      "total": "18.15€"
+    }
+  }`;
+
+
+      } else if (endpoint === "generate-pdf-from-html") {
+        jsonData = JSON.stringify({
+          html: `
+            <html>
+              <head>
+                <style>
+                  body { font-family: Arial, sans-serif; padding: 20px; }
+                  h1 { color: #333; text-align: center; }
+                  p { line-height: 1.6; }
+                  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                  th { background-color: #f4f7fb; }
+                </style>
+              </head>
+              <body>
+                <h1>Sample Raw HTML</h1>
+                <p>This is a sample PDF generated from raw HTML.</p>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Item</th>
+                      <th>Quantity</th>
+                      <th>Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Sample Item 1</td>
+                      <td>2</td>
+                      <td>$10.00</td>
+                    </tr>
+                    <tr>
+                      <td>Sample Item 2</td>
+                      <td>1</td>
+                      <td>$5.00</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </body>
+            </html>
+          `
+        }, null, 2);
+      }
     
       document.getElementById('json').value = jsonData;
     }
