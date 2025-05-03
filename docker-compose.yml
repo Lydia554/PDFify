@@ -3,21 +3,14 @@ version: "3.8"
 services:
   app:
     build:
-      context: .              
-      dockerfile: Dockerfile  
+      context: .
+      dockerfile: Dockerfile
     image: pdf-api
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
-      MONGO_URI: mongodb://mongo:27017/pdf-api
-      STRIPE_SECRET_KEY: sk_live_...
-      STRIPE_PUBLISHABLE_KEY: pk_live_...
-      EMAIL_USER: pdfgeneratorapp@gmail.com
-      EMAIL_PASS: lebv dihq dnfy isvh
-      JWT_SECRET: someSuperSecretKeyThatIsLongAndRandom123
-      SUCCESS_URL: http://localhost:3000/success.html
-      CANCEL_URL: http://localhost:3000/cancel.html
-      ENCRYPTION_KEY: fdbd55cd89fbe55192fbc6656cef69c4
       PUPPETEER_SKIP_DOWNLOAD: true
     volumes:
       - .:/app
