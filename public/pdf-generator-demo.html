@@ -118,7 +118,7 @@
       }
     
       try {
-  const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/user/usage`, {
+  const response = await axios.get("/api/user/usage", {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
 
@@ -136,7 +136,7 @@
     
     fetchUserUsage();
     function updateJsonForEndpoint(endpoint) {
-  const baseUrl = process.env.BASE_URL; // Fetch from environment variable
+  const baseUrl = process.env.BASE_URL; 
 
   let jsonData = "";
 
