@@ -68,7 +68,7 @@
       }
 
       try {
-        const response = await axios.post("api/user/create-user", { email, password });
+        const response = await axios.post("/api/auth/login", { email, password });
 
   if (response.data.apiKey) {
     localStorage.setItem("apiKey", response.data.apiKey);

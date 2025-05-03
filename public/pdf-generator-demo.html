@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+ 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Generator API</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body style="font-family: sans-serif; max-width: 600px; margin: 40px auto;">
+  
+  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+  </div>
+  <nav style="background-color: #f4f7fb; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
+    <div>
+      <a href="/shopify-guide" class="shopify-docs-button" style="margin-right: 10px;">📄 Shopify Docs</a>
+      <a href="#" id="userDashboardLink" class="shopify-docs-button">👤 User Dashboard</a>
+    </div>
+    <button id="logoutButton">Logout</button>
+  </nav>
+  
+    <h1> PDF Generator API</h1>
+   
+    <div id="loaderOverlay" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50 hidden">
+      <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-purple-600"></div>
+    </div>
+
+   
+
+<!-- Endpoint Selection -->
+<label for="endpoint">Endpoint:</label>
+<select id="endpoint">
+  <option value="generate-invoice">Invoice</option>
+  <option value="generate-shop-order">Shop Order</option>
+  <option value="generate-therapy-report">Therapy Report</option>
+  <option value="generate-recipe">Recipe</option> 
+  <option value="generate-pdf-from-html">Raw HTML</option>
+</select>
+
+
+  <br><br>
+
+  <!-- API Key Input -->
+  <label for="apiKey">Your API Key:</label>
+  <input type="text" id="apiKey" style="width: 100%;" placeholder="Paste your API key here" required>
+
+  <br><br>
+
+  <!-- JSON Data Input -->
+  <label for="json">Data (JSON):</label>
+  <textarea id="json" rows="20" style="width: 100%;" required></textarea>
+
+  <br>
+
+  <!-- Button to Generate PDF -->
+  <button onclick="sendRequest()">Generate PDF</button>
+
+  <p id="result"></p>
+
+  <!-- Stripe Payment Button -->
+  <h3>Upgrade to Premium (More PDF Generations)</h3>
+  <button id="payment-button">Pay for Premium Access</button>
+
+  <p id="payment-result"></p>
+
+
+
+  <script>
+    document.querySelectorAll("nav a").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const targetUrl = event.target.href;
+    
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        loadingOverlay.style.display = "flex";
+        console.log("Spinner shown");
+    
+        if (!targetUrl) {
+          console.error("Invalid target URL");
+          loadingOverlay.style.display = "none";
+          return;
+        }
+    
+        setTimeout(() => {
+          console.log("Navigating to:", targetUrl);
+          window.location.href = targetUrl;
+        }, 500);
+      });
+    });
+    
+    window.addEventListener("load", () => {
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "none";
+      console.log("Spinner hidden on page load");
+    });
+    
+    async function sendRequest() {
+      showProgressBar();
+    
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        alert("Request completed!");
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
+        setTimeout(hideProgressBar, 500);
+      }
+    }
+    
+    async function fetchUserUsage() {
+      const apiKey = localStorage.getItem("apiKey");
+      if (!apiKey) {
+        alert("No API key found. Please log in.");
+        window.location.href = "/login.html";
+        return;
+      }
+    
+      try {
+  const response = await axios.get(`${import.meta.env.VITE_BASE_URL}/api/user/usage`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+
+  const { usageCount, maxUsage } = response.data;
+
+    
+        if (usageCount >= maxUsage) {
+          document.getElementById("result").innerText = "Monthly usage limit reached. Upgrade to premium for unlimited access.";
+          document.querySelector("button[onclick='sendRequest()']").disabled = true;
+        }
+      } catch (error) {
+        console.error("Error fetching user usage:", error);
+      }
+    }
+    
+    fetchUserUsage();
+    function updateJsonForEndpoint(endpoint) {
+  const baseUrl = process.env.BASE_URL; // Fetch from environment variable
+
+  let jsonData = "";
+
+  if (endpoint === "generate-recipe") {
+    jsonData = `{
+      "data": {
+        "recipeName": "Cheese Pie",
+        "author": "Anna Moore",
+        "ingredients": [
+          "500g flour",
+          "200g cheese",
+          "100g butter",
+          "1 egg"
+        ],
+        "instructions": [
+          "Mix the flour, egg, and butter.",
+          "Add crumbled cheese.",
+          "Bake in preheated oven at 180°C for 40 minutes."
+        ],
+        "prepTime": "30 minutes",
+        "cookTime": "40 minutes"
+      }
+    }`;
+
+  } else if (endpoint === "generate-therapy-report") {
+    jsonData = `{
+      "data": {
+        "childName": "Anna Moore",
+        "birthDate": "2021-02-14",
+        "sessionDate": "2025-03-25",
+        "therapyType": "Speech Therapy",
+        "observations": "The child shows progress in articulating sounds.",
+        "recommendations": "Continue home exercises for 10 minutes daily. Next check-up in 4 weeks.",
+        "milestones": [
+          { "name": "Pronounce B", "progress": "Improved" },
+          { "name": "Pronounce M", "progress": "Satisfactory" },
+          { "name": "Pronounce P", "progress": "Excellent" }
+        ],
+        "milestonesData": [60, 70, 90],
+        "logoUrl": "${baseUrl}/images/Logo.png"
+      }
+    }`;
+
+  } else if (endpoint === "generate-shop-order") {
+    jsonData = `{
+      "data": {
+        "shopName": "TetaFit Store",
+        "customer": {
+          "name": "Anna Moore",
+          "email": "anna@example.com"
+        },
+        "orderId": "ORD-98765",
+        "date": "2025-03-25",
+        "products": [
+          { "name": "Protein Bar", "quantity": 2, "price": "4.00€" },
+          { "name": "Yoga Mat", "quantity": 1, "price": "19.99€" }
+        ],
+        "total": "27.99€"
+      }
+    }`;
+
+  } else if (endpoint === "generate-invoice") {
+    jsonData = `{
+      "data": {
+        "customerName": "Anna Moore",
+        "customerEmail": "anna@example.com",
+        "orderId": "12345",
+        "date": "2025-03-25",
+        "items": [
+          { "name": "PDF Template", "quantity": 1, "price": "10.00€", "total": "10.00" },
+          { "name": "Extra Support", "quantity": 1, "price": "5.00€", "total": "5.00" }
+        ],
+        "subtotal": "15.00€",
+        "tax": "3.15€",
+        "total": "18.15€"
+      }
+    }`;
+
+  } else if (endpoint === "generate-pdf-from-html") {
+    jsonData = JSON.stringify({
+      html: `
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              h1 { color: #333; text-align: center; }
+              p { line-height: 1.6; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f4f7fb; }
+            </style>
+          </head>
+          <body>
+            <h1>Sample Raw HTML</h1>
+            <p>This is a sample PDF generated from raw HTML.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Sample Item 1</td>
+                  <td>2</td>
+                  <td>$10.00</td>
+                </tr>
+                <tr>
+                  <td>Sample Item 2</td>
+                  <td>1</td>
+                  <td>$5.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `
+    }, null, 2);
+  }
+
+ 
+
+    
+      document.getElementById('json').value = jsonData;
+    }
+    
+    document.getElementById('endpoint').addEventListener('change', (event) => {
+      updateJsonForEndpoint(event.target.value);
+    });
+    
+    updateJsonForEndpoint(document.getElementById('endpoint').value);
+    
+    const storedApiKey = localStorage.getItem('apiKey');
+    if (storedApiKey) {
+      document.getElementById('apiKey').value = storedApiKey;
+    } else {
+      alert('No API key found. Please log in.');
+      window.location.href = 'login.html'; 
+    }
+    
+    const apiKey = localStorage.getItem("apiKey");
+    const userDashboardLink = document.getElementById("userDashboardLink");
+    
+    if (apiKey) {
+      userDashboardLink.href = `/user-dashboard?apiKey=${apiKey}`;
+    } else {
+      userDashboardLink.href = "/login.html"; 
+    }
+    
+    document.getElementById("logoutButton").addEventListener("click", () => {
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "flex";
+      console.log("Spinner shown for Logout button");
+    
+      setTimeout(() => {
+        localStorage.removeItem("apiKey");
+        console.log("Navigating to login page");
+        window.location.href = "/login.html";
+      }, 500);
+    });
+    
+    async function sendRequest() {
+      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
+      const endpoint = document.getElementById('endpoint').value;
+      const jsonInput = document.getElementById('json').value;
+      const result = document.getElementById('result');
+    
+      if (!apiKey || !jsonInput) {
+        result.innerText = 'Please enter both API key and valid JSON data.';
+        return;
+      }
+    
+      result.innerText = 'Generating PDF...';
+      try {
+  const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/${endpoint}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: jsonInput
+  });
+
+    
+        if (!response.ok) {
+          const err = await response.json();
+          console.error("API Error:", err);
+          result.innerText = 'Error: ' + (err.error || response.statusText);
+          return;
+        }
+    
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'document.pdf';
+        a.click();
+        result.innerText = '✅ PDF downloaded!';
+      } catch (err) {
+        result.innerText = 'Error: ' + err.message;
+      }
+    }
+    
+    fetch('/get-stripe-key')
+      .then(response => response.json())
+      .then(data => {
+        const stripe = Stripe(data.stripePublishableKey);
+    
+        document.getElementById('payment-button').addEventListener('click', async () => {
+          const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
+          if (!apiKey) {
+            alert('Please provide your API key');
+            return;
+          }
+    
+          try {
+            const response = await fetch('/api/stripe/create-checkout-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+              },
+              body: JSON.stringify({
+                email: "user@example.com", 
+                plan: "premium" 
+              }),
+            });
+    
+            if (!response.ok) {
+              const error = await response.json();
+              console.error("Error creating checkout session:", error);
+              alert(`Error: ${error.error || "Failed to create checkout session"}`);
+              return;
+            }
+    
+            const session = await response.json();
+    
+            if (!session.id) {
+              alert('Error: No session ID returned from backend.');
+              console.log(session);
+              return;
+            }
+    
+            const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+            if (error) {
+              console.log(error);
+              alert('Error during checkout');
+            }
+          } catch (err) {
+            console.error("Unexpected error:", err);
+            alert('An unexpected error occurred. Please try again.');
+          }
+        });
+      })
+      .catch(error => console.error('Error fetching Stripe key:', error));
+    </script>
+</body>
+</html>
+
+
+
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    color: #333;
+  }
+
+
+  h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  button {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+    width: 100%;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+  }
+
+  button:hover {
+    background-color: #1976d2;
+  }
+
+  label {
+    font-size: 14px;
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  select, input, textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 150px;
+  }
+
+  #logoutButton {
+    background-color: #ff4081;
+    padding: 10px 20px;
+    font-size: 16px;
+    width: auto;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+
+  #logoutButton:hover {
+    background-color: #f50057;
+  }
+
+  #payment-button {
+    background-color: #4caf50;
+    margin-top: 20px;
+  }
+
+  #payment-button:hover {
+    background-color: #45a049;
+  }
+
+  #result {
+    margin-top: 15px;
+    font-size: 16px;
+    color: #333;
+    font-weight: bold;
+  }
+
+  #payment-result {
+    margin-top: 15px;
+    font-size: 16px;
+    color: #2196f3;
+  }
+
+  .shopify-docs-button {
+    display: inline-block;
+    margin: 10px 0;
+    padding: 10px 16px;
+    background-color: #5e72e4;
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+
+  .shopify-docs-button:hover {
+    background-color: #324cdd;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Responsive styles */
+  @media (max-width: 600px) {
+    body {
+      padding: 10px;
+    }
+
+    h1 {
+      font-size: 20px;
+    }
+
+    button {
+      font-size: 14px;
+      padding: 10px;
+    }
+
+    label, select, input, textarea {
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 100px;
+    }
+
+    #logoutButton, #payment-button, #payment-result {
+      width: 100%;
+    }
+  }
+</style>
