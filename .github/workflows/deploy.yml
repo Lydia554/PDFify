@@ -17,7 +17,7 @@ jobs:
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         # port: 22 # Optional, defaults to 22
         script: |
           echo "Connecting to server..."
