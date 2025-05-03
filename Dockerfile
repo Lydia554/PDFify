@@ -24,15 +24,15 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-    WORKDIR /app
+WORKDIR /app
 
-    # Only copy package.json and package-lock.json first to cache layers
-    COPY package*.json ./
+# Only copy package.json and package-lock.json first to cache layers
+COPY ./app/package*.json ./
     
-    # Install dependencies inside container (ensures correct platform)
-    RUN npm install
+# Install dependencies inside container (ensures correct platform)
+RUN npm install
     
-    # Then copy your code
-    COPY . .
-    
-    CMD ["node", "server/index.js"]
+# Then copy your code
+COPY ./app .
+   
+CMD ["node", "server/index.js"]

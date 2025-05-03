@@ -16,6 +16,10 @@ const log = (message, data = null) => {
 };
 
 function generateTherapyReportHTML(data) {
+  // Use BASE_URL from the environment variables, no fallback needed
+  const baseUrl = process.env.BASE_URL;
+  const logoUrl = baseUrl + data.logoUrl; // Construct the full URL for the logo
+
   return `
     <html>
       <head>
@@ -40,7 +44,7 @@ function generateTherapyReportHTML(data) {
       <body>
         <div class="watermark">Confidential</div>
         <header>
-          <img src="${data.logoUrl}" alt="Logo" class="logo">
+          <img src="${logoUrl}" alt="Logo" class="logo">
         </header>
         <h1>Therapy Report</h1>
 
@@ -100,6 +104,7 @@ function generateTherapyReportHTML(data) {
     </html>
   `;
 }
+
 
 router.post("/generate-therapy-report", authenticate, async (req, res) => {
   const { data } = req.body;

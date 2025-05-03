@@ -101,12 +101,13 @@ document.getElementById("upgradeSubscriptionButton").addEventListener("click", a
     const stripeKeyResponse = await axios.get("/get-stripe-key");
     const stripe = Stripe(stripeKeyResponse.data.stripePublishableKey);
 
-    const response = await axios.post("http://localhost:3000/api/stripe/create-checkout-session", {
-      email: document.getElementById("email").textContent,
-      plan: "premium",
-    }, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
+    const response = await axios.post(`${process.env.BASE_URL}/api/stripe/create-checkout-session`, {
+  email: document.getElementById("email").textContent,
+  plan: "premium",
+}, {
+  headers: { Authorization: `Bearer ${apiKey}` },
+});
+
 
     if (response.status === 200 && response.data.id) {
       const { error } = await stripe.redirectToCheckout({ sessionId: response.data.id });
@@ -132,7 +133,8 @@ document.getElementById("downgradeSubscriptionButton").addEventListener("click",
   }
 
   try {
-    const response = await axios.post("http://localhost:3000/api/stripe/cancel-subscription", {}, {
+    const response = await axios.post(`${process.env.BASE_URL}/api/stripe/cancel-subscription`,
+ {}, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
 
@@ -178,10 +180,10 @@ document.getElementById("logoutButton").addEventListener("click", () => {
     }
 
     const response = await axios.put(
-      "http://localhost:3000/api/user/update",
-      { email: newEmail, password: newPassword },
-      { headers: { Authorization: `Bearer ${apiKey}` } }
-    );
+  `${window.location.origin}/api/user/update`,
+  { email: newEmail, password: newPassword },
+  { headers: { Authorization: `Bearer ${apiKey}` } }
+);
 
     result.innerText = response.data.message;
     fetchUserData(); 
@@ -204,7 +206,7 @@ document.getElementById("logoutButton").addEventListener("click", () => {
   }
 
   try {
-    const response = await axios.get("http://localhost:3000/api/user/usage", {
+    const response = await axios.get(`${process.env.baseUrl}/api/user/usage`, {
       headers: {
         Authorization: `Bearer ${apiKey}`, 
       },

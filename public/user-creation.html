@@ -61,11 +61,12 @@
         return;
       }
 
-      try {
-        const response = await axios.post("http://localhost:3000/api/user/create-user", { email, password });
-        result.innerText = `🎉 Success: ${response.data.message}`;
-        result.className = "result success"; 
-        result.style.display = "block";
+     try {
+  const response = await axios.post(`${process.env.BASE_URL}/api/user/create-user`, { email, password });
+  result.innerText = `🎉 Success: ${response.data.message}`;
+  result.className = "result success"; 
+  result.style.display = "block";
+
 
         setTimeout(() => {
           window.location.href = response.data.redirect;

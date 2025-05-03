@@ -50,7 +50,7 @@ router.post("/forgot-password", async (req, res) => {
 
     await user.save();
 
-    const resetUrl = `http://localhost:3000/reset-password.html?token=${token}`;
+    const resetUrl = `${process.env.BASE_URL}/reset-password.html?token=${token}`;
     await sendEmail({
       to: user.email,
       subject: "Reset your password",
