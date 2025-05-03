@@ -313,7 +313,7 @@
     
       result.innerText = 'Generating PDF...';
       try {
-  const response = await fetch(`${import.meta.env.VITE_BASE_URL}/api/${endpoint}`, {
+  const response = await fetch("/api/${endpoint}", {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
