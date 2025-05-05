@@ -1,4 +1,9 @@
+const crypto = require("crypto");
 const User = require("../models/User");
+
+const hashApiKey = (apiKey) => {
+  return crypto.createHash("sha256").update(apiKey).digest("hex");
+};
 
 const authenticate = async (req, res, next) => {
   let apiKey;
@@ -17,17 +22,16 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    const user = await User.findOne();
-    if (!user || user.getDecryptedApiKey() !== apiKey) {
+    const hashedKey = hashApiKey(apiKey);
+    const user = await User.findOne({ hashedApiKey: hashedKey });
+
+    if (!user) {
       return res.status(403).json({ error: "Invalid API key" });
     }
 
-    req.user = user; // full mongoose doc (needed for .save, PDF generation, etc.)
-
-    // Extract clean plain values for frontend use
+    req.user = user;
     req.userData = {
       email: user.email,
-      apiKey: user.getDecryptedApiKey(),
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
