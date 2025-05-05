@@ -28,7 +28,8 @@ const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
-      return res.status(403).json({ error: "Invalid API key" });
+      return res.status(403).json({ error: "User not found or API key is invalid" });
+
     }
 
     req.user = user;
