@@ -195,8 +195,9 @@ document.getElementById("logoutButton").addEventListener("click", () => {
 
 
 document.getElementById("deleteAccountButton").addEventListener("click", async () => {
-  const confirmDelete = confirm("Are you sure you want to delete your account? This action is irreversible.");
-  if (!confirmDelete) return;
+  if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+    return;
+  }
 
   const apiKey = localStorage.getItem("apiKey");
   if (!apiKey) {
@@ -206,22 +207,21 @@ document.getElementById("deleteAccountButton").addEventListener("click", async (
   }
 
   try {
-    const response = await axios.delete(`/api/user/delete`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
+    const response = await axios.delete(`${window.location.origin}/api/user/delete`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
     });
 
     if (response.status === 200) {
-      alert(response.data.message);
+      alert("Account deleted successfully.");
       localStorage.removeItem("apiKey");
-      window.location.href = "/login.html";
+      window.location.href = "/"; 
     }
   } catch (error) {
     console.error("Error deleting account:", error);
     alert("Failed to delete account. Please try again.");
   }
 });
+
 
    
     async function fetchUserData() {
