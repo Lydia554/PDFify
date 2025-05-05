@@ -223,37 +223,44 @@ document.getElementById("deleteAccountButton").addEventListener("click", async (
 });
 
 
-   
-    async function fetchUserData() {
-  
+async function fetchUserData() {
   const urlParams = new URLSearchParams(window.location.search);
   const apiKey = urlParams.get("apiKey") || localStorage.getItem("apiKey");
 
   if (!apiKey) {
     document.getElementById("result").textContent = "No API key found. Please log in.";
-    window.location.href = "/login.html"; 
+    window.location.href = "/login.html";
     return;
   }
 
   try {
     const response = await axios.get(`/api/user/usage`, {
       headers: {
-        Authorization: `Bearer ${apiKey}`, 
+        Authorization: `Bearer ${apiKey}`,
       },
     });
 
     const data = response.data;
 
-  
     document.getElementById("email").textContent = data.email;
     document.getElementById("apiKey").textContent = data.apiKey;
     document.getElementById("usageCount").textContent = data.usageCount;
     document.getElementById("maxUsage").textContent = data.maxUsage;
     document.getElementById("premiumStatus").textContent = data.isPremium ? "Premium" : "Free";
+
   } catch (error) {
-    document.getElementById("result").textContent = "Error fetching user data. Please try again later.";
+    console.error("Error fetching user data:", error);
+    if (error.response && error.response.status === 404) {
+   
+      localStorage.removeItem("apiKey");
+      alert("Your account no longer exists. Redirecting to login.");
+      window.location.href = "/login.html";
+    } else {
+      document.getElementById("result").textContent = "Error fetching user data. Please try again later.";
+    }
   }
 }
+
 
     fetchUserData(); 
   </script>
