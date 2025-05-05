@@ -1,9 +1,4 @@
-const crypto = require("crypto");
 const User = require("../models/User");
-
-const hashApiKey = (apiKey) => {
-  return crypto.createHash("sha256").update(apiKey).digest("hex");
-};
 
 const authenticate = async (req, res, next) => {
   let apiKey;
@@ -22,19 +17,29 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    const hashedKey = hashApiKey(apiKey);
-    const user = await User.findOne({ hashedApiKey: hashedKey });
+    
+    const users = await User.find();
+    const user = users.find((u) => {
+      try {
+        return u.getDecryptedApiKey() === apiKey;
+      } catch (e) {
+        return false;
+      }
+    });
 
     if (!user) {
       return res.status(403).json({ error: "Invalid API key" });
     }
 
     req.user = user;
+
     req.userData = {
       email: user.email,
+      apiKey: user.getDecryptedApiKey(),
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
+      userId: user._id,
     };
 
     next();

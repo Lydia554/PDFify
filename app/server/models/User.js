@@ -38,7 +38,7 @@ function decrypt(text) {
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true },
-    hashedApiKey: { type: String, required: true, unique: true },
+    apiKey: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     usageCount: { type: Number, default: 0 },
     maxUsage: { type: Number, default: 30 },
@@ -51,8 +51,17 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const hashApiKey = (apiKey) => {
-  return crypto.createHash("sha256").update(apiKey).digest("hex");
+
+userSchema.pre("save", async function (next) {
+  if (this.isModified("apiKey")) {
+    this.apiKey = encrypt(this.apiKey);
+  }
+  next();
+});
+
+
+userSchema.methods.getDecryptedApiKey = function () {
+  return decrypt(this.apiKey);
 };
 
 userSchema.pre("save", async function (next) {

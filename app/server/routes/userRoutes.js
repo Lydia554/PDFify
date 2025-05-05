@@ -25,23 +25,19 @@ router.post("/create-user", async (req, res) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    const crypto = require("crypto");
+    const apiKey = require("crypto").randomBytes(24).toString("hex");
 
-    const apiKey = crypto.randomBytes(24).toString("hex");
-    const hashedApiKey = crypto.createHash("sha256").update(apiKey).digest("hex");
-    
     const newUser = new User({
       email,
       password,
-      hashedApiKey,
+      apiKey,
     });
 
     await newUser.save();
     log("User created successfully:", newUser);
 
     const subject = "Welcome to PDF Generator!";
-const text = `Hi ${email},\n\nThank you for signing up for PDF Generator! Your API key is:\n\n${apiKey}\n\nSave it securely — we cannot show it again.\n\nBest regards,\nThe PDF Generator Team`;
-
+    const text = `Hi ${email},\n\nThank you for signing up for PDF Generator! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDF Generator Team`;
 
     await sendEmail({
       to: email,
@@ -65,7 +61,7 @@ router.get("/usage", authenticate, (req, res) => {
 
   res.json({
     email: user.email,
-    apiKey: "hidden",
+    apiKey: user.getDecryptedApiKey(),
     usageCount: user.usageCount,
     maxUsage: user.maxUsage,
     isPremium: user.isPremium,
@@ -84,7 +80,7 @@ router.get("/me", authenticate, async (req, res) => {
 
     res.json({
       email: user.email,
-      apiKey: "hidden",
+      apiKey: user.apiKey,
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
