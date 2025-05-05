@@ -38,6 +38,7 @@ app.use("/api", shopOrderRoutes);
 app.use("/api", therapyReportRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
+app.use("/api/user", require("./routes/user"));
 
 app.use(express.static(path.join(__dirname, "../public")));
 
