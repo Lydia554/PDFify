@@ -25,17 +25,25 @@ router.post("/login", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    res.json({ apiKey: user.getDecryptedApiKey() });
-  } catch (error) {
-    console.error("Error during login:", error);
-    res.status(500).json({ error: "Internal server error" });
+    // Do not call user.save() or modify user here!
+
+    // Send API key and other info (if needed)
+    return res.json({
+      message: "Login successful",
+      apiKey: user.getDecryptedApiKey(),
+      email: user.email,
+    });
+  } catch (err) {
+    console.error("Login error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 });
+
 
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
