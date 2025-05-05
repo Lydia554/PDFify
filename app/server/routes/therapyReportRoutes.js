@@ -16,9 +16,9 @@ const log = (message, data = null) => {
 };
 
 function generateTherapyReportHTML(data) {
-  // Use BASE_URL from the environment variables, no fallback needed
+  
   const baseUrl = process.env.BASE_URL;
-  const logoUrl = baseUrl + data.logoUrl; // Construct the full URL for the logo
+  const logoUrl = baseUrl + data.logoUrl; 
 
   return `
     <html>
