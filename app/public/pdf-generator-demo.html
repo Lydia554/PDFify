@@ -133,7 +133,7 @@
     
     fetchUserUsage();
     function updateJsonForEndpoint(endpoint) {
-  const baseUrl = process.env.BASE_URL; 
+      const baseUrl = window.location.origin;
 
   let jsonData = "";
 
