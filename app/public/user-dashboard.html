@@ -207,7 +207,7 @@ document.getElementById("deleteAccountButton").addEventListener("click", async (
   }
 
   try {
-    const response = await axios.delete(`${window.location.origin}/api/user/delete`, {
+    const response = await axios.delete(`/api/user/delete`, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
 
