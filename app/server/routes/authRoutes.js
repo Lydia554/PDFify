@@ -22,25 +22,29 @@ router.post("/login", async (req, res) => {
   try {
     const user = await User.findOne({ email });
     if (!user) {
+      console.log("User not found:", email);
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      console.log("Invalid password for:", email);
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Do not call user.save() or modify user here!
+    let decryptedKey;
+    try {
+      decryptedKey = user.getDecryptedApiKey();
+    } catch (decryptError) {
+      console.error("Decryption failed:", decryptError);
+      return res.status(500).json({ error: "Failed to decrypt API key" });
+    }
 
-    // Send API key and other info (if needed)
-    return res.json({
-      message: "Login successful",
-      apiKey: user.getDecryptedApiKey(),
-      email: user.email,
-    });
-  } catch (err) {
-    console.error("Login error:", err);
-    res.status(500).json({ error: "Server error" });
+    console.log("Login success, decrypted API key:", decryptedKey);
+    res.json({ apiKey: decryptedKey });
+  } catch (error) {
+    console.error("Unexpected error during login:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
