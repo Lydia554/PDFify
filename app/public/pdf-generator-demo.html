@@ -118,7 +118,7 @@
       }
     
       try {
-  const response = await axios.get("/api/user/usage", {
+  const response = await axios.get(`/api/user/usage`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
 
