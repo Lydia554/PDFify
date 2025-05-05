@@ -17,7 +17,7 @@ const log = (message, data = null) => {
 
 function generateTherapyReportHTML(data) {
   
-  const baseUrl = process.env.BASE_URL;
+  const baseUrl = window.location.origin;
   const logoUrl = baseUrl + data.logoUrl; 
 
   return `
