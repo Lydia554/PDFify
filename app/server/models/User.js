@@ -35,41 +35,47 @@ function decrypt(text) {
   return decrypted.toString("utf8");
 }
 
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  apiKey: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  usageCount: { type: Number, default: 0 },
-  maxUsage: { type: Number, default: 30 },
-  isPremium: { type: Boolean, default: false },
-  role: { type: String, enum: ["user", "admin"], default: "user" },
-  isActive: { type: Boolean, default: true },
-  resetToken: { type: String },
-  resetTokenExpiry: { type: Date },
-
-  apiKeyEncrypted: { type: Boolean, default: false }
-}, { timestamps: true });
-
+const userSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true },
+    apiKey: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    usageCount: { type: Number, default: 0 },
+    maxUsage: { type: Number, default: 30 },
+    isPremium: { type: Boolean, default: false },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    isActive: { type: Boolean, default: true },
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
+  },
+  { timestamps: true }
+);
 
 
 userSchema.pre("save", async function (next) {
+  if (this.isModified("apiKey")) {
+    this.apiKey = encrypt(this.apiKey);
+  }
+  next();
+});
+
+
+userSchema.methods.getDecryptedApiKey = function () {
+  return decrypt(this.apiKey);
+};
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+
   try {
-   
-    if (this.isModified("apiKey") && !this.apiKeyEncrypted) {
-      this.apiKey = encrypt(this.apiKey);
-      this.apiKeyEncrypted = true;
-    }
-
-    if (this.isModified("password")) {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-    }
-
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
     next(error);
   }
 });
-
 
 module.exports = mongoose.model("User", userSchema);
