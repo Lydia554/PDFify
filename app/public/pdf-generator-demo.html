@@ -133,7 +133,7 @@
     
     fetchUserUsage();
     function updateJsonForEndpoint(endpoint) {
-  const baseUrl = process.env.BASE_URL; 
+      const baseUrl = window.location.origin;
 
   let jsonData = "";
 
@@ -463,7 +463,7 @@
   }
 
   #logoutButton:hover {
-    background-color: #000;
+    background-color: #f50057;
   }
 
   #payment-button {
