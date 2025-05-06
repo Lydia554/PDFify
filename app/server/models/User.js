@@ -9,20 +9,14 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
   throw new Error("ENCRYPTION_KEY must be set in the .env file and must be 32 characters long.");
 }
 
-
 const IV_LENGTH = 16;
 
 function encrypt(text) {
- 
-  if (typeof text === "string" && text.includes(":")) {
-    return text;
-  }
-
-  const iv = crypto.randomBytes(IV_LENGTH);
+  const iv = crypto.randomBytes(IV_LENGTH); 
   const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
   let encrypted = cipher.update(text, "utf8");
   encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString("hex") + ":" + encrypted.toString("hex");
+  return iv.toString("hex") + ":" + encrypted.toString("hex"); 
 }
 
 function decrypt(text) {
@@ -57,17 +51,27 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+
 userSchema.pre("save", async function (next) {
+  if (this.isModified("apiKey")) {
+    this.apiKey = encrypt(this.apiKey);
+  }
+  next();
+});
+
+
+userSchema.methods.getDecryptedApiKey = function () {
+  return decrypt(this.apiKey);
+};
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+
   try {
-    if (this.isModified("apiKey")) {
-      this.apiKey = encrypt(this.apiKey); 
-    }
-
-    if (this.isModified("password")) {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt); 
-    }
-
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
     next(error);
