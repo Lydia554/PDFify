@@ -24,16 +24,16 @@ router.post("/create-user", async (req, res) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
-  
-
     const newUser = new User({
       email,
-      password,
-      apiKey,
+      password, // The apiKey will be generated and encrypted automatically in the pre-save hook
     });
 
     await newUser.save();
     log("User created successfully:", newUser);
+
+    // Get the API key after saving the user
+    const apiKey = newUser.getDecryptedApiKey();
 
     const subject = "Welcome to PDF Generator!";
     const text = `Hi ${email},\n\nThank you for signing up for PDF Generator! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDF Generator Team`;
