@@ -1,5 +1,4 @@
-const User = require("./models/User"); 
-await mongoose.connect(process.env.MONGO_URI);
+const User = require("../models/User");
 
 const authenticate = async (req, res, next) => {
   let apiKey;
@@ -20,15 +19,17 @@ const authenticate = async (req, res, next) => {
   try {
     
     const users = await User.find();
-    for (const user of users) {
+    const user = users.find((u) => {
       try {
-        const decrypted = decrypt(user.apiKey); 
-        user.apiKey = encrypt(decrypted);
-        await user.save();
-        console.log(`Fixed API key for user: ${user.email}`);
+        return u.getDecryptedApiKey() === apiKey;
       } catch (e) {
-        console.error(`Could not fix API key for ${user.email}:`, e.message);
+        return false;
       }
+    });
+
+    if (!user) {
+      return res.status(403).json({ error: "User not found or API key is invalid" });
+
     }
 
     req.user = user;
