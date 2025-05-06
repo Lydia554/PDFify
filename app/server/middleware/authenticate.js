@@ -4,48 +4,51 @@ const authenticate = async (req, res, next) => {
   let apiKey;
 
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
+  if (authHeader?.startsWith("Bearer ")) {
     apiKey = authHeader.split(" ")[1];
   }
 
-  if (!apiKey) {
-    apiKey = req.query.apiKey;
-  }
+  if (!apiKey) apiKey = req.query.apiKey;
 
   if (!apiKey) {
     return res.status(403).json({ error: "API key not provided" });
   }
 
   try {
-    
+   
     const users = await User.find();
-    const user = users.find((u) => {
+
+
+    let matchedUser = null;
+    for (const user of users) {
       try {
-        return u.getDecryptedApiKey() === apiKey;
-      } catch (e) {
-        return false;
+        const decryptedKey = user.getDecryptedApiKey();
+        if (decryptedKey === apiKey) {
+          matchedUser = user;
+          break;
+        }
+      } catch (err) {
+        console.warn("Skipping user due to bad apiKey:", user._id);
       }
-    });
-
-    if (!user) {
-      return res.status(403).json({ error: "User not found or API key is invalid" });
-
     }
 
-    req.user = user;
+    if (!matchedUser) {
+      return res.status(403).json({ error: "Invalid API key" });
+    }
 
+    req.user = matchedUser;
     req.userData = {
-      email: user.email,
-      apiKey: user.getDecryptedApiKey(),
-      usageCount: user.usageCount,
-      maxUsage: user.maxUsage,
-      isPremium: user.isPremium,
-      userId: user._id,
+      email: matchedUser.email,
+      apiKey,
+      usageCount: matchedUser.usageCount,
+      maxUsage: matchedUser.maxUsage,
+      isPremium: matchedUser.isPremium,
+      userId: matchedUser._id,
     };
 
     next();
-  } catch (error) {
-    console.error("Authentication Error:", error);
+  } catch (err) {
+    console.error("Authentication Error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };

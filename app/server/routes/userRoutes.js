@@ -24,13 +24,14 @@ router.post("/create-user", async (req, res) => {
 
     const apiKey = User.generateApiKey();
 
-    const newUser = new User({
-      email,
-      password,
-    });
-    newUser.rawApiKey = apiKey; 
+const newUser = new User({
+  email,
+  password,
+});
+newUser.rawApiKey = apiKey;
 
-    await newUser.save();
+await newUser.save();
+
 
     const subject = "Welcome to PDF Generator!";
     const text = `Hi ${email},\n\nThank you for signing up for PDF Generator! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDF Generator Team`;
