@@ -58,7 +58,10 @@ userSchema.pre("save", async function (next) {
   }
   next();
 });
-
+userSchema.statics.generateApiKey = function () {
+  const rawKey = crypto.randomBytes(24).toString("hex");
+  return rawKey;
+};
 
 userSchema.methods.getDecryptedApiKey = function () {
   return decrypt(this.apiKey);
