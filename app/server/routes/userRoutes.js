@@ -17,30 +17,33 @@ router.post("/create-user", async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    log("Received data:", { email, password });
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    const apiKey = crypto.randomBytes(24).toString("hex");
-    
+    const apiKey = require("crypto").randomBytes(24).toString("hex");
+
     const newUser = new User({
       email,
       password,
-     
+      apiKey,
     });
 
-    await newUser.save(); 
-
+    await newUser.save();
+    log("User created successfully:", newUser);
 
     const subject = "Welcome to PDF Generator!";
-    const text = `Hi ${email},\n\nThank you for signing up for PDF Generator! Your API key is: ${newUser.apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDF Generator Team`;
+    const text = `Hi ${email},\n\nThank you for signing up for PDF Generator! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDF Generator Team`;
 
     await sendEmail({
       to: email,
       subject,
       text,
     });
+    log("Welcome email sent to:", email);
 
     res.status(201).json({ message: "User created successfully", redirect: "/login.html" });
   } catch (error) {
@@ -48,7 +51,6 @@ router.post("/create-user", async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 router.get("/usage", authenticate, (req, res) => {
   const user = req.user;
