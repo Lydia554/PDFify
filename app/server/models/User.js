@@ -10,18 +10,6 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
 }
 
 
-const users = await User.find();
-for (const user of users) {
-  try {
-    const decrypted = decrypt(user.apiKey); 
-    user.apiKey = encrypt(decrypted); 
-    await user.save();
-    console.log(`Fixed API key for user: ${user.email}`);
-  } catch (e) {
-    console.error(`Could not fix API key for ${user.email}:`, e.message);
-  }
-}
-
 const IV_LENGTH = 16;
 
 function encrypt(text) {
