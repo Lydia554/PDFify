@@ -12,11 +12,16 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
 const IV_LENGTH = 16;
 
 function encrypt(text) {
-  const iv = crypto.randomBytes(IV_LENGTH); 
+ 
+  if (typeof text === "string" && text.includes(":")) {
+    return text;
+  }
+
+  const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
   let encrypted = cipher.update(text, "utf8");
   encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString("hex") + ":" + encrypted.toString("hex"); 
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
 }
 
 function decrypt(text) {
