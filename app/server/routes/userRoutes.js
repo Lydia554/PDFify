@@ -79,7 +79,7 @@ router.get("/me", authenticate, async (req, res) => {
 
     res.json({
       email: user.email,
-      apiKey: user.apiKey,
+      apiKey: user.getDecryptedApiKey(), 
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
