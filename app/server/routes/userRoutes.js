@@ -69,7 +69,7 @@ router.get("/usage", authenticate, (req, res) => {
 
 router.get("/me", authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.userData.userId);
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
