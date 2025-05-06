@@ -22,6 +22,7 @@ router.post("/create-user", async (req, res) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
+    const apiKey = crypto.randomBytes(24).toString("hex");
     
     const newUser = new User({
       email,
