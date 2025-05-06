@@ -61,21 +61,34 @@
         return;
       }
 
-     try {
+      try {
   const response = await axios.post(`/api/user/create-user`, { email, password });
-  result.innerText = `🎉 Success: ${response.data.message}`;
-  result.className = "result success"; 
+
+
+  if (response.data.message && response.data.redirect) {
+    result.innerText = `🎉 Success: ${response.data.message}`;
+    result.className = "result success"; 
+    result.style.display = "block";
+
+    setTimeout(() => {
+      window.location.href = response.data.redirect; 
+    }, 2000);
+  } else {
+    
+    result.innerText = "User created, but no redirection URL provided.";
+    result.className = "result success"; 
+    result.style.display = "block";
+  }
+} catch (error) {
+  console.error("User creation error:", error.response);  
+  const errorMessage = error.response
+    ? error.response.data.error || "An unexpected error occurred during user creation."
+    : "A network error occurred. Please try again later.";
+  result.innerText = errorMessage;
+  result.className = "result error"; 
   result.style.display = "block";
+}
 
-
-        setTimeout(() => {
-          window.location.href = response.data.redirect;
-        }, 2000);
-      } catch (error) {
-        result.innerText = `❌ Error: ${error.response?.data?.error || "Something went wrong"}`;
-        result.className = "result error"; 
-        result.style.display = "block";
-      }
     });
 
     window.addEventListener("load", () => {
