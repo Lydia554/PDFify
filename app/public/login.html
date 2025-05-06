@@ -68,24 +68,17 @@
       }
 
       try {
-  const response = await axios.post(`/api/auth/login`, { email, password }, { timeout: 5000 });
+        const response = await axios.post(`/api/auth/login`, { email, password });
 
   if (response.data.apiKey) {
     localStorage.setItem("apiKey", response.data.apiKey);
     window.location.href = "/pdf-generator-demo";
   } else {
-    result.innerText = `Error: ${response.data.error || "Invalid credentials"}`;
-    result.style.display = "block";
+    result.innerText = `Error: ${response.data.error}`;
   }
 } catch (error) {
-  console.error("Login error:", error);  
-  const errorMessage = error.response
-    ? error.response.data.error || "An unexpected server error occurred"
-    : "A network error occurred. Please try again later.";
-  result.innerText = errorMessage;
-  result.style.display = "block";
+  result.innerText = "An unexpected error occurred. Please try again.";
 }
-
 
     });
   </script>

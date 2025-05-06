@@ -25,6 +25,8 @@ function decrypt(text) {
     throw new Error("Invalid encrypted text format");
   }
 
+  
+
   const iv = Buffer.from(textParts[0], "hex"); 
   const encryptedText = Buffer.from(textParts[1], "hex"); 
   const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
@@ -49,17 +51,17 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Ensure apiKey is generated and encrypted in the pre-save hook
-userSchema.pre("save", function (next) {
-  if (this.isNew && !this.apiKey) {
-    this.apiKey = crypto.randomBytes(24).toString("hex"); // Generate API key
-    this.apiKey = encrypt(this.apiKey); // Encrypt the API key
+
+userSchema.pre("save", async function (next) {
+  if (this.isModified("apiKey")) {
+    this.apiKey = encrypt(this.apiKey);
   }
   next();
 });
 
+
 userSchema.methods.getDecryptedApiKey = function () {
-  return decrypt(this.apiKey); // Decrypt API key when needed
+  return decrypt(this.apiKey);
 };
 
 userSchema.pre("save", async function (next) {
