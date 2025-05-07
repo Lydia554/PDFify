@@ -53,19 +53,25 @@ const userSchema = new mongoose.Schema(
 
 
 userSchema.pre("save", async function (next) {
-  if (this.isModified("apiKey")) {
-    try {
-     
-      if (this.apiKey && this.apiKey.includes(":")) {
-        this.apiKey = decrypt(this.apiKey);
-      }
-
-      this.apiKey = encrypt(this.apiKey);
-    } catch (error) {
-      return next(error);
+  try {
+  
+    if (this.isModified("password")) {
+      this.password = await bcrypt.hash(this.password, 10);
     }
+
+  
+    if (this.isModified("apiKey")) {
+      if (this.apiKey && this.apiKey.includes(":")) {
+        this.apiKey = decrypt(this.apiKey); 
+      }
+      this.apiKey = encrypt(this.apiKey);
+    }
+
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 });
+
 
 module.exports = mongoose.model("User", userSchema);
