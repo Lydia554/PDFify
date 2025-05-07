@@ -30,12 +30,20 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    res.json({ apiKey: user.getDecryptedApiKey() });
+    res.json({
+      message: "Login successful",
+      apiKey: user.getDecryptedApiKey(),
+      email: user.email,
+      isPremium: user.isPremium,
+      usageCount: user.usageCount,
+      maxUsage: user.maxUsage,
+    });
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
