@@ -1,70 +1,58 @@
-const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema(
-  {
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    password: {
-      type: String,
-      required: true,
-    },
-    apiKey: {
-      type: String,
-      required: true,
-      select: false, // Don't select by default
-    },
-    isPremium: {
-      type: Boolean,
-      default: false,
-    },
-    maxUsage: {
-      type: Number,
-      default: 30,
-    },
-    usageCount: {
-      type: Number,
-      default: 0,
-    },
-  },
-  { timestamps: true }
-);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY; // 32 bytes
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
+  throw new Error("ENCRYPTION_KEY must be set in the .env file and must be 32 characters long.");
+}
 
-// Methods to handle encryption and decryption
-userSchema.methods.getDecryptedApiKey = function () {
-  const decipher = crypto.createDecipher("aes-256-cbc", process.env.ENCRYPTION_SECRET);
-  let decrypted = decipher.update(this.apiKey, "hex", "utf8");
-  decrypted += decipher.final("utf8");
-  return decrypted;
-};
+const IV_LENGTH = 16; // AES block size
 
-// Pre-save hook to hash the password before saving
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+// Encrypt text
+function encrypt(text) {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let encrypted = cipher.update(text, "utf8");
+  encrypted = Buffer.concat([encrypted, cipher.final()]);
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
+}
 
-  try {
-    const hashedPassword = await bcrypt.hash(this.password, 10);
-    this.password = hashedPassword;
-    next();
-  } catch (error) {
-    next(error);
+// Decrypt text
+function decrypt(text) {
+  const textParts = text.split(":");
+  if (textParts.length !== 2) {
+    throw new Error("Invalid encrypted text format");
   }
+
+  const iv = Buffer.from(textParts[0], "hex");
+  const encryptedText = Buffer.from(textParts[1], "hex");
+  const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
+  let decrypted = decipher.update(encryptedText);
+  decrypted = Buffer.concat([decrypted, decipher.final()]);
+  return decrypted.toString("utf8");
+}
+
+// User Schema
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  apiKey: { type: String, required: true },
+  usageCount: { type: Number, default: 0 },
+  maxUsage: { type: Number, default: 30 },
+  isPremium: { type: Boolean, default: false },
 });
 
-// Encrypt the API key before saving
+// Encrypt API Key before saving
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("apiKey")) return next();
-
-  const cipher = crypto.createCipher("aes-256-cbc", process.env.ENCRYPTION_SECRET);
-  let encrypted = cipher.update(this.apiKey, "utf8", "hex");
-  encrypted += cipher.final("hex");
-  this.apiKey = encrypted;
-
+  if (this.isModified("apiKey")) {
+    this.apiKey = encrypt(this.apiKey); // Encrypt API key before saving
+  }
   next();
 });
+
+// Decrypt API Key when retrieving
+userSchema.methods.getDecryptedApiKey = function () {
+  return decrypt(this.apiKey); // Decrypt API key when accessing
+};
 
 module.exports = mongoose.model("User", userSchema);
