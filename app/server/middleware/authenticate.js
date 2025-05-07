@@ -18,18 +18,26 @@ const authenticate = async (req, res, next) => {
 
   try {
     
-    const user = users.find((u) => {
+    const users = await User.find();
+    let user = null;
+    
+    for (let u of users) {
       try {
         const decrypted = u.getDecryptedApiKey();
-        console.log("🔍 Checking user:", u.email);
-        console.log("🔑 Decrypted key:", decrypted);
-        console.log("📥 Provided key:", apiKey);
-        return decrypted.trim() === apiKey.trim(); // Trim just in case
+        if (decrypted === apiKey) {
+          user = u;
+          break;
+        }
       } catch (e) {
-        console.error("❌ Decryption failed for", u.email, e.message);
-        return false;
+        console.error("Decryption failed for user:", u.email, e.message);
       }
-    });
+    }
+    
+    if (!user) {
+      return res.status(403).json({ error: "User not found or API key is invalid" });
+    }
+    
+    
 
     if (!user) {
       return res.status(403).json({ error: "User not found or API key is invalid" });
