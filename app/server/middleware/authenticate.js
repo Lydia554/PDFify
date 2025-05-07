@@ -1,14 +1,12 @@
 const User = require("../models/User");
 
 const authenticate = async (req, res, next) => {
-  let apiKey;
+  let apiKey = null;
 
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    apiKey = authHeader.split(" ")[1];
-  }
 
-  if (!apiKey) {
+  if (req.headers.authorization?.startsWith("Bearer ")) {
+    apiKey = req.headers.authorization.split(" ")[1];
+  } else if (req.query.apiKey) {
     apiKey = req.query.apiKey;
   }
 
@@ -17,35 +15,39 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    
     const users = await User.find();
-    const user = users.find((u) => {
+
+    let authenticatedUser = null;
+
+    for (const u of users) {
       try {
-        return u.getDecryptedApiKey() === apiKey;
-      } catch (e) {
-        return false;
+        const decryptedKey = u.getDecryptedApiKey();
+        if (decryptedKey === apiKey) {
+          authenticatedUser = u;
+          break;
+        }
+      } catch (err) {
+        console.warn("Failed to decrypt API key for user:", u.email);
       }
-    });
-
-    if (!user) {
-      return res.status(403).json({ error: "User not found or API key is invalid" });
-
     }
 
-    req.user = user;
+    if (!authenticatedUser) {
+      return res.status(403).json({ error: "User not found or API key is invalid" });
+    }
 
+    req.user = authenticatedUser;
     req.userData = {
-      email: user.email,
-      apiKey: user.getDecryptedApiKey(),
-      usageCount: user.usageCount,
-      maxUsage: user.maxUsage,
-      isPremium: user.isPremium,
-      userId: user._id,
+      email: authenticatedUser.email,
+      apiKey: authenticatedUser.getDecryptedApiKey(),
+      usageCount: authenticatedUser.usageCount,
+      maxUsage: authenticatedUser.maxUsage,
+      isPremium: authenticatedUser.isPremium,
+      userId: authenticatedUser._id,
     };
 
     next();
   } catch (error) {
-    console.error("Authentication Error:", error);
+    console.error("Authentication error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
