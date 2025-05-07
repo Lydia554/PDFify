@@ -33,49 +33,43 @@ function decrypt(text) {
   return decrypted.toString("utf8");
 }
 
-// User Schema
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  apiKey: { type: String, required: true },
-  usageCount: { type: Number, default: 0 },
-  maxUsage: { type: Number, default: 30 },
-  isPremium: { type: Boolean, default: false },
+const userSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true },
+    apiKey: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    usageCount: { type: Number, default: 0 },
+    maxUsage: { type: Number, default: 30 },
+    isPremium: { type: Boolean, default: false },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    isActive: { type: Boolean, default: true },
+    resetToken: { type: String },
+    resetTokenExpiry: { type: Date },
+  },
+  { timestamps: true }
+);
+
+// Pre-save hook to ensure apiKey is encrypted only if it's new or doesn't exist
+userSchema.pre("save", async function (next) {
+  try {
+    if (!this.apiKey) {
+      // Generate and encrypt apiKey if it doesn't exist
+      this.apiKey = encrypt(crypto.randomBytes(32).toString("hex"));
+    }
+
+    if (this.isModified("password")) {
+      this.password = await bcrypt.hash(this.password, 10);
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
-// Encrypt API Key before saving
-userSchema.pre('save', async function (next) {
-  if (this.isModified('apiKey')) {
-    this.apiKey = await encryptApiKey(this.apiKey);
-  }
-
-  if (this.isNew) {
-    // Hash the password only when a new user is created
-    this.password = await bcrypt.hash(this.password, 10);
-  }
-  next();
-});
-
-// Helper to encrypt the API Key
-const encryptApiKey = async (apiKey) => {
-  const cipher = crypto.createCipher('aes-256-cbc', process.env.API_KEY_SECRET);
-  let encrypted = cipher.update(apiKey, 'utf8', 'hex');
-  encrypted += cipher.final('hex');
-  return encrypted;
-};
-
-// Helper to decrypt the API Key
+// Method to get the decrypted API key when needed
 userSchema.methods.getDecryptedApiKey = function () {
-  const decipher = crypto.createDecipher('aes-256-cbc', process.env.API_KEY_SECRET);
-  let decrypted = decipher.update(this.apiKey, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
-  return decrypted;
+  return decrypt(this.apiKey);
 };
 
-// Method to update password (re-hash it)
-userSchema.methods.updatePassword = async function (newPassword) {
-  this.password = await bcrypt.hash(newPassword, 10);
-  await this.save();
-};
-
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);
