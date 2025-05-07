@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const dotenv = require("dotenv");
-dotenv.config();
+const dotenv = require("dotenv"); 
+dotenv.config(); 
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
@@ -12,19 +12,23 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
 const IV_LENGTH = 16;
 
 function encrypt(text) {
-  const iv = crypto.randomBytes(IV_LENGTH);
+  const iv = crypto.randomBytes(IV_LENGTH); 
   const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
   let encrypted = cipher.update(text, "utf8");
   encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString("hex") + ":" + encrypted.toString("hex");
+  return iv.toString("hex") + ":" + encrypted.toString("hex"); 
 }
 
 function decrypt(text) {
   const textParts = text.split(":");
-  if (textParts.length !== 2) throw new Error("Invalid encrypted text format");
+  if (textParts.length !== 2) {
+    throw new Error("Invalid encrypted text format");
+  }
 
-  const iv = Buffer.from(textParts[0], "hex");
-  const encryptedText = Buffer.from(textParts[1], "hex");
+  
+
+  const iv = Buffer.from(textParts[0], "hex"); 
+  const encryptedText = Buffer.from(textParts[1], "hex"); 
   const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
   let decrypted = decipher.update(encryptedText);
   decrypted = Buffer.concat([decrypted, decipher.final()]);
@@ -47,36 +51,31 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Method to get decrypted API key
-userSchema.methods.getDecryptedApiKey = function () {
-  return decrypt(this.apiKey);
-};
-
-// Method to change API key manually
-userSchema.methods.setNewApiKey = function (rawApiKey) {
-  this.apiKey = encrypt(rawApiKey);
-};
-
-// Method to change password manually
-userSchema.methods.setNewPassword = async function (newPassword) {
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(newPassword, salt);
-};
 
 userSchema.pre("save", async function (next) {
-  if (this.isNew || this.isModified("password")) {
-    try {
-      const salt = await bcrypt.genSalt(10);
-      this.password = await bcrypt.hash(this.password, salt);
-    } catch (error) {
-      return next(error);
-    }
+  if (this.isModified("apiKey")) {
+    this.apiKey = encrypt(this.apiKey);
   }
   next();
 });
 
 
+userSchema.methods.getDecryptedApiKey = function () {
+  return decrypt(this.apiKey);
+};
 
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
 
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
 
 module.exports = mongoose.model("User", userSchema);
