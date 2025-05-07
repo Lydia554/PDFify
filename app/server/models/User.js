@@ -49,16 +49,16 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// 🔐 Hash password + encrypt apiKey before saving
+
 userSchema.pre("save", async function (next) {
   try {
-    // Decrypt apiKey before checking for modifications to avoid double-encryption
+
     if (this.isModified("apiKey") || this.isNew) {
       if (this.apiKey && this.apiKey.includes(":")) {
         this.apiKey = decrypt(this.apiKey);
       }
 
-      // Encrypt it again after checking
+     
       this.apiKey = encrypt(this.apiKey);
     }
 
@@ -72,7 +72,7 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// ➕ Add method to get decrypted API key
+
 userSchema.methods.getDecryptedApiKey = function () {
   return decrypt(this.apiKey);
 };
