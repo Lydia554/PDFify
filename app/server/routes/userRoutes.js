@@ -4,8 +4,8 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const checkSubscription = require("../middleware/checkSubscription");
 const sendEmail = require("../sendEmail");
+const crypto = require("crypto");
 const router = express.Router();
-
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -24,7 +24,7 @@ router.post("/create-user", async (req, res) => {
       return res.status(400).json({ error: "User already exists" });
     }
 
-    const apiKey = require("crypto").randomBytes(24).toString("hex");
+    const apiKey = crypto.randomBytes(24).toString("hex");
 
     const newUser = new User({
       email,
@@ -194,6 +194,49 @@ router.post("/unsubscribe", authenticate, async (req, res) => {
 router.get("/premium-content", authenticate, checkSubscription, (req, res) => {
   log("Accessed premium content by user:", req.user);
   res.json({ message: "Welcome to the premium content!" });
+});
+
+// New routes for change password and api key management
+
+router.post("/change-password", authenticate, async (req, res) => {
+  const { password } = req.body;
+  const userId = req.user.userId;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    log("Password updated successfully for user:", user);
+
+    res.json({ message: "Password updated successfully!" });
+  } catch (error) {
+    console.error("Error updating password:", error);
+    res.status(500).json({ error: "Error updating password" });
+  }
+});
+
+router.post("/change-api-key", authenticate, async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const newApiKey = crypto.randomBytes(24).toString("hex");
+    user.apiKey = newApiKey;
+    await user.save();
+
+    log("API key updated successfully for user:", user);
+
+    res.json({ message: "API key updated successfully!" });
+  } catch (error) {
+    console.error("Error updating API key:", error);
+    res.status(500).json({ error: "Error updating API key" });
+  }
 });
 
 module.exports = router;
