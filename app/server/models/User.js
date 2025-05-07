@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const crypto = require("crypto");
-const dotenv = require("dotenv"); 
-dotenv.config(); 
+const dotenv = require("dotenv");
+dotenv.config();
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
@@ -12,11 +12,11 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
 const IV_LENGTH = 16;
 
 function encrypt(text) {
-  const iv = crypto.randomBytes(IV_LENGTH); 
+  const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
   let encrypted = cipher.update(text, "utf8");
   encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString("hex") + ":" + encrypted.toString("hex"); 
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
 }
 
 function decrypt(text) {
@@ -25,10 +25,8 @@ function decrypt(text) {
     throw new Error("Invalid encrypted text format");
   }
 
-  
-
-  const iv = Buffer.from(textParts[0], "hex"); 
-  const encryptedText = Buffer.from(textParts[1], "hex"); 
+  const iv = Buffer.from(textParts[0], "hex");
+  const encryptedText = Buffer.from(textParts[1], "hex");
   const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
   let decrypted = decipher.update(encryptedText);
   decrypted = Buffer.concat([decrypted, decipher.final()]);
@@ -51,18 +49,16 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-
+// 🔐 Hash password + encrypt API key before saving
 userSchema.pre("save", async function (next) {
   try {
-  
     if (this.isModified("password")) {
       this.password = await bcrypt.hash(this.password, 10);
     }
 
-  
     if (this.isModified("apiKey")) {
       if (this.apiKey && this.apiKey.includes(":")) {
-        this.apiKey = decrypt(this.apiKey); 
+        this.apiKey = decrypt(this.apiKey);
       }
       this.apiKey = encrypt(this.apiKey);
     }
@@ -73,5 +69,9 @@ userSchema.pre("save", async function (next) {
   }
 });
 
+// ➕ Add method to get decrypted API key
+userSchema.methods.getDecryptedApiKey = function () {
+  return decrypt(this.apiKey);
+};
 
 module.exports = mongoose.model("User", userSchema);
