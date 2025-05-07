@@ -93,6 +93,28 @@ cron.schedule("0 0 1 * *", async () => {
   }
 });
 
+app.get('/debug-users', async (req, res) => {
+  const User = require('./models/User'); // adjust path if needed
+  const users = await User.find();
+  const mapped = users.map(u => {
+    try {
+      return {
+        email: u.email,
+        decryptedApiKey: u.getDecryptedApiKey(),
+      };
+    } catch (e) {
+      return {
+        email: u.email,
+        decryptedApiKey: '❌ Could not decrypt',
+        error: e.message,
+      };
+    }
+  });
+
+  res.json(mapped);
+});
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 PDF API server running on port ${PORT}`));
