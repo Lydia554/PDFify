@@ -18,7 +18,7 @@ const userRoutes = require("./routes/userRoutes");
 const stripeRoutes = require("./routes/stripeRoutes");
 const invoiceRoutes = require("./routes/invoiceRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
-const paymentRoutes = require("./routes/htmlRoutes");
+const htmlRoutes = require("./routes/htmlRoutes");
 
 
 
