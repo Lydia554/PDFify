@@ -257,9 +257,7 @@
     }, null, 2);
   }
 
- 
 
-    
       document.getElementById('json').value = jsonData;
     }
     
@@ -340,6 +338,24 @@
         result.innerText = 'Error: ' + err.message;
       }
     }
+
+    fetch('/api/generate-pdf-from-html', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: jsonData
+  })
+  .then((response) => response.blob())
+  .then((blob) => {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'generated_pdf.pdf';
+    link.click();
+  })
+  .catch((error) => {
+    console.error('Error generating PDF:', error);
+  });
     
     fetch('/get-stripe-key')
       .then(response => response.json())
