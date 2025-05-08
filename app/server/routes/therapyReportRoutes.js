@@ -16,36 +16,94 @@ const log = (message, data = null) => {
 };
 
 function generateTherapyReportHTML(data) {
-  
-  const baseUrl = window.location.origin;
-  const logoUrl = baseUrl + data.logoUrl; 
+  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
   return `
     <html>
       <head>
         <style>
-          body { font-family: 'Arial', sans-serif; padding: 40px; color: #333; background-color: #f9f9f9; }
-          h1 { text-align: center; color: #5e60ce; font-size: 24px; margin-bottom: 30px; }
-          p { line-height: 1.8; font-size: 16px; }
-          .section { margin-bottom: 25px; }
-          .label { font-weight: bold; color: #444; }
-          .content { margin-top: 10px; color: #555; }
-          .section-title { margin-top: 20px; font-size: 18px; font-weight: bold; color: #5e60ce; }
-          .chart-container { width: 100%; height: 400px; margin: 30px 0; }
-          .logo { width: 100px; height: auto; }
-          .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.1; font-size: 50px; color: #5e60ce; font-weight: bold; }
-          .multi-column { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-          .table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          .table th, .table td { padding: 10px; border: 1px solid #ddd; text-align: left; }
-          .table th { background-color: #5e60ce; color: white; }
+          body {
+            font-family: 'Arial', sans-serif;
+            padding: 40px;
+            color: #333;
+            background-color: #f9f9f9;
+            position: relative;
+            box-sizing: border-box;
+          }
+          h1 {
+            text-align: center;
+            color: #5e60ce;
+            font-size: 24px;
+            margin-bottom: 30px;
+          }
+          p {
+            line-height: 1.8;
+            font-size: 16px;
+          }
+          .section {
+            margin-bottom: 25px;
+          }
+          .label {
+            font-weight: bold;
+            color: #444;
+          }
+          .content {
+            margin-top: 10px;
+            color: #555;
+          }
+          .section-title {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #5e60ce;
+          }
+          .chart-container {
+            width: 100%;
+            height: 400px;
+            margin: 30px 0;
+          }
+          .logo {
+            width: 120px;
+            display: block;
+            margin: 0 auto 30px;
+          }
+          .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.1;
+            font-size: 50px;
+            color: #5e60ce;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 0;
+          }
+          .multi-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+          }
+          .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+          }
+          .table th, .table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+          }
+          .table th {
+            background-color: #5e60ce;
+            color: white;
+          }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       </head>
       <body>
         <div class="watermark">Confidential</div>
-        <header>
-          <img src="${logoUrl}" alt="Logo" class="logo">
-        </header>
+        <img src="${logoUrl}" alt="Logo" class="logo" />
         <h1>Therapy Report</h1>
 
         <div class="section">
@@ -81,7 +139,7 @@ function generateTherapyReportHTML(data) {
 
         <script>
           const ctx = document.getElementById('progressChart').getContext('2d');
-          const progressChart = new Chart(ctx, {
+          new Chart(ctx, {
             type: 'bar',
             data: {
               labels: ['Session 1', 'Session 2', 'Session 3', 'Session 4'],
@@ -120,9 +178,12 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
   const pdfPath = path.join(pdfDir, `therapy_report_${Date.now()}.pdf`);
 
   try {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
 
+    const page = await browser.newPage();
     const html = generateTherapyReportHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
 
@@ -156,6 +217,5 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 module.exports = router;

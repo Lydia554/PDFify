@@ -9,13 +9,13 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
+const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
   }
 };
-
 
 function generateRecipeHTML(data) {
   const breakdownChart = data.ingredientBreakdown
@@ -132,10 +132,17 @@ function generateRecipeHTML(data) {
             font-size: 12px;
             color: #aaa;
           }
+
+          .logo {
+            display: block;
+            margin: 0 auto 30px;
+            max-width: 100px;
+          }
         </style>
       </head>
       <body>
         <div class="container">
+          <img src="${logoUrl}" alt="Logo" class="logo" />
           <h1>${data.recipeName}</h1>
 
           <div class="section">
@@ -182,7 +189,7 @@ router.post("/generate-recipe", authenticate, async (req, res) => {
     return res.status(400).json({ error: "Missing recipe data" });
   }
 
-  // ✅ Ensure the 'pdfs' directory exists
+
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) {
     fs.mkdirSync(pdfDir, { recursive: true });

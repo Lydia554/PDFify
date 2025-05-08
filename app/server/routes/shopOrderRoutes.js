@@ -17,7 +17,7 @@ const log = (message, data = null) => {
 };
 
 function generateShopOrderHTML(data) {
-  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/public/images/Logo.png";
+  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
   return `
     <html>
