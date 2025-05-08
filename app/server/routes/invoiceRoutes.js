@@ -15,8 +15,9 @@ const log = (message, data = null) => {
 
 
 function generateInvoiceHTML(data) {
-  const logoPath = path.resolve(__dirname, "../public/images/Logo.png");
-  const logoUrl = `file://${logoPath.replace(/\\/g, "/")}`;
+  const logoUrl = `https://pdf-api.portfolio.lidija-jokic.com/public/images/Logo.png`;
+
+  
   return `
     <html>
       <head>
