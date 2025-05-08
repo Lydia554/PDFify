@@ -23,7 +23,7 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    // 🔍 3. Log all users and their decrypted keys
+    // 🔍 3. Load users and compare decrypted keys
     const users = await User.find();
     console.log("👥 [Auth] Total users:", users.length);
 
@@ -33,7 +33,7 @@ const authenticate = async (req, res, next) => {
         console.log(`🧪 Comparing decrypted key: ${decrypted} === ${apiKey}`);
         return decrypted === apiKey;
       } catch (e) {
-        console.warn("⚠️ [Auth] Decryption failed for a user:", u.email);
+        console.warn("⚠️ [Auth] Decryption failed for user:", u.email);
         return false;
       }
     });
@@ -45,7 +45,13 @@ const authenticate = async (req, res, next) => {
 
     console.log("✅ [Auth] User authenticated:", user.email);
 
-    req.user = user;
+    // ✅ Attach minimal and consistent user data
+    req.user = {
+      userId: user._id,
+      email: user.email,
+    };
+
+    // Optional: include detailed data in case other parts need it
     req.userData = {
       email: user.email,
       apiKey: user.getDecryptedApiKey(),
