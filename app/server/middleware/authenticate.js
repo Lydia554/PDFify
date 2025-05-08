@@ -10,7 +10,6 @@ const authenticate = async (req, res, next) => {
     apiKey = authHeader.split(" ")[1];
   }
 
-
   if (!apiKey) {
     apiKey = req.query.apiKey;
   }
@@ -22,7 +21,6 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    
     const users = await User.find();
     console.log("👥 [Auth] Total users:", users.length);
 
@@ -44,18 +42,16 @@ const authenticate = async (req, res, next) => {
 
     console.log("✅ [Auth] User authenticated:", user.email);
 
-    req.user = {
-      userId: user._id,
-      email: user.email,
-    };
+    // ✅ Attach the full user object to req.user
+    req.user = user;
 
+    // You can also create a sanitized version of the data if needed
     req.userData = {
       email: user.email,
-      apiKey: user.getDecryptedApiKey(),
+      apiKey: user.getDecryptedApiKey(), // if you need this specific value elsewhere
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
-      userId: user._id,
     };
 
     next();
