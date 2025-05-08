@@ -1,15 +1,18 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
-const fs = require("fs");
 const router = express.Router();
+const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
+const User = require("../models/User");
+
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
   }
 };
+
 
 function generateInvoiceHTML(data) {
   return `
@@ -147,8 +150,10 @@ function generateInvoiceHTML(data) {
       </head>
       <body>
         <div class="container">
-          <img src="${process.env.baseUrl}/images/Logo.png" alt="Company Logo" class="logo" />
+       <img src="/images/Logo.png" alt="Company Logo" class="logo" />
+
           <h1>Invoice for ${data.customerName}</h1>
+
           <div class="invoice-header">
             <div class="left">
               <p><strong>Order ID:</strong> ${data.orderId}</p>
@@ -201,7 +206,11 @@ function generateInvoiceHTML(data) {
 
           <div class="chart-container">
             <h2>Breakdown</h2>
-            <img src="https://quickchart.io/chart?c={type:'pie',data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}}}" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
+            <img src="https://quickchart.io/chart?c={
+              type:'pie',
+              data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
+              ]}
+            }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
           </div>
 
           <div class="footer">
@@ -218,39 +227,45 @@ function generateInvoiceHTML(data) {
   `;
 }
 
+
+
 router.post("/generate-invoice", authenticate, async (req, res) => {
   const { data } = req.body;
-  log("Received data for invoice generation:", data);
-
-  if (!data || !data.customerName) {
-    log("Invalid invoice data:", data);
-    return res.status(400).json({ error: "Missing invoice data" });
-  }
-
-  const pdfPath = path.join(__dirname, `../pdfs/invoice_${Date.now()}.pdf`);
 
   try {
-    log("Launching Puppeteer...");
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user.usageCount >= user.maxUsage) {
+      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for unlimited access." });
+    }
+
+    user.usageCount += 1;
+    await user.save();
+
+  
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
+    const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
+
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    log("Puppeteer launched successfully.");
 
     const page = await browser.newPage();
-    log("New page created.");
 
     const html = generateInvoiceHTML(data);
-    log("Generated HTML for invoice:", html);
-
     await page.setContent(html, { waitUntil: "networkidle0" });
-    log("HTML content set on the page.");
-
     await page.pdf({ path: pdfPath, format: "A4" });
-    log("PDF generated successfully at:", pdfPath);
-
     await browser.close();
-    log("Browser closed.");
 
     res.download(pdfPath, (err) => {
       if (err) {
@@ -258,10 +273,12 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       }
       fs.unlinkSync(pdfPath); 
     });
+
   } catch (error) {
-    console.error("Invoice PDF generation failed:", error);
+    console.error("Error during PDF generation:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
