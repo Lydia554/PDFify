@@ -15,7 +15,8 @@ const log = (message, data = null) => {
 
 
 function generateInvoiceHTML(data) {
-  const logoUrl = `https://pdf-api.portfolio.lidija-jokic.com/public/images/Logo.png`;
+  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/public/images/Logo.png";
+
 
   
   return `
