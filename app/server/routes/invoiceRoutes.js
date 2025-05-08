@@ -240,25 +240,29 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     }
 
     if (user.usageCount >= user.maxUsage) {
-      return res.status(403).json({
-        error: "Monthly usage limit reached. Upgrade to premium for unlimited access.",
-      });
+      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for unlimited access." });
     }
 
     user.usageCount += 1;
     await user.save();
 
-    const pdfPath = path.join(__dirname, `../pdfs/Invoice_${data.orderId}.pdf`);
+  
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
 
-    // ✅ FIX: Add necessary launch args to Puppeteer
+    const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
+
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
-    const html = generateInvoiceHTML(data);
 
+    const html = generateInvoiceHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
@@ -267,12 +271,14 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       if (err) {
         console.error("Error sending file:", err);
       }
-      fs.unlinkSync(pdfPath); // Delete the file after sending
+      fs.unlinkSync(pdfPath); 
     });
+
   } catch (error) {
     console.error("Error during PDF generation:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
