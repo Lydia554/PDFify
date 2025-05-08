@@ -112,7 +112,6 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
     return res.status(400).json({ error: "Missing report data" });
   }
 
-  // ✅ Ensure the 'pdfs' directory exists
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) {
     fs.mkdirSync(pdfDir, { recursive: true });

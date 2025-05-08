@@ -4,12 +4,11 @@ const path = require('path');
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
-
+const User = require("../models/User"); 
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
-
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -17,8 +16,9 @@ const log = (message, data = null) => {
   }
 };
 
-
 function generateShopOrderHTML(data) {
+  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/public/images/Logo.png";
+
   return `
     <html>
       <head>
@@ -30,6 +30,13 @@ function generateShopOrderHTML(data) {
             background-color: #f9f9f9;
             margin: 0;
             box-sizing: border-box;
+          }
+          img.logo {
+            width: 150px;
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
           }
           h1 {
             text-align: center;
@@ -91,6 +98,7 @@ function generateShopOrderHTML(data) {
         </style>
       </head>
       <body>
+        <img src="${logoUrl}" alt="Company Logo" class="logo" />
         <h1>Shop Order: ${data.shopName}</h1>
         
         <div class="section">
@@ -122,6 +130,7 @@ function generateShopOrderHTML(data) {
     </html>
   `;
 }
+
 router.post("/generate-shop-order", authenticate, async (req, res) => {
   const { data } = req.body;
   log("Received data for shop order generation:", data);
@@ -131,7 +140,6 @@ router.post("/generate-shop-order", authenticate, async (req, res) => {
     return res.status(400).json({ error: "Missing shop order data" });
   }
 
-  // ✅ Ensure the 'pdfs' directory exists
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) {
     fs.mkdirSync(pdfDir, { recursive: true });
@@ -162,15 +170,18 @@ router.post("/generate-shop-order", authenticate, async (req, res) => {
     await browser.close();
     log("Browser closed.");
 
-    req.user.usageCount++;
-    await req.user.save();
-    log("User usage count updated:", req.user.usageCount);
+    const user = await User.findById(req.user.userId);
+    if (user) {
+      user.usageCount += 1;
+      await user.save();
+      log("User usage count updated:", user.usageCount);
+    }
 
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
       }
-      fs.unlinkSync(pdfPath); 
+      fs.unlinkSync(pdfPath);
     });
   } catch (error) {
     console.error("Shop order PDF generation failed:", error);
