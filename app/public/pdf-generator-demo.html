@@ -213,46 +213,47 @@
     }`;
 
   } else if (endpoint === "generate-pdf-from-html") {
-    jsonData = JSON.stringify({
-      html: `
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              h1 { color: #333; text-align: center; }
-              p { line-height: 1.6; }
-              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f4f7fb; }
-            </style>
-          </head>
-          <body>
-            <h1>Sample Raw HTML</h1>
-            <p>This is a sample PDF generated from raw HTML.</p>
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th>Quantity</th>
-                  <th>Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Sample Item 1</td>
-                  <td>2</td>
-                  <td>$10.00</td>
-                </tr>
-                <tr>
-                  <td>Sample Item 2</td>
-                  <td>1</td>
-                  <td>$5.00</td>
-                </tr>
-              </tbody>
-            </table>
-          </body>
-        </html>
-      `
+  jsonData = JSON.stringify({
+    html: `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { color: #333; text-align: center; }
+            p { line-height: 1.6; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f4f7fb; }
+          </style>
+        </head>
+        <body>
+          <h1>Sample Raw HTML</h1>
+          <p>This is a sample PDF generated from raw HTML.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sample Item 1</td>
+                <td>2</td>
+                <td>$10.00</td>
+              </tr>
+              <tr>
+                <td>Sample Item 2</td>
+                <td>1</td>
+                <td>$5.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+
     }, null, 2);
   }
 
