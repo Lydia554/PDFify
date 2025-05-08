@@ -15,6 +15,8 @@ const log = (message, data = null) => {
 
 
 function generateInvoiceHTML(data) {
+  const logoPath = path.resolve(__dirname, "../public/images/Logo.png");
+  const logoUrl = `file://${logoPath.replace(/\\/g, "/")}`;
   return `
     <html>
       <head>
@@ -150,7 +152,8 @@ function generateInvoiceHTML(data) {
       </head>
       <body>
         <div class="container">
-       <img src="../public/images/Logo.png" alt="Company Logo" class="logo" />
+       <img src="${logoUrl}" alt="Company Logo" class="logo" />
+
 
           <h1>Invoice for ${data.customerName}</h1>
 
