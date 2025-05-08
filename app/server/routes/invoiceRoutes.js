@@ -150,7 +150,7 @@ function generateInvoiceHTML(data) {
       </head>
       <body>
         <div class="container">
-       <img src="public/images/Logo.png" alt="Company Logo" class="logo" />
+       <img src="/public/images/Logo.png" alt="Company Logo" class="logo" />
 
           <h1>Invoice for ${data.customerName}</h1>
 
