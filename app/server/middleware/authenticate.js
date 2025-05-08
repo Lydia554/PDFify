@@ -10,7 +10,6 @@ const authenticate = async (req, res, next) => {
     apiKey = authHeader.split(" ")[1];
   }
 
-
   if (!apiKey) {
     apiKey = req.query.apiKey;
   }
@@ -22,7 +21,6 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    
     const users = await User.find();
     console.log("👥 [Auth] Total users:", users.length);
 
@@ -44,19 +42,8 @@ const authenticate = async (req, res, next) => {
 
     console.log("✅ [Auth] User authenticated:", user.email);
 
-    req.user = {
-      userId: user._id,
-      email: user.email,
-    };
-
-    req.userData = {
-      email: user.email,
-      apiKey: user.getDecryptedApiKey(),
-      usageCount: user.usageCount,
-      maxUsage: user.maxUsage,
-      isPremium: user.isPremium,
-      userId: user._id,
-    };
+    // ✅ Attach the full user object to req.user
+    req.user = user;
 
     next();
   } catch (error) {
