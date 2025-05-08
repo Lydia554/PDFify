@@ -54,13 +54,14 @@ router.post("/create-user", async (req, res) => {
 
 router.get("/usage", authenticate, (req, res) => {
   const user = req.user;
+
   if (!user) {
     return res.status(404).json({ error: "User not found" });
   }
 
   res.json({
     email: user.email,
-    apiKey: user.getDecryptedApiKey(),
+    apiKey: user.apiKey,
     usageCount: user.usageCount,
     maxUsage: user.maxUsage,
     isPremium: user.isPremium,
