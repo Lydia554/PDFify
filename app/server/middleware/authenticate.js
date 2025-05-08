@@ -3,7 +3,6 @@ const User = require("../models/User");
 const authenticate = async (req, res, next) => {
   let apiKey;
 
-  // 🔍 1. Check Authorization header
   const authHeader = req.headers.authorization;
   console.log("🔐 [Auth] Authorization Header:", authHeader);
 
@@ -11,7 +10,7 @@ const authenticate = async (req, res, next) => {
     apiKey = authHeader.split(" ")[1];
   }
 
-  // 🔍 2. Fallback to query param
+
   if (!apiKey) {
     apiKey = req.query.apiKey;
   }
@@ -23,7 +22,7 @@ const authenticate = async (req, res, next) => {
   }
 
   try {
-    // 🔍 3. Load users and compare decrypted keys
+    
     const users = await User.find();
     console.log("👥 [Auth] Total users:", users.length);
 
@@ -45,13 +44,11 @@ const authenticate = async (req, res, next) => {
 
     console.log("✅ [Auth] User authenticated:", user.email);
 
-    // ✅ Attach minimal and consistent user data
     req.user = {
       userId: user._id,
       email: user.email,
     };
 
-    // Optional: include detailed data in case other parts need it
     req.userData = {
       email: user.email,
       apiKey: user.getDecryptedApiKey(),
