@@ -173,8 +173,6 @@ function generateRecipeHTML(data) {
   `;
 }
 
-
-
 router.post("/generate-recipe", authenticate, async (req, res) => {
   const { data } = req.body;
   log("Received data for recipe generation:", data);
@@ -184,7 +182,13 @@ router.post("/generate-recipe", authenticate, async (req, res) => {
     return res.status(400).json({ error: "Missing recipe data" });
   }
 
-  const pdfPath = path.join(__dirname, `../pdfs/recipe_${Date.now()}.pdf`);
+  // ✅ Ensure the 'pdfs' directory exists
+  const pdfDir = path.join(__dirname, "../pdfs");
+  if (!fs.existsSync(pdfDir)) {
+    fs.mkdirSync(pdfDir, { recursive: true });
+  }
+
+  const pdfPath = path.join(pdfDir, `recipe_${Date.now()}.pdf`);
 
   try {
     log("Launching Puppeteer...");

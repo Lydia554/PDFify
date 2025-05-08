@@ -122,8 +122,6 @@ function generateShopOrderHTML(data) {
     </html>
   `;
 }
-
-
 router.post("/generate-shop-order", authenticate, async (req, res) => {
   const { data } = req.body;
   log("Received data for shop order generation:", data);
@@ -133,7 +131,13 @@ router.post("/generate-shop-order", authenticate, async (req, res) => {
     return res.status(400).json({ error: "Missing shop order data" });
   }
 
-  const pdfPath = path.join(__dirname, `../pdfs/shop_order_${Date.now()}.pdf`);
+  // ✅ Ensure the 'pdfs' directory exists
+  const pdfDir = path.join(__dirname, "../pdfs");
+  if (!fs.existsSync(pdfDir)) {
+    fs.mkdirSync(pdfDir, { recursive: true });
+  }
+
+  const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
 
   try {
     log("Launching Puppeteer...");

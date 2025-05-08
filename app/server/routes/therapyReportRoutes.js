@@ -105,7 +105,6 @@ function generateTherapyReportHTML(data) {
   `;
 }
 
-
 router.post("/generate-therapy-report", authenticate, async (req, res) => {
   const { data } = req.body;
 
@@ -113,7 +112,13 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
     return res.status(400).json({ error: "Missing report data" });
   }
 
-  const pdfPath = path.join(__dirname, `../pdfs/therapy_report_${Date.now()}.pdf`);
+  // ✅ Ensure the 'pdfs' directory exists
+  const pdfDir = path.join(__dirname, "../pdfs");
+  if (!fs.existsSync(pdfDir)) {
+    fs.mkdirSync(pdfDir, { recursive: true });
+  }
+
+  const pdfPath = path.join(pdfDir, `therapy_report_${Date.now()}.pdf`);
 
   try {
     const browser = await puppeteer.launch({ headless: true });
@@ -152,5 +157,6 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
