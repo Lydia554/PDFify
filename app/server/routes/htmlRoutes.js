@@ -44,7 +44,7 @@ function wrapHtmlWithBranding(htmlContent) {
 }
 
 
-router.post('/generate-pdf-from-html', async (req, res) => {
+router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
   const { html } = req.body;
 
   if (!html) {
