@@ -6,6 +6,7 @@ const dotenv = require("dotenv");
 const path = require("path");
 const cron = require("node-cron");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 
 dotenv.config();
 
@@ -45,7 +46,8 @@ app.use(session({
   }),
   cookie: {
     maxAge: 2 * 60 * 60 * 1000, 
-    
+    httpOnly: true,
+    secure: false, 
   },
 }));
 
