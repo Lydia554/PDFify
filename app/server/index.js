@@ -70,7 +70,7 @@ app.get("/pdf-generator-demo", (req, res) => {
 
 
 app.get("/shopify-guide", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/shopify-guide.html"));
+  res.sendFile(path.join(__dirname, "../public/api-guide.html"));
 });
 app.get('/success.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'success.html'));
