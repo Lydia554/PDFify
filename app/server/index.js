@@ -3,12 +3,14 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
-dotenv.config();
 const path = require("path");
 const cron = require("node-cron");
+const session = require("express-session");
+
+dotenv.config();
+
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
-
 
 const recipeRoutes = require("./routes/recipeRoutes");
 const shopOrderRoutes = require("./routes/shopOrderRoutes");
@@ -21,15 +23,28 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const htmlRoutes = require("./routes/htmlRoutes");
 
 
+const app = express();
+
 
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch((error) => console.error('MongoDB connection error:', error));
 
-const app = express();
+
 app.use(cors());
 app.use(bodyParser.json());
 
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'fallbackSecretKey',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24, 
+    httpOnly: true,
+    secure: false, 
+  },
+}));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
@@ -42,52 +57,42 @@ app.use("/api/stripe/webhook", stripeRoutes);
 app.use("/api/stripe", paymentRoutes);
 
 
-
-
-
 app.use(express.static(path.join(__dirname, "../public")));
-
 
 app.get("/user-dashboard", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "../public/user-dashboard.html"));
 });
 
-
 app.get("/create-user-page", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/user-creation.html"));
 });
 
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/landing.html"));
 });
-
-
-
 
 app.get("/pdf-generator-demo", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html"));
 });
 
-
 app.get("/api-guide", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/api-guide.html"));
 });
-app.get('/success.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'success.html'));
+
+app.get("/success.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "success.html"));
 });
 
-app.get('/cancel.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'cancel.html'));
+app.get("/cancel.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "cancel.html"));
 });
 
-
-app.get('/get-stripe-key', (req, res) => {
+app.get("/get-stripe-key", (req, res) => {
   if (!process.env.STRIPE_PUBLISHABLE_KEY) {
     return res.status(500).json({ error: "Stripe publishable key not set" });
   }
   res.json({ stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
 });
-
 
 cron.schedule("0 0 1 * *", async () => {
   try {
@@ -97,8 +102,6 @@ cron.schedule("0 0 1 * *", async () => {
     console.error("Error resetting usage counts:", error);
   }
 });
-
-
 
 
 const PORT = process.env.PORT || 3000;
