@@ -1,3 +1,9 @@
+<!-- CHANGES MADE:
+- Removed all mentions of Shopify
+- Reworded sections to be generic (e.g., "your store data" instead of "Shopify data")
+- Removed the "Shopify Guide" link in nav
+-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,7 +11,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API Guide | PDF Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
   <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
@@ -18,7 +23,7 @@
       <nav class="space-x-4">
         <a href="/" class="text-gray-600 hover:text-purple-600">Home</a>
         <a href="#" id="userDashboardLink" class="text-gray-600 hover:text-purple-600">Dashboard</a>
-        <a href="/shopify-guide.html" class="text-purple-700 font-semibold">API Guide</a>
+        <a href="#" class="text-purple-700 font-semibold">API Guide</a>
         <a href="/pdf-generator-demo" class="text-gray-600 hover:text-purple-600">📄 PDF Generator Demo</a>
       </nav>
     </div>
@@ -27,14 +32,14 @@
   <main class="max-w-4xl mx-auto px-6 py-12">
     <h2 class="text-3xl font-bold mb-4">API Integration Guide</h2>
     <p class="text-lg mb-6">
-      Learn how to use our PDF Generator with your Shopify store. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs for your products, orders, and customers.
+      Learn how to use our PDF Generator API. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs from your data.
     </p>
 
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">🛍️ What Can You Do With It?</h3>
       <ul class="list-disc pl-6 text-base space-y-1">
-        <li>Generate product information sheets directly from your store data</li>
-        <li>Create downloadable invoices for Shopify orders</li>
+        <li>Generate product information sheets directly from your data</li>
+        <li>Create downloadable invoices for orders</li>
         <li>Print shipping labels or packing slips</li>
         <li>Design custom PDFs for gift cards or marketing inserts</li>
       </ul>
@@ -43,13 +48,12 @@
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">⚙️ How It Works</h3>
       <p class="text-lg mb-4">
-        Follow these simple steps to generate your PDFs directly from Shopify data or raw HTML content:
+        Follow these simple steps to generate your PDFs using structured JSON data or raw HTML content:
       </p>
       <ol class="list-decimal pl-6 text-base space-y-4">
         <li>
-          <strong>Step 1: Export Shopify Data (JSON) or Raw HTML</strong>
-          <p class="text-base">You can either export your Shopify data in JSON format (containing product details, orders, customer data, etc.) or provide raw HTML content that you'd like to convert into a PDF.</p>
-          <p class="text-base">If you choose raw HTML, simply create or modify the HTML document with the content you want to include in your PDF. This could be a customized invoice, product sheet, or any other document designed in HTML.</p>
+          <strong>Step 1: Prepare Your JSON or Raw HTML</strong>
+          <p class="text-base">You can either provide structured JSON data (such as product details, orders, customer data, etc.) or create raw HTML content that you'd like to convert into a PDF.</p>
         </li>
         <li>
           <strong>Step 2: Upload Data or HTML to PDF Generator</strong>
@@ -61,19 +65,19 @@
         </li>
         <li>
           <strong>Step 4: Download Your PDF</strong>
-          <p class="text-base">Once the PDF is generated, click 'Generate' and download your PDF. Whether you're using Shopify data or raw HTML, the result will be a ready-to-use PDF document that you can print, email, or store digitally.</p>
+          <p class="text-base">Once the PDF is generated, click 'Generate' and download your PDF. Whether you're using structured data or raw HTML, the result will be a ready-to-use PDF document that you can print, email, or store digitally.</p>
         </li>
       </ol>
     </section>
+
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">📁 Example PDF Downloads</h3>
-      <p class="mb-2">Preview some example PDFs generated from Shopify data:</p>
+      <p class="mb-2">Preview some example PDFs:</p>
       <ul class="list-disc pl-6">
         <li><a href="/demo/Shop Order.pdf" class="text-blue-600 hover:underline">Sample Shop Order Invoice</a></li>
         <img src="/demo/Shop-Order.jpg" alt="Sample Invoice Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
       </ul>
     </section>
-    
 
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">📄 Recipe PDF</h3>
@@ -83,7 +87,6 @@
         <img src="/demo/Recipe-Large.jpg" alt="Recipe PDF Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
       </ul>
     </section>
-    
 
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">📄 Therapy Report PDF</h3>
@@ -95,20 +98,18 @@
       </ul>
     </section>
 
-
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">📄 Raw Html</h3>
       <p class="mb-2">Preview a Raw Html PDF generated from your data:</p>
       <ul class="list-disc pl-6">
         <li><a href="/demo/Raw HTML.pdf" class="text-blue-600 hover:underline">Sample Raw Html PDF</a></li>
-        <img src="/demo/RawHTML-Large-1.jpg" alt="Therapy Report PDF Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
-        
+        <img src="/demo/RawHTML-Large-1.jpg" alt="Raw HTML PDF Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
       </ul>
     </section>
 
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">💻 For Developers</h3>
-      <p class="mb-4">Want to automate PDF generation using Shopify order or product data? You can use our API with custom scripts or Shopify webhooks.</p>
+      <p class="mb-4">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>
       <pre class="bg-gray-100 p-4 rounded-md text-sm overflow-auto">
 curl -X POST https://your-app.com/api/pdf \
   -H "Authorization: Bearer &lt;your-token&gt;" \
@@ -125,7 +126,7 @@ curl -X POST https://your-app.com/api/pdf \
 
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">📹 Coming Soon: Video Demo</h3>
-      <p class="text-base">We’re working on a short tutorial video showing how to go from Shopify to PDF in under 3 minutes. Stay tuned!</p>
+      <p class="text-base">We’re working on a short tutorial video showing how to generate PDFs in under 3 minutes. Stay tuned!</p>
     </section>
   </main>
 
@@ -135,13 +136,7 @@ curl -X POST https://your-app.com/api/pdf \
     </div>
   </footer>
 
-</body>
-</html>
-
-
-
 <script>
-
 document.querySelectorAll("nav a").forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault(); 
@@ -149,51 +144,31 @@ document.querySelectorAll("nav a").forEach((link) => {
 
     const loadingOverlay = document.getElementById("loadingOverlay");
     loadingOverlay.style.display = "flex"; 
-    console.log("Spinner shown");
 
     if (!targetUrl) {
-      console.error("Invalid target URL");
       loadingOverlay.style.display = "none"; 
       return;
     }
 
- 
     setTimeout(() => {
-      console.log("Navigating to:", targetUrl);
       window.location.href = targetUrl; 
     }, 500); 
   });
 });
 
-
 window.addEventListener("load", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   loadingOverlay.style.display = "none"; 
-  console.log("Spinner hidden on page load");
 });
 
-async function sendRequest() {
-  showProgressBar(); 
+const apiKey = localStorage.getItem("apiKey");
+const userDashboardLink = document.getElementById("userDashboardLink");
 
-  try {
-   
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    alert("Request completed!");
-  } catch (error) {
-    console.error("Error:", error);
-  } finally {
-    setTimeout(hideProgressBar, 500); 
-  }
+if (apiKey) {
+  userDashboardLink.href = `/user-dashboard?apiKey=${apiKey}`;
+} else {
+  userDashboardLink.href = "/login.html"; 
 }
- 
-  const apiKey = localStorage.getItem("apiKey");
-  const userDashboardLink = document.getElementById("userDashboardLink");
-
-  if (apiKey) {
-    userDashboardLink.href = `/user-dashboard?apiKey=${apiKey}`;
-  } else {
-    userDashboardLink.href = "/login.html"; 
-  }
 </script>
 
 <style>
@@ -203,4 +178,5 @@ async function sendRequest() {
     }
   }
 </style>
-
+</body>
+</html>
