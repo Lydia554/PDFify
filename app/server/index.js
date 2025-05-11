@@ -36,15 +36,20 @@ app.use(bodyParser.json());
 
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'fallbackSecretKey',
+  secret: process.env.SESSION_SECRET || "fallbackSecretKey",
   resave: false,
   saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    ttl: 2 * 60 * 60, 
+  }),
   cookie: {
-    maxAge: 1000 * 60 * 60 * 24, 
+    maxAge: 2 * 60 * 60 * 1000, 
     httpOnly: true,
     secure: false, 
   },
 }));
+
 
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
