@@ -17,19 +17,14 @@ router.post("/create-checkout-session", async (req, res) => {
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
+      customer_email: email,
       line_items: [
         {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: 'Premium Subscription',
-            },
-            unit_amount: plan === "premium" ? 1000 : 0, 
-          },
+          price: 'price_1RNxpNJqMBxMksyPrXgxxsuE',
           quantity: 1,
         },
       ],
-      mode: 'payment',
+      mode: 'subscription',
       success_url: `${process.env.SUCCESS_URL}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.CANCEL_URL}`,
     });
@@ -41,6 +36,7 @@ router.post("/create-checkout-session", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 router.post("/cancel-subscription", authenticate, async (req, res) => {
   const userId = req.user.userId;

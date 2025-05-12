@@ -152,49 +152,25 @@ router.delete("/delete", authenticate, async (req, res) => {
   }
 });
 
-router.post("/subscribe", authenticate, async (req, res) => {
-  const userId = req.user.userId;
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    user.isPremium = true;
-    user.maxUsage = 1000;
-    await user.save();
-
-    log("Subscription upgraded to premium for user:", user);
-
-    res.json({ message: "Subscription upgraded to premium!" });
-  } catch (error) {
-    console.error("Error upgrading subscription:", error);
-    res.status(500).json({ error: "Error upgrading subscription" });
-  }
-});
 
 router.post("/unsubscribe", authenticate, async (req, res) => {
   const userId = req.user.userId;
 
   try {
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user || !user.stripeSubscriptionId) {
+      return res.status(404).json({ error: "User or subscription not found" });
+    }
 
-    user.isPremium = false;
-    user.maxUsage = 30;
-    await user.save();
+    await stripe.subscriptions.update(user.stripeSubscriptionId, {
+      cancel_at_period_end: true, 
+    });
 
-    log("Subscription downgraded to free for user:", user);
-
-    res.json({ message: "Subscription downgraded to free!" });
+    res.json({ message: "Subscription cancellation initiated. You'll stay premium until the end of the billing period." });
   } catch (error) {
-    console.error("Error downgrading subscription:", error);
-    res.status(500).json({ error: "Error downgrading subscription" });
+    console.error("Error cancelling Stripe subscription:", error);
+    res.status(500).json({ error: "Failed to cancel subscription." });
   }
-});
-
-router.get("/premium-content", authenticate, checkSubscription, (req, res) => {
-  log("Accessed premium content by user:", req.user);
-  res.json({ message: "Welcome to the premium content!" });
 });
 
 module.exports = router;

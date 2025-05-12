@@ -29,6 +29,7 @@ router.post(
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    // 🔔 Handle checkout session completed
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
@@ -36,21 +37,17 @@ router.post(
 
       try {
         const customerEmail = session.customer_details.email;
-
-        
         let user = await User.findOne({ email: customerEmail });
 
         if (!user) {
           console.warn("User not found for email:", customerEmail);
 
-         
           await sendEmail({
-            to: "admin@example.com", 
+            to: "admin@example.com",
             subject: "User Not Found for Stripe Subscription",
             text: `A Stripe subscription was completed for email: ${customerEmail}, but no matching user was found in the database.`,
           });
 
-          
           const apiKey = require("crypto").randomBytes(24).toString("hex");
           user = new User({
             email: customerEmail,
@@ -65,26 +62,20 @@ router.post(
           log("New user created for Stripe subscription:", user);
         }
 
-    
         user.stripeSubscriptionId = session.subscription;
         user.isPremium = true;
-        user.maxUsage = 1000; 
+        user.maxUsage = 1000;
         await user.save();
 
         log("User subscription updated successfully:", user);
 
-       
         const decryptedApiKey = user.getDecryptedApiKey();
         log("Decrypted API Key for user:", decryptedApiKey);
 
-     
-        const subject = "Payment Successful - Thank You!";
-        const text = `Hi ${user.email},\n\nThank you for your payment! Your subscription is now active.\n\nBest regards,\nThe PDF Generator Team`;
-
         await sendEmail({
           to: customerEmail,
-          subject,
-          text,
+          subject: "Payment Successful - Thank You!",
+          text: `Hi ${user.email},\n\nThank you for your payment! Your subscription is now active.\n\nBest regards,\nThe PDF Generator Team`,
         });
 
         log("Payment success email sent to:", customerEmail);
@@ -93,8 +84,43 @@ router.post(
       }
     }
 
+    // 🔔 Handle subscription cancellation
+    if (event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object;
+      const customerId = subscription.customer;
+
+      try {
+        const customer = await stripe.customers.retrieve(customerId);
+        const customerEmail = customer.email;
+
+        const user = await User.findOne({ email: customerEmail });
+        if (!user) {
+          console.warn("User not found for cancelled subscription:", customerEmail);
+          return res.json({ received: true });
+        }
+
+        user.isPremium = false;
+        user.maxUsage = 30;
+        user.stripeSubscriptionId = null;
+        await user.save();
+
+        log("User subscription cancelled and downgraded:", user);
+
+        await sendEmail({
+          to: customerEmail,
+          subject: "Subscription Cancelled",
+          text: `Hi ${user.email},\n\nYour subscription has been cancelled. You now have access to the free plan.\n\nBest regards,\nThe PDF Generator Team`,
+        });
+
+        log("Cancellation email sent to:", customerEmail);
+      } catch (error) {
+        console.error("Error handling subscription cancellation:", error);
+      }
+    }
+
     res.json({ received: true });
   }
 );
+
 
 module.exports = router;
