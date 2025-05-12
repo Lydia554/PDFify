@@ -37,53 +37,72 @@
       const toggleButton = document.getElementById("togglePassword");
       if (passwordField.type === "password") {
         passwordField.type = "text";
-        toggleButton.textContent = "🙈"; 
+        toggleButton.textContent = "🙈";
       } else {
         passwordField.type = "password";
-        toggleButton.textContent = "👁️"; 
+        toggleButton.textContent = "👁️";
       }
     });
-
+  
     document.getElementById("loginButton").addEventListener("click", () => {
       window.location.href = "/login.html";
     });
-
+  
     document.getElementById("createUserForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const result = document.getElementById("result");
-
+  
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+ 
+      const passwordRegex = /^(?=.*[0-9]).{8,}$/;
+  
       if (!email || !password) {
         result.innerText = "Please enter both email and password.";
-        result.className = "result error"; 
+        result.className = "result error";
         result.style.display = "block";
         return;
       }
-
-     try {
-  const response = await axios.post(`/api/user/create-user`, { email, password });
-  result.innerText = `🎉 Success: ${response.data.message}`;
-  result.className = "result success"; 
-  result.style.display = "block";
-
-
+  
+      if (!emailRegex.test(email)) {
+        result.innerText = "Invalid email format.";
+        result.className = "result error";
+        result.style.display = "block";
+        return;
+      }
+  
+      if (!passwordRegex.test(password)) {
+        result.innerText = "Password must be at least 8 characters long and include at least one number.";
+        result.className = "result error";
+        result.style.display = "block";
+        return;
+      }
+  
+      try {
+        const response = await axios.post(`/api/user/create-user`, { email, password });
+        result.innerText = `🎉 Success: ${response.data.message}`;
+        result.className = "result success";
+        result.style.display = "block";
+  
         setTimeout(() => {
           window.location.href = response.data.redirect;
         }, 2000);
       } catch (error) {
         result.innerText = `❌ Error: ${error.response?.data?.error || "Something went wrong"}`;
-        result.className = "result error"; 
+        result.className = "result error";
         result.style.display = "block";
       }
     });
-
+  
     window.addEventListener("load", () => {
       const loadingOverlay = document.getElementById("loadingOverlay");
-      loadingOverlay.style.display = "none"; 
+      loadingOverlay.style.display = "none";
       console.log("Spinner hidden on page load");
     });
   </script>
+  
 
   <style>
     body {
