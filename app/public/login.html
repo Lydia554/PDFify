@@ -42,7 +42,6 @@
   </div>
 
   <script>
-    // Toggle password visibility
     document.getElementById("togglePassword").addEventListener("click", () => {
       const passwordField = document.getElementById("password");
       const toggleButton = document.getElementById("togglePassword");
@@ -54,34 +53,57 @@
         toggleButton.textContent = "👁️"; 
       }
     });
-
-    // Login functionality
+  
     document.getElementById("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const result = document.getElementById("result");
-
+  
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+     
+      const passwordRegex = /^(?=.*[0-9]).{8,}$/;
+  
       if (!email || !password) {
         result.innerText = "Please enter both email and password.";
+        result.className = "result error";
+        result.style.display = "block";
         return;
       }
-
+  
+      if (!emailRegex.test(email)) {
+        result.innerText = "Invalid email format.";
+        result.className = "result error";
+        result.style.display = "block";
+        return;
+      }
+  
+      if (!passwordRegex.test(password)) {
+        result.innerText = "Password must be at least 8 characters long and include at least one number.";
+        result.className = "result error";
+        result.style.display = "block";
+        return;
+      }
+  
       try {
         const response = await axios.post(`/api/auth/login`, { email, password });
-
-  if (response.data.apiKey) {
-    localStorage.setItem("apiKey", response.data.apiKey);
-    window.location.href = "/pdf-generator-demo";
-  } else {
-    result.innerText = `Error: ${response.data.error}`;
-  }
-} catch (error) {
-  result.innerText = "An unexpected error occurred. Please try again.";
-}
-
+  
+        if (response.data.apiKey) {
+          localStorage.setItem("apiKey", response.data.apiKey);
+          window.location.href = "/pdf-generator-demo";
+        } else {
+          result.innerText = `Error: ${response.data.error}`;
+          result.className = "result error";
+          result.style.display = "block";
+        }
+      } catch (error) {
+        result.innerText = "An unexpected error occurred. Please try again.";
+        result.className = "result error";
+        result.style.display = "block";
+      }
     });
   </script>
+  
 
   <style>
     body {
