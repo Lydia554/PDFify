@@ -133,7 +133,7 @@ document.getElementById("downgradeSubscriptionButton").addEventListener("click",
   }
 
   try {
-    const response = await axios.post(`/api/stripe/cancel-subscription`,
+    const response = await axios.post(`/api/stripe/unsubscribe`,
  {}, {
       headers: { Authorization: `Bearer ${apiKey}` },
     });
