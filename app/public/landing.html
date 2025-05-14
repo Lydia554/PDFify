@@ -45,12 +45,19 @@
     </div>
   </section>
 
+  <!-- Toggle Tabs -->
+<div class="flex justify-center mt-8">
+  <button id="userModeBtn" class="px-4 py-2 bg-blue-600 text-white rounded-l focus:outline-none">🧑 For Everyone</button>
+  <button id="devModeBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r focus:outline-none">💻 For Developers</button>
+</div>
+
+
 
   <section class="py-16">
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
-      <div class="max-w-3xl mx-auto text-sm font-mono overflow-x-auto">
+    <section id="devCodeSection" class="py-16 hidden">
+      <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
         <pre><code>
-  fetch("https://your-api.com/api/generate-pdf", {
+  fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -157,6 +164,25 @@ document.getElementById("signUpButton").addEventListener("click", (event) => {
     console.log("Spinner hidden on page load");
   });
 
+  const userModeBtn = document.getElementById("userModeBtn");
+const devModeBtn = document.getElementById("devModeBtn");
+const devCodeSection = document.getElementById("devCodeSection");
+
+userModeBtn.addEventListener("click", () => {
+  devCodeSection.classList.add("hidden");
+  userModeBtn.classList.add("bg-blue-600", "text-white");
+  userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+  devModeBtn.classList.remove("bg-blue-600", "text-white");
+  devModeBtn.classList.add("bg-gray-200", "text-gray-800");
+});
+
+devModeBtn.addEventListener("click", () => {
+  devCodeSection.classList.remove("hidden");
+  devModeBtn.classList.add("bg-blue-600", "text-white");
+  devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+  userModeBtn.classList.remove("bg-blue-600", "text-white");
+  userModeBtn.classList.add("bg-gray-200", "text-gray-800");
+});
 
 
   
