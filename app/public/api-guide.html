@@ -117,39 +117,31 @@
       </ul>
     </section>
 
-<!-- Toggle Tabs -->
+      <!-- Toggle Tabs -->
 <div class="flex justify-center mt-8">
   <button id="userModeBtn" class="px-4 py-2 bg-blue-600 text-white rounded-l focus:outline-none">🧑 For Everyone</button>
   <button id="devModeBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r focus:outline-none">💻 For Developers</button>
 </div>
 
-<!-- USER MODE SECTION -->
-<section id="userSection" class="py-16">
-  <div class="max-w-3xl mx-auto text-center px-4">
-    <h2 class="text-2xl font-bold mb-4">Create Stunning PDFs in Seconds</h2>
-    <p class="text-lg mb-6">Whether you're sending invoices, resumes, or documents—just paste your HTML and receive a polished PDF. No coding skills needed!</p>
-  </div>
-</section>
-
-<!-- DEVELOPER MODE SECTION -->
-<section id="devCodeSection" class="py-16 hidden">
-  <p class="mb-4">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>
-  <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
-    <pre class="text-center">
-      curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip \
-        -H "Authorization: Bearer &lt;your-token&gt;" \
-        -H "Content-Type: application/json" \
-        -d '{
-          "title": "Order #1234",
-          "customer": "Jane Doe",
-          "items": [
-            {"name": "Shirt", "quantity": 2, "price": 24.99}
-          ]
-        }'
-            </pre></div>
-</section>
-
-
+    <section class="mb-10">
+      <section id="devCodeSection" class="py-16 hidden" >
+     
+      <h3 class="text-2xl font-semibold mb-2 text-purple-700">💻 For Developers</h3>
+      <p class="mb-4">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
+       <div class="bg-gray-900 text-green-400 px-4 py-6  text-center w-full shadow">
+      <pre class="text-center">
+curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip \
+  -H "Authorization: Bearer &lt;your-token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Order #1234",
+    "customer": "Jane Doe",
+    "items": [
+      {"name": "Shirt", "quantity": 2, "price": 24.99}
+    ]
+  }'
+      </pre></div>
+    </section>
 
     <section class="mb-10">
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">📹 Coming Soon: Video Demo</h3>
@@ -203,12 +195,12 @@ window.addEventListener("load", () => {
     console.log("Spinner hidden on page load");
   });
 
-  const userSection = document.getElementById("userSection");
+  const userModeBtn = document.getElementById("userModeBtn");
+const devModeBtn = document.getElementById("devModeBtn");
+const devCodeSection = document.getElementById("devCodeSection");
 
 userModeBtn.addEventListener("click", () => {
   devCodeSection.classList.add("hidden");
-  userSection.classList.remove("hidden");
-
   userModeBtn.classList.add("bg-blue-600", "text-white");
   userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
   devModeBtn.classList.remove("bg-blue-600", "text-white");
@@ -217,8 +209,6 @@ userModeBtn.addEventListener("click", () => {
 
 devModeBtn.addEventListener("click", () => {
   devCodeSection.classList.remove("hidden");
-  userSection.classList.add("hidden");
-
   devModeBtn.classList.add("bg-blue-600", "text-white");
   devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
   userModeBtn.classList.remove("bg-blue-600", "text-white");
