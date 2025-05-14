@@ -62,7 +62,7 @@ app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
-app.use("/api/packing-slip", packingSlipRoutes);
+app.use("/api/", packingSlipRoutes);
 
 
 app.use(express.static(path.join(__dirname, "../public")));
