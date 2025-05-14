@@ -170,12 +170,12 @@ document.getElementById("signUpButton").addEventListener("click", (event) => {
     console.log("Spinner hidden on page load");
   });
 
-  const userModeBtn = document.getElementById("userModeBtn");
-const devModeBtn = document.getElementById("devModeBtn");
-const devCodeSection = document.getElementById("devCodeSection");
+  const userSection = document.getElementById("userSection");
 
 userModeBtn.addEventListener("click", () => {
   devCodeSection.classList.add("hidden");
+  userSection.classList.remove("hidden");
+
   userModeBtn.classList.add("bg-blue-600", "text-white");
   userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
   devModeBtn.classList.remove("bg-blue-600", "text-white");
@@ -184,12 +184,13 @@ userModeBtn.addEventListener("click", () => {
 
 devModeBtn.addEventListener("click", () => {
   devCodeSection.classList.remove("hidden");
+  userSection.classList.add("hidden");
+
   devModeBtn.classList.add("bg-blue-600", "text-white");
   devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
   userModeBtn.classList.remove("bg-blue-600", "text-white");
   userModeBtn.classList.add("bg-gray-200", "text-gray-800");
 });
-
 
   
 </script>
