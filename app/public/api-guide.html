@@ -117,11 +117,19 @@
       </ul>
     </section>
 
+      <!-- Toggle Tabs -->
+<div class="flex justify-center mt-8">
+  <button id="userModeBtn" class="px-4 py-2 bg-blue-600 text-white rounded-l focus:outline-none">🧑 For Everyone</button>
+  <button id="devModeBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r focus:outline-none">💻 For Developers</button>
+</div>
+
     <section class="mb-10">
+      <section id="devCodeSection" class="py-16 hidden" >
+        <div class="bg-gray-900 text-green-400 px-4 py-6  text-center w-full shadow"></div>
       <h3 class="text-2xl font-semibold mb-2 text-purple-700">💻 For Developers</h3>
       <p class="mb-4">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>
-      <pre class="bg-gray-100 p-4 rounded-md text-sm overflow-auto">
-curl -X POST https://your-app.com/api/pdf \
+      <pre class="text-center">
+curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip \
   -H "Authorization: Bearer &lt;your-token&gt;" \
   -H "Content-Type: application/json" \
   -d '{
