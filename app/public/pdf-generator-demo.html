@@ -214,21 +214,20 @@
     }`;
     
   } else if (endpoint === "generate-packing-slip") {
-  jsonData = `{
-    "data": {
-      "orderId": "98765",
-      "customerName": "John Smith",
-      "shippingAddress": "1234 Maple Street, Springfield, USA",
-      "date": "2025-05-14",
-      "items": [
-        { "name": "Yoga Mat", "sku": "YM-001", "quantity": 1 },
-        { "name": "Dumbbells Set", "sku": "DB-002", "quantity": 2 },
-        { "name": "Water Bottle", "sku": "WB-003", "quantity": 3 }
-      ]
-    }
-  }`;
-
-
+      jsonData = `{
+        "data": {
+          "orderId": "98765",
+          "customerName": "John Smith",
+          "shippingAddress": "1234 Maple Street, Springfield, USA",
+          "date": "2025-05-14",
+          "items": [
+            { "name": "Yoga Mat", "sku": "YM-001", "quantity": 1 },
+            { "name": "Dumbbells Set", "sku": "DB-002", "quantity": 2 },
+            { "name": "Water Bottle", "sku": "WB-003", "quantity": 3 }
+          ]
+        }
+      }`;
+      console.log("Parsed JSON:", JSON.parse(jsonData));
 
   } else if (endpoint === "generate-pdf-from-html") {
   jsonData = JSON.stringify({
