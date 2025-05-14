@@ -22,6 +22,7 @@ const stripeRoutes = require("./routes/stripeRoutes");
 const invoiceRoutes = require("./routes/invoiceRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const htmlRoutes = require("./routes/htmlRoutes");
+const packingSlipRoutes = require("./routes/packing-slipRoutes");
 
 
 const app = express();
@@ -61,6 +62,7 @@ app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
+app.use("/api/packing-slip", packingSlipRoutes);
 
 
 app.use(express.static(path.join(__dirname, "../public")));
