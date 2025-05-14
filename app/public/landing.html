@@ -45,27 +45,25 @@
     </div>
   </section>
 
-  <!-- Toggle Tabs -->
+<!-- Toggle Tabs -->
 <div class="flex justify-center mt-8">
   <button id="userModeBtn" class="px-4 py-2 bg-blue-600 text-white rounded-l focus:outline-none">🧑 For Everyone</button>
   <button id="devModeBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r focus:outline-none">💻 For Developers</button>
 </div>
 
-
-
-
-<section class="py-16">
-  <!-- For Everyone -->
-  <div id="everyoneTextSection" class="text-center text-lg text-gray-800 mb-8">
-    <p class="mb-4">👤 Not a developer? No problem!</p>
-    <p>Just use our simple form to generate beautiful PDFs without any code.</p>
-    <p>No installs, no tech skills needed. Quick, easy, and free to try.</p>
+<!-- USER MODE SECTION -->
+<section id="userSection" class="py-16">
+  <div class="max-w-3xl mx-auto text-center px-4">
+    <h2 class="text-2xl font-bold mb-4">Create Stunning PDFs in Seconds</h2>
+    <p class="text-lg mb-6">Whether you're sending invoices, resumes, or documents—just paste your HTML and receive a polished PDF. No coding skills needed!</p>
+    <img src="/demo/user-friendly-preview.jpg" alt="User-friendly Preview" class="mx-auto rounded-lg shadow border border-gray-300 max-w-md">
   </div>
+</section>
 
-  <!-- For Developers -->
-  <section id="devCodeSection" class="py-16 hidden">
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
-      <pre class="text-center"><code>
+<!-- DEVELOPER MODE SECTION -->
+<section id="devCodeSection" class="py-16 hidden">
+  <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
+    <pre class="text-center"><code>
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip", {
   method: "POST",
   headers: {
@@ -76,14 +74,12 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-pack
     html: "&lt;h1&gt;Invoice for {{ order.name }}&lt;/h1&gt;"
   })
 });
-      </code></pre>
-    </div>
-  </section>
+    </code></pre>
+  </div>
 </section>
-
   <!-- Features -->
 <section class="py-16 bg-gray-100">
-  <div class="max-w-4xl mx-auto px-8 text-center"> 
+  <div class="max-w-4xl mx-auto px-8 text-center">
     <h2 class="text-2xl font-bold mb-6 text-center">Features</h2>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-lg">
       <div>🧾 HTML to PDF conversion</div>
@@ -95,6 +91,7 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-pack
     </div>
   </div>
 </section>
+
 <!-- Pricing -->
 <section class="py-16">
   <div class="max-w-4xl mx-auto px-4 text-center">
