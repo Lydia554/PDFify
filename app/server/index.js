@@ -60,9 +60,10 @@ app.use("/api", recipeRoutes);
 app.use("/api", shopOrderRoutes);
 app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
+app.use("/api/", packingSlipRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
-app.use("/api/", packingSlipRoutes);
+
 
 
 app.use(express.static(path.join(__dirname, "../public")));
