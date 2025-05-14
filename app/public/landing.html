@@ -51,32 +51,35 @@
   <button id="devModeBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r focus:outline-none">💻 For Developers</button>
 </div>
 
-<div id="forEveryone" class="text-center text-base space-y-4">
-  <p>🧾 Need a PDF invoice, recipe sheet, or report? You don't need to know coding!</p>
-  <p>Just fill out a simple form, and we’ll generate a beautiful PDF instantly.</p>
-  <p>No apps to install. No technical setup. Just fast, clean results in seconds.</p>
-</div>
 
 
-  <section class="py-16">
-    <section id="devCodeSection" class="py-16 hidden" >
-      <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
-        <pre class="text-center"><code>
 
-  fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip  , {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer YOUR_API_TOKEN"
-    },
-    body: JSON.stringify({
-      html: "&lt;h1&gt;Invoice for {{ order.name }}&lt;/h1&gt;"
-    })
-  });
-        </code></pre>
-      </div>
+<section class="py-16">
+  <!-- For Everyone -->
+  <div id="everyoneTextSection" class="text-center text-lg text-gray-800 mb-8">
+    <p class="mb-4">👤 Not a developer? No problem!</p>
+    <p>Just use our simple form to generate beautiful PDFs without any code.</p>
+    <p>No installs, no tech skills needed. Quick, easy, and free to try.</p>
+  </div>
+
+  <!-- For Developers -->
+  <section id="devCodeSection" class="py-16 hidden">
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
+      <pre class="text-center"><code>
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_TOKEN"
+  },
+  body: JSON.stringify({
+    html: "&lt;h1&gt;Invoice for {{ order.name }}&lt;/h1&gt;"
+  })
+});
+      </code></pre>
     </div>
   </section>
+</section>
 
   <!-- Features -->
 <section class="py-16 bg-gray-100">
