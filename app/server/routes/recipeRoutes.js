@@ -4,6 +4,7 @@ const path = require('path');
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
+const pdfParse = require("pdf-parse");
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -180,6 +181,7 @@ function generateRecipeHTML(data) {
   `;
 }
 
+
 router.post("/generate-recipe", authenticate, async (req, res) => {
   const { data } = req.body;
   log("Received data for recipe generation:", data);
@@ -188,7 +190,6 @@ router.post("/generate-recipe", authenticate, async (req, res) => {
     log("Invalid recipe data:", data);
     return res.status(400).json({ error: "Missing recipe data" });
   }
-
 
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) {
@@ -220,16 +221,35 @@ router.post("/generate-recipe", authenticate, async (req, res) => {
     await browser.close();
     log("Browser closed.");
 
+   
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      fs.unlinkSync(pdfPath);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user.usageCount + pageCount > user.maxUsage) {
+      fs.unlinkSync(pdfPath);
+      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+    }
+
+    user.usageCount += pageCount;
+    await user.save();
+    log("User usage count updated:", user.usageCount);
+
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
       }
-      fs.unlinkSync(pdfPath); 
+      fs.unlinkSync(pdfPath);
     });
   } catch (error) {
     console.error("Recipe PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 module.exports = router;

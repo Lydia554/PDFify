@@ -64,7 +64,7 @@ router.post(
 
         user.stripeSubscriptionId = session.subscription;
         user.isPremium = true;
-        user.maxUsage = 1000;
+        user.maxUsage += 1000; 
         await user.save();
 
         log("User subscription updated successfully:", user);

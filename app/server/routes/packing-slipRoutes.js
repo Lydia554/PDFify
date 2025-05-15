@@ -5,6 +5,7 @@ const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
+const pdfParse = require("pdf-parse");
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -143,13 +144,6 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.usageCount >= user.maxUsage) {
-      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for unlimited access." });
-    }
-
-    user.usageCount += 1;
-    await user.save();
-
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -169,13 +163,27 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
+    
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
+
+    if (user.usageCount + pageCount > user.maxUsage) {
+      fs.unlinkSync(pdfPath);
+      return res.status(403).json({
+        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+      });
+    }
+
+    user.usageCount += pageCount;
+    await user.save();
+
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
       }
       fs.unlinkSync(pdfPath);
     });
-
   } catch (error) {
     console.error("Packing Slip PDF generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });

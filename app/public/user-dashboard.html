@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>User Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
@@ -18,7 +18,7 @@
       <a href="/api-guide" class="api-docs-button" style="margin-right: 10px;">📄 API Docs</a>
       <a href="/pdf-generator-demo" class="pdf-gen-button">📄 PDF Generator</a>
     </div>
-    <button id="logoutButton" >Logout</button>
+    <button id="logoutButton">Logout</button>
   </nav>
 
   <h1>User Dashboard</h1>
@@ -35,245 +35,232 @@
   <button id="upgradeSubscriptionButton" style="color: white; background-color: green; padding: 10px; cursor: pointer;">Upgrade to Premium</button>
   <button id="downgradeSubscriptionButton" style="color: white; background-color: orange; padding: 10px; cursor: pointer;">Downgrade to Free</button>
 
-  <hr>
+  <hr />
 
   <h2>Update Your Information</h2>
   <form id="updateUserForm">
     <label for="newEmail">New Email:</label>
-    <input type="email" id="newEmail" placeholder="Enter new email" style="width: 100%; padding: 8px; margin-bottom: 20px;">
-    
+    <input type="email" id="newEmail" placeholder="Enter new email" style="width: 100%; padding: 8px; margin-bottom: 20px;" />
+
     <label for="newPassword">New Password:</label>
-    <input type="password" id="newPassword" placeholder="Enter new password" style="width: 100%; padding: 8px; margin-bottom: 20px;">
-    
+    <input type="password" id="newPassword" placeholder="Enter new password" style="width: 100%; padding: 8px; margin-bottom: 20px;" />
+
     <button type="submit">Update Info</button>
   </form>
 
-  <hr>
+  <hr />
 
   <h2>Delete Account</h2>
   <button id="deleteAccountButton" style="color: white; background-color: red; padding: 10px; cursor: pointer;">Delete Account</button>
 
-  <p id="result" style="margin-top: 20px;"></p>
+  <p id="result" style="margin-top: 20px; font-weight: bold; color: #333;"></p>
 
   <script>
-
-
-document.querySelectorAll("nav a").forEach((link) => {
-  link.addEventListener("click", (event) => {
-    event.preventDefault(); 
-    const targetUrl = event.target.href; 
-
-    const loadingOverlay = document.getElementById("loadingOverlay");
-    loadingOverlay.style.display = "flex"; 
-    console.log("Spinner shown");
-
-    if (!targetUrl) {
-      console.error("Invalid target URL");
-      loadingOverlay.style.display = "none"; 
-      return;
-    }
-
- 
-    setTimeout(() => {
-      console.log("Navigating to:", targetUrl);
-      window.location.href = targetUrl; 
-    }, 500); 
-  });
-});
-
-
-window.addEventListener("load", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none"; 
-  console.log("Spinner hidden on page load");
-});
-
-
-document.getElementById("upgradeSubscriptionButton").addEventListener("click", async () => {
-  const apiKey = localStorage.getItem("apiKey");
-  if (!apiKey) {
-    alert("No API key found. Please log in.");
-    window.location.href = "/login.html";
-    return;
-  }
-
-  try {
-    
-    const stripeKeyResponse = await axios.get(`/get-stripe-key`);
-    const stripe = Stripe(stripeKeyResponse.data.stripePublishableKey);
-
-    const response = await axios.post(`/api/stripe/create-checkout-session`, {
-  email: document.getElementById("email").textContent,
-  plan: "premium",
-}, {
-  headers: { Authorization: `Bearer ${apiKey}` },
-});
-
-
-    if (response.status === 200 && response.data.id) {
-      const { error } = await stripe.redirectToCheckout({ sessionId: response.data.id });
-      if (error) {
-        console.error("Stripe redirect error:", error);
-        alert("Failed to redirect to Stripe. Please try again.");
-      }
-    } else {
-      alert("Failed to create a checkout session. Please try again.");
-    }
-  } catch (error) {
-    console.error("Error creating checkout session:", error);
-    alert("Failed to upgrade subscription. Please try again.");
-  }
-});
-
-document.getElementById("downgradeSubscriptionButton").addEventListener("click", async () => {
-  const apiKey = localStorage.getItem("apiKey");
-  if (!apiKey) {
-    alert("No API key found. Please log in.");
-    window.location.href = "/login.html";
-    return;
-  }
-
-  try {
-    const response = await axios.post(`/api/stripe/unsubscribe`,
- {}, {
-      headers: { Authorization: `Bearer ${apiKey}` },
+    // Reusable API wrapper with auth header
+    const api = axios.create({
+      baseURL: "/api",
+      timeout: 10000,
     });
 
-    if (response.status === 200) {
-      alert(response.data.message);
-      fetchUserData(); 
-    }
-  } catch (error) {
-    console.error("Error canceling subscription:", error);
-    alert("Failed to cancel subscription. Please try again.");
-  }
-});
-  
-document.getElementById("logoutButton").addEventListener("click", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "flex"; 
-  console.log("Spinner shown for Logout button");
-
-  setTimeout(() => {
-    localStorage.removeItem("apiKey"); 
-    console.log("Navigating to login page");
-    window.location.href = "/login.html"; 
-  }, 500); 
-});
-
-    document.getElementById("updateUserForm").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const newEmail = document.getElementById("newEmail").value.trim();
-  const newPassword = document.getElementById("newPassword").value.trim();
-  const result = document.getElementById("result");
-
-  if (!newEmail && !newPassword) {
-    result.innerText = "Please enter a new email or password to update.";
-    return;
-  }
-
-  try {
-    const apiKey = localStorage.getItem("apiKey");
-    if (!apiKey) {
-      alert("No API key found. Please log in.");
-      window.location.href = "/login.html";
-      return;
+    function getApiKey() {
+      return new URLSearchParams(window.location.search).get("apiKey") || localStorage.getItem("apiKey");
     }
 
-    const response = await axios.put(
-  `${window.location.origin}/api/user/update`,
-  { email: newEmail, password: newPassword },
-  { headers: { Authorization: `Bearer ${apiKey}` } }
-);
-
-    result.innerText = response.data.message;
-    fetchUserData(); 
-  } catch (error) {
-    console.error("Error updating user information:", error);
-    result.innerText = "Failed to update information. Please try again.";
-  }
-});
-
-
-document.getElementById("deleteAccountButton").addEventListener("click", async () => {
-  if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-    return;
-  }
-
-  const apiKey = localStorage.getItem("apiKey");
-  if (!apiKey) {
-    alert("No API key found. Please log in.");
-    window.location.href = "/login.html";
-    return;
-  }
-
-  try {
-    const response = await axios.delete(`/api/user/delete`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-
-    if (response.status === 200) {
-      alert("Account deleted successfully.");
-      localStorage.removeItem("apiKey");
-      window.location.href = "/"; 
-    }
-  } catch (error) {
-    console.error("Error deleting account:", error);
-    alert("Failed to delete account. Please try again.");
-  }
-});
-
-
-async function fetchUserData() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const apiKey = urlParams.get("apiKey") || localStorage.getItem("apiKey");
-
-  if (!apiKey) {
-    document.getElementById("result").textContent = "No API key found. Please log in.";
-    window.location.href = "/login.html";
-    return;
-  }
-
-  try {
-    const response = await axios.get(`/api/user/usage`, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+    api.interceptors.request.use(
+      (config) => {
+        const apiKey = getApiKey();
+        if (apiKey) {
+          config.headers.Authorization = `Bearer ${apiKey}`;
+        }
+        return config;
       },
+      (error) => Promise.reject(error)
+    );
+
+    api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response && error.response.status === 401) {
+          alert("Session expired or unauthorized. Please log in again.");
+          localStorage.removeItem("apiKey");
+          window.location.href = "/login.html";
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    // Utility: Mask API Key for display
+    function maskApiKey(key) {
+      if (!key) return "";
+      return key.slice(0, 4) + "..." + key.slice(-4);
+    }
+
+    // Central user info display function
+    function displayUserInfo(data) {
+      document.getElementById("email").textContent = data.email || "";
+      document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || "");
+      document.getElementById("usageCount").textContent = data.usageCount || 0;
+      document.getElementById("maxUsage").textContent = data.maxUsage || 0;
+      document.getElementById("premiumStatus").textContent = data.isPremium ? "Premium" : "Free";
+    }
+
+    async function fetchUserData() {
+      const apiKey = getApiKey();
+      if (!apiKey) {
+        document.getElementById("result").textContent = "No API key found. Please log in.";
+        window.location.href = "/login.html";
+        return;
+      }
+      try {
+        const response = await api.get("/user/usage");
+        displayUserInfo(response.data);
+        document.getElementById("result").textContent = "";
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+        if (error.response && error.response.status === 404) {
+          localStorage.removeItem("apiKey");
+          alert("Your account no longer exists. Redirecting to login.");
+          window.location.href = "/login.html";
+        } else {
+          document.getElementById("result").textContent = "Error fetching user data. Please try again later.";
+        }
+      }
+    }
+
+    // Navigation spinner logic
+    document.querySelectorAll("nav a").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        const targetUrl = event.target.href;
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        loadingOverlay.style.display = "flex";
+
+        if (!targetUrl) {
+          console.error("Invalid target URL");
+          loadingOverlay.style.display = "none";
+          return;
+        }
+
+        setTimeout(() => {
+          window.location.href = targetUrl;
+        }, 500);
+      });
     });
 
-    const data = response.data;
-
-    document.getElementById("email").textContent = data.email;
-    document.getElementById("apiKey").textContent = data.apiKey;
-    document.getElementById("usageCount").textContent = data.usageCount;
-    document.getElementById("maxUsage").textContent = data.maxUsage;
-    document.getElementById("premiumStatus").textContent = data.isPremium ? "Premium" : "Free";
-
-  } catch (error) {
-    console.error("Error fetching user data:", error);
-    if (error.response && error.response.status === 404) {
-   
-      localStorage.removeItem("apiKey");
-      alert("Your account no longer exists. Redirecting to login.");
-      window.location.href = "/login.html";
-    } else {
-      document.getElementById("result").textContent = "Error fetching user data. Please try again later.";
-    }
-  }
-}
-
-
-    fetchUserData(); 
-
+    window.addEventListener("load", () => {
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "none";
+    });
 
     window.addEventListener("pageshow", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none";
-  console.log("Spinner hidden on page show (e.g., back navigation)");
-});
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "none";
+    });
 
+    // Subscription management with improved UX
+    const upgradeBtn = document.getElementById("upgradeSubscriptionButton");
+    const downgradeBtn = document.getElementById("downgradeSubscriptionButton");
+    const resultMessage = document.getElementById("result");
 
+    async function handleSubscriptionChange(type) {
+      const button = type === "upgrade" ? upgradeBtn : downgradeBtn;
+      button.disabled = true;
+      resultMessage.textContent = "";
+
+      try {
+        if (type === "upgrade") {
+          const stripeKeyResponse = await api.get("/get-stripe-key");
+          const stripe = Stripe(stripeKeyResponse.data.stripePublishableKey);
+
+          const response = await api.post("/stripe/create-checkout-session", {
+            email: document.getElementById("email").textContent,
+            plan: "premium",
+          });
+
+          if (response.data.id) {
+            const { error } = await stripe.redirectToCheckout({ sessionId: response.data.id });
+            if (error) {
+              resultMessage.textContent = "Failed to redirect to Stripe. Please try again.";
+            }
+          } else {
+            resultMessage.textContent = "Failed to create checkout session. Please try again.";
+          }
+        } else {
+          const response = await api.post("/stripe/unsubscribe");
+          if (response.status === 200) {
+            resultMessage.textContent = response.data.message;
+            await fetchUserData();
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to ${type === "upgrade" ? "upgrade" : "cancel"} subscription:`, error);
+        resultMessage.textContent = `Failed to ${type === "upgrade" ? "upgrade" : "cancel"} subscription. Please try again.`;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    upgradeBtn.addEventListener("click", () => handleSubscriptionChange("upgrade"));
+    downgradeBtn.addEventListener("click", () => handleSubscriptionChange("downgrade"));
+
+    // Logout button with spinner
+    document.getElementById("logoutButton").addEventListener("click", () => {
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "flex";
+
+      setTimeout(() => {
+        localStorage.removeItem("apiKey");
+        window.location.href = "/login.html";
+      }, 500);
+    });
+
+    // Update user info form
+    document.getElementById("updateUserForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const newEmail = document.getElementById("newEmail").value.trim();
+      const newPassword = document.getElementById("newPassword").value.trim();
+
+      if (!newEmail && !newPassword) {
+        resultMessage.textContent = "Please enter a new email or password to update.";
+        return;
+      }
+
+      try {
+        const response = await api.put("/user/update", { email: newEmail, password: newPassword });
+        resultMessage.textContent = response.data.message;
+        fetchUserData();
+      } catch (error) {
+        console.error("Error updating user information:", error);
+        resultMessage.textContent = "Failed to update information. Please try again.";
+      }
+    });
+
+    // Delete account button
+    document.getElementById("deleteAccountButton").addEventListener("click", async () => {
+      if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+        return;
+      }
+
+      try {
+        const response = await api.delete("/user/delete");
+        resultMessage.textContent = response.data.message || "Account deleted.";
+        localStorage.removeItem("apiKey");
+        setTimeout(() => window.location.href = "/login.html", 2000);
+      } catch (error) {
+        console.error("Error deleting account:", error);
+        resultMessage.textContent = "Failed to delete account. Please try again.";
+      }
+    });
+
+    // Initial fetch of user data on load
+    fetchUserData();
   </script>
+
+
+
+</body>
+</html>
+
 
   <style>
     body {
@@ -385,6 +372,20 @@ async function fetchUserData() {
       label, input {
         font-size: 14px;
       }
+    }
+
+
+
+    button {
+      border: none;
+      border-radius: 4px;
+      font-size: 1em;
+      margin: 5px 0;
+      transition: background-color 0.3s ease;
+    }
+    button:disabled {
+      background-color: #bbb !important;
+      cursor: not-allowed;
     }
   </style>
 </body>
