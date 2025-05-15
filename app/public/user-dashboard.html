@@ -245,7 +245,7 @@
         const response = await api.delete("/user/delete");
         resultMessage.textContent = response.data.message || "Account deleted.";
         localStorage.removeItem("apiKey");
-        setTimeout(() => window.location.href = "/login.html", 2000);
+        setTimeout(() => window.location.href = "/create-user-page.html", 2000);
       } catch (error) {
         console.error("Error deleting account:", error);
         resultMessage.textContent = "Failed to delete account. Please try again.";
