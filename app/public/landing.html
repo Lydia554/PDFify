@@ -61,10 +61,11 @@
 
 <!-- DEVELOPER MODE SECTION -->
 <section id="devCodeSection" class="py-16 hidden">
-  <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 JavaScript Example</h3>
-      <p class="mb-4 text-center">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
-  <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
-    <pre class="text-center"><code>
+  <div class="max-w-4xl mx-auto px-4">
+    <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 JavaScript Example</h3>
+    <p class="mb-4 text-center">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow rounded">
+      <pre class="text-sm overflow-x-auto"><code>
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip", {
   method: "POST",
   headers: {
@@ -72,16 +73,15 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-pack
     "Authorization": "Bearer YOUR_API_TOKEN"
   },
   body: JSON.stringify({
-    html: "&lt;h1&gt;Invoice for {{ order.name }}&lt;/h1&gt;"
+    html: "<h1>Invoice for {{ order.name }}</h1>"
   })
 });
-    </code></pre>
-  </div>
+      </code></pre>
+    </div>
 
-   
-    <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 Command Line Example</h3>
-     <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow">
-    <pre class="text-center">
+    <h3 class="text-2xl font-semibold mt-10 mb-2 text-purple-700 text-center">💻 Command Line Example</h3>
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow rounded">
+      <pre class="text-sm overflow-x-auto"><code>
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip \
 -H "Authorization: Bearer &lt;your-token&gt;" \
 -H "Content-Type: application/json" \
@@ -92,9 +92,9 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generat
     {"name": "Shirt", "quantity": 2, "price": 24.99}
   ]
 }'
-    </pre></div>
- 
-
+      </code></pre>
+    </div>
+  </div>
 </section>
 
 
