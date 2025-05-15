@@ -1,4 +1,4 @@
-import { formatDate } from './shared.js';
+const { formatDate } = require('../shared/shared');
 
 export const friendlyFieldsHtml = `
   <label>Recipe Name: <input type="text" id="recipeName" required></label><br>
