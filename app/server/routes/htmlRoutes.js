@@ -7,11 +7,13 @@ const authenticate = require('../middleware/authenticate');
 const User = require('../models/User');
 const pdfParse = require("pdf-parse");
 
-const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
 
 if (typeof ReadableStream === 'undefined') {
   global.ReadableStream = require('web-streams-polyfill').ReadableStream;
 }
+
+const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 function wrapHtmlWithBranding(htmlContent) {
   return `
@@ -32,12 +34,31 @@ function wrapHtmlWithBranding(htmlContent) {
           .content {
             margin-top: 30px;
           }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #777;
+            border-top: 1px dashed #ccc;
+            padding-top: 20px;
+          }
+          .footer a {
+            color: #2a3d66;
+            text-decoration: none;
+          }
+          .footer a:hover {
+            text-decoration: underline;
+          }
         </style>
       </head>
       <body>
         <img src="${logoUrl}" alt="Logo" class="logo" />
         <div class="content">
           ${htmlContent}
+        </div>
+        <div class="footer">
+          <p>Thanks for using our service!</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
         </div>
       </body>
     </html>
