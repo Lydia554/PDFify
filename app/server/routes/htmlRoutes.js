@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const authenticate = require('../middleware/authenticate'); 
-const pdfParse = require("pdf-parse");
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
@@ -43,7 +42,6 @@ function wrapHtmlWithBranding(htmlContent) {
   `;
 }
 
-
 router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
   console.log('📥 POST /generate-pdf-from-html called');
   console.log('🔐 Authenticated user:', req.user ? req.user.email : 'Not Authenticated');
@@ -56,29 +54,25 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
 
   console.log('📝 HTML content received (first 200 chars):', html.substring(0, 200));
 
+  const wrappedHtml = wrapHtmlWithBranding(html);
+
+  const pdfDir = './pdfs';
+  if (!fs.existsSync(pdfDir)) {
+    console.log('📁 Creating PDF directory...');
+    fs.mkdirSync(pdfDir, { recursive: true });
+  }
+
+  const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
+  console.log(`📄 PDF will be saved to: ${pdfPath}`);
+
   try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const wrappedHtml = wrapHtmlWithBranding(html);
-
-    const pdfDir = './pdfs';
-    if (!fs.existsSync(pdfDir)) {
-      console.log('📁 Creating PDF directory...');
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
-
-    const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
-    console.log(`📄 PDF will be saved to: ${pdfPath}`);
-
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
     const page = await browser.newPage();
+
     await page.setContent(wrappedHtml, { waitUntil: 'networkidle0' });
     console.log('📄 HTML content loaded into Puppeteer');
 
@@ -91,21 +85,6 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
 
     await browser.close();
 
-  
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({
-        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-      });
-    }
-
-    user.usageCount += pageCount;
-    await user.save();
-
     res.download(pdfPath, (err) => {
       if (err) {
         console.error('❌ Error sending file:', err);
@@ -114,7 +93,6 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
         fs.unlinkSync(pdfPath);
       }
     });
-
   } catch (error) {
     console.error('❌ PDF generation failed:', error);
     res.status(500).json({ error: 'PDF generation failed' });

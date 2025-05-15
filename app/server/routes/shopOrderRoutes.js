@@ -5,7 +5,6 @@ const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User"); 
-const pdfParse = require("pdf-parse");
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -132,7 +131,6 @@ function generateShopOrderHTML(data) {
   `;
 }
 
-
 router.post("/generate-shop-order", authenticate, async (req, res) => {
   const { data } = req.body;
   log("Received data for shop order generation:", data);
@@ -172,26 +170,12 @@ router.post("/generate-shop-order", authenticate, async (req, res) => {
     await browser.close();
     log("Browser closed.");
 
-   
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-    log(`Generated PDF has ${pageCount} pages.`);
-
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      fs.unlinkSync(pdfPath);
-      return res.status(404).json({ error: "User not found" });
+    if (user) {
+      user.usageCount += 1;
+      await user.save();
+      log("User usage count updated:", user.usageCount);
     }
-
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-    }
-
-    user.usageCount += pageCount;
-    await user.save();
-    log("User usage count updated:", user.usageCount);
 
     res.download(pdfPath, (err) => {
       if (err) {

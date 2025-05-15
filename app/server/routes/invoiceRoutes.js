@@ -5,7 +5,6 @@ const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
-const pdfParse = require("pdf-parse");
 
 
 const log = (message, data = null) => {
@@ -236,16 +235,24 @@ function generateInvoiceHTML(data) {
 
 
 
-
 router.post("/generate-invoice", authenticate, async (req, res) => {
   const { data } = req.body;
 
   try {
     const user = await User.findById(req.user.userId);
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    if (user.usageCount >= user.maxUsage) {
+      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for unlimited access." });
+    }
+
+    user.usageCount += 1;
+    await user.save();
+
+  
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -253,35 +260,19 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
 
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
+
     const html = generateInvoiceHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-    // 🔢 Get number of pages
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-
-    console.log(`User used ${pageCount} pages`);
-
-    // ✅ Check against usage limits
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath); // clean up
-      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-    }
-
-    // 📈 Update usage by number of pages
-    user.usageCount += pageCount;
-    await user.save();
-
-    // 📤 Send file to user
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
