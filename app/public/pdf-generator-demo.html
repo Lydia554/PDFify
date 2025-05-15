@@ -71,32 +71,24 @@
 
 
   <script>
-    const developerBtn = document.getElementById('developerModeBtn');
-const friendlyBtn = document.getElementById('friendlyModeBtn');
+        const devBtn = document.getElementById('developerModeBtn');
+    const friendlyBtn = document.getElementById('friendlyModeBtn');
+    const devSection = document.getElementById('developerMode');
+    const friendlySection = document.getElementById('friendlyMode');
 
-const developerForm = document.getElementById('developerModeForm');
-const friendlyForm = document.getElementById('friendlyModeForm');
+    devBtn.addEventListener('click', () => {
+      devBtn.classList.add('active');
+      friendlyBtn.classList.remove('active');
+      devSection.style.display = 'block';
+      friendlySection.style.display = 'none';
+    });
 
-developerBtn.addEventListener('click', () => {
-  // Set active button styling
-  developerBtn.classList.add('active');
-  friendlyBtn.classList.remove('active');
-
-  // Show developer mode form, hide friendly
-  developerForm.style.display = 'block';
-  friendlyForm.style.display = 'none';
-});
-
-friendlyBtn.addEventListener('click', () => {
-  // Set active button styling
-  friendlyBtn.classList.add('active');
-  developerBtn.classList.remove('active');
-
-  // Show friendly mode form, hide developer
-  friendlyForm.style.display = 'block';
-  developerForm.style.display = 'none';
-});
-
+    friendlyBtn.addEventListener('click', () => {
+      friendlyBtn.classList.add('active');
+      devBtn.classList.remove('active');
+      devSection.style.display = 'none';
+      friendlySection.style.display = 'block';
+    });
 
 
 
@@ -581,27 +573,20 @@ friendlyBtn.addEventListener('click', () => {
     background-color: #324cdd;
   }
 
-
-  #modeToggle {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 20px;
-      gap: 10px;
+  #modeToggle button.active {
+      background-color: #2a3d66;
+      color: white;
     }
     #modeToggle button {
-      flex: 1;
-      padding: 10px 0;
-      font-weight: bold;
-      border-radius: 5px;
-      border: 1px solid #2196f3;
-      background-color: white;
-      color: #2196f3;
       cursor: pointer;
-      transition: background-color 0.3s, color 0.3s;
+      padding: 8px 16px;
+      margin-right: 5px;
+      border: none;
+      background-color: #eee;
+      font-weight: 600;
     }
-    #modeToggle button.active {
-      background-color: #2196f3;
-      color: white;
+    #developerMode, #friendlyMode {
+      margin-top: 20px;
     }
 
     /* Friendly mode form */
