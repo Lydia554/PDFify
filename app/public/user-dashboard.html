@@ -16,7 +16,7 @@
   <nav style="background-color: #f4f7fb; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
     <div>
       <a href="/api-guide" class="api-docs-button" style="margin-right: 10px;">📄 API Docs</a>
-      <a href="/pdf-generator-demo" class="text-gray-600 hover:text-purple-600">📄 PDF Generator</a>
+      <a href="/pdf-generator-demo" class="pdf-gen-button">📄 PDF Generator</a>
     </div>
     <button id="logoutButton" >Logout</button>
   </nav>
@@ -344,7 +344,8 @@ async function fetchUserData() {
       font-weight: bold;
     }
 
-    .api-docs-button {
+    .api-docs-button,
+    .pdf-gen-button {
       display: inline-block;
       margin: 10px 0;
       padding: 10px 16px;
