@@ -23,24 +23,27 @@
   
     <h1> PDF Generator API</h1>
 
-    <!-- Mode Toggle Buttons -->
-<div id="modeToggle">
-  <button id="developerModeBtn" class="active">Developer Mode</button>
-  <button id="friendlyModeBtn">Friendly Mode</button>
-</div>
-
-<!-- Developer Mode Container -->
-<div id="developerMode">
-  <!-- Endpoint Selection -->
-  <label for="endpoint">Endpoint:</label>
-  <select id="endpoint">
-    <option value="generate-invoice">Invoice</option>
-    <option value="generate-shop-order">Shop Order</option>
-    <option value="generate-therapy-report">Therapy Report</option>
-    <option value="generate-recipe">Recipe</option> 
-    <option value="generate-pdf-from-html">Raw HTML</option>
-    <option value="generate-packing-slip">Packing Slip</option>
-  </select>
+    <div id="modeToggle">
+      <button id="developerModeBtn" class="active">Developer Mode</button>
+      <button id="friendlyModeBtn">Friendly Mode</button>
+    </div>
+    
+    <!-- Developer Mode Form -->
+    <div id="developerModeForm">
+      <!-- Your existing developer mode form, e.g. raw JSON textarea -->
+      <textarea id="jsonInput" placeholder="Paste your JSON here"></textarea>
+    </div>
+    
+    <!-- Friendly Mode Form -->
+    <div id="friendlyModeForm" style="display:none;">
+      <!-- Friendly Mode UI (form fields, inputs for each template parameter) -->
+      <form id="friendlyForm">
+        <!-- example field -->
+        <label for="customerName">Customer Name</label>
+        <input type="text" id="customerName" name="customerName" />
+        <!-- add more fields dynamically or manually -->
+      </form>
+    </div>
 
   <br />
 
@@ -61,20 +64,7 @@
   <p id="result"></p>
 </div>
 
-<!-- Friendly Mode Container -->
-<div id="friendlyForm">
-  <label for="friendlyTemplate">Select Template:</label>
-  <select id="friendlyTemplate">
-    <option value="">-- Select Template --</option>
-    <option value="generate-invoice">Invoice</option>
-    <option value="generate-shop-order">Shop Order</option>
-    <option value="generate-therapy-report">Therapy Report</option>
-    <option value="generate-recipe">Recipe</option>
-    <option value="generate-packing-slip">Packing Slip</option>
-  </select>
 
-  <div id="friendlyFields"></div>
-   
 
    
   <div id="friendlyFields"></div>
