@@ -21,14 +21,8 @@
     <button id="logoutButton">Logout</button>
   </nav>
   <!-- Mode Toggle Buttons -->
-  <div id="modeToggle">
+  <div id="modeToggle" class="toggle-container">
     <button id="developerModeBtn" class="active">Developer Mode</button>
- 
-  </div>
-
-
-  <div id="modeToggle">
-    
     <button id="friendlyModeBtn">Friendly Mode</button>
   </div>
   <!-- Developer Mode Container -->
@@ -74,27 +68,74 @@
   <p id="payment-result"></p>
 
 
-
-  <script>
-        const devBtn = document.getElementById('developerModeBtn');
+  <script type="module">
+    const templateMap = {
+      invoice: './templates/invoice.js',
+      recipe: './templates/recipe.js',
+      
+    };
+  
+    const devBtn = document.getElementById('developerModeBtn');
     const friendlyBtn = document.getElementById('friendlyModeBtn');
     const devSection = document.getElementById('developerMode');
     const friendlySection = document.getElementById('friendlyMode');
-
+    const friendlyFields = document.getElementById('friendlyFields');
+    const generateFriendlyBtn = document.getElementById('generateFriendlyBtn');
+    const endpointSelector = document.getElementById('endpoint');
+  
+    let currentTemplateModule = null;
+  
     devBtn.addEventListener('click', () => {
       devBtn.classList.add('active');
       friendlyBtn.classList.remove('active');
       devSection.style.display = 'block';
       friendlySection.style.display = 'none';
     });
-
-    friendlyBtn.addEventListener('click', () => {
+  
+    friendlyBtn.addEventListener('click', async () => {
       friendlyBtn.classList.add('active');
       devBtn.classList.remove('active');
       devSection.style.display = 'none';
       friendlySection.style.display = 'block';
+  
+      await loadFriendlyForm();
     });
-
+  
+    endpointSelector.addEventListener('change', async () => {
+      if (friendlySection.style.display === 'block') {
+        await loadFriendlyForm();
+      }
+    });
+  
+    async function loadFriendlyForm() {
+      const selected = endpointSelector.value;
+      const friendlyKey = selected.replace("generate-", "").replace(/-/g, "_");
+      const templatePath = templateMap[friendlyKey];
+  
+      if (!templatePath) {
+        friendlyFields.innerHTML = "<p>No friendly form available for this template yet.</p>";
+        generateFriendlyBtn.disabled = true;
+        return;
+      }
+  
+      try {
+        currentTemplateModule = await import(templatePath);
+        friendlyFields.innerHTML = currentTemplateModule.friendlyFieldsHtml;
+        generateFriendlyBtn.disabled = false;
+      } catch (err) {
+        console.error("Error loading friendly module:", err);
+        friendlyFields.innerHTML = "<p>Failed to load form.</p>";
+        generateFriendlyBtn.disabled = true;
+      }
+    }
+  
+    generateFriendlyBtn.addEventListener('click', () => {
+      if (currentTemplateModule) {
+        const data = currentTemplateModule.collectFriendlyData();
+        console.log("Sending to friendly endpoint:", data);
+        document.getElementById("friendlyResult").textContent = "PDF request submitted!";
+      }
+    });
 
 
     document.querySelectorAll("nav a").forEach((link) => {
@@ -579,27 +620,24 @@
   }
 
 
-  #modeToggle {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 20px;
-      gap: 10px;
-    }
-    #modeToggle button {
-      flex: 1;
-      padding: 10px 0;
-      font-weight: bold;
-      border-radius: 5px;
-      border: 1px solid #2196f3;
-      background-color: white;
-      color: #2196f3;
-      cursor: pointer;
-      transition: background-color 0.3s, color 0.3s;
-    }
-    #modeToggle button.active {
-      background-color: #0d4e83;
-      color: white;
-    }
+  .toggle-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  #modeToggle button {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  #modeToggle .active {
+    background-color: #0179db;
+    color: white;
+  }
 
     /* Friendly mode form */
     #friendlyForm {

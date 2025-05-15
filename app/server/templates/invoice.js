@@ -1,14 +1,23 @@
-function generateInvoiceHTML(data) {
-    return `
-      <html>
-        <body>
-          <h1>Invoice for ${data.customerName}</h1>
-          <p>Order ID: ${data.orderId}</p>
-          <p>Total: ${data.total}</p>
-          <!-- More invoice HTML -->
-        </body>
-      </html>
-    `;
+module.exports = {
+  friendlyFieldsHtml: `
+    <label>Invoice Number:</label>
+    <input type="text" id="invoiceNumber" required /><br />
+
+    <label>Customer Name:</label>
+    <input type="text" id="customerName" required /><br />
+
+    <label>Amount:</label>
+    <input type="number" id="amount" required /><br />
+
+    <label>Due Date:</label>
+    <input type="date" id="dueDate" required /><br />
+  `,
+  collectFriendlyData: () => {
+    return {
+      invoiceNumber: document.getElementById('invoiceNumber')?.value || '',
+      customerName: document.getElementById('customerName')?.value || '',
+      amount: document.getElementById('amount')?.value || '',
+      dueDate: document.getElementById('dueDate')?.value || '',
+    };
   }
-  
-  module.exports = generateInvoiceHTML;
+};
