@@ -263,6 +263,15 @@ async function fetchUserData() {
 
 
     fetchUserData(); 
+
+
+    window.addEventListener("pageshow", () => {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "none";
+  console.log("Spinner hidden on page show (e.g., back navigation)");
+});
+
+
   </script>
 
   <style>
