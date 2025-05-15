@@ -1,3 +1,7 @@
+
+const { formatDate, calculateTotal } = require('../../shared/shared.js');
+
+
 module.exports = {
   friendlyFieldsHtml: `
     <label>Invoice Number:</label>
