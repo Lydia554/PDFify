@@ -1,61 +1,40 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const path = require("path");
-const fs = require("fs");
-const puppeteer = require("puppeteer");
-const pdfParse = require("pdf-parse");
+const path = require('path');
+const fs = require('fs');
+const puppeteer = require('puppeteer');
 
-const authenticate = require("../middleware/authenticate");
-const User = require("../models/User");
+const invoiceTemplate = require('../templates/invoice');
+const recipeTemplate = require('../templates/recipe');
 
+const templates = {
+  invoice: invoiceTemplate,
+  recipe: recipeTemplate,
+};
 
-router.post("/generate", authenticate, async (req, res) => {
+router.post('/generate', async (req, res) => {
   const { template, formData } = req.body;
-
-  const generateHTML = templates[template];
-  if (!generateHTML) {
-    return res.status(400).json({ error: "Template not found" });
-  }
+  const generateHtml = templates[template];
+  
+  if (!generateHtml) return res.status(400).json({ error: 'Invalid template' });
 
   try {
-    const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const html = generateHtml(formData);
+    const pdfPath = path.join(__dirname, '../../pdfs', `pdf_${Date.now()}.pdf`);
 
-    const html = generateHTML(formData);
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-
-    const pdfPath = path.join(pdfDir, `Friendly_${Date.now()}.pdf`);
-
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
+    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.pdf({ path: pdfPath, format: 'A4' });
     await browser.close();
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({ error: "Usage limit reached" });
-    }
-
-    user.usageCount += pageCount;
-    await user.save();
-
-    res.download(pdfPath, (err) => {
-      if (err) console.error("Send error:", err);
+    res.download(pdfPath, err => {
+      if (err) console.error(err);
       fs.unlinkSync(pdfPath);
     });
-  } catch (error) {
-    console.error("Friendly mode error:", error);
-    res.status(500).json({ error: "PDF generation failed" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'PDF generation failed' });
   }
 });
 
