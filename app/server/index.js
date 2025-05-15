@@ -25,6 +25,7 @@ const htmlRoutes = require("./routes/htmlRoutes");
 const packingSlipRoutes = require("./routes/packing-slipRoutes");
 const friendlyMode = require("./routes/friendlyMode");
 
+
 const app = express();
 
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
