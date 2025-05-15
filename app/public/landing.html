@@ -66,8 +66,8 @@
     <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 JavaScript Example</h3>
     <p class="mb-6 text-center text-gray-700">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
 
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
-      <pre class="code-js"><code>
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto code-block">
+      <pre><code>
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip", {
   method: "POST",
   headers: {
@@ -82,8 +82,8 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-pack
     </div>
 
     <h3 class="text-2xl font-semibold mt-12 mb-2 text-purple-700 text-center">💻 Command Line Example</h3>
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
-      <pre class="code-cl"><code>
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto code-block">
+      <pre><code>
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip \
 -H "Authorization: Bearer <your-token>" \
 -H "Content-Type: application/json" \
@@ -239,14 +239,14 @@ devModeBtn.addEventListener("click", () => {
     transition: all 0.3s ease-in-out;
   }
 
-.code-js {
-    margin-left: 40%;
+  .code-block {
+  max-width: 1000px;
+  margin: 0 auto;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-
-.code-cl {
-    margin-left: 40%;
-}
 
   @keyframes spin {
     to {
