@@ -47,8 +47,8 @@
 
 <!-- Toggle Tabs -->
 <div class="flex justify-center mt-8">
-  <button id="userModeBtn" class="px-4 py-2 bg-blue-600 text-white rounded-l focus:outline-none">🧑 For Everyone</button>
-  <button id="devModeBtn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-r focus:outline-none">💻 For Developers</button>
+  <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
+  <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
 </div>
 
 <!-- USER MODE SECTION -->
@@ -66,8 +66,8 @@
     <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 JavaScript Example</h3>
     <p class="mb-6 text-center text-gray-700">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
 
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto code-block">
-      <pre><code>
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
+      <pre class="code-js"><code>
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip", {
   method: "POST",
   headers: {
@@ -82,8 +82,8 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-pack
     </div>
 
     <h3 class="text-2xl font-semibold mt-12 mb-2 text-purple-700 text-center">💻 Command Line Example</h3>
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto code-block">
-      <pre><code>
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
+      <pre class="code-cl"><code>
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip \
 -H "Authorization: Bearer <your-token>" \
 -H "Content-Type: application/json" \
@@ -239,14 +239,14 @@ devModeBtn.addEventListener("click", () => {
     transition: all 0.3s ease-in-out;
   }
 
-  .code-block {
-  max-width: 1000px;
-  margin: 0 auto;
-  text-align: left;
-  white-space: pre-wrap;
-  word-break: break-word;
+.code-js {
+    margin-left: 40%;
 }
 
+
+.code-cl {
+    margin-left: 40%;
+}
 
   @keyframes spin {
     to {
