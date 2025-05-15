@@ -54,10 +54,16 @@
   </div>
 
   <!-- Friendly Mode Container -->
-  <div id="friendlyMode" style="display: none;">
-    <div id="friendlyFields">
-      <!-- Dynamic friendly form fields will be injected here -->
-    </div>
+  <div id="friendlyMode" style="display:none;">
+    <select id="templateSelect">
+      <option value="invoice">Invoice</option>
+      <option value="recipe">Recipe</option>
+    </select>
+    <div id="formContainer"></div>
+    <button id="generatePdfBtn">Generate PDF</button>
+    <p id="friendlyResult"></p>
+  </div>
+  
 
     <button id="generateFriendlyBtn" disabled>Generate PDF</button>
     <p id="friendlyResult"></p>
@@ -87,8 +93,10 @@ friendlyBtn.addEventListener('click', () => {
   devBtn.classList.remove('active');
   devSection.style.display = 'none';
   friendlySection.style.display = 'block';
-});
 
+  // Render the form after showing the section
+  renderForm(templateSelect.value);
+});
 
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
