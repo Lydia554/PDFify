@@ -138,28 +138,7 @@
     });
 
 
-    document.querySelectorAll("nav a").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        const targetUrl = event.target.href;
-    
-        const loadingOverlay = document.getElementById("loadingOverlay");
-        loadingOverlay.style.display = "flex";
-        console.log("Spinner shown");
-    
-        if (!targetUrl) {
-          console.error("Invalid target URL");
-          loadingOverlay.style.display = "none";
-          return;
-        }
-    
-        setTimeout(() => {
-          console.log("Navigating to:", targetUrl);
-          window.location.href = targetUrl;
-        }, 500);
-      });
-    });
-    
+   
     
     async function sendRequest() {
       showProgressBar();
@@ -495,11 +474,6 @@
       .catch(error => console.error('Error fetching Stripe key:', error));
 
 
-      window.addEventListener("pageshow", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none";
-  console.log("Spinner hidden on page show (e.g., back navigation)");
-});
 
 
     </script>
