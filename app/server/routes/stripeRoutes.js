@@ -75,7 +75,7 @@ router.post(
         await sendEmail({
           to: customerEmail,
           subject: "Payment Successful - Thank You!",
-          text: `Hi ${user.email},\n\nThank you for your payment! Your subscription is now active.\n\nBest regards,\nThe PDF Generator Team`,
+          text: `Hi ${user.email},\n\nThank you for your payment! Your subscription is now active.\n\nBest regards,\nThe PDFify Team`,
         });
 
         log("Payment success email sent to:", customerEmail);
@@ -109,7 +109,7 @@ router.post(
         await sendEmail({
           to: customerEmail,
           subject: "Subscription Cancelled",
-          text: `Hi ${user.email},\n\nYour subscription has been cancelled. You now have access to the free plan.\n\nBest regards,\nThe PDF Generator Team`,
+          text: `Hi ${user.email},\n\nYour subscription has been cancelled. You now have access to the free plan.\n\nBest regards,\nThe PDFify Team`,
         });
 
         log("Cancellation email sent to:", customerEmail);

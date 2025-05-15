@@ -35,8 +35,8 @@ router.post("/create-user", async (req, res) => {
     await newUser.save();
     log("User created successfully:", newUser);
 
-    const subject = "Welcome to PDF Generator!";
-    const text = `Hi ${email},\n\nThank you for signing up for PDF Generator! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDF Generator Team`;
+    const subject = "Welcome to PDFifyr!";
+    const text = `Hi ${email},\n\nThank you for signing up for PDFify! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDFify Team`;
 
     await sendEmail({
       to: email,
@@ -116,7 +116,7 @@ router.put("/update", authenticate, async (req, res) => {
 
     if (emailChanged || password) {
       const subject = "Your Account Information Has Been Updated";
-      const text = `Hi ${user.email},\n\nYour account information has been updated. If you did not make this change, please contact support immediately.\n\nBest regards,\nThe PDF Generator Team`;
+      const text = `Hi ${user.email},\n\nYour account information has been updated. If you did not make this change, please contact support immediately.\n\nBest regards,\nThe PDFify Team`;
 
       await sendEmail({
         to: user.email,
