@@ -8,7 +8,12 @@ const pdfParse = require("pdf-parse");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
 
-
+// Import HTML template generators (add more as needed)
+const templates = {
+  invoice: require("../templates/invoice"),
+  // e.g. report: require("../templates/report"),
+  // e.g. certificate: require("../templates/certificate"),
+};
 
 router.post("/generate", authenticate, async (req, res) => {
   const { template, formData } = req.body;
