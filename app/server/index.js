@@ -27,7 +27,6 @@ const packingSlipRoutes = require("./routes/packing-slipRoutes");
 
 const app = express();
 
-
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch((error) => console.error('MongoDB connection error:', error));
