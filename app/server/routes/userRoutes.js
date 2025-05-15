@@ -35,7 +35,7 @@ router.post("/create-user", async (req, res) => {
     await newUser.save();
     log("User created successfully:", newUser);
 
-    const subject = "Welcome to PDFifyr!";
+    const subject = "Welcome to PDFify!";
     const text = `Hi ${email},\n\nThank you for signing up for PDFify! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDFify Team`;
 
     await sendEmail({
