@@ -46,36 +46,15 @@
 
   <br><br>
 
- <!-- Mode Toggle -->
- <div>
-  <label><input type="radio" name="mode" value="developer" checked> Developer Mode</label>
-  <label><input type="radio" name="mode" value="friendly"> Friendly Mode</label>
+<!-- Toggle Between Developer and Friendly Mode -->
+<div class="mode-toggle">
+  <label>
+    <input type="radio" v-model="mode" value="developer" /> Developer Mode
+  </label>
+  <label>
+    <input type="radio" v-model="mode" value="friendly" /> Friendly Mode
+  </label>
 </div>
-
-<!-- Template Selector -->
-<div id="template-section">
-  <label for="template-select">Choose Template:</label>
-  <select id="template-select">
-    <option value="">Select a template</option>
-    <option value="invoice">Invoice</option>
-    <option value="receipt">Receipt</option>
-  </select>
-</div>
-
-<!-- Developer Mode Area -->
-<div id="developer-mode">
-  <label for="json-input">JSON Data:</label>
-  <textarea id="json-input" placeholder="Paste JSON here"></textarea>
-
-  <label for="html-input">HTML Template:</label>
-  <textarea id="html-input" placeholder="Paste HTML here"></textarea>
-
-  <button id="generate-dev">Generate PDF (Developer)</button>
-</div>
-
-<!-- Friendly Mode Area -->
-<form id="friendly-form" style="display: none;"></form>
-<button id="generate-friendly" style="display: none;">Generate PDF (Friendly)</button>
 
   <!-- JSON Data Input -->
   <label for="json">Data (JSON):</label>
@@ -459,111 +438,6 @@
       .catch(error => console.error('Error fetching Stripe key:', error));
 
 
-
-      const formFieldsByTemplate = {
-      invoice: [
-        { label: 'Customer Name', key: 'customerName', type: 'text' },
-        { label: 'Invoice Date', key: 'invoiceDate', type: 'date' },
-        { label: 'Amount', key: 'amount', type: 'number' }
-      ],
-      receipt: [
-        { label: 'Recipient', key: 'recipient', type: 'text' },
-        { label: 'Date', key: 'date', type: 'date' },
-        { label: 'Total', key: 'total', type: 'number' }
-      ]
-    };
-
-    const modeRadios = document.querySelectorAll('input[name="mode"]');
-    const devSection = document.getElementById('developer-mode');
-    const friendlyForm = document.getElementById('friendly-form');
-    const generateFriendlyBtn = document.getElementById('generate-friendly');
-    const templateSelect = document.getElementById('template-select');
-
-    modeRadios.forEach(radio => {
-      radio.addEventListener('change', () => {
-        const mode = document.querySelector('input[name="mode"]:checked').value;
-        const isDev = mode === 'developer';
-        devSection.style.display = isDev ? 'block' : 'none';
-        friendlyForm.style.display = !isDev ? 'block' : 'none';
-        generateFriendlyBtn.style.display = !isDev ? 'inline-block' : 'none';
-      });
-    });
-
-    templateSelect.addEventListener('change', () => {
-      const selectedTemplate = templateSelect.value;
-      const fields = formFieldsByTemplate[selectedTemplate] || [];
-      friendlyForm.innerHTML = '';
-
-      fields.forEach(field => {
-        const label = document.createElement('label');
-        label.textContent = field.label;
-
-        const input = document.createElement('input');
-        input.type = field.type;
-        input.name = field.key;
-
-        friendlyForm.appendChild(label);
-        friendlyForm.appendChild(document.createElement('br'));
-        friendlyForm.appendChild(input);
-        friendlyForm.appendChild(document.createElement('br'));
-      });
-    });
-
-    document.getElementById('generate-friendly').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const selectedTemplate = templateSelect.value;
-      const formData = new FormData(friendlyForm);
-      const json = {};
-
-      for (let [key, value] of formData.entries()) {
-        json[key] = value;
-      }
-
-      const payload = {
-        template: selectedTemplate,
-        data: json
-      };
-
-      const res = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${selectedTemplate}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-    });
-
-    document.getElementById('generate-dev').addEventListener('click', async () => {
-      const jsonInput = document.getElementById('json-input').value;
-      const htmlInput = document.getElementById('html-input').value;
-
-      const payload = {
-        html: htmlInput,
-        data: JSON.parse(jsonInput || '{}')
-      };
-
-      const res = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'generated.pdf');
-      document.body.appendChild(link);
-      link.click();
-    });
-
-
       window.addEventListener("pageshow", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   loadingOverlay.style.display = "none";
@@ -682,28 +556,6 @@
   .api-docs-button:hover {
     background-color: #324cdd;
   }
-
-
-
-
-  label {
-      display: block;
-      margin-top: 10px;
-    }
-    select, input[type="text"], input[type="date"], input[type="number"] {
-      width: 100%;
-      margin-bottom: 10px;
-    }
-    #developer-mode, #friendly-form, #generate-friendly {
-      margin-top: 20px;
-    }
-
-
-
-
-
-
-
 
   @keyframes spin {
     to {
