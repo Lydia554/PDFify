@@ -20,63 +20,53 @@
     </div>
     <button id="logoutButton">Logout</button>
   </nav>
-  
-    <h1> PDF Generator API</h1>
+  <!-- Mode Toggle Buttons -->
+  <div id="modeToggle">
+    <button id="developerModeBtn" class="active">Developer Mode</button>
+    <button id="friendlyModeBtn">Friendly Mode</button>
+  </div>
 
-    <div id="modeToggle">
-      <button id="developerModeBtn" class="active">Developer Mode</button>
-      <button id="friendlyModeBtn">Friendly Mode</button>
+  <!-- Developer Mode Container -->
+  <div id="developerMode">
+    <label for="endpoint">Endpoint:</label>
+    <select id="endpoint">
+      <option value="generate-invoice">Invoice</option>
+      <option value="generate-shop-order">Shop Order</option>
+      <option value="generate-therapy-report">Therapy Report</option>
+      <option value="generate-recipe">Recipe</option>
+      <option value="generate-pdf-from-html">Raw HTML</option>
+      <option value="generate-packing-slip">Packing Slip</option>
+    </select>
+
+    <br />
+
+    <label for="apiKey">Your API Key:</label>
+    <input type="text" id="apiKey" placeholder="Paste your API key here" required />
+
+    <br />
+
+    <label for="json">Data (JSON):</label>
+    <textarea id="json" rows="15" required></textarea>
+
+    <br />
+
+    <button id="generateDevBtn">Generate PDF</button>
+    <p id="result"></p>
+  </div>
+
+  <!-- Friendly Mode Container -->
+  <div id="friendlyMode" style="display: none;">
+    <div id="friendlyFields">
+      <!-- Dynamic friendly form fields will be injected here -->
     </div>
-    
-    <!-- Developer Mode Form -->
-    <div id="developerModeForm">
-      <!-- Your existing developer mode form, e.g. raw JSON textarea -->
-      <textarea id="jsonInput" placeholder="Paste your JSON here"></textarea>
-    </div>
-    
-    <!-- Friendly Mode Form -->
-    <div id="friendlyModeForm" style="display:none;">
-      <!-- Friendly Mode UI (form fields, inputs for each template parameter) -->
-      <form id="friendlyForm">
-        <!-- example field -->
-        <label for="customerName">Customer Name</label>
-        <input type="text" id="customerName" name="customerName" />
-        <!-- add more fields dynamically or manually -->
-      </form>
-    </div>
 
-  <br />
+    <button id="generateFriendlyBtn" disabled>Generate PDF</button>
+    <p id="friendlyResult"></p>
+  </div>
 
-  <!-- API Key Input -->
-  <label for="apiKey">Your API Key:</label>
-  <input type="text" id="apiKey" placeholder="Paste your API key here" required />
-
-  <br />
-
-  <!-- JSON Data Input -->
-  <label for="json">Data (JSON):</label>
-  <textarea id="json" rows="15" required></textarea>
-
-  <br />
-
-  <!-- Button to Generate PDF -->
-  <button id="generateDevBtn">Generate PDF</button>
-  <p id="result"></p>
-</div>
-
-
-
-   
-  <div id="friendlyFields"></div>
-
-  <!-- Button to Generate PDF -->
-  <button id="generateFriendlyBtn" disabled>Generate PDF</button>
-  <p id="friendlyResult"></p>
-</div>
-
-<h3>Upgrade to Premium (More PDF Generations)</h3>
-<button id="payment-button">Pay for Premium Access</button>
-<p id="payment-result"></p>
+  <h3>Upgrade to Premium (More PDF Generations)</h3>
+  <button id="payment-button">Pay for Premium Access</button>
+  <p id="payment-result"></p>
 
 
 
