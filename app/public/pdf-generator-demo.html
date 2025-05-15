@@ -22,52 +22,78 @@
   </nav>
   
     <h1> PDF Generator API</h1>
-   
 
-   
+    <!-- Mode Toggle Buttons -->
+<div id="modeToggle">
+  <button id="developerModeBtn" class="active">Developer Mode</button>
+  <button id="friendlyModeBtn">Friendly Mode</button>
+</div>
 
-<!-- Endpoint Selection -->
-<label for="endpoint">Endpoint:</label>
-<select id="endpoint">
-  <option value="generate-invoice">Invoice</option>
-  <option value="generate-shop-order">Shop Order</option>
-  <option value="generate-therapy-report">Therapy Report</option>
-  <option value="generate-recipe">Recipe</option> 
-  <option value="generate-pdf-from-html">Raw HTML</option>
-  <option value="generate-packing-slip">Packing Slip</option>
-</select>
+<!-- Developer Mode Container -->
+<div id="developerMode">
+  <!-- Endpoint Selection -->
+  <label for="endpoint">Endpoint:</label>
+  <select id="endpoint">
+    <option value="generate-invoice">Invoice</option>
+    <option value="generate-shop-order">Shop Order</option>
+    <option value="generate-therapy-report">Therapy Report</option>
+    <option value="generate-recipe">Recipe</option> 
+    <option value="generate-pdf-from-html">Raw HTML</option>
+    <option value="generate-packing-slip">Packing Slip</option>
+  </select>
 
-
-  <br><br>
+  <br />
 
   <!-- API Key Input -->
   <label for="apiKey">Your API Key:</label>
-  <input type="text" id="apiKey" style="width: 100%;" placeholder="Paste your API key here" required>
+  <input type="text" id="apiKey" placeholder="Paste your API key here" required />
 
-  <br><br>
-
-
+  <br />
 
   <!-- JSON Data Input -->
   <label for="json">Data (JSON):</label>
-  <textarea id="json" rows="20" style="width: 100%;" required></textarea>
+  <textarea id="json" rows="15" required></textarea>
 
-  <br>
+  <br />
 
   <!-- Button to Generate PDF -->
-  <button onclick="sendRequest()">Generate PDF</button>
-
+  <button id="generateDevBtn">Generate PDF</button>
   <p id="result"></p>
+</div>
 
-  <!-- Stripe Payment Button -->
-  <h3>Upgrade to Premium (More PDF Generations)</h3>
-  <button id="payment-button">Pay for Premium Access</button>
+<!-- Friendly Mode Container -->
+<div id="friendlyForm">
+  <label for="friendlyTemplate">Select Template:</label>
+  <select id="friendlyTemplate">
+    <option value="">-- Select Template --</option>
+    <option value="generate-invoice">Invoice</option>
+    <option value="generate-shop-order">Shop Order</option>
+    <option value="generate-therapy-report">Therapy Report</option>
+    <option value="generate-recipe">Recipe</option>
+    <option value="generate-packing-slip">Packing Slip</option>
+  </select>
 
-  <p id="payment-result"></p>
+  <div id="friendlyFields"></div>
+   
+
+   
+  <div id="friendlyFields"></div>
+
+  <!-- Button to Generate PDF -->
+  <button id="generateFriendlyBtn" disabled>Generate PDF</button>
+  <p id="friendlyResult"></p>
+</div>
+
+<h3>Upgrade to Premium (More PDF Generations)</h3>
+<button id="payment-button">Pay for Premium Access</button>
+<p id="payment-result"></p>
 
 
 
   <script>
+
+
+
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
@@ -429,6 +455,152 @@
       })
       .catch(error => console.error('Error fetching Stripe key:', error));
 
+  // Mode toggling
+  const developerModeBtn = document.getElementById('developerModeBtn');
+  const friendlyModeBtn = document.getElementById('friendlyModeBtn');
+  const developerModeDiv = document.getElementById('developerMode');
+  const friendlyFormDiv = document.getElementById('friendlyForm');
+  const friendlyTemplateSelect = document.getElementById('friendlyTemplate');
+  const friendlyFieldsDiv = document.getElementById('friendlyFields');
+  const generateFriendlyBtn = document.getElementById('generateFriendlyBtn');
+  const friendlyResult = document.getElementById('friendlyResult');
+
+  developerModeBtn.addEventListener('click', () => {
+    developerModeBtn.classList.add('active');
+    friendlyModeBtn.classList.remove('active');
+    developerModeDiv.style.display = 'block';
+    friendlyFormDiv.style.display = 'none';
+    friendlyResult.innerText = '';
+  });
+
+  friendlyModeBtn.addEventListener('click', () => {
+    friendlyModeBtn.classList.add('active');
+    developerModeBtn.classList.remove('active');
+    developerModeDiv.style.display = 'none';
+    friendlyFormDiv.style.display = 'block';
+    friendlyResult.innerText = '';
+  });
+
+  // Template schemas for Friendly Mode — fields definition for each template
+  // You can extend these schemas to match your data structure needs.
+  const templateSchemas = {
+    "generate-invoice": [
+      { label: "Customer Name", name: "customerName", type: "text" },
+      { label: "Customer Email", name: "customerEmail", type: "email" },
+      { label: "Order ID", name: "orderId", type: "text" },
+      { label: "Date", name: "date", type: "date" },
+      { label: "Subtotal", name: "subtotal", type: "text" },
+      { label: "Tax", name: "tax", type: "text" },
+      { label: "Total", name: "total", type: "text" }
+      // For simplicity, not adding nested items here, could be expanded
+    ],
+    "generate-shop-order": [
+      { label: "Shop Name", name: "shopName", type: "text" },
+      { label: "Customer Name", name: "customerName", type: "text" },
+      { label: "Customer Email", name: "customerEmail", type: "email" },
+      { label: "Order ID", name: "orderId", type: "text" },
+      { label: "Date", name: "date", type: "date" }
+      // Products could be added dynamically if needed later
+    ],
+    "generate-therapy-report": [
+      { label: "Child Name", name: "childName", type: "text" },
+      { label: "Birth Date", name: "birthDate", type: "date" },
+      { label: "Session Date", name: "sessionDate", type: "date" },
+      { label: "Therapy Type", name: "therapyType", type: "text" },
+      { label: "Observations", name: "observations", type: "textarea" },
+      { label: "Recommendations", name: "recommendations", type: "textarea" }
+    ],
+    "generate-recipe": [
+      { label: "Recipe Name", name: "recipeName", type: "text" },
+      { label: "Author", name: "author", type: "text" },
+      { label: "Ingredients (comma separated)", name: "ingredients", type: "textarea" },
+      { label: "Instructions (comma separated)", name: "instructions", type: "textarea" },
+      { label: "Preparation Time", name: "prepTime", type: "text" },
+      { label: "Cooking Time", name: "cookTime", type: "text" }
+    ],
+    "generate-packing-slip": [
+      { label: "Order ID", name: "orderId", type: "text" },
+      { label: "Customer Name", name: "customerName", type: "text" },
+      { label: "Shipping Address", name: "shippingAddress", type: "textarea" },
+      { label: "Date", name: "date", type: "date" }
+    ]
+  };
+
+  // When a template is selected in Friendly Mode, render the form fields dynamically
+  friendlyTemplateSelect.addEventListener('change', () => {
+    const template = friendlyTemplateSelect.value;
+    friendlyFieldsDiv.innerHTML = '';
+    generateFriendlyBtn.disabled = true;
+    friendlyResult.innerText = '';
+
+    if (!template) return;
+
+    const fields = templateSchemas[template];
+    if (!fields) {
+      friendlyFieldsDiv.innerHTML = "<p>No fields defined for this template yet.</p>";
+      return;
+    }
+
+    // Create form inputs
+    fields.forEach(field => {
+      const label = document.createElement('label');
+      label.textContent = field.label;
+      label.htmlFor = field.name;
+
+      let input;
+      if (field.type === 'textarea') {
+        input = document.createElement('textarea');
+      } else {
+        input = document.createElement('input');
+        input.type = field.type || 'text';
+      }
+      input.name = field.name;
+      input.id = field.name;
+      input.required = true;
+
+      friendlyFieldsDiv.appendChild(label);
+      friendlyFieldsDiv.appendChild(input);
+    });
+
+    generateFriendlyBtn.disabled = false;
+  });
+
+  // Generate PDF in Friendly Mode: build JSON from form fields and send request
+  generateFriendlyBtn.addEventListener('click', async () => {
+    const template = friendlyTemplateSelect.value;
+    if (!template) {
+      friendlyResult.innerText = 'Please select a template.';
+      return;
+    }
+
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if (!apiKey) {
+      friendlyResult.innerText = 'Please enter your API key.';
+      return;
+    }
+
+    // Gather form data
+    const fields = templateSchemas[template];
+    let data = {};
+
+    try {
+      fields.forEach(field => {
+        const input = document.getElementById(field.name);
+        if (!input || !input.value.trim()) throw new Error(`Please fill out ${field.label}`);
+        // For textarea fields with comma separated values, parse to arrays (optional)
+        if ((field.name === 'ingredients' || field.name === 'instructions') && field.type === 'textarea') {
+          data[field.name] = input.value.split(',').map(s => s.trim()).filter(Boolean);
+        } else {
+          data[field.name] = input.value.trim();
+        }
+      });
+    } catch (e) {
+      friendlyResult.innerText = e.message;
+      return;
+    } });
+
+
+
 
       window.addEventListener("pageshow", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
@@ -548,6 +720,47 @@
   .api-docs-button:hover {
     background-color: #324cdd;
   }
+
+
+  #modeToggle {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      gap: 10px;
+    }
+    #modeToggle button {
+      flex: 1;
+      padding: 10px 0;
+      font-weight: bold;
+      border-radius: 5px;
+      border: 1px solid #2196f3;
+      background-color: white;
+      color: #2196f3;
+      cursor: pointer;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    #modeToggle button.active {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    /* Friendly mode form */
+    #friendlyForm {
+      display: none;
+    }
+    #friendlyForm label {
+      margin-top: 10px;
+    }
+    #friendlyForm input,
+    #friendlyForm textarea,
+    #friendlyForm select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      margin-top: 5px;
+    }
 
   @keyframes spin {
     to {
