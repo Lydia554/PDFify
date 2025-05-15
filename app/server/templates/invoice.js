@@ -1,4 +1,5 @@
-const { formatDate } = require('../shared');
+const { formatDate } = require('../shared/formatDate');
+
 
 function generateInvoiceHtml(data) {
   return `

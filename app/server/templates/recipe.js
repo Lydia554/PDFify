@@ -1,3 +1,4 @@
+
 const { formatDate } = require('../shared/formatDate');
 
 function generateRecipeHtml(data) {
