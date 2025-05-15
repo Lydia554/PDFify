@@ -68,128 +68,39 @@
   <p id="payment-result"></p>
 
   <script type="module">
-import generateInvoiceHtml from '../templates-frontend/invoice.js';
-import generateRecipeHtml from '../templates-frontend/recipe.js';
+import * as invoiceTemplate from './templates-frontend/invoice.js';
+import * as recipeTemplate from './templates-frontend/recipe.js';
 
 const templateMap = {
-  invoice: generateInvoiceHtml,
-  recipe: generateRecipeHtml,
+  invoice: invoiceTemplate,
+  recipe: recipeTemplate,
 };
-
-const devBtn = document.getElementById('developerModeBtn');
-const friendlyBtn = document.getElementById('friendlyModeBtn');
-const devSection = document.getElementById('developerMode');
-const friendlySection = document.getElementById('friendlyMode');
-const friendlyFields = document.getElementById('friendlyFields');
-const generateFriendlyBtn = document.getElementById('generateFriendlyBtn');
-const endpointSelector = document.getElementById('endpoint');
-
-let currentTemplate = null;
-
-devBtn.addEventListener('click', () => {
-  devBtn.classList.add('active');
-  friendlyBtn.classList.remove('active');
-  devSection.style.display = 'block';
-  friendlySection.style.display = 'none';
-});
-
-friendlyBtn.addEventListener('click', async () => {
-  friendlyBtn.classList.add('active');
-  devBtn.classList.remove('active');
-  devSection.style.display = 'none';
-  friendlySection.style.display = 'block';
-
-  await loadFriendlyForm();
-});
-
-endpointSelector.addEventListener('change', async () => {
-  if (friendlySection.style.display === 'block') {
-    await loadFriendlyForm();
-  }
-});
-
-// This function dynamically creates form inputs based on selected template keys
-async function loadFriendlyForm() {
-  const templateKey = endpointSelector.value;
-  currentTemplate = templateKey;
   
-  // Clear previous fields
-  friendlyFields.innerHTML = '';
-
-  // For demo, generate simple inputs - you can expand to your real form schema
-  if (templateKey === 'invoice') {
-    friendlyFields.innerHTML = `
-      <label>Customer Name: <input id="customerName" type="text" /></label><br/>
-      <label>Amount: <input id="amount" type="number" /></label><br/>
-      <label>Date: <input id="date" type="date" /></label><br/>
-    `;
-  } else if (templateKey === 'recipe') {
-    friendlyFields.innerHTML = `
-      <label>Recipe Name: <input id="recipeName" type="text" /></label><br/>
-      <label>Author: <input id="author" type="text" /></label><br/>
-      <label>Prep Time: <input id="prepTime" type="text" /></label><br/>
-      <label>Cook Time: <input id="cookTime" type="text" /></label><br/>
-      <label>Ingredients (comma separated): <input id="ingredients" type="text" /></label><br/>
-      <label>Instructions (semicolon separated): <input id="instructions" type="text" /></label><br/>
-    `;
-  } else {
-    friendlyFields.innerHTML = `<p>No form available for this template.</p>`;
-  }
-}
-
-generateFriendlyBtn.addEventListener('click', async () => {
-  if (!currentTemplate || !templateMap[currentTemplate]) {
-    alert('Please select a valid template');
-    return;
-  }
-
-  // Gather form data dynamically
-  const formData = {};
-  if (currentTemplate === 'invoice') {
-    formData.customerName = document.getElementById('customerName').value;
-    formData.amount = document.getElementById('amount').value;
-    formData.date = document.getElementById('date').value;
-  } else if (currentTemplate === 'recipe') {
-    formData.recipeName = document.getElementById('recipeName').value;
-    formData.author = document.getElementById('author').value;
-    formData.prepTime = document.getElementById('prepTime').value;
-    formData.cookTime = document.getElementById('cookTime').value;
-    formData.ingredients = document.getElementById('ingredients').value.split(',').map(i => i.trim());
-    formData.instructions = document.getElementById('instructions').value.split(';').map(i => i.trim());
-  }
-
-  // Generate HTML preview locally (optional)
-  const generatedHtml = templateMap[currentTemplate](formData);
-  console.log(generatedHtml); // You could show preview here if you want
-
-  // Send to backend to generate PDF
-  try {
-    const response = await fetch('/api/friendly/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template: currentTemplate, formData }),
+    const devBtn = document.getElementById('developerModeBtn');
+    const friendlyBtn = document.getElementById('friendlyModeBtn');
+    const devSection = document.getElementById('developerMode');
+    const friendlySection = document.getElementById('friendlyMode');
+    const friendlyFields = document.getElementById('friendlyFields');
+    const generateFriendlyBtn = document.getElementById('generateFriendlyBtn');
+    const endpointSelector = document.getElementById('endpoint');
+  
+    let currentTemplateModule = null;
+  
+    devBtn.addEventListener('click', () => {
+      devBtn.classList.add('active');
+      friendlyBtn.classList.remove('active');
+      devSection.style.display = 'block';
+      friendlySection.style.display = 'none';
     });
-    
-    if (!response.ok) throw new Error('PDF generation failed');
-
-    // Handle PDF download
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentTemplate}_${Date.now()}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-
-  } catch (error) {
-    alert('Error generating PDF: ' + error.message);
-  }
-});
-
-// Initialize
-loadFriendlyForm();
+  
+    friendlyBtn.addEventListener('click', async () => {
+      friendlyBtn.classList.add('active');
+      devBtn.classList.remove('active');
+      devSection.style.display = 'none';
+      friendlySection.style.display = 'block';
+  
+      await loadFriendlyForm();
+    });
   
     endpointSelector.addEventListener('change', async () => {
       if (friendlySection.style.display === 'block') {
