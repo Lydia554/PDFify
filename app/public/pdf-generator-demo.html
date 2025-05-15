@@ -68,11 +68,13 @@
   <p id="payment-result"></p>
 
   <script type="module">
-    const templateMap = {
-      invoice: require("../templates-backend/invoice"),
-      recipe: require("../templates-backend/recipe"),
-      
-    };
+import * as invoiceTemplate from './templates-frontend/invoice.js';
+import * as recipeTemplate from './templates-frontend/recipe.js';
+
+const templateMap = {
+  invoice: invoiceTemplate,
+  recipe: recipeTemplate,
+};
   
     const devBtn = document.getElementById('developerModeBtn');
     const friendlyBtn = document.getElementById('friendlyModeBtn');
