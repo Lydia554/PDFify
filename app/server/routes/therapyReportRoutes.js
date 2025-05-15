@@ -4,6 +4,7 @@ const path = require('path');
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
+const pdfParse = require("pdf-parse");
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -206,12 +207,32 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
 
     await browser.close();
 
+
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      fs.unlinkSync(pdfPath);
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user.usageCount + pageCount > user.maxUsage) {
+      fs.unlinkSync(pdfPath);
+      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+    }
+
+    user.usageCount += pageCount;
+    await user.save();
+
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
       }
       fs.unlinkSync(pdfPath);
     });
+
   } catch (error) {
     console.error("Therapy report PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
