@@ -124,7 +124,7 @@ function generateShopOrderHTML(data) {
 
         <div class="footer">
           <p>Thank you for your order! We hope to serve you again soon.</p>
-          <p>If you have questions, contact us at <a href="mailto:support@pdfifyapi.gmail.com">support@pdfifyapi.gmail.com</a>.</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
           <p>&copy; 2025 TetaFit Store — All rights reserved.</p>
         </div>
       </body>

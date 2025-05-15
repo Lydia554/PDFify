@@ -222,7 +222,7 @@ function generateInvoiceHTML(data) {
 
           <div class="footer">
             <p>Thank you for your business!</p>
-            <p>If you have questions, contact us at <a href="mailto:support@pdfifyapi.gmail.com">support@pdfifyapi.gmail.com</a>.</p>
+            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
             <p>&copy; 2025 TetaFit Store — All rights reserved.</p>
             <p class="terms">
               Terms & Conditions: Payment due within 14 days. Late payments may result in additional fees. Refer to our website for full terms.
