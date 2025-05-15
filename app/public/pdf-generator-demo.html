@@ -67,76 +67,7 @@
   <button id="payment-button">Pay for Premium Access</button>
   <p id="payment-result"></p>
 
-  <script type="module">
-import * as invoiceTemplate from './templates-frontend/invoice.js';
-import * as recipeTemplate from './templates-frontend/recipe.js';
-
-const templateMap = {
-  invoice: invoiceTemplate,
-  recipe: recipeTemplate,
-};
-  
-    const devBtn = document.getElementById('developerModeBtn');
-    const friendlyBtn = document.getElementById('friendlyModeBtn');
-    const devSection = document.getElementById('developerMode');
-    const friendlySection = document.getElementById('friendlyMode');
-    const friendlyFields = document.getElementById('friendlyFields');
-    const generateFriendlyBtn = document.getElementById('generateFriendlyBtn');
-    const endpointSelector = document.getElementById('endpoint');
-  
-    let currentTemplateModule = null;
-  
-    devBtn.addEventListener('click', () => {
-      devBtn.classList.add('active');
-      friendlyBtn.classList.remove('active');
-      devSection.style.display = 'block';
-      friendlySection.style.display = 'none';
-    });
-  
-    friendlyBtn.addEventListener('click', async () => {
-      friendlyBtn.classList.add('active');
-      devBtn.classList.remove('active');
-      devSection.style.display = 'none';
-      friendlySection.style.display = 'block';
-  
-      await loadFriendlyForm();
-    });
-  
-    endpointSelector.addEventListener('change', async () => {
-      if (friendlySection.style.display === 'block') {
-        await loadFriendlyForm();
-      }
-    });
-  
-    async function loadFriendlyForm() {
-      const selected = endpointSelector.value;
-      const friendlyKey = selected.replace("generate-", "").replace(/-/g, "_");
-      const templatePath = templateMap[friendlyKey];
-  
-      if (!templatePath) {
-        friendlyFields.innerHTML = "<p>No friendly form available for this template yet.</p>";
-        generateFriendlyBtn.disabled = true;
-        return;
-      }
-  
-      try {
-        currentTemplateModule = await import(templatePath);
-        friendlyFields.innerHTML = currentTemplateModule.friendlyFieldsHtml;
-        generateFriendlyBtn.disabled = false;
-      } catch (err) {
-        console.error("Error loading friendly module:", err);
-        friendlyFields.innerHTML = "<p>Failed to load form.</p>";
-        generateFriendlyBtn.disabled = true;
-      }
-    }
-  
-    generateFriendlyBtn.addEventListener('click', () => {
-      if (currentTemplateModule) {
-        const data = currentTemplateModule.collectFriendlyData();
-        console.log("Sending to friendly endpoint:", data);
-        document.getElementById("friendlyResult").textContent = "PDF request submitted!";
-      }
-    });
+  <script >
 
 
     document.querySelectorAll("nav a").forEach((link) => {
