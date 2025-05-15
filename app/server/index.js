@@ -1,8 +1,8 @@
-require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const dotenv = require("dotenv");
 const path = require("path");
 const cron = require("node-cron");
 const session = require("express-session");
