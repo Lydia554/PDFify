@@ -70,7 +70,7 @@ app.get("/user-dashboard", authenticate, (req, res) => {
   res.sendFile(path.join(__dirname, "../public/user-dashboard.html"));
 });
 
-app.get("/create-user-page", (req, res) => {
+app.get("/user-creation", (req, res) => {
   res.sendFile(path.join(__dirname, "../public/user-creation.html"));
 });
 
