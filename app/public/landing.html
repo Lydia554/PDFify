@@ -190,21 +190,6 @@ document.getElementById("loginButton").addEventListener("click", (event) => {
   }, 500); 
 });
 
-  document.getElementById("getStartedButton").addEventListener("click", (event) => {
-    event.preventDefault(); 
-    const targetUrl = event.target.href; 
-
-    const loadingOverlay = document.getElementById("loadingOverlay");
-    loadingOverlay.style.display = "flex"; 
-    console.log("Spinner shown for Get Started button");
-
-    setTimeout(() => {
-      console.log("Navigating to:", targetUrl);
-      loadingOverlay.style.display = "none";
-      window.location.href = targetUrl; 
-    }, 500); 
-  });
-
 
   window.addEventListener("load", () => {
     const loadingOverlay = document.getElementById("loadingOverlay");
