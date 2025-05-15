@@ -91,7 +91,35 @@
 
 
   <script>
-    
+    const developerBtn = document.getElementById('developerModeBtn');
+const friendlyBtn = document.getElementById('friendlyModeBtn');
+
+const developerForm = document.getElementById('developerModeForm');
+const friendlyForm = document.getElementById('friendlyModeForm');
+
+developerBtn.addEventListener('click', () => {
+  // Set active button styling
+  developerBtn.classList.add('active');
+  friendlyBtn.classList.remove('active');
+
+  // Show developer mode form, hide friendly
+  developerForm.style.display = 'block';
+  friendlyForm.style.display = 'none';
+});
+
+friendlyBtn.addEventListener('click', () => {
+  // Set active button styling
+  friendlyBtn.classList.add('active');
+  developerBtn.classList.remove('active');
+
+  // Show friendly mode form, hide developer
+  friendlyForm.style.display = 'block';
+  developerForm.style.display = 'none';
+});
+
+
+
+
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
