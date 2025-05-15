@@ -16,9 +16,67 @@ const log = (message, data = null) => {
     console.log(message, data);
   }
 };
+const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 function generateTherapyReportHTML(data) {
-  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  const innerHtml = `
+    <div class="watermark">Confidential</div>
+    <img src="${logoUrl}" alt="Logo" class="logo" />
+    <h1>Therapy Report</h1>
+
+    <div class="section">
+      <p><span class="label">Name of Child:</span> <span class="content">${data.childName}</span></p>
+      <p><span class="label">Birth Date:</span> <span class="content">${data.birthDate}</span></p>
+      <p><span class="label">Session Date:</span> <span class="content">${data.sessionDate}</span></p>
+      <p><span class="label">Therapy Type:</span> <span class="content">${data.therapyType}</span></p>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Observations:</p>
+      <p class="content">${data.observations}</p>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Milestones:</p>
+      <div class="multi-column">
+        <table class="table">
+          <tr><th>Milestone</th><th>Progress</th></tr>
+          ${data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')}
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Recommendations:</p>
+      <p class="content">${data.recommendations}</p>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="progressChart"></canvas>
+    </div>
+
+    <script>
+      const ctx = document.getElementById('progressChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Session 1', 'Session 2', 'Session 3', 'Session 4'],
+          datasets: [{
+            label: 'Milestone Progress',
+            data: [${data.milestonesData.join(',')}],
+            backgroundColor: 'rgba(94, 96, 206, 0.5)',
+            borderColor: 'rgba(94, 96, 206, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    </script>
+  `;
 
   return `
     <html>
@@ -100,66 +158,30 @@ function generateTherapyReportHTML(data) {
             background-color: #5e60ce;
             color: white;
           }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #777;
+            border-top: 1px dashed #ccc;
+            padding-top: 20px;
+          }
+          .footer a {
+            color: #2a3d66;
+            text-decoration: none;
+          }
+          .footer a:hover {
+            text-decoration: underline;
+          }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       </head>
       <body>
-        <div class="watermark">Confidential</div>
-        <img src="${logoUrl}" alt="Logo" class="logo" />
-        <h1>Therapy Report</h1>
-
-        <div class="section">
-          <p><span class="label">Name of Child:</span> <span class="content">${data.childName}</span></p>
-          <p><span class="label">Birth Date:</span> <span class="content">${data.birthDate}</span></p>
-          <p><span class="label">Session Date:</span> <span class="content">${data.sessionDate}</span></p>
-          <p><span class="label">Therapy Type:</span> <span class="content">${data.therapyType}</span></p>
+        ${innerHtml}
+        <div class="footer">
+          <p>Thanks for using our service!</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
         </div>
-
-        <div class="section">
-          <p class="section-title">Observations:</p>
-          <p class="content">${data.observations}</p>
-        </div>
-
-        <div class="section">
-          <p class="section-title">Milestones:</p>
-          <div class="multi-column">
-            <table class="table">
-              <tr><th>Milestone</th><th>Progress</th></tr>
-              ${data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')}
-            </table>
-          </div>
-        </div>
-
-        <div class="section">
-          <p class="section-title">Recommendations:</p>
-          <p class="content">${data.recommendations}</p>
-        </div>
-
-        <div class="chart-container">
-          <canvas id="progressChart"></canvas>
-        </div>
-
-        <script>
-          const ctx = document.getElementById('progressChart').getContext('2d');
-          new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels: ['Session 1', 'Session 2', 'Session 3', 'Session 4'],
-              datasets: [{
-                label: 'Milestone Progress',
-                data: [${data.milestonesData.join(',')}],
-                backgroundColor: 'rgba(94, 96, 206, 0.5)',
-                borderColor: 'rgba(94, 96, 206, 1)',
-                borderWidth: 1
-              }]
-            },
-            options: {
-              scales: {
-                y: { beginAtZero: true }
-              }
-            }
-          });
-        </script>
       </body>
     </html>
   `;
