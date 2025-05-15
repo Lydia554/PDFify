@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const authenticate = require('../middleware/authenticate'); 
+const User = require('../models/User');
 const pdfParse = require("pdf-parse");
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";

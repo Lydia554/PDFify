@@ -4,6 +4,7 @@ const path = require('path');
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
+const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
 if (typeof ReadableStream === "undefined") {
