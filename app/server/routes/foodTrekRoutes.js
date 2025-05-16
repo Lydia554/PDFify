@@ -15,6 +15,26 @@ function parseArray(arr) {
   return Array.isArray(arr) ? arr.map(item => parseEmoji(item)) : [];
 }
 
+// Helper: split step string into stepName and stepDesc
+function splitStep(text) {
+  // Try split at first period + space (if within first 40 chars)
+  const periodSplit = text.indexOf('. ');
+  if (periodSplit > 0 && periodSplit < 40) {
+    const stepName = text.slice(0, periodSplit + 1).trim();
+    const stepDesc = text.slice(periodSplit + 1).trim();
+    return { stepName, stepDesc };
+  }
+  // Try split at first colon
+  const colonSplit = text.indexOf(':');
+  if (colonSplit > 0 && colonSplit < 40) {
+    const stepName = text.slice(0, colonSplit + 1).trim();
+    const stepDesc = text.slice(colonSplit + 1).trim();
+    return { stepName, stepDesc };
+  }
+  // Fallback: no split, entire text is description
+  return { stepName: '', stepDesc: text };
+}
+
 // Generate HTML content from recipe data
 function generateRecipeHtml(data) {
   const parsedData = {
@@ -173,36 +193,37 @@ function generateRecipeHtml(data) {
         transform: scale(1.05);
       }
 
-     .images-with-steps {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-      justify-content: center;
-    }
+      /* New styles for images with steps */
+      .images-with-steps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 5px;
+      }
 
-    .image-step-pair {
-      flex: 1 1 150px;
-      max-width: 200px;
-      text-align: center;
-    }
+      .image-step-pair {
+        max-width: 140px;
+        text-align: center;
+      }
 
-    .image-step-pair img {
-      max-width: 100%;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }
+      .image-step-pair img {
+        max-width: 100%;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+      }
 
-    .image-step-pair img:hover {
-      transform: scale(1.05);
-    }
+      .image-step-pair img:hover {
+        transform: scale(1.05);
+      }
 
-    .step-text {
-      margin-top: 8px;
-      font-size: 0.95rem;
-      color: #4e342e;
-      font-weight: 600;
-    }
+      .step-text {
+        margin-top: 8px;
+        font-size: 0.95rem;
+        color: #4e342e;
+        text-align: left;
+      }
 
       footer {
         text-align: center;
@@ -260,82 +281,99 @@ function generateRecipeHtml(data) {
     </style>
   </head>
   <body>
-  <header class="logo-header" id="header-logo">
-    <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
-  </header>
+    <header class="logo-header" id="header-logo">
+      <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
+    </header>
 
-  <div class="container">
-    <h1>${parsedData.recipeName || 'Recipe'}</h1>
+    <div class="container">
+      <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
-    <div class="meta-info">
-      ${parsedData.prepTime.label ? `<div class="meta-item"><span class="label">${parsedData.prepTime.label}:</span><span class="value">${parsedData.prepTime.val}</span></div>` : ''}
-      ${parsedData.cookTime.label ? `<div class="meta-item"><span class="label">${parsedData.cookTime.label}:</span><span class="value">${parsedData.cookTime.val}</span></div>` : ''}
-      ${parsedData.totalTime.label ? `<div class="meta-item"><span class="label">${parsedData.totalTime.label}:</span><span class="value">${parsedData.totalTime.val}</span></div>` : ''}
-      ${parsedData.restTime.label ? `<div class="meta-item"><span class="label">${parsedData.restTime.label}:</span><span class="value">${parsedData.restTime.val}</span></div>` : ''}
-      ${parsedData.difficulty.label ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
+      <div class="meta-info">
+        ${parsedData.prepTime.label ? `<div class="meta-item"><span class="label">${parsedData.prepTime.label}:</span><span class="value">${parsedData.prepTime.val}</span></div>` : ''}
+        ${parsedData.cookTime.label ? `<div class="meta-item"><span class="label">${parsedData.cookTime.label}:</span><span class="value">${parsedData.cookTime.val}</span></div>` : ''}
+        ${parsedData.totalTime.label ? `<div class="meta-item"><span class="label">${parsedData.totalTime.label}:</span><span class="value">${parsedData.totalTime.val}</span></div>` : ''}
+        ${parsedData.restTime.label ? `<div class="meta-item"><span class="label">${parsedData.restTime.label}:</span><span class="value">${parsedData.restTime.val}</span></div>` : ''}
+        ${parsedData.difficulty.label ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
+      </div>
+
+      ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
+
+      ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
+
+      ${parsedData.instructions.length ? `
+        <section class="card">
+          <h2>Instructions</h2>
+          <ol class="instructions">
+            ${parsedData.instructions.map(i => {
+              const { stepName, stepDesc } = splitStep(i);
+              return `<li>
+                ${stepName ? `<strong>${stepName}</strong> ` : ''}
+                ${stepDesc}
+              </li>`;
+            }).join('')}
+          </ol>
+        </section>
+      ` : ''}
+
+      ${parsedData.imageUrls?.length ? `
+        <section class="card">
+          <h2>Images with Steps</h2>
+          <div class="images-with-steps">
+            ${parsedData.imageUrls.map((url, i) => {
+              const { stepName, stepDesc } = splitStep(parsedData.instructions[i] || '');
+              return `
+                <div class="image-step-pair">
+                  <img src="${url}" alt="Recipe image ${i + 1}" />
+                  <p class="step-text">
+                    ${stepName ? `<strong>${stepName}</strong><br>` : ''}
+                    ${stepDesc}
+                  </p>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </section>
+      ` : ''}
+
     </div>
 
-    ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
-    ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
-   
-    ${parsedData.imageUrls?.length ? `
-      <section class="card">
-        <h2>Instructions</h2>
-        <div class="images-with-steps">
-          ${parsedData.imageUrls.map((url, i) => `
-            <div class="image-step-pair">
-              <img src="${url}" alt="Recipe image ${i + 1}" />
-              <p class="step-text">${parsedData.instructions[i] || ''}</p>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-    ` : ''}
-  </div>
-
-
     <footer>
-      Created with ❤️ by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
+      &copy; 2025 Food Trek
     </footer>
   </body>
-  </html>`;
+  </html>
+  `;
 }
 
 router.post('/premium-recipe', async (req, res) => {
-  const { email, ...data } = req.body;
-
   try {
-    const html = generateRecipeHtml(data);
-    const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
-    const pdfDir = path.join(__dirname, '../../pdfs');
+    const recipeData = req.body;
 
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
+    const htmlContent = generateRecipeHtml(recipeData);
 
-    const pdfPath = path.join(pdfDir, fileName);
-
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    const browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    await page.pdf({
-      path: pdfPath,
+    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,
-      displayHeaderFooter: false,
-      scale: 1,
+      margin: { top: '1cm', bottom: '1cm', left: '1cm', right: '1cm' },
     });
 
     await browser.close();
 
-    res.download(pdfPath, fileName, err => {
-      if (err) console.error(err);
-      fs.unlinkSync(pdfPath);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Length': pdfBuffer.length,
+      'Content-Disposition': `attachment; filename="${recipeData.recipeName || 'recipe'}.pdf"`,
     });
-  } catch (err) {
-    console.error('PDF generation failed:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    res.status(500).send('Error generating PDF');
   }
 });
 
