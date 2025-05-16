@@ -225,7 +225,7 @@ function generateRecipeHtml(data) {
         ${data.description ? `
           <section class="card description">
             <h2>Description</h2>
-            <p>${replaceEmojisWithImages(data.description)}</p>
+            <p>${data.description}</p>
           </section>
         ` : ''}
   
