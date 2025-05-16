@@ -38,7 +38,7 @@ router.post("/create-checkout-session", async (req, res) => {
 });
 
 
-router.post("/cancel-subscription", authenticate, async (req, res) => {
+router.post("/unsubscribe", authenticate, async (req, res) => {
   const userId = req.user.userId;
 
   try {
