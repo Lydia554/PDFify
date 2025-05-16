@@ -72,7 +72,7 @@ function generateRecipeHtml(data) {
       }
 
       .container {
-        max-width: 720px;
+        max-width: 500px;
         margin: 30px auto;
         padding: 30px 40px;
         background: #fff;
@@ -163,7 +163,7 @@ function generateRecipeHtml(data) {
       }
 
       .images img {
-        max-width: 10%;
+        max-width: 20%;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transition: transform 0.3s ease;
@@ -210,7 +210,7 @@ function generateRecipeHtml(data) {
         }
 
         .images img {
-          max-width: 100%;
+          max-width: 50%;
           box-shadow: none;
           border-radius: 0;
         }
