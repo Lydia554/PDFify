@@ -52,24 +52,28 @@ function generateRecipeHtml(data) {
     <meta charset="UTF-8" />
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
-      body, html { margin: 0; padding: 0; background: #fff; font-family: 'Open Sans', sans-serif; color: #333; }
-      body::before {
-        content: "";
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        width: 400px;
-        height: 200px;
-        background: url('https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg') no-repeat center;
-        background-size: contain;
-        opacity: 0.06;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 0;
+      body, html {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+        font-family: 'Open Sans', sans-serif;
+        color: #333;
       }
+
+      header.logo-header {
+        text-align: center;
+        padding: 20px 0 10px;
+        border-bottom: 1px solid #eee;
+      }
+
+      header.logo-header img {
+        max-width: 180px;
+        height: auto;
+      }
+
       .container {
         max-width: 720px;
-        margin: 40px auto;
+        margin: 30px auto;
         padding: 30px 40px;
         background: #fff;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
@@ -77,6 +81,7 @@ function generateRecipeHtml(data) {
         position: relative;
         z-index: 1;
       }
+
       h1 {
         font-family: 'Merriweather', serif;
         font-weight: 700;
@@ -86,12 +91,14 @@ function generateRecipeHtml(data) {
         border-bottom: 3px solid #ff7043;
         padding-bottom: 8px;
       }
+
       .meta-info {
         display: flex;
         gap: 20px;
         flex-wrap: wrap;
         margin-bottom: 30px;
       }
+
       .meta-item {
         background: #fff3e0;
         box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
@@ -102,6 +109,7 @@ function generateRecipeHtml(data) {
         font-weight: 600;
         color: #bf360c;
       }
+
       .meta-item .label {
         display: block;
         font-size: 0.9rem;
@@ -111,11 +119,13 @@ function generateRecipeHtml(data) {
         letter-spacing: 1.3px;
         color: #e65100;
       }
+
       .meta-item .value {
         font-size: 1.1rem;
         font-weight: 400;
         color: #4e342e;
       }
+
       section.card {
         background: #fff;
         border-radius: 12px;
@@ -123,6 +133,7 @@ function generateRecipeHtml(data) {
         padding: 25px 30px;
         margin-bottom: 35px;
       }
+
       section.card h2 {
         font-family: 'Merriweather', serif;
         font-weight: 700;
@@ -132,14 +143,17 @@ function generateRecipeHtml(data) {
         padding-bottom: 8px;
         margin-bottom: 20px;
       }
+
       ul.ingredients, ol.instructions {
         padding-left: 25px;
         font-size: 1.1rem;
         color: #4e342e;
       }
+
       ol.instructions li {
         margin-bottom: 14px;
       }
+
       .images {
         display: flex;
         flex-wrap: wrap;
@@ -147,25 +161,78 @@ function generateRecipeHtml(data) {
         justify-content: center;
         margin-top: 20px;
       }
+
       .images img {
         max-width: 30%;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transition: transform 0.3s ease;
       }
+
       .images img:hover {
         transform: scale(1.05);
       }
+
+      footer {
+        text-align: center;
+        margin: 30px auto;
+        font-size: 0.9rem;
+        color: #888;
+      }
+
       @media print {
-        body::before { opacity: 0.03; }
-        .container { box-shadow: none; border-radius: 0; margin: 0; padding: 0 15px; max-width: 100%; }
-        .images img { max-width: 100%; box-shadow: none; border-radius: 0; }
-        h1, section.card h2 { color: #000; border-color: #666; }
-        .meta-item { background: #eee; box-shadow: none; color: #000; }
+        body, html {
+          margin: 0;
+          padding: 0;
+        }
+
+        header.logo-header {
+          position: running(header-logo);
+          display: block;
+          text-align: center;
+          margin-bottom: 10px;
+        }
+
+        @page {
+          margin-top: 100px;
+          margin-bottom: 60px;
+          @top-center {
+            content: element(header-logo);
+          }
+        }
+
+        .container {
+          box-shadow: none;
+          border-radius: 0;
+          margin: 0;
+          padding: 0 15px;
+          max-width: 100%;
+        }
+
+        .images img {
+          max-width: 100%;
+          box-shadow: none;
+          border-radius: 0;
+        }
+
+        h1, section.card h2 {
+          color: #000;
+          border-color: #666;
+        }
+
+        .meta-item {
+          background: #eee;
+          box-shadow: none;
+          color: #000;
+        }
       }
     </style>
   </head>
   <body>
+    <header class="logo-header" id="header-logo">
+      <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
+    </header>
+
     <div class="container">
       <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
@@ -183,7 +250,7 @@ function generateRecipeHtml(data) {
       ${parsedData.imageUrls?.length ? `<section class="card"><h2>Images</h2><div class="images">${parsedData.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}</div></section>` : ''}
     </div>
 
-    <footer style="text-align:center; margin:30px auto; font-size:0.9rem; color:#888;">
+    <footer>
       Created with ❤️ by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
     </footer>
   </body>
@@ -191,43 +258,41 @@ function generateRecipeHtml(data) {
 }
 
 router.post('/premium-recipe', async (req, res) => {
-    const { email, ...data } = req.body;
-  
-    try {
-      const html = generateRecipeHtml(data);
-      const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
-      const pdfDir = path.join(__dirname, '../../pdfs');
-  
-      if (!fs.existsSync(pdfDir)) {
-        fs.mkdirSync(pdfDir, { recursive: true });
-      }
-  
-      const pdfPath = path.join(pdfDir, fileName);
-  
-      const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-      const page = await browser.newPage();
-      await new Promise(resolve => setTimeout(resolve, 1000));
-  
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-  
-      await page.pdf({
-        path: pdfPath,
-        format: 'A4',
-        printBackground: true,
-        scale: 1,
-      });
-  
-      await browser.close();
-  
-      res.download(pdfPath, fileName, err => {
-        if (err) console.error(err);
-        fs.unlinkSync(pdfPath);
-      });
-    } catch (err) {
-      console.error('PDF generation failed:', err);
-      res.status(500).json({ error: 'Internal Server Error' });
+  const { email, ...data } = req.body;
+
+  try {
+    const html = generateRecipeHtml(data);
+    const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
+    const pdfDir = path.join(__dirname, '../../pdfs');
+
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
     }
-  });
-  
-  module.exports = router;
-  
+
+    const pdfPath = path.join(pdfDir, fileName);
+
+    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    await page.pdf({
+      path: pdfPath,
+      format: 'A4',
+      printBackground: true,
+      displayHeaderFooter: false,
+      scale: 1,
+    });
+
+    await browser.close();
+
+    res.download(pdfPath, fileName, err => {
+      if (err) console.error(err);
+      fs.unlinkSync(pdfPath);
+    });
+  } catch (err) {
+    console.error('PDF generation failed:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+module.exports = router;
