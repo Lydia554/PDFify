@@ -61,7 +61,7 @@ app.use("/api", shopOrderRoutes);
 app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
 app.use("/api/friendly", friendlyMode);
-app.use('/api/foodtrek', foodTrekRoutes);
+app.use('/api', foodTrekRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
