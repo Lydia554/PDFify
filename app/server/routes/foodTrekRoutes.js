@@ -5,7 +5,6 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
-
 function replaceEmojisWithImages(str) {
     const baseUrl = 'https://twemoji.maxcdn.com/v/latest/svg/';
     const regexEmoji = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
@@ -60,7 +59,7 @@ function replaceEmojisWithImages(str) {
         height: 400px;
         background: url('https://food-trek.com/wp-content/uploads/2024/05/food-trek-logo.png') no-repeat center;
         background-size: contain;
-        opacity: 0.08;
+        opacity: 0.07;
         transform: translate(-50%, -50%);
         pointer-events: none;
         z-index: 0;
@@ -71,7 +70,7 @@ function replaceEmojisWithImages(str) {
         font-weight: 700;
         font-size: 2.8rem;
         color: #e65100;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
         border-bottom: 3px solid #ff7043;
         padding-bottom: 8px;
         position: relative;
@@ -81,50 +80,52 @@ function replaceEmojisWithImages(str) {
       .meta-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 20px;
-        margin-bottom: 25px;
+        gap: 18px;
+        margin-bottom: 30px;
         position: relative;
         z-index: 1;
       }
   
       .meta-item {
         background: #fff;
-        padding: 15px 25px;
-        border-radius: 14px;
-        box-shadow: 0 4px 12px rgba(230, 81, 0, 0.3);
-        flex: 1 1 120px;
+        padding: 18px 28px;
+        border-radius: 16px;
+        box-shadow: 0 5px 15px rgba(230, 81, 0, 0.25);
+        flex: 1 1 140px;
         text-align: center;
         user-select: none;
         cursor: default;
         transition: box-shadow 0.3s ease;
+        min-width: 140px;
       }
       .meta-item:hover {
-        box-shadow: 0 6px 18px rgba(230, 81, 0, 0.6);
+        box-shadow: 0 7px 25px rgba(230, 81, 0, 0.45);
       }
   
       .meta-item .label {
         font-family: 'Merriweather', serif;
         font-weight: 700;
-        font-size: 1.1rem;
+        font-size: 1rem;
         color: #bf360c;
         margin-bottom: 6px;
         display: block;
         text-transform: uppercase;
-        letter-spacing: 0.07em;
+        letter-spacing: 0.1em;
         white-space: pre-line;
         line-height: 1.2;
       }
   
       .meta-item .value {
         font-weight: 700;
-        font-size: 1.3rem;
+        font-size: 1.4rem;
         color: #3e2723;
         white-space: nowrap;
+        user-select: text;
       }
   
       .description {
-        margin-bottom: 30px;
-        font-size: 1.1rem;
+        margin-bottom: 40px;
+        font-size: 1.15rem;
         font-style: italic;
         color: #555;
         white-space: pre-wrap;
@@ -135,19 +136,19 @@ function replaceEmojisWithImages(str) {
       h2 {
         font-family: 'Merriweather', serif;
         font-weight: 700;
-        font-size: 1.8rem;
+        font-size: 1.85rem;
         color: #bf360c;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
         border-bottom: 2px solid #ffab91;
         padding-bottom: 6px;
-        margin-top: 40px;
+        margin-top: 50px;
         position: relative;
         z-index: 1;
       }
   
       ul.ingredients {
         list-style-type: disc;
-        padding-left: 25px;
+        padding-left: 28px;
         font-size: 1.1rem;
         color: #444;
         position: relative;
@@ -155,23 +156,23 @@ function replaceEmojisWithImages(str) {
       }
   
       ol.instructions {
-        padding-left: 25px;
+        padding-left: 28px;
         font-size: 1.1rem;
         color: #444;
-        margin-bottom: 30px;
+        margin-bottom: 40px;
         position: relative;
         z-index: 1;
       }
   
       ol.instructions li {
-        margin-bottom: 14px;
+        margin-bottom: 16px;
       }
   
       .images {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 30px;
+        gap: 10px;
+        margin-top: 35px;
         justify-content: center;
         position: relative;
         z-index: 1;
@@ -181,15 +182,17 @@ function replaceEmojisWithImages(str) {
         width: 130px;
         height: 95px;
         object-fit: cover;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+        user-select: none;
       }
   
       .emoji {
         vertical-align: text-bottom;
-        width: 1.1em;
-        height: 1.1em;
+        width: 1.2em;
+        height: 1.2em;
         margin-left: 3px;
+        user-select: none;
       }
   
       @media print {
@@ -236,42 +239,76 @@ function replaceEmojisWithImages(str) {
     <h1>${replaceEmojisWithImages(data.recipeName || 'Recipe')}</h1>
   
     <div class="meta-container">
-      ${data.prepTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('⏲️\nPrep Time')}</span><span class="value">${data.prepTime}</span></div>` : ''}
-      ${data.cookTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('🔥\nCook Time')}</span><span class="value">${data.cookTime}</span></div>` : ''}
-      ${data.restTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('🛌\nRest Time')}</span><span class="value">${data.restTime}</span></div>` : ''}
-      ${data.totalTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('⏳\nTotal Time')}</span><span class="value">${data.totalTime}</span></div>` : ''}
-      ${data.difficulty ? `<div class="meta-item"><span class="label">Difficulty</span><span class="value">${data.difficulty}</span></div>` : ''}
-      ${data.servings ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('🍽️\nServings')}</span><span class="value">${data.servings}</span></div>` : ''}
+      ${
+        data.prepTime
+          ? `<div class="meta-item"><span class="label">PREP TIME</span><span class="value">${replaceEmojisWithImages(data.prepTime)}</span></div>`
+          : ''
+      }
+      ${
+        data.cookTime
+          ? `<div class="meta-item"><span class="label">COOK TIME</span><span class="value">${replaceEmojisWithImages(data.cookTime)}</span></div>`
+          : ''
+      }
+      ${
+        data.restTime
+          ? `<div class="meta-item"><span class="label">REST TIME</span><span class="value">${replaceEmojisWithImages(data.restTime)}</span></div>`
+          : ''
+      }
+      ${
+        data.totalTime
+          ? `<div class="meta-item"><span class="label">TOTAL TIME:</span><span class="value">${replaceEmojisWithImages(data.totalTime)}</span></div>`
+          : ''
+      }
+      ${
+        data.difficulty
+          ? `<div class="meta-item"><span class="label">DIFFICULTY:</span><span class="value">${replaceEmojisWithImages(data.difficulty)}</span></div>`
+          : ''
+      }
+      ${
+        data.servings
+          ? `<div class="meta-item"><span class="label">SERVINGS</span><span class="value">${replaceEmojisWithImages(data.servings)}</span></div>`
+          : ''
+      }
     </div>
   
-    ${data.description ? `<p class="description">${data.description}</p>` : ''}
+    ${data.description ? `<p class="description">${replaceEmojisWithImages(data.description)}</p>` : ''}
   
-    ${data.ingredients && data.ingredients.length ? `
-      <h2>Ingredients</h2>
-      <ul class="ingredients">
-        ${data.ingredients.map(i => `<li>${replaceEmojisWithImages(i)}</li>`).join('')}
-      </ul>
-    ` : ''}
+    ${
+      data.ingredients && data.ingredients.length
+        ? `<h2>Ingredients</h2>
+        <ul class="ingredients">
+          ${data.ingredients.map(i => `<li>${replaceEmojisWithImages(i)}</li>`).join('')}
+        </ul>`
+        : ''
+    }
   
-    ${data.instructions && data.instructions.length ? `
-      <h2>Instructions</h2>
-      <ol class="instructions">
-        ${data.instructions.map(i => `<li>${replaceEmojisWithImages(i)}</li>`).join('')}
-      </ol>
-    ` : ''}
+    ${
+      data.instructions && data.instructions.length
+        ? `<h2>Instructions</h2>
+        <ol class="instructions">
+          ${data.instructions.map(i => `<li>${replaceEmojisWithImages(i)}</li>`).join('')}
+        </ol>`
+        : ''
+    }
   
-    ${data.images && data.images.length ? `
-      <div class="images">
-        ${data.images.map(img => `<img src="${img}" alt="Recipe image" />`).join('')}
-      </div>
-    ` : ''}
+    ${
+      data.imageUrls && data.imageUrls.length
+        ? `<div class="images">
+          ${data.imageUrls
+            .map(
+              (img) =>
+                `<img src="${img}" alt="Recipe image" loading="lazy" />`
+            )
+            .join('')}
+        </div>`
+        : ''
+    }
   </body>
   </html>
-    `;
+  `;
   }
   
   
-
   
   
 router.post('/premium-recipe', async (req, res) => {
