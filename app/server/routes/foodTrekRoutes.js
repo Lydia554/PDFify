@@ -296,7 +296,7 @@ router.post('/premium-recipe', async (req, res) => {
 
     await page.setContent(html, { waitUntil: 'networkidle0' });
     // wait for Twemoji script to run and images to load
-    await page.waitForTimeout(1000);
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     await page.pdf({
       path: pdfPath,
