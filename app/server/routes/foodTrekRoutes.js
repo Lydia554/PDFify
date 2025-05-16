@@ -71,14 +71,18 @@ router.post('/premium-recipe', async (req, res) => {
   
       const html = generateRecipeHtml(data);
       const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
-      const pdfPath = path.join(__dirname, '../../pdfs', fileName);
-  
-      const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      await page.pdf({ path: pdfPath, format: 'A4' });
-      await browser.close();
-  
+      const pdfDir = path.join(__dirname, '../../pdfs');
+if (!fs.existsSync(pdfDir)) {
+  fs.mkdirSync(pdfDir, { recursive: true });
+}
+const pdfPath = path.join(pdfDir, fileName);
+
+const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+const page = await browser.newPage();
+await page.setContent(html, { waitUntil: 'networkidle0' });
+await page.pdf({ path: pdfPath, format: 'A4' });
+await browser.close();
+
       res.download(pdfPath, fileName, err => {
         if (err) console.error(err);
         fs.unlinkSync(pdfPath);
