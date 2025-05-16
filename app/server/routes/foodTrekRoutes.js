@@ -271,7 +271,10 @@ function generateRecipeHtml(data) {
         }
       </script>
 
-      <footer>Created with ❤️ by Food Trek — Visit food-trek.com</footer>
+       <footer style="margin: 30px auto; text-align: center; font-size: 0.9rem; color: #888;">
+        Created with ❤️ by <strong>Food Trek</strong> — Visit 
+        <a href="https://foodtrek.com" target="_blank" style="color: #ff7043; text-decoration: none;">foodtrek.com</a>
+      </footer>
     </body>
     </html>
     `;
