@@ -166,38 +166,39 @@ function generateRecipeHtml(data) {
       <body>
         <h1>${data.recipeName ? `${data.recipeName} <span class="emoji">🍽️</span>` : 'Recipe'}</h1>
         
-        <div class="meta">
-          ${data.prepTime ? `
-            <div class="meta-item">
-              <div class="label emoji">⏲️ Prep Time</div>
-              <div class="value">${data.prepTime}</div>
-            </div>` : ''}
-          ${data.cookTime ? `
-            <div class="meta-item">
-              <div class="label emoji">🔥 Cook Time</div>
-              <div class="value">${data.cookTime}</div>
-            </div>` : ''}
-          ${data.totalTime ? `
-            <div class="meta-item">
-              <div class="label emoji">⏳ Total Time</div>
-              <div class="value">${data.totalTime}</div>
-            </div>` : ''}
-            ${data.restTime ? `
-                <div class="meta-item">
-                  <div class="label emoji">⏳ Rest Time</div>
-                  <div class="value">${data.restTime}</div>
-                </div>` : ''}
-          ${data.difficulty ? `
-            <div class="meta-item">
-              <div class="label emoji">⚙️ Difficulty</div>
-              <div class="value">${data.difficulty}</div>
-            </div>` : ''}
-          ${data.servings ? `
-            <div class="meta-item">
-              <div class="label emoji">🍴 Servings</div>
-              <div class="value">${data.servings}</div>
-            </div>` : ''}
-        </div>
+      <div class="meta">
+  ${data.prepTime ? `
+    <div class="meta-item">
+      <div class="label emoji">⏲️ Prep Time</div>
+      <div class="value">${data.prepTime}</div>
+    </div>` : ''}
+  ${data.cookTime ? `
+    <div class="meta-item">
+      <div class="label emoji">🔥 Cook Time</div>
+      <div class="value">${data.cookTime}</div>
+    </div>` : ''}
+  ${data.totalTime ? `
+    <div class="meta-item">
+      <div class="label emoji">⏳ Total Time</div>
+      <div class="value">${data.totalTime}</div>
+    </div>` : ''}
+  ${data.restTime ? `
+    <div class="meta-item">
+      <div class="label emoji">🛌 Rest Time</div>
+      <div class="value">${data.restTime}</div>
+    </div>` : ''}
+  ${data.difficulty ? `
+    <div class="meta-item">
+      <div class="label emoji">⚙️ Difficulty</div>
+      <div class="value">${data.difficulty}</div>
+    </div>` : ''}
+  ${data.servings ? `
+    <div class="meta-item">
+      <div class="label emoji">🍽️ Servings</div>
+      <div class="value">${data.servings}</div>
+    </div>` : ''}
+</div>
+
         
         ${data.description ? `<p class="description">${data.description}</p>` : ''}
         
