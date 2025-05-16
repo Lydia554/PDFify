@@ -50,7 +50,7 @@ function generateRecipeHtml(data) {
   <body>
     ${data.includeTitle ? `<h1>${data.recipeName} <span class="emoji">🍽️</span></h1>` : ''}
     ${data.imageUrl ? `<img src="${data.imageUrl}" alt="Recipe Image" />` : ''}
-    ${data.includeAuthor ? `<p><strong>Author:</strong> ${data.author}</p>` : ''}
+  
     ${data.includePrepTime ? `<p><strong>Prep Time:</strong> ${data.prepTime}</p>` : ''}
     ${data.includeCookTime ? `<p><strong>Cook Time:</strong> ${data.cookTime}</p>` : ''}
 
