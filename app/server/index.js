@@ -30,7 +30,7 @@ const foodTrekRoutes = require('./routes/foodTrekRoutes');
 
 const app = express();
 app.use(cors({
-  origin: 'https://food-trek.com', // your frontend URL
+  origin: 'https://food-trek.com', 
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));

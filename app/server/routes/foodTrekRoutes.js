@@ -5,24 +5,54 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const twemoji = require('twemoji');
 
+// Helper: parse individual text string to twemoji <img> if emoji is found
+function parseEmoji(text) {
+  return text ? twemoji.parse(text, { folder: '72x72', ext: '.png' }) : '';
+}
+
+// Helper: parse an array of text strings
+function parseArray(arr) {
+  return Array.isArray(arr) ? arr.map(item => parseEmoji(item)) : [];
+}
+
+// Generate HTML content from recipe data
 function generateRecipeHtml(data) {
-  // Your original HTML template without JS or replaceEmojisWithImages function
-  const rawHtml = `
+  const parsedData = {
+    ...data,
+    recipeName: parseEmoji(data.recipeName),
+    description: parseEmoji(data.description),
+    ingredients: parseArray(data.ingredients),
+    instructions: parseArray(data.instructions),
+    prepTime: {
+      label: parseEmoji(data?.prepTime?.label),
+      val: parseEmoji(data?.prepTime?.val),
+    },
+    cookTime: {
+      label: parseEmoji(data?.cookTime?.label),
+      val: parseEmoji(data?.cookTime?.val),
+    },
+    totalTime: {
+      label: parseEmoji(data?.totalTime?.label),
+      val: parseEmoji(data?.totalTime?.val),
+    },
+    restTime: {
+      label: parseEmoji(data?.restTime?.label),
+      val: parseEmoji(data?.restTime?.val),
+    },
+    difficulty: {
+      label: parseEmoji(data?.difficulty?.label),
+      val: parseEmoji(data?.difficulty?.val),
+    },
+  };
+
+  return `
   <!DOCTYPE html>
   <html>
   <head>
     <meta charset="UTF-8" />
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
-
-      body, html {
-        margin: 0; padding: 0;
-        background: #fff;
-        font-family: 'Open Sans', sans-serif;
-        position: relative;
-        color: #333;
-      }
-
+      body, html { margin: 0; padding: 0; background: #fff; font-family: 'Open Sans', sans-serif; color: #333; }
       body::before {
         content: "";
         position: fixed;
@@ -37,7 +67,6 @@ function generateRecipeHtml(data) {
         pointer-events: none;
         z-index: 0;
       }
-
       .container {
         max-width: 720px;
         margin: 40px auto;
@@ -48,7 +77,6 @@ function generateRecipeHtml(data) {
         position: relative;
         z-index: 1;
       }
-
       h1 {
         font-family: 'Merriweather', serif;
         font-weight: 700;
@@ -58,14 +86,12 @@ function generateRecipeHtml(data) {
         border-bottom: 3px solid #ff7043;
         padding-bottom: 8px;
       }
-
       .meta-info {
         display: flex;
         gap: 20px;
         flex-wrap: wrap;
         margin-bottom: 30px;
       }
-
       .meta-item {
         background: #fff3e0;
         box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
@@ -73,13 +99,9 @@ function generateRecipeHtml(data) {
         padding: 10px 18px;
         min-width: 110px;
         text-align: center;
-        cursor: default;
-        user-select: none;
         font-weight: 600;
         color: #bf360c;
-        box-sizing: border-box;
       }
-
       .meta-item .label {
         display: block;
         font-size: 0.9rem;
@@ -89,21 +111,18 @@ function generateRecipeHtml(data) {
         letter-spacing: 1.3px;
         color: #e65100;
       }
-
       .meta-item .value {
         font-size: 1.1rem;
         font-weight: 400;
         color: #4e342e;
       }
-
       section.card {
-        background:rgb(255, 255, 255);
+        background: #fff;
         border-radius: 12px;
         box-shadow: 0 6px 18px rgba(255, 183, 77, 0.3);
         padding: 25px 30px;
         margin-bottom: 35px;
       }
-
       section.card h2 {
         font-family: 'Merriweather', serif;
         font-weight: 700;
@@ -113,24 +132,14 @@ function generateRecipeHtml(data) {
         padding-bottom: 8px;
         margin-bottom: 20px;
       }
-
-      ul.ingredients {
-        list-style-type: disc;
+      ul.ingredients, ol.instructions {
         padding-left: 25px;
         font-size: 1.1rem;
         color: #4e342e;
       }
-
-      ol.instructions {
-        padding-left: 25px;
-        font-size: 1.1rem;
-        color: #4e342e;
-      }
-
       ol.instructions li {
         margin-bottom: 14px;
       }
-
       .images {
         display: flex;
         flex-wrap: wrap;
@@ -138,134 +147,50 @@ function generateRecipeHtml(data) {
         justify-content: center;
         margin-top: 20px;
       }
-
       .images img {
         max-width: 30%;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        object-fit: cover;
         transition: transform 0.3s ease;
       }
-
       .images img:hover {
         transform: scale(1.05);
       }
-
       @media print {
-        body::before {
-          opacity: 0.03;
-        }
-        .container {
-          box-shadow: none;
-          border-radius: 0;
-          margin: 0;
-          padding: 0 15px;
-          max-width: 100%;
-        }
-        .images img {
-          max-width: 100%;
-          margin-bottom: 20px;
-          box-shadow: none;
-          border-radius: 0;
-        }
-        h1, section.card h2 {
-          color: #000;
-          border-color: #666;
-        }
-        .meta-item {
-          background: #eee;
-          box-shadow: none;
-          color: #000;
-        }
+        body::before { opacity: 0.03; }
+        .container { box-shadow: none; border-radius: 0; margin: 0; padding: 0 15px; max-width: 100%; }
+        .images img { max-width: 100%; box-shadow: none; border-radius: 0; }
+        h1, section.card h2 { color: #000; border-color: #666; }
+        .meta-item { background: #eee; box-shadow: none; color: #000; }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <h1>${data.recipeName || 'Recipe'}</h1>
+      <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
       <div class="meta-info">
-        ${data.prepTime && data.prepTime.label ? `
-          <div class="meta-item">
-            <span class="label">⏱️ ${data.prepTime.label}:</span>
-            <span class="value">${data.prepTime.val}</span>
-          </div>` : ''}
-
-        ${data.cookTime && data.cookTime.label ? `
-          <div class="meta-item">
-            <span class="label">🔥 ${data.cookTime.label}:</span>
-            <span class="value">${data.cookTime.val}</span>
-          </div>` : ''}
-
-        ${data.totalTime && data.totalTime.label ? `
-          <div class="meta-item">
-            <span class="label">⏳ ${data.totalTime.label}:</span>
-            <span class="value">${data.totalTime.val}</span>
-          </div>` : ''}
-
-        ${data.restTime && data.restTime.label ? `
-          <div class="meta-item">
-            <span class="label">🕒 ${data.restTime.label}:</span>
-            <span class="value">${data.restTime.val}</span>
-          </div>` : ''}
-
-        ${data.difficulty && data.difficulty.label ? `
-          <div class="meta-item">
-            <span class="label">⭐ ${data.difficulty.label}:</span>
-            <span class="value">${data.difficulty.val}</span>
-          </div>` : ''}
+        ${parsedData.prepTime.label ? `<div class="meta-item"><span class="label">${parsedData.prepTime.label}:</span><span class="value">${parsedData.prepTime.val}</span></div>` : ''}
+        ${parsedData.cookTime.label ? `<div class="meta-item"><span class="label">${parsedData.cookTime.label}:</span><span class="value">${parsedData.cookTime.val}</span></div>` : ''}
+        ${parsedData.totalTime.label ? `<div class="meta-item"><span class="label">${parsedData.totalTime.label}:</span><span class="value">${parsedData.totalTime.val}</span></div>` : ''}
+        ${parsedData.restTime.label ? `<div class="meta-item"><span class="label">${parsedData.restTime.label}:</span><span class="value">${parsedData.restTime.val}</span></div>` : ''}
+        ${parsedData.difficulty.label ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
       </div>
 
-      ${data.description ? `
-        <section class="card description">
-          <h2>Description</h2>
-          <p>${data.description}</p>
-        </section>
-      ` : ''}
-
-      ${data.ingredients?.length ? `
-        <section class="card ingredients">
-          <h2>Ingredients</h2>
-          <ul class="ingredients">
-            ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
-          </ul>
-        </section>
-      ` : ''}
-
-      ${data.instructions?.length ? `
-        <section class="card instructions">
-          <h2>Instructions</h2>
-          <ol class="instructions">
-            ${data.instructions.map(i => `<li>${i}</li>`).join('')}
-          </ol>
-        </section>
-      ` : ''}
-
-      ${data.imageUrls?.length ? `
-        <section class="card images-section">
-          <h2>Images</h2>
-          <div class="images">
-            ${data.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}
-          </div>
-        </section>
-      ` : ''}
+      ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
+      ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
+      ${parsedData.instructions.length ? `<section class="card"><h2>Instructions</h2><ol class="instructions">${parsedData.instructions.map(i => `<li>${i}</li>`).join('')}</ol></section>` : ''}
+      ${parsedData.imageUrls?.length ? `<section class="card"><h2>Images</h2><div class="images">${parsedData.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}</div></section>` : ''}
     </div>
 
-    <footer style="margin: 30px auto; text-align: center; font-size: 0.9rem; color: #888;">
-      Created with ❤️ by <strong>Food Trek</strong> — Visit
-      <a href="https://food-trek.com" target="_blank" style="color: #ff7043; text-decoration: none;">food-trek.com</a>
+    <footer style="text-align:center; margin:30px auto; font-size:0.9rem; color:#888;">
+      Created with ❤️ by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
     </footer>
   </body>
-  </html>
-  `;
-
-  // Use twemoji.parse to convert emoji chars into <img> emoji images
-  return twemoji.parse(rawHtml, {
-    folder: '72x72',
-    ext: '.png',
-  });
+  </html>`;
 }
 
+// Route: POST /premium-recipe
 router.post('/premium-recipe', async (req, res) => {
   const { email, ...data } = req.body;
 
@@ -274,15 +199,11 @@ router.post('/premium-recipe', async (req, res) => {
     const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
     const pdfDir = path.join(__dirname, '../../pdfs');
 
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
     const pdfPath = path.join(pdfDir, fileName);
-
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
-    await page.setViewport({ width: 800, height: 1000 });
 
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
