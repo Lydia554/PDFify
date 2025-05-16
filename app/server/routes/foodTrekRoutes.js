@@ -9,6 +9,20 @@ function generateRecipeHtml(data) {
     return `
     <html>
     <head>
+
+ <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // parse emojis in the entire body
+        twemoji.parse(document.body, {
+          folder: '72x72',
+          ext: '.png'
+        });
+      });
+    </script>
+
+
+
       <meta charset="UTF-8" />
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
@@ -188,74 +202,74 @@ function generateRecipeHtml(data) {
     </head>
     <body>
       <div class="container">
-        <h1>${data.recipeName || 'Recipe'}</h1>
-  
-        <div class="meta-info">
-          ${data.prepTime && data.prepTime.label ? `
-            <div class="meta-item">
-              <span class="label">${replaceEmojisWithImages('⏱️ ')}${data.prepTime.label}:</span>
-              <span class="value">${data.prepTime.val}</span>
-            </div>` : ''}
-  
-          ${data.cookTime && data.cookTime.label ? `
-            <div class="meta-item">
-              <span class="label">${replaceEmojisWithImages('🔥 ')}${data.cookTime.label}:</span>
-              <span class="value">${data.cookTime.val}</span>
-            </div>` : ''}
-  
-          ${data.totalTime && data.totalTime.label ? `
-            <div class="meta-item">
-              <span class="label">${replaceEmojisWithImages('⏳ ')}${data.totalTime.label}:</span>
-              <span class="value">${data.totalTime.val}</span>
-            </div>` : ''}
-  
-          ${data.restTime && data.restTime.label ? `
-            <div class="meta-item">
-              <span class="label">${replaceEmojisWithImages('🕒 ')}${data.restTime.label}:</span>
-              <span class="value">${data.restTime.val}</span>
-            </div>` : ''}
-  
-          ${data.difficulty && data.difficulty.label ? `
-            <div class="meta-item">
-              <span class="label">${replaceEmojisWithImages('⭐ ')}${data.difficulty.label}:</span>
-              <span class="value">${data.difficulty.val}</span>
-            </div>` : ''}
-        </div>
-  
-        ${data.description ? `
-          <section class="card description">
-            <h2>Description</h2>
-            <p>${replaceEmojisWithImages(data.description)}</p>
-          </section>
-        ` : ''}
-  
-        ${data.ingredients?.length ? `
-          <section class="card ingredients">
-            <h2>Ingredients</h2>
-            <ul class="ingredients">
-              ${data.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('')}
-            </ul>
-          </section>
-        ` : ''}
-  
-        ${data.instructions?.length ? `
-          <section class="card instructions">
-            <h2>Instructions</h2>
-            <ol class="instructions">
-              ${data.instructions.map(step => `<li>${step}</li>`).join('')}
-            </ol>
-          </section>
-        ` : ''}
-  
-        ${data.imageUrls?.length ? `
-          <section class="card images-section">
-            <h2>Images</h2>
-            <div class="images">
-              ${data.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}
-            </div>
-          </section>
-        ` : ''}
+      <h1>${data.recipeName || 'Recipe'}</h1>
+
+      <div class="meta-info">
+        ${data.prepTime && data.prepTime.label ? `
+          <div class="meta-item">
+            <span class="label">⏱️ ${data.prepTime.label}:</span>
+            <span class="value">${data.prepTime.val}</span>
+          </div>` : ''}
+
+        ${data.cookTime && data.cookTime.label ? `
+          <div class="meta-item">
+            <span class="label">🔥 ${data.cookTime.label}:</span>
+            <span class="value">${data.cookTime.val}</span>
+          </div>` : ''}
+
+        ${data.totalTime && data.totalTime.label ? `
+          <div class="meta-item">
+            <span class="label">⏳ ${data.totalTime.label}:</span>
+            <span class="value">${data.totalTime.val}</span>
+          </div>` : ''}
+
+        ${data.restTime && data.restTime.label ? `
+          <div class="meta-item">
+            <span class="label">🕒 ${data.restTime.label}:</span>
+            <span class="value">${data.restTime.val}</span>
+          </div>` : ''}
+
+        ${data.difficulty && data.difficulty.label ? `
+          <div class="meta-item">
+            <span class="label">⭐ ${data.difficulty.label}:</span>
+            <span class="value">${data.difficulty.val}</span>
+          </div>` : ''}
       </div>
+
+      ${data.description ? `
+        <section class="card description">
+          <h2>Description</h2>
+          <p>${data.description}</p>
+        </section>
+      ` : ''}
+
+      ${data.ingredients?.length ? `
+        <section class="card ingredients">
+          <h2>Ingredients</h2>
+          <ul class="ingredients">
+            ${data.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('')}
+          </ul>
+        </section>
+      ` : ''}
+
+      ${data.instructions?.length ? `
+        <section class="card instructions">
+          <h2>Instructions</h2>
+          <ol class="instructions">
+            ${data.instructions.map(step => `<li>${step}</li>`).join('')}
+          </ol>
+        </section>
+      ` : ''}
+
+      ${data.imageUrls?.length ? `
+        <section class="card images-section">
+          <h2>Images</h2>
+          <div class="images">
+            ${data.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}
+          </div>
+        </section>
+      ` : ''}
+    </div>
   
     
        <footer style="margin: 30px auto; text-align: center; font-size: 0.9rem; color: #888;">
@@ -267,19 +281,6 @@ function generateRecipeHtml(data) {
     `;
   }
 
-
-  function replaceEmojisWithImages(text) {
-    const emojiMap = {
-      '⏱️': 'https://twemoji.maxcdn.com/v/latest/72x72/23f1.png',
-      '🔥': 'https://twemoji.maxcdn.com/v/latest/72x72/1f525.png',
-      '⏳': 'https://twemoji.maxcdn.com/v/latest/72x72/23f3.png',
-      '🕒': 'https://twemoji.maxcdn.com/v/latest/72x72/1f552.png',
-      '⭐': 'https://twemoji.maxcdn.com/v/latest/72x72/2b50.png'
-    };
-    return text.split('').map(ch =>
-      emojiMap[ch] ? `<img src="${emojiMap[ch]}" style="width:18px;vertical-align:middle;margin-right:4px;">` : ch
-    ).join('');
-  }
 
 
   router.post('/premium-recipe', async (req, res) => {
