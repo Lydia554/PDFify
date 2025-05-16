@@ -7,6 +7,7 @@ const path = require("path");
 const cron = require("node-cron");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
+const cors = require('cors');
 
 dotenv.config();
 
@@ -28,6 +29,12 @@ const foodTrekRoutes = require('./routes/foodTrekRoutes');
 
 
 const app = express();
+app.use(cors({
+  origin: 'https://food-trek.com', // your frontend URL
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 
 mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
