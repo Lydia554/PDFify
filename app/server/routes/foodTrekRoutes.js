@@ -99,7 +99,7 @@ function generateRecipeHtml(data) {
   
         /* Cards for sections */
         section.card {
-          background: #fff8e1;
+          background:rgb(255, 255, 255);
           border-radius: 12px;
           box-shadow: 0 6px 18px rgba(255, 183, 77, 0.3);
           padding: 25px 30px;
@@ -260,7 +260,7 @@ function generateRecipeHtml(data) {
     
        <footer style="margin: 30px auto; text-align: center; font-size: 0.9rem; color: #888;">
         Created with ❤️ by <strong>Food Trek</strong> — Visit 
-        <a href="https://food-trek.com" target="_blank" style="color: #ff7043; text-decoration: none;">foodtrek.com</a>
+        <a href="https://food-trek.com" target="_blank" style="color: #ff7043; text-decoration: none;">food-trek.com</a>
       </footer>
     </body>
     </html>
