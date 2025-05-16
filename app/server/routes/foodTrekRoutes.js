@@ -5,279 +5,239 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
-function replaceEmojisWithImages(str) {
-    const baseUrl = 'https://twemoji.maxcdn.com/v/latest/svg/';
-    const regexEmoji = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
+
   
-    // Escape HTML to avoid injection
-    function escapeHtml(text) {
-      return text.replace(/[&<>"']/g, m => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      })[m]);
+function generateRecipeHtml(data) {
+    return `
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+  <meta charset="UTF-8" />
+  <title>${data.recipeName || 'Recipe'}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap');
+  
+    body {
+      font-family: 'Open Sans', sans-serif;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 30px 40px;
+      background: #fff;
+      color: #333;
+      line-height: 1.6;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      border-radius: 10px;
+      border: 1px solid #eee;
+      position: relative;
+      overflow: hidden;
     }
   
-    return escapeHtml(str).replace(regexEmoji, (emoji) => {
-      const codePoints = [...emoji].map(c => c.codePointAt(0).toString(16)).join('-');
-      return `<img class="emoji" draggable="false" alt="${emoji}" src="${baseUrl}${codePoints}.svg" style="width:1.1em; height:1.1em; vertical-align:text-bottom;" />`;
-    });
-  }
+    /* Pale Food Trek logo watermark */
+body::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  background: url('https://food-trek.com/wp-content/uploads/2025/01/Food-e1738851342880.png') no-repeat center;
+  background-size: contain;
+  opacity: 0.07;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 0;
+}
   
-  function generateRecipeHtml(data) {
-    return `
-  <html>
-  <head>
-    <meta charset="UTF-8" />
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
+    h1 {
+      font-family: 'Merriweather', serif;
+      font-weight: 700;
+      font-size: 2.8rem;
+      color: #e65100;
+      margin-bottom: 30px;
+      position: relative;
+      z-index: 1;
+      user-select: text;
+    }
   
+    .meta-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+  
+    .meta-item {
+      background: #fff;
+      padding: 20px 25px;
+      border-radius: 14px;
+      box-shadow: 0 6px 15px rgba(230, 81, 0, 0.25);
+      flex: 1 1 140px;
+      min-width: 140px;
+      cursor: default;
+      user-select: none;
+      transition: box-shadow 0.3s ease;
+    }
+    .meta-item:hover {
+      box-shadow: 0 8px 25px rgba(230, 81, 0, 0.4);
+    }
+  
+    .meta-item .label {
+      font-family: 'Merriweather', serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #bf360c;
+      margin-bottom: 5px;
+      user-select: text;
+    }
+  
+    .meta-item .value {
+      font-weight: 400;
+      font-size: 1.25rem;
+      color: #3e2723;
+      user-select: text;
+      white-space: nowrap;
+    }
+  
+    .description {
+      margin-top: 30px;
+      font-size: 1.15rem;
+      font-style: italic;
+      color: #555;
+      white-space: pre-wrap;
+      position: relative;
+      z-index: 1;
+    }
+  
+    h2 {
+      font-family: 'Merriweather', serif;
+      font-weight: 700;
+      font-size: 1.85rem;
+      color: #bf360c;
+      margin: 50px 0 18px 0;
+      border-bottom: 2px solid #ffab91;
+      padding-bottom: 6px;
+      position: relative;
+      z-index: 1;
+    }
+  
+    ul.ingredients {
+      list-style-type: disc;
+      padding-left: 28px;
+      font-size: 1.1rem;
+      color: #444;
+      position: relative;
+      z-index: 1;
+    }
+  
+    ol.instructions {
+      padding-left: 28px;
+      font-size: 1.1rem;
+      color: #444;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 1;
+    }
+  
+    ol.instructions li {
+      margin-bottom: 16px;
+    }
+  
+    .images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 40px;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+  
+    .images img {
+      width: 130px;
+      height: 95px;
+      object-fit: cover;
+      border-radius: 12px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.12);
+      user-select: none;
+    }
+  
+    @media print {
       body {
-        font-family: 'Open Sans', sans-serif;
-        max-width: 720px;
-        margin: 40px auto;
-        padding: 30px 40px;
-        background: #fff;
-        color: #333;
-        line-height: 1.6;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        border-radius: 10px;
-        border: 1px solid #eee;
-        position: relative;
-        overflow: hidden;
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        padding: 0;
+        max-width: 100%;
+        color: #000;
       }
-  
-      /* Pale Food Trek logo watermark */
       body::before {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 400px;
-        height: 400px;
-        background: url('https://food-trek.com/wp-content/uploads/2024/05/food-trek-logo.png') no-repeat center;
-        background-size: contain;
-        opacity: 0.07;
-        transform: translate(-50%, -50%);
-        pointer-events: none;
-        z-index: 0;
+        display: none;
       }
-  
-      h1 {
-        font-family: 'Merriweather', serif;
-        font-weight: 700;
-        font-size: 2.8rem;
-        color: #e65100;
-        margin-bottom: 25px;
-        border-bottom: 3px solid #ff7043;
-        padding-bottom: 8px;
-        position: relative;
-        z-index: 1;
-      }
-  
-      .meta-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 18px;
-        margin-bottom: 30px;
-        position: relative;
-        z-index: 1;
-      }
-  
-      .meta-item {
-        background: #fff;
-        padding: 18px 28px;
-        border-radius: 16px;
-        box-shadow: 0 5px 15px rgba(230, 81, 0, 0.25);
-        flex: 1 1 140px;
-        text-align: center;
-        user-select: none;
-        cursor: default;
-        transition: box-shadow 0.3s ease;
-        min-width: 140px;
-      }
-      .meta-item:hover {
-        box-shadow: 0 7px 25px rgba(230, 81, 0, 0.45);
-      }
-  
-      .meta-item .label {
-        font-family: 'Merriweather', serif;
-        font-weight: 700;
-        font-size: 1rem;
-        color: #bf360c;
-        margin-bottom: 6px;
-        display: block;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        white-space: pre-line;
-        line-height: 1.2;
-      }
-  
-      .meta-item .value {
-        font-weight: 700;
-        font-size: 1.4rem;
-        color: #3e2723;
-        white-space: nowrap;
-        user-select: text;
-      }
-  
-      .description {
-        margin-bottom: 40px;
-        font-size: 1.15rem;
-        font-style: italic;
-        color: #555;
-        white-space: pre-wrap;
-        position: relative;
-        z-index: 1;
-      }
-  
-      h2 {
-        font-family: 'Merriweather', serif;
-        font-weight: 700;
-        font-size: 1.85rem;
-        color: #bf360c;
-        margin-bottom: 14px;
-        border-bottom: 2px solid #ffab91;
-        padding-bottom: 6px;
-        margin-top: 50px;
-        position: relative;
-        z-index: 1;
-      }
-  
-      ul.ingredients {
-        list-style-type: disc;
-        padding-left: 28px;
-        font-size: 1.1rem;
-        color: #444;
-        position: relative;
-        z-index: 1;
-      }
-  
-      ol.instructions {
-        padding-left: 28px;
-        font-size: 1.1rem;
-        color: #444;
-        margin-bottom: 40px;
-        position: relative;
-        z-index: 1;
-      }
-  
-      ol.instructions li {
-        margin-bottom: 16px;
-      }
-  
-      .images {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 35px;
-        justify-content: center;
-        position: relative;
-        z-index: 1;
-      }
-  
       .images img {
-        width: 130px;
-        height: 95px;
-        object-fit: cover;
-        border-radius: 12px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.12);
-        user-select: none;
+        width: 100%;
+        height: auto;
+        margin-bottom: 20px;
+        box-shadow: none;
+        border-radius: 0;
       }
-  
-      .emoji {
-        vertical-align: text-bottom;
-        width: 1.2em;
-        height: 1.2em;
-        margin-left: 3px;
-        user-select: none;
+      h1, h2 {
+        color: #000;
+        border-color: #000;
       }
-  
-      @media print {
-        body {
-          box-shadow: none;
-          border: none;
-          margin: 0;
-          padding: 0;
-          max-width: 100%;
-          color: #000;
-        }
-        body::before {
-          display: none;
-        }
-        .images img {
-          width: 100%;
-          height: auto;
-          margin-bottom: 20px;
-          box-shadow: none;
-          border-radius: 0;
-        }
-        h1 {
-          color: #000;
-          border-color: #000;
-        }
-        h2 {
-          color: #000;
-          border-color: #666;
-        }
-        .meta-item {
-          box-shadow: none !important;
-          background: none !important;
-        }
-        .meta-item .label, .meta-item .value {
-          color: #000 !important;
-        }
-        .description {
-          color: #000 !important;
-        }
+      .meta-item {
+        box-shadow: none !important;
+        background: none !important;
       }
-    </style>
+      .meta-item .label, .meta-item .value, .description {
+        color: #000 !important;
+      }
+    }
+  </style>
   </head>
   <body>
-    <h1>${replaceEmojisWithImages(data.recipeName || 'Recipe')}</h1>
+    <h1>${data.recipeName || 'Recipe'}</h1>
   
     <div class="meta-container">
       ${
         data.prepTime
-          ? `<div class="meta-item"><span class="label">PREP TIME</span><span class="value">${replaceEmojisWithImages(data.prepTime)}</span></div>`
+          ? `<div class="meta-item"><div class="label">Prep Time:</div><div class="value">${data.prepTime}</div></div>`
           : ''
       }
       ${
         data.cookTime
-          ? `<div class="meta-item"><span class="label">COOK TIME</span><span class="value">${replaceEmojisWithImages(data.cookTime)}</span></div>`
+          ? `<div class="meta-item"><div class="label">Cook Time:</div><div class="value">${data.cookTime}</div></div>`
           : ''
       }
       ${
         data.restTime
-          ? `<div class="meta-item"><span class="label">REST TIME</span><span class="value">${replaceEmojisWithImages(data.restTime)}</span></div>`
+          ? `<div class="meta-item"><div class="label">Rest Time:</div><div class="value">${data.restTime}</div></div>`
           : ''
       }
       ${
         data.totalTime
-          ? `<div class="meta-item"><span class="label">TOTAL TIME:</span><span class="value">${replaceEmojisWithImages(data.totalTime)}</span></div>`
+          ? `<div class="meta-item"><div class="label">Total Time:</div><div class="value">${data.totalTime}</div></div>`
           : ''
       }
       ${
         data.difficulty
-          ? `<div class="meta-item"><span class="label">DIFFICULTY:</span><span class="value">${replaceEmojisWithImages(data.difficulty)}</span></div>`
+          ? `<div class="meta-item"><div class="label">Difficulty:</div><div class="value">${data.difficulty}</div></div>`
           : ''
       }
       ${
         data.servings
-          ? `<div class="meta-item"><span class="label">SERVINGS</span><span class="value">${replaceEmojisWithImages(data.servings)}</span></div>`
+          ? `<div class="meta-item"><div class="label">Servings:</div><div class="value">${data.servings}</div></div>`
           : ''
       }
     </div>
   
-    ${data.description ? `<p class="description">${replaceEmojisWithImages(data.description)}</p>` : ''}
+    ${data.description ? `<p class="description">${data.description}</p>` : ''}
   
     ${
       data.ingredients && data.ingredients.length
         ? `<h2>Ingredients</h2>
         <ul class="ingredients">
-          ${data.ingredients.map(i => `<li>${replaceEmojisWithImages(i)}</li>`).join('')}
+          ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
         </ul>`
         : ''
     }
@@ -286,7 +246,7 @@ function replaceEmojisWithImages(str) {
       data.instructions && data.instructions.length
         ? `<h2>Instructions</h2>
         <ol class="instructions">
-          ${data.instructions.map(i => `<li>${replaceEmojisWithImages(i)}</li>`).join('')}
+          ${data.instructions.map(i => `<li>${i}</li>`).join('')}
         </ol>`
         : ''
     }
@@ -305,9 +265,8 @@ function replaceEmojisWithImages(str) {
     }
   </body>
   </html>
-  `;
+    `;
   }
-  
   
   
   
