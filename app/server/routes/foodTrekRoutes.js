@@ -60,7 +60,7 @@ function generateRecipeHtml(data) {
         left: 50%;
         width: 400px;
         height: 200px;
-        background: url('https://food-trek.com/wp-content/uploads/2025/02/logo-1-18x9.jpg') no-repeat center;
+        background: url('https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg') no-repeat center;
         background-size: contain;
         opacity: 0.06;
         transform: translate(-50%, -50%);
