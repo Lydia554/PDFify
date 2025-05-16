@@ -282,7 +282,7 @@ router.post('/premium-recipe', async (req, res) => {
 
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await page.setViewport({ width: 800, height: 1000 });
 
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
