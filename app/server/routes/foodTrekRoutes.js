@@ -190,40 +190,44 @@ function generateRecipeHtml(data) {
   </html>`;
 }
 
-// Route: POST /premium-recipe
 router.post('/premium-recipe', async (req, res) => {
-  const { email, ...data } = req.body;
-
-  try {
-    const html = generateRecipeHtml(data);
-    const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
-    const pdfDir = path.join(__dirname, '../../pdfs');
-
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-
-    const pdfPath = path.join(pdfDir, fileName);
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-    const page = await browser.newPage();
-
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    await page.pdf({
-      path: pdfPath,
-      format: 'A4',
-      printBackground: true,
-      scale: 1,
-    });
-
-    await browser.close();
-
-    res.download(pdfPath, fileName, err => {
-      if (err) console.error(err);
-      fs.unlinkSync(pdfPath);
-    });
-  } catch (err) {
-    console.error('PDF generation failed:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
-
-module.exports = router;
+    const { email, ...data } = req.body;
+  
+    try {
+      const html = generateRecipeHtml(data);
+      const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
+      const pdfDir = path.join(__dirname, '../../pdfs');
+  
+      if (!fs.existsSync(pdfDir)) {
+        fs.mkdirSync(pdfDir, { recursive: true });
+      }
+  
+      const pdfPath = path.join(pdfDir, fileName);
+  
+      const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+      const page = await browser.newPage();
+      await new Promise(resolve => setTimeout(resolve, 1000));
+  
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+  
+      await page.pdf({
+        path: pdfPath,
+        format: 'A4',
+        printBackground: true,
+        scale: 1,
+      });
+  
+      await browser.close();
+  
+      res.download(pdfPath, fileName, err => {
+        if (err) console.error(err);
+        fs.unlinkSync(pdfPath);
+      });
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+  
+  module.exports = router;
+  
