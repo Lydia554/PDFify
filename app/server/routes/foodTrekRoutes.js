@@ -62,12 +62,12 @@ function generateRecipeHtml(data) {
 
       header.logo-header {
         text-align: center;
-        padding: 20px 0 10px;
+        padding: 5px 0 10px;
         border-bottom: 1px solid #eee;
       }
 
       header.logo-header img {
-        max-width: 100px;
+        max-width: 150px;
         height: auto;
       }
 
@@ -163,7 +163,7 @@ function generateRecipeHtml(data) {
       }
 
       .images img {
-        max-width: 20%;
+        max-width: 10%;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transition: transform 0.3s ease;
