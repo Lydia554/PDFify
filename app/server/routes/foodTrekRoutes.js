@@ -72,7 +72,7 @@ function generateRecipeHtml(data) {
       }
 
       .container {
-        max-width: 500px;
+        max-width: 300px;
         margin: 30px auto;
         padding: 30px 40px;
         background: #fff;
