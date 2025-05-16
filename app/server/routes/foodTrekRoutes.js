@@ -67,7 +67,7 @@ function generateRecipeHtml(data) {
       }
 
       header.logo-header img {
-        max-width: 180px;
+        max-width: 100px;
         height: auto;
       }
 
@@ -157,13 +157,13 @@ function generateRecipeHtml(data) {
       .images {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 5px;
         justify-content: center;
-        margin-top: 20px;
+        margin-top: 5px;
       }
 
       .images img {
-        max-width: 30%;
+        max-width: 20%;
         border-radius: 10px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         transition: transform 0.3s ease;
