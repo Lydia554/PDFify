@@ -6,7 +6,7 @@ const puppeteer = require('puppeteer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 
-function generatePremiumRecipeHtml(data) {
+function generateRecipeHtml(data) {
     return `
       <html>
         <head>
