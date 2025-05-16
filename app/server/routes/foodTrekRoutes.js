@@ -173,15 +173,36 @@ function generateRecipeHtml(data) {
         transform: scale(1.05);
       }
 
-      /* Added style for step description below images */
-      .image-step {
-        text-align: center;
-        font-weight: 600;
-        color: #bf360c;
-        margin-top: 6px;
-        font-size: 0.9rem;
-        user-select: none;
-      }
+     .images-with-steps {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+    }
+
+    .image-step-pair {
+      flex: 1 1 150px;
+      max-width: 200px;
+      text-align: center;
+    }
+
+    .image-step-pair img {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .image-step-pair img:hover {
+      transform: scale(1.05);
+    }
+
+    .step-text {
+      margin-top: 8px;
+      font-size: 0.95rem;
+      color: #4e342e;
+      font-weight: 600;
+    }
 
       footer {
         text-align: center;
@@ -256,11 +277,10 @@ function generateRecipeHtml(data) {
 
     ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
     ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
-    ${parsedData.instructions.length ? `<section class="card"><h2>Instructions</h2><ol class="instructions">${parsedData.instructions.map(i => `<li>${i}</li>`).join('')}</ol></section>` : ''}
-
+   
     ${parsedData.imageUrls?.length ? `
       <section class="card">
-        <h2>Images with Steps</h2>
+        <h2>Instructions</h2>
         <div class="images-with-steps">
           ${parsedData.imageUrls.map((url, i) => `
             <div class="image-step-pair">
