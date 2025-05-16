@@ -43,45 +43,51 @@ function generateRecipeHtml(data) {
 }
 
 router.post('/premium-recipe', async (req, res) => {
-  const { email, ...data } = req.body;
-
-  try {
-    const user = await User.findOne({ email });
-
-    if (!user || !user.isPremium) {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'subscription',
-        payment_method_types: ['card'],
-        customer_email: email,
-        line_items: [{
-          price: process.env.STRIPE_PREMIUM_PRICE_ID,
-          quantity: 1,
-        }],
-        success_url: `${process.env.BASE_URL}/${process.env.SUCCESS_URL}?email=${encodeURIComponent(email)}`,
-        cancel_url: `${process.env.BASE_URL}/${process.env.CANCEL_URL}`,
+    const { email, ...data } = req.body;
+  
+    try {
+      const bypassPayment = true; // ⬅️ Set to false later when re-enabling Stripe
+  
+      // ⛔️ Skip payment check if bypassPayment is true
+      if (!bypassPayment) {
+        const user = await User.findOne({ email });
+  
+        if (!user || !user.isPremium) {
+          const session = await stripe.checkout.sessions.create({
+            mode: 'subscription',
+            payment_method_types: ['card'],
+            customer_email: email,
+            line_items: [{
+              price: process.env.STRIPE_PREMIUM_PRICE_ID,
+              quantity: 1,
+            }],
+            success_url: `${process.env.BASE_URL}/${process.env.SUCCESS_URL}?email=${encodeURIComponent(email)}`,
+            cancel_url: `${process.env.BASE_URL}/${process.env.CANCEL_URL}`,
+          });
+  
+          return res.status(402).json({ checkoutUrl: session.url });
+        }
+      }
+  
+      const html = generateRecipeHtml(data);
+      const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
+      const pdfPath = path.join(__dirname, '../../pdfs', fileName);
+  
+      const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      await page.pdf({ path: pdfPath, format: 'A4' });
+      await browser.close();
+  
+      res.download(pdfPath, fileName, err => {
+        if (err) console.error(err);
+        fs.unlinkSync(pdfPath);
       });
-
-      return res.status(402).json({ checkoutUrl: session.url });
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    const html = generateRecipeHtml(data);
-    const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
-    const pdfPath = path.join(__dirname, '../../pdfs', fileName);
-
-    const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: 'A4' });
-    await browser.close();
-
-    res.download(pdfPath, fileName, err => {
-      if (err) console.error(err);
-      fs.unlinkSync(pdfPath);
-    });
-  } catch (err) {
-    console.error('PDF generation failed:', err);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
-});
+  });
+  
 
 module.exports = router;
