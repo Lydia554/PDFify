@@ -7,41 +7,124 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 
 function generateRecipeHtml(data) {
-  return `
+    return `
     <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 40px; }
-        h1 { color: #ff5722; }
-        ul { padding-left: 20px; }
-        img { max-width: 100%; margin: 10px 0; border-radius: 8px; }
-        .section { margin-top: 20px; }
-      </style>
-    </head>
-    <body>
-      <h1>${data.recipeName}</h1>
-      ${data.includePrepTime ? `<p><strong>Prep Time:</strong> ${data.prepTime}</p>` : ''}
-      ${data.description ? `<p><em>${data.description}</em></p>` : ''}
-      ${data.includeIngredients ? `
-        <div class="section">
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
+          body {
+            font-family: 'Open Sans', sans-serif;
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 30px 40px;
+            background: #fff;
+            color: #333;
+            line-height: 1.6;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            border: 1px solid #eee;
+          }
+          h1 {
+            font-family: 'Merriweather', serif;
+            font-weight: 700;
+            font-size: 2.8rem;
+            color: #e65100;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #ff7043;
+            padding-bottom: 8px;
+          }
+          .meta {
+            font-size: 1rem;
+            font-style: italic;
+            color: #666;
+            margin-bottom: 20px;
+          }
+          .description {
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            font-style: italic;
+            color: #555;
+          }
+          h2 {
+            font-family: 'Merriweather', serif;
+            font-weight: 700;
+            font-size: 1.8rem;
+            color: #bf360c;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffab91;
+            padding-bottom: 6px;
+            margin-top: 40px;
+          }
+          ul.ingredients {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 1.1rem;
+            color: #444;
+          }
+          ol.instructions {
+            padding-left: 25px;
+            font-size: 1.1rem;
+            color: #444;
+            margin-bottom: 30px;
+          }
+          ol.instructions li {
+            margin-bottom: 12px;
+          }
+          .images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 30px;
+            justify-content: center;
+          }
+          .images img {
+            max-width: 45%;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            object-fit: cover;
+          }
+          @media print {
+            body {
+              box-shadow: none;
+              border: none;
+              margin: 0;
+              padding: 0;
+              max-width: 100%;
+            }
+            .images img {
+              max-width: 100%;
+              margin-bottom: 20px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>${data.recipeName || 'Recipe'}</h1>
+        ${data.includePrepTime && data.prepTime ? `<p class="meta">Prep Time: ${data.prepTime}</p>` : ''}
+        ${data.description ? `<p class="description">${data.description}</p>` : ''}
+        ${data.includeIngredients && data.ingredients?.length ? `
           <h2>Ingredients</h2>
-          <ul>${data.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
-        </div>` : ''}
-      ${data.includeInstructions ? `
-        <div class="section">
+          <ul class="ingredients">
+            ${data.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('')}
+          </ul>
+        ` : ''}
+        ${data.includeInstructions && data.instructions?.length ? `
           <h2>Instructions</h2>
-          <ol>${data.instructions.map(i => `<li>${i}</li>`).join('')}</ol>
-        </div>` : ''}
-      ${data.imageUrls?.length ? `
-        <div class="section">
+          <ol class="instructions">
+            ${data.instructions.map(step => `<li>${step}</li>`).join('')}
+          </ol>
+        ` : ''}
+        ${data.imageUrls && data.imageUrls.length ? `
           <h2>Images</h2>
-          ${data.imageUrls.map(url => `<img src="${url}" />`).join('')}
-        </div>` : ''}
-    </body>
+          <div class="images">
+            ${data.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}
+          </div>
+        ` : ''}
+      </body>
     </html>
-  `;
-}
-
+    `;
+  }
 router.post('/premium-recipe', async (req, res) => {
     const { email, ...data } = req.body;
   
