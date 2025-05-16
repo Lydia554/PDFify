@@ -239,39 +239,40 @@ function generateRecipeHtml(data) {
     </style>
   </head>
   <body>
-    <header class="logo-header" id="header-logo">
-      <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
-    </header>
+  <header class="logo-header" id="header-logo">
+    <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
+  </header>
 
-    <div class="container">
-      <h1>${parsedData.recipeName || 'Recipe'}</h1>
+  <div class="container">
+    <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
-      <div class="meta-info">
-        ${parsedData.prepTime.label ? `<div class="meta-item"><span class="label">${parsedData.prepTime.label}:</span><span class="value">${parsedData.prepTime.val}</span></div>` : ''}
-        ${parsedData.cookTime.label ? `<div class="meta-item"><span class="label">${parsedData.cookTime.label}:</span><span class="value">${parsedData.cookTime.val}</span></div>` : ''}
-        ${parsedData.totalTime.label ? `<div class="meta-item"><span class="label">${parsedData.totalTime.label}:</span><span class="value">${parsedData.totalTime.val}</span></div>` : ''}
-        ${parsedData.restTime.label ? `<div class="meta-item"><span class="label">${parsedData.restTime.label}:</span><span class="value">${parsedData.restTime.val}</span></div>` : ''}
-        ${parsedData.difficulty.label ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
-      </div>
-
-      ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
-      ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
-      ${parsedData.instructions.length ? `<section class="card"><h2>Instructions</h2><ol class="instructions">${parsedData.instructions.map(i => `<li>${i}</li>`).join('')}</ol></section>` : ''}
-
-      ${parsedData.imageUrls?.length ? `
-        <section class="card">
-          <h2>Images</h2>
-          <div class="images">
-            ${parsedData.imageUrls.map((url, i) => `
-              <div style="text-align: center; margin-bottom: 10px;">
-                <img src="${url}" alt="Recipe image" />
-                <div class="image-step">Step ${i + 1}</div>
-              </div>
-            `).join('')}
-          </div>
-        </section>
-      ` : ''}
+    <div class="meta-info">
+      ${parsedData.prepTime.label ? `<div class="meta-item"><span class="label">${parsedData.prepTime.label}:</span><span class="value">${parsedData.prepTime.val}</span></div>` : ''}
+      ${parsedData.cookTime.label ? `<div class="meta-item"><span class="label">${parsedData.cookTime.label}:</span><span class="value">${parsedData.cookTime.val}</span></div>` : ''}
+      ${parsedData.totalTime.label ? `<div class="meta-item"><span class="label">${parsedData.totalTime.label}:</span><span class="value">${parsedData.totalTime.val}</span></div>` : ''}
+      ${parsedData.restTime.label ? `<div class="meta-item"><span class="label">${parsedData.restTime.label}:</span><span class="value">${parsedData.restTime.val}</span></div>` : ''}
+      ${parsedData.difficulty.label ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
     </div>
+
+    ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
+    ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
+    ${parsedData.instructions.length ? `<section class="card"><h2>Instructions</h2><ol class="instructions">${parsedData.instructions.map(i => `<li>${i}</li>`).join('')}</ol></section>` : ''}
+
+    ${parsedData.imageUrls?.length ? `
+      <section class="card">
+        <h2>Images with Steps</h2>
+        <div class="images-with-steps">
+          ${parsedData.imageUrls.map((url, i) => `
+            <div class="image-step-pair">
+              <img src="${url}" alt="Recipe image ${i + 1}" />
+              <p class="step-text">${parsedData.instructions[i] || ''}</p>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    ` : ''}
+  </div>
+
 
     <footer>
       Created with ❤️ by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
