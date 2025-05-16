@@ -6,268 +6,249 @@ const puppeteer = require('puppeteer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 
-  
 function generateRecipeHtml(data) {
+    // Helper to replace emojis with images (if needed)
+    function replaceEmojisWithImages(text) {
+      // Add your emoji-to-image logic here, or just return text for now
+      return text;
+    }
+  
     return `
-  <!DOCTYPE html>
-  <html lang="en">
-  <head>
-  <meta charset="UTF-8" />
-  <title>${data.recipeName || 'Recipe'}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans&display=swap');
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
+          body {
+            font-family: 'Open Sans', sans-serif;
+            max-width: 720px;
+            margin: 40px auto 80px; /* bottom margin for footer */
+            padding: 30px 40px;
+            background: #fff;
+            color: #333;
+            line-height: 1.6;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            border: 1px solid #eee;
+            position: relative;
+            z-index: 1;
+          }
+          /* Watermark logo */
+          body::before {
+            content: "";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 350px;
+            height: 175px;
+            background: url('https://food-trek.com/wp-content/uploads/2025/02/logo-1-18x9.jpg') no-repeat center;
+            background-size: contain;
+            opacity: 0.06;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
+          }
+          h1 {
+            font-family: 'Merriweather', serif;
+            font-weight: 700;
+            font-size: 2.8rem;
+            color: #e65100;
+            margin-bottom: 12px;
+            border-bottom: 3px solid #ff7043;
+            padding-bottom: 8px;
+          }
+          .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+            font-style: normal;
+          }
+          .meta-item {
+            background: #fff5e6;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(255, 112, 67, 0.3);
+            min-width: 100px;
+            text-align: center;
+            font-weight: 600;
+            color: #bf360c;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.2;
+            font-size: 0.95rem;
+            user-select: none;
+          }
+          .meta-item .label {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            color: #e65100;
+          }
+          .meta-item .value {
+            font-weight: 400;
+            text-transform: none;
+            color: #4e342e;
+          }
+          /* Cards for sections */
+          .card {
+            background: #fff5e6;
+            padding: 20px 25px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 6px 18px rgba(255, 112, 67, 0.2);
+            color: #5d4037;
+            font-size: 1.1rem;
+            line-height: 1.4;
+          }
+          .card h2 {
+            font-family: 'Merriweather', serif;
+            font-weight: 700;
+            font-size: 1.9rem;
+            color: #bf360c;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #ffab91;
+            padding-bottom: 8px;
+            user-select: none;
+          }
+          ul.ingredients {
+            list-style-type: disc;
+            padding-left: 25px;
+            margin: 0;
+            color: #4e342e;
+          }
+          ul.ingredients li {
+            margin-bottom: 10px;
+          }
+          ol.instructions, ol.dr-ordered-list {
+            padding-left: 25px;
+            margin: 0;
+            color: #4e342e;
+          }
+          ol.instructions li, ol.dr-ordered-list li {
+            margin-bottom: 16px;
+            line-height: 1.5;
+          }
+          /* Smaller images, closer together */
+          .images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 20px;
+            justify-content: center;
+          }
+          .images img {
+            width: 30%;
+            max-width: 180px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            object-fit: cover;
+          }
+          /* Footer */
+          footer {
+            position: fixed;
+            bottom: 15px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #aaa;
+            font-family: 'Open Sans', sans-serif;
+            user-select: none;
+            z-index: 10;
+          }
+          /* Print styling */
+          @media print {
+            body {
+              box-shadow: none;
+              border: none;
+              margin: 0;
+              padding: 0;
+              max-width: 100%;
+              color: #000;
+            }
+            .card {
+              box-shadow: none;
+              background: none;
+              padding: 0;
+              margin-bottom: 20px;
+              color: #000;
+            }
+            .images img {
+              max-width: 100%;
+              margin-bottom: 20px;
+              box-shadow: none;
+              border-radius: 0;
+            }
+            h1, h2, .meta-item .label {
+              color: #000;
+              border-color: #000;
+            }
+            footer {
+              color: #444;
+              position: fixed;
+              bottom: 10px;
+              font-size: 0.8rem;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>${data.recipeName || 'Recipe'}</h1>
   
-    body {
-      font-family: 'Open Sans', sans-serif;
-      max-width: 720px;
-      margin: 40px auto;
-      padding: 30px 40px;
-      background: #fff;
-      color: #333;
-      line-height: 1.6;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      border-radius: 10px;
-      border: 1px solid #eee;
-      position: relative;
-      overflow: hidden;
-    }
+        <div class="meta">
+          ${data.prepTime ? `<div class="meta-item"><span class="label">Prep Time</span><span class="value">${data.prepTime}</span></div>` : ''}
+          ${data.cookTime ? `<div class="meta-item"><span class="label">Cook Time</span><span class="value">${data.cookTime}</span></div>` : ''}
+          ${data.restTime ? `<div class="meta-item"><span class="label">Rest Time</span><span class="value">${data.restTime}</span></div>` : ''}
+          ${data.totalTime ? `<div class="meta-item"><span class="label">Total Time</span><span class="value">${data.totalTime}</span></div>` : ''}
+          ${data.difficulty ? `<div class="meta-item"><span class="label">Difficulty</span><span class="value">${data.difficulty}</span></div>` : ''}
+          ${data.servings ? `<div class="meta-item"><span class="label">Servings</span><span class="value">${data.servings}</span></div>` : ''}
+        </div>
   
-    /* Pale Food Trek logo watermark */
-body::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 400px;
-  height: 400px;
-  background: url('https://food-trek.com/wp-content/uploads/2025/01/Food-e1738851342880.png') no-repeat center;
-  background-size: contain;
-  opacity: 0.07;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  z-index: 0;
-}
+        ${data.description ? `
+        <div class="card">
+          <h2>Description</h2>
+          <p>${data.description}</p>
+        </div>
+        ` : ''}
   
-    h1 {
-      font-family: 'Merriweather', serif;
-      font-weight: 700;
-      font-size: 2.8rem;
-      color: #e65100;
-      margin-bottom: 30px;
-      position: relative;
-      z-index: 1;
-      user-select: text;
-    }
+        ${data.ingredients?.length ? `
+        <div class="card">
+          <h2>Ingredients</h2>
+          <ul class="ingredients">
+            ${data.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
   
-    .meta-container {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      position: relative;
-      z-index: 1;
-    }
+        ${(data.instructions?.length || data.drOrderedList?.length) ? `
+        <div class="card">
+          <h2>Instructions</h2>
+          <ol class="instructions">
+            ${data.instructions?.map(step => `<li>${step}</li>`).join('') || ''}
+          </ol>
+          <ol class="dr-ordered-list">
+            ${data.drOrderedList?.map(step => `<li>${step}</li>`).join('') || ''}
+          </ol>
+        </div>
+        ` : ''}
   
-    .meta-item {
-      background: #fff;
-      padding: 20px 25px;
-      border-radius: 14px;
-      box-shadow: 0 6px 15px rgba(230, 81, 0, 0.25);
-      flex: 1 1 140px;
-      min-width: 140px;
-      cursor: default;
-      user-select: none;
-      transition: box-shadow 0.3s ease;
-    }
-    .meta-item:hover {
-      box-shadow: 0 8px 25px rgba(230, 81, 0, 0.4);
-    }
+        ${data.imageUrls?.length ? `
+        <div class="card">
+          <h2>Images</h2>
+          <div class="images">
+            ${data.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}
+          </div>
+        </div>
+        ` : ''}
   
-    .meta-item .label {
-      font-family: 'Merriweather', serif;
-      font-weight: 700;
-      font-size: 1.05rem;
-      color: #bf360c;
-      margin-bottom: 5px;
-      user-select: text;
-    }
-  
-    .meta-item .value {
-      font-weight: 400;
-      font-size: 1.25rem;
-      color: #3e2723;
-      user-select: text;
-      white-space: nowrap;
-    }
-  
-    .description {
-      margin-top: 30px;
-      font-size: 1.15rem;
-      font-style: italic;
-      color: #555;
-      white-space: pre-wrap;
-      position: relative;
-      z-index: 1;
-    }
-  
-    h2 {
-      font-family: 'Merriweather', serif;
-      font-weight: 700;
-      font-size: 1.85rem;
-      color: #bf360c;
-      margin: 50px 0 18px 0;
-      border-bottom: 2px solid #ffab91;
-      padding-bottom: 6px;
-      position: relative;
-      z-index: 1;
-    }
-  
-    ul.ingredients {
-      list-style-type: disc;
-      padding-left: 28px;
-      font-size: 1.1rem;
-      color: #444;
-      position: relative;
-      z-index: 1;
-    }
-  
-    ol.instructions {
-      padding-left: 28px;
-      font-size: 1.1rem;
-      color: #444;
-      margin-bottom: 40px;
-      position: relative;
-      z-index: 1;
-    }
-  
-    ol.instructions li {
-      margin-bottom: 16px;
-    }
-  
-    .images {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 40px;
-      justify-content: center;
-      position: relative;
-      z-index: 1;
-    }
-  
-    .images img {
-      width: 130px;
-      height: 95px;
-      object-fit: cover;
-      border-radius: 12px;
-      box-shadow: 0 5px 15px rgba(0,0,0,0.12);
-      user-select: none;
-    }
-  
-    @media print {
-      body {
-        box-shadow: none;
-        border: none;
-        margin: 0;
-        padding: 0;
-        max-width: 100%;
-        color: #000;
-      }
-      body::before {
-        display: none;
-      }
-      .images img {
-        width: 100%;
-        height: auto;
-        margin-bottom: 20px;
-        box-shadow: none;
-        border-radius: 0;
-      }
-      h1, h2 {
-        color: #000;
-        border-color: #000;
-      }
-      .meta-item {
-        box-shadow: none !important;
-        background: none !important;
-      }
-      .meta-item .label, .meta-item .value, .description {
-        color: #000 !important;
-      }
-    }
-  </style>
-  </head>
-  <body>
-    <h1>${data.recipeName || 'Recipe'}</h1>
-  
-    <div class="meta-container">
-      ${
-        data.prepTime
-          ? `<div class="meta-item"><div class="label">Prep Time:</div><div class="value">${data.prepTime}</div></div>`
-          : ''
-      }
-      ${
-        data.cookTime
-          ? `<div class="meta-item"><div class="label">Cook Time:</div><div class="value">${data.cookTime}</div></div>`
-          : ''
-      }
-      ${
-        data.restTime
-          ? `<div class="meta-item"><div class="label">Rest Time:</div><div class="value">${data.restTime}</div></div>`
-          : ''
-      }
-      ${
-        data.totalTime
-          ? `<div class="meta-item"><div class="label">Total Time:</div><div class="value">${data.totalTime}</div></div>`
-          : ''
-      }
-      ${
-        data.difficulty
-          ? `<div class="meta-item"><div class="label">Difficulty:</div><div class="value">${data.difficulty}</div></div>`
-          : ''
-      }
-      ${
-        data.servings
-          ? `<div class="meta-item"><div class="label">Servings:</div><div class="value">${data.servings}</div></div>`
-          : ''
-      }
-    </div>
-  
-    ${data.description ? `<p class="description">${data.description}</p>` : ''}
-  
-    ${
-      data.ingredients && data.ingredients.length
-        ? `<h2>Ingredients</h2>
-        <ul class="ingredients">
-          ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
-        </ul>`
-        : ''
-    }
-  
-    ${
-      data.instructions && data.instructions.length
-        ? `<h2>Instructions</h2>
-        <ol class="instructions">
-          ${data.instructions.map(i => `<li>${i}</li>`).join('')}
-        </ol>`
-        : ''
-    }
-  
-    ${
-      data.imageUrls && data.imageUrls.length
-        ? `<div class="images">
-          ${data.imageUrls
-            .map(
-              (img) =>
-                `<img src="${img}" alt="Recipe image" loading="lazy" />`
-            )
-            .join('')}
-        </div>`
-        : ''
-    }
-  </body>
-  </html>
+        <footer>food-trek.com</footer>
+      </body>
+    </html>
     `;
   }
-  
   
   
 router.post('/premium-recipe', async (req, res) => {
