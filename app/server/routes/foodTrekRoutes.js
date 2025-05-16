@@ -6,7 +6,36 @@ const puppeteer = require('puppeteer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 
-function generateRecipeHtml(data) {
+// Use Twemoji CDN to replace emojis in strings with inline images
+function replaceEmojisWithImages(str) {
+    // Escape HTML special chars to avoid injection
+    function escapeHtml(text) {
+      return text.replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[m]);
+    }
+    
+    // Twemoji CDN base
+    const baseUrl = 'https://twemoji.maxcdn.com/v/latest/svg/';
+  
+    // Convert emoji to hex codepoint strings
+    // This regex matches all emojis (surrogate pairs)
+    const regexEmoji = /(\p{Emoji_Presentation}|\p{Emoji}\uFE0F)/gu;
+  
+    // Replace each emoji char with img tag
+    return escapeHtml(str).replace(regexEmoji, (emoji) => {
+      // Get codepoints as hex separated by '-'
+      const codePoints = [...emoji].map(c => c.codePointAt(0).toString(16)).join('-');
+      // Return <img> referencing Twemoji SVG icon
+      return `<img class="emoji" draggable="false" alt="${emoji}" src="${baseUrl}${codePoints}.svg" style="width:1.1em; height:1.1em; vertical-align:text-bottom;" />`;
+    });
+  }
+  
+  function generateRecipeHtml(data) {
     return `
     <html>
       <head>
@@ -17,16 +46,13 @@ function generateRecipeHtml(data) {
             font-family: 'Open Sans', sans-serif;
             max-width: 720px;
             margin: 40px auto;
-            padding: 30px 40px 60px;
+            padding: 30px 40px;
             background: #fff;
             color: #333;
             line-height: 1.6;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             border-radius: 10px;
             border: 1px solid #eee;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
           }
           h1 {
             font-family: 'Merriweather', serif;
@@ -36,40 +62,45 @@ function generateRecipeHtml(data) {
             margin-bottom: 12px;
             border-bottom: 3px solid #ff7043;
             padding-bottom: 8px;
-            user-select: none;
           }
           .meta {
             display: flex;
             flex-wrap: wrap;
-            gap: 30px;
+            gap: 30px 25px;
+            font-size: 1rem;
+            color: #666;
             margin-bottom: 25px;
+            font-style: normal;
           }
           .meta-item {
-            display: flex;
-            flex-direction: column;
-            min-width: 100px;
-            font-style: normal;
-            color: #666;
+            min-width: 80px;
+            text-align: center;
+            line-height: 1.2;
+            font-weight: 400;
+            color: #555;
             user-select: none;
           }
-          .meta-item > .label {
+          .meta-item .label {
             font-weight: 700;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+            color: #bf360c;
+            margin-bottom: 2px;
+            display: block;
             text-transform: uppercase;
-            margin-bottom: 4px;
             letter-spacing: 0.05em;
+            font-family: 'Merriweather', serif;
           }
-          .meta-item > .value {
-            font-weight: 400;
-            font-size: 1.1rem;
-            color: #444;
+          .meta-item .value {
+            font-weight: 600;
+            font-size: 1.15rem;
+            color: #3e2723;
           }
           .description {
             margin-bottom: 30px;
-            font-size: 1.15rem;
+            font-size: 1.1rem;
             font-style: italic;
             color: #555;
-            user-select: text;
+            white-space: pre-wrap;
           }
           h2 {
             font-family: 'Merriweather', serif;
@@ -80,7 +111,6 @@ function generateRecipeHtml(data) {
             border-bottom: 2px solid #ffab91;
             padding-bottom: 6px;
             margin-top: 40px;
-            user-select: none;
           }
           ul.ingredients {
             list-style-type: disc;
@@ -100,34 +130,22 @@ function generateRecipeHtml(data) {
           .images {
             display: flex;
             flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 20px;
-            justify-content: flex-start;
+            gap: 10px;
+            margin-top: 30px;
+            justify-content: center;
           }
           .images img {
-            max-width: 30%;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 140px;
+            height: 100px;
             object-fit: cover;
-            transition: transform 0.3s ease;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
           }
-          .images img:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 16px rgba(216,67,21,0.3);
-          }
-          footer {
-            margin-top: auto;
-            border-top: 1px solid #ffab91;
-            padding-top: 15px;
-            text-align: center;
-            font-size: 0.9rem;
-            font-style: italic;
-            color: #a35d30;
-            user-select: none;
-          }
-          /* Emoji fallback: use system font for emojis */
           .emoji {
-            font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', sans-serif;
+            vertical-align: text-bottom;
+            width: 1.1em;
+            height: 1.1em;
+            margin-left: 3px;
           }
           @media print {
             body {
@@ -137,10 +155,10 @@ function generateRecipeHtml(data) {
               padding: 0;
               max-width: 100%;
               color: #000;
-              background: #fff;
             }
             .images img {
-              max-width: 100%;
+              width: 100%;
+              height: auto;
               margin-bottom: 20px;
               box-shadow: none;
               border-radius: 0;
@@ -156,76 +174,49 @@ function generateRecipeHtml(data) {
             .meta {
               color: #000;
             }
-            footer {
+            .meta-item .label {
               color: #000;
-              border-color: #ccc;
+            }
+            .meta-item .value {
+              color: #000;
             }
           }
         </style>
       </head>
       <body>
-        <h1>${data.recipeName ? `${data.recipeName} <span class="emoji">🍽️</span>` : 'Recipe'}</h1>
-        
-      <div class="meta">
-  ${data.prepTime ? `
-    <div class="meta-item">
-      <div class="label emoji">⏲️ Prep Time</div>
-      <div class="value">${data.prepTime}</div>
-    </div>` : ''}
-  ${data.cookTime ? `
-    <div class="meta-item">
-      <div class="label emoji">🔥 Cook Time</div>
-      <div class="value">${data.cookTime}</div>
-    </div>` : ''}
-  ${data.totalTime ? `
-    <div class="meta-item">
-      <div class="label emoji">⏳ Total Time</div>
-      <div class="value">${data.totalTime}</div>
-    </div>` : ''}
-  ${data.restTime ? `
-    <div class="meta-item">
-      <div class="label emoji">🛌 Rest Time</div>
-      <div class="value">${data.restTime}</div>
-    </div>` : ''}
-  ${data.difficulty ? `
-    <div class="meta-item">
-      <div class="label emoji">⚙️ Difficulty</div>
-      <div class="value">${data.difficulty}</div>
-    </div>` : ''}
-  ${data.servings ? `
-    <div class="meta-item">
-      <div class="label emoji">🍽️ Servings</div>
-      <div class="value">${data.servings}</div>
-    </div>` : ''}
-</div>
-
-        
+        <h1>${data.recipeName || 'Recipe'}</h1>
+  
+        <div class="meta">
+          ${data.prepTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('⏲️<br>')}</span><span class="value">${data.prepTime}</span></div>` : ''}
+          ${data.cookTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('🔥<br>Cook Time')}</span><span class="value">${data.cookTime}</span></div>` : ''}
+          ${data.restTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('🛌<br>Rest Time')}</span><span class="value">${data.restTime}</span></div>` : ''}
+          ${data.totalTime ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('⏳<br>Total Time')}</span><span class="value">${data.totalTime}</span></div>` : ''}
+          ${data.difficulty ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('🌶️<br>Difficulty')}</span><span class="value">${data.difficulty}</span></div>` : ''}
+          ${data.servings ? `<div class="meta-item"><span class="label">${replaceEmojisWithImages('🍽️<br>Servings')}</span><span class="value">${data.servings}</span></div>` : ''}
+        </div>
+  
         ${data.description ? `<p class="description">${data.description}</p>` : ''}
-        
+  
         ${data.ingredients?.length ? `
-          <h2>Ingredients</h2>
+          <h2>${replaceEmojisWithImages('📝 Ingredients')}</h2>
           <ul class="ingredients">
             ${data.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('')}
           </ul>
         ` : ''}
-        
+  
         ${data.instructions?.length ? `
-          <h2>Instructions</h2>
+          <h2>${replaceEmojisWithImages('👩‍🍳 Instructions')}</h2>
           <ol class="instructions">
             ${data.instructions.map(step => `<li>${step}</li>`).join('')}
           </ol>
         ` : ''}
-        
+  
         ${data.imageUrls?.length ? `
-          <h2>Images</h2>
+          <h2>${replaceEmojisWithImages('📸 Images')}</h2>
           <div class="images">
             ${data.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}
           </div>
         ` : ''}
-        
-        <footer>
-          © Food Trek — Premium Recipe Print
-        </footer>
       </body>
     </html>
     `;
