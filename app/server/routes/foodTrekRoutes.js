@@ -101,8 +101,8 @@ function generateRecipeHtml(data) {
       </head>
       <body>
         <h1>${data.recipeName || 'Recipe'}</h1>
-        ${data.includePrepTime && data.prepTime ? `<p class="meta">Prep Time: ${data.prepTime}</p>` : ''}
-        ${data.description ? `<p class="description">${data.description}</p>` : ''}
+        ${data.includePrepTime && data.prepTime ? `<p class="meta">: ${data.prepTime}:</p>` : ''}
+        ${data.description ? `${data.description}:</p>` : ''}
         ${data.includeIngredients && data.ingredients?.length ? `
           <h2>Ingredients</h2>
           <ul class="ingredients">
