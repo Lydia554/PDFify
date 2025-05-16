@@ -7,170 +7,157 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const User = require('../models/User');
 
 function generateRecipeHtml(data) {
-   
-        return `
-        <html>
-        <head>
-          <meta charset="UTF-8" />
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700&family=Open+Sans&display=swap');
-      
+    return `
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
+          body {
+            font-family: 'Open Sans', sans-serif;
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 30px 40px;
+            background: #fff;
+            color: #333;
+            line-height: 1.6;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            border: 1px solid #eee;
+          }
+          h1 {
+            font-family: 'Merriweather', serif;
+            font-weight: 700;
+            font-size: 2.8rem;
+            color: #e65100;
+            margin-bottom: 12px;
+            border-bottom: 3px solid #ff7043;
+            padding-bottom: 8px;
+          }
+          .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            font-size: 1rem;
+            color: #666;
+            margin-bottom: 25px;
+            font-style: normal;
+          }
+          .meta-item {
+            font-weight: 600;
+            min-width: 120px;
+          }
+          .description {
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            font-style: italic;
+            color: #555;
+          }
+          h2 {
+            font-family: 'Merriweather', serif;
+            font-weight: 700;
+            font-size: 1.8rem;
+            color: #bf360c;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #ffab91;
+            padding-bottom: 6px;
+            margin-top: 40px;
+          }
+          ul.ingredients {
+            list-style-type: disc;
+            padding-left: 25px;
+            font-size: 1.1rem;
+            color: #444;
+          }
+          ol.instructions {
+            padding-left: 25px;
+            font-size: 1.1rem;
+            color: #444;
+            margin-bottom: 30px;
+          }
+          ol.instructions li {
+            margin-bottom: 14px;
+          }
+          .images {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 30px;
+            justify-content: center;
+          }
+          .images img {
+            max-width: 45%;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            object-fit: cover;
+          }
+          @media print {
             body {
-              font-family: 'Open Sans', sans-serif;
-              max-width: 700px;
-              margin: 40px auto;
-              padding: 30px 40px;
-              background: #fff;
-              color: #333;
-              line-height: 1.6;
-              box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-              border-radius: 12px;
-              border: 1px solid #eee;
-            }
-      
-            h1 {
-              font-family: 'Merriweather', serif;
-              font-weight: 700;
-              font-size: 2.8rem;
-              color: #d35400;
-              margin-bottom: 10px;
-              border-bottom: 3px solid #f39c12;
-              padding-bottom: 8px;
-            }
-      
-            .meta-info {
-              display: flex;
-              gap: 20px;
-              font-size: 1rem;
-              color: #666;
-              margin: 12px 0 30px 0;
-              font-weight: 600;
-            }
-            .meta-info div {
-              flex-shrink: 0;
-            }
-      
-            .description {
-              font-style: italic;
-              font-size: 1.1rem;
-              color: #555;
-              margin-bottom: 30px;
-            }
-      
-            h2 {
-              font-family: 'Merriweather', serif;
-              font-weight: 700;
-              font-size: 1.8rem;
-              color: #c0392b;
-              border-bottom: 2px solid #e74c3c;
-              padding-bottom: 6px;
-              margin-top: 40px;
-              margin-bottom: 16px;
-            }
-      
-            ul.ingredients {
-              list-style-type: disc;
-              padding-left: 25px;
-              font-size: 1.15rem;
-              color: #444;
-              margin-bottom: 30px;
-            }
-      
-            ol.instructions {
-              padding-left: 25px;
-              font-size: 1.15rem;
-              color: #444;
-              margin-bottom: 40px;
-            }
-      
-            ol.instructions li {
-              margin-bottom: 18px;
-              position: relative;
-            }
-      
-            ol.instructions li img {
-              margin-top: 12px;
+              box-shadow: none;
+              border: none;
+              margin: 0;
+              padding: 0;
               max-width: 100%;
-              border-radius: 8px;
-              box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-              display: block;
+              color: #000;
             }
-      
-            .footer {
-              font-size: 0.85rem;
-              color: #999;
-              text-align: center;
-              border-top: 1px solid #eee;
-              padding-top: 16px;
-              margin-top: 50px;
-              font-family: 'Open Sans', sans-serif;
+            .images img {
+              max-width: 100%;
+              margin-bottom: 20px;
+              box-shadow: none;
+              border-radius: 0;
             }
-      
-            a {
-              color: #2980b9;
-              text-decoration: none;
+            h1 {
+              color: #000;
+              border-color: #000;
             }
-            a:hover {
-              text-decoration: underline;
+            h2 {
+              color: #000;
+              border-color: #666;
             }
-      
-            @media print {
-              body {
-                box-shadow: none;
-                border: none;
-                margin: 0;
-                padding: 0;
-                max-width: 100%;
-              }
-              ol.instructions li img {
-                max-width: 100%;
-              }
+            .meta {
+              color: #000;
             }
-          </style>
-        </head>
-        <body>
-          <h1>${data.recipeName || 'Recipe'}</h1>
-      
-          <div class="meta-info">
-            ${data.prepTime ? `<div><strong>Prep Time:</strong> ${data.prepTime}</div>` : ''}
-            ${data.cookTime ? `<div><strong>Cook Time:</strong> ${data.cookTime}</div>` : ''}
-            ${data.totalTime ? `<div><strong>Total Time:</strong> ${data.totalTime}</div>` : ''}
-            ${data.difficulty ? `<div><strong>Difficulty:</strong> ${data.difficulty}</div>` : ''}
+          }
+        </style>
+      </head>
+      <body>
+        <h1>${data.recipeName || 'Recipe'}</h1>
+        
+        <div class="meta">
+          ${data.prepTime ? `<div class="meta-item"><strong>Prep Time:</strong> ${data.prepTime}</div>` : ''}
+          ${data.cookTime ? `<div class="meta-item"><strong>Cook Time:</strong> ${data.cookTime}</div>` : ''}
+          ${data.totalTime ? `<div class="meta-item"><strong>Total Time:</strong> ${data.totalTime}</div>` : ''}
+          ${data.difficulty ? `<div class="meta-item"><strong>Difficulty:</strong> ${data.difficulty}</div>` : ''}
+          ${data.servings ? `<div class="meta-item"><strong>Servings:</strong> ${data.servings}</div>` : ''}
+        </div>
+        
+        ${data.description ? `<p class="description">${data.description}</p>` : ''}
+        
+        ${data.ingredients?.length ? `
+          <h2>Ingredients</h2>
+          <ul class="ingredients">
+            ${data.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('')}
+          </ul>
+        ` : ''}
+        
+        ${data.instructions?.length ? `
+          <h2>Instructions</h2>
+          <ol class="instructions">
+            ${data.instructions.map(step => `<li>${step}</li>`).join('')}
+          </ol>
+        ` : ''}
+        
+        ${data.imageUrls?.length ? `
+          <h2>Images</h2>
+          <div class="images">
+            ${data.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}
           </div>
-      
-          ${data.description ? `<p class="description">${data.description}</p>` : ''}
-      
-          ${data.ingredients && data.ingredients.length ? `
-            <h2>Ingredients</h2>
-            <ul class="ingredients">
-              ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
-            </ul>
-          ` : ''}
-      
-          ${data.instructions && data.instructions.length ? `
-            <h2>Instructions</h2>
-            <ol class="instructions">
-              ${data.instructions.map((step, i) => `
-                <li>
-                  ${step}
-                  ${data.instructionImages && data.instructionImages[i] ? `<img src="${data.instructionImages[i]}" alt="Step ${i+1} image" />` : ''}
-                </li>
-              `).join('')}
-            </ol>
-          ` : ''}
-      
-          ${data.readOnlineUrl ? `
-            <div class="footer">
-              Read it online: <a href="${data.readOnlineUrl}">${data.readOnlineUrl}</a>
-            </div>
-          ` : ''}
-        </body>
-        </html>
-        `;
-      }
-
-      
-      
+        ` : ''}
+      </body>
+    </html>
+    `;
+  }
+  
 router.post('/premium-recipe', async (req, res) => {
     const { email, ...data } = req.body;
   
