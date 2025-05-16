@@ -3,8 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const User = require('../models/User');
+
 
 function generateRecipeHtml(data) {
     return `
@@ -275,48 +274,26 @@ function generateRecipeHtml(data) {
     </html>
     `;
   }
-  
-  
-router.post('/premium-recipe', async (req, res) => {
+  router.post('/premium-recipe', async (req, res) => {
     const { email, ...data } = req.body;
   
     try {
-      const bypassPayment = true; // ⬅️ Set to false later when re-enabling Stripe
-  
-      // ⛔️ Skip payment check if bypassPayment is true
-      if (!bypassPayment) {
-        const user = await User.findOne({ email });
-  
-        if (!user || !user.isPremium) {
-          const session = await stripe.checkout.sessions.create({
-            mode: 'subscription',
-            payment_method_types: ['card'],
-            customer_email: email,
-            line_items: [{
-              price: process.env.STRIPE_PREMIUM_PRICE_ID,
-              quantity: 1,
-            }],
-            success_url: `${process.env.BASE_URL}/${process.env.SUCCESS_URL}?email=${encodeURIComponent(email)}`,
-            cancel_url: `${process.env.BASE_URL}/${process.env.CANCEL_URL}`,
-          });
-  
-          return res.status(402).json({ checkoutUrl: session.url });
-        }
-      }
-  
       const html = generateRecipeHtml(data);
       const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
       const pdfDir = path.join(__dirname, '../../pdfs');
-if (!fs.existsSync(pdfDir)) {
-  fs.mkdirSync(pdfDir, { recursive: true });
-}
-const pdfPath = path.join(pdfDir, fileName);
-
-const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-const page = await browser.newPage();
-await page.setContent(html, { waitUntil: 'networkidle0' });
-await page.pdf({ path: pdfPath, format: 'A4' });
-await browser.close();
+  
+      if (!fs.existsSync(pdfDir)) {
+        fs.mkdirSync(pdfDir, { recursive: true });
+      }
+  
+      const pdfPath = path.join(pdfDir, fileName);
+  
+      const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      await page.pdf({ path: pdfPath, format: 'A4' });
+      await browser.close();
+  
       res.download(pdfPath, fileName, err => {
         if (err) console.error(err);
         fs.unlinkSync(pdfPath);
@@ -327,6 +304,4 @@ await browser.close();
     }
   });
   
-
-module.exports = router;
-
+  module.exports = router;
