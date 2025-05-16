@@ -270,6 +270,8 @@ function generateRecipeHtml(data) {
           return text.split('').map(ch => emojiMap[ch] ? '<img src="'+emojiMap[ch]+'" style="width:18px;vertical-align:middle;margin-right:4px;">' : ch).join('');
         }
       </script>
+
+      <footer>Created with ❤️ by Food Trek — Visit food-trek.com</footer>
     </body>
     </html>
     `;
