@@ -281,7 +281,7 @@ function generateRecipeHtml(data) {
     ).join('');
   }
 
-  
+
   router.post('/premium-recipe', async (req, res) => {
     const { email, ...data } = req.body;
   
@@ -297,10 +297,20 @@ function generateRecipeHtml(data) {
       const pdfPath = path.join(pdfDir, fileName);
   
       const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      await page.pdf({ path: pdfPath, format: 'A4' });
-      await browser.close();
+const page = await browser.newPage();
+await page.setViewport({ width: 800, height: 1000 }); 
+
+await page.setContent(html, { waitUntil: 'networkidle0' });
+await page.waitForTimeout(500); 
+
+await page.pdf({
+  path: pdfPath,
+  format: 'A4',
+  printBackground: true,
+  scale: 1
+});
+
+await browser.close();
   
       res.download(pdfPath, fileName, err => {
         if (err) console.error(err);
