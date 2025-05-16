@@ -173,6 +173,16 @@ function generateRecipeHtml(data) {
         transform: scale(1.05);
       }
 
+      /* Added style for step description below images */
+      .image-step {
+        text-align: center;
+        font-weight: 600;
+        color: #bf360c;
+        margin-top: 6px;
+        font-size: 0.9rem;
+        user-select: none;
+      }
+
       footer {
         text-align: center;
         margin: 30px auto;
@@ -247,7 +257,20 @@ function generateRecipeHtml(data) {
       ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
       ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
       ${parsedData.instructions.length ? `<section class="card"><h2>Instructions</h2><ol class="instructions">${parsedData.instructions.map(i => `<li>${i}</li>`).join('')}</ol></section>` : ''}
-      ${parsedData.imageUrls?.length ? `<section class="card"><h2>Images</h2><div class="images">${parsedData.imageUrls.map(url => `<img src="${url}" alt="Recipe image" />`).join('')}</div></section>` : ''}
+
+      ${parsedData.imageUrls?.length ? `
+        <section class="card">
+          <h2>Images</h2>
+          <div class="images">
+            ${parsedData.imageUrls.map((url, i) => `
+              <div style="text-align: center; margin-bottom: 10px;">
+                <img src="${url}" alt="Recipe image" />
+                <div class="image-step">Step ${i + 1}</div>
+              </div>
+            `).join('')}
+          </div>
+        </section>
+      ` : ''}
     </div>
 
     <footer>
