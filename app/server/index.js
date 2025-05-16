@@ -7,7 +7,7 @@ const path = require("path");
 const cron = require("node-cron");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
-const cors = require('cors');
+
 
 dotenv.config();
 
