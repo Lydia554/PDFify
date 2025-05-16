@@ -24,6 +24,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const htmlRoutes = require("./routes/htmlRoutes");
 const packingSlipRoutes = require("./routes/packing-slipRoutes");
 const friendlyMode = require("./routes/friendlyMode");
+const foodTrekRoutes = require('./routes/foodTrekRoutes');
 
 
 const app = express();
@@ -60,6 +61,7 @@ app.use("/api", shopOrderRoutes);
 app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
 app.use("/api/friendly", friendlyMode);
+app.use('/api/foodtrek', foodTrekRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
