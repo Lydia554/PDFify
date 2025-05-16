@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const User = require('../models/User'); // if you're tracking premium users
+const User = require('../models/User');
 
 function generateRecipeHtml(data) {
   return `
@@ -45,28 +45,28 @@ function generateRecipeHtml(data) {
 router.post('/premium-recipe', async (req, res) => {
   const { email, ...data } = req.body;
 
-  // Check premium user
-  const user = await User.findOne({ email });
-
-  if (!user || !user.isPremium) {
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      customer_email: email,
-      line_items: [{
-        price: process.env.STRIPE_PREMIUM_PRICE_ID,
-        quantity: 1,
-      }],
-      success_url: 'https://your-api-domain.com/premium-success?email=' + encodeURIComponent(email),
-      cancel_url: 'https://your-site.com/premium-cancelled',
-    });
-
-    return res.status(402).json({ checkoutUrl: session.url });
-  }
-
   try {
+    const user = await User.findOne({ email });
+
+    if (!user || !user.isPremium) {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        customer_email: email,
+        line_items: [{
+          price: process.env.STRIPE_PREMIUM_PRICE_ID,
+          quantity: 1,
+        }],
+        success_url: `${process.env.BASE_URL}/${process.env.SUCCESS_URL}?email=${encodeURIComponent(email)}`,
+        cancel_url: `${process.env.BASE_URL}/${process.env.CANCEL_URL}`,
+      });
+
+      return res.status(402).json({ checkoutUrl: session.url });
+    }
+
     const html = generateRecipeHtml(data);
-    const pdfPath = path.join(__dirname, '../../pdfs', `foodtrek_recipe_${Date.now()}.pdf`);
+    const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
+    const pdfPath = path.join(__dirname, '../../pdfs', fileName);
 
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
@@ -74,13 +74,13 @@ router.post('/premium-recipe', async (req, res) => {
     await page.pdf({ path: pdfPath, format: 'A4' });
     await browser.close();
 
-    res.download(pdfPath, err => {
+    res.download(pdfPath, fileName, err => {
       if (err) console.error(err);
       fs.unlinkSync(pdfPath);
     });
   } catch (err) {
-    console.error('PDF generation error:', err);
-    res.status(500).json({ error: 'PDF generation failed' });
+    console.error('PDF generation failed:', err);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
