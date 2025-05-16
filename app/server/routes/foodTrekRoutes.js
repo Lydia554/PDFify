@@ -225,7 +225,7 @@ function generateRecipeHtml(data) {
         ${data.description ? `
           <section class="card description">
             <h2>Description</h2>
-            <p>${data.description}</p>
+            <p>${replaceEmojisWithImages(data.description)}</p>
           </section>
         ` : ''}
   
@@ -301,7 +301,8 @@ const page = await browser.newPage();
 await page.setViewport({ width: 800, height: 1000 }); 
 
 await page.setContent(html, { waitUntil: 'networkidle0' });
-await page.waitForTimeout(500); 
+await new Promise(resolve => setTimeout(resolve, 1000));
+
 
 await page.pdf({
   path: pdfPath,
