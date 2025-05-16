@@ -3,16 +3,18 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const twemoji = require('twemoji');
 
 function generateRecipeHtml(data) {
-  return `
+  // Your original HTML template without JS or replaceEmojisWithImages function
+  const rawHtml = `
+  <!DOCTYPE html>
   <html>
   <head>
     <meta charset="UTF-8" />
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
 
-      /* Reset */
       body, html {
         margin: 0; padding: 0;
         background: #fff;
@@ -21,7 +23,6 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
-      /* Watermark */
       body::before {
         content: "";
         position: fixed;
@@ -58,7 +59,6 @@ function generateRecipeHtml(data) {
         padding-bottom: 8px;
       }
 
-      /* Meta info section with button style */
       .meta-info {
         display: flex;
         gap: 20px;
@@ -96,7 +96,6 @@ function generateRecipeHtml(data) {
         color: #4e342e;
       }
 
-      /* Cards for sections */
       section.card {
         background:rgb(255, 255, 255);
         border-radius: 12px;
@@ -115,7 +114,6 @@ function generateRecipeHtml(data) {
         margin-bottom: 20px;
       }
 
-      /* Ingredients list */
       ul.ingredients {
         list-style-type: disc;
         padding-left: 25px;
@@ -123,7 +121,6 @@ function generateRecipeHtml(data) {
         color: #4e342e;
       }
 
-      /* Instructions list */
       ol.instructions {
         padding-left: 25px;
         font-size: 1.1rem;
@@ -134,7 +131,6 @@ function generateRecipeHtml(data) {
         margin-bottom: 14px;
       }
 
-      /* Images container */
       .images {
         display: flex;
         flex-wrap: wrap;
@@ -155,7 +151,6 @@ function generateRecipeHtml(data) {
         transform: scale(1.05);
       }
 
-      /* Print adjustments */
       @media print {
         body::before {
           opacity: 0.03;
@@ -184,17 +179,6 @@ function generateRecipeHtml(data) {
         }
       }
     </style>
-
-    <!-- Twemoji JS to parse emojis -->
-    <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
-    <script>
-      document.addEventListener('DOMContentLoaded', () => {
-        twemoji.parse(document.body, {
-          folder: '72x72',
-          ext: '.png'
-        });
-      });
-    </script>
   </head>
   <body>
     <div class="container">
@@ -243,7 +227,7 @@ function generateRecipeHtml(data) {
         <section class="card ingredients">
           <h2>Ingredients</h2>
           <ul class="ingredients">
-            ${data.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('')}
+            ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
           </ul>
         </section>
       ` : ''}
@@ -252,7 +236,7 @@ function generateRecipeHtml(data) {
         <section class="card instructions">
           <h2>Instructions</h2>
           <ol class="instructions">
-            ${data.instructions.map(step => `<li>${step}</li>`).join('')}
+            ${data.instructions.map(i => `<li>${i}</li>`).join('')}
           </ol>
         </section>
       ` : ''}
@@ -268,12 +252,18 @@ function generateRecipeHtml(data) {
     </div>
 
     <footer style="margin: 30px auto; text-align: center; font-size: 0.9rem; color: #888;">
-      Created with ❤️ by <strong>Food Trek</strong> — Visit 
+      Created with ❤️ by <strong>Food Trek</strong> — Visit
       <a href="https://food-trek.com" target="_blank" style="color: #ff7043; text-decoration: none;">food-trek.com</a>
     </footer>
   </body>
   </html>
   `;
+
+  // Use twemoji.parse to convert emoji chars into <img> emoji images
+  return twemoji.parse(rawHtml, {
+    folder: '72x72',
+    ext: '.png',
+  });
 }
 
 router.post('/premium-recipe', async (req, res) => {
@@ -292,17 +282,15 @@ router.post('/premium-recipe', async (req, res) => {
 
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
-    await page.setViewport({ width: 800, height: 1000 });
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    // wait for Twemoji script to run and images to load
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
     await page.pdf({
       path: pdfPath,
       format: 'A4',
       printBackground: true,
-      scale: 1
+      scale: 1,
     });
 
     await browser.close();
