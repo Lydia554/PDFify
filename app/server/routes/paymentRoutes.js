@@ -2,6 +2,7 @@ const express = require("express");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
 const authenticate = require("../middleware/authenticate");
+const User = require("../models/User");
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
