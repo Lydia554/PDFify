@@ -82,7 +82,6 @@ const page = await browser.newPage();
 await page.setContent(html, { waitUntil: 'networkidle0' });
 await page.pdf({ path: pdfPath, format: 'A4' });
 await browser.close();
-
       res.download(pdfPath, fileName, err => {
         if (err) console.error(err);
         fs.unlinkSync(pdfPath);
