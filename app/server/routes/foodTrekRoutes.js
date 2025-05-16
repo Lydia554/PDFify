@@ -257,28 +257,31 @@ function generateRecipeHtml(data) {
         ` : ''}
       </div>
   
-      <script>
-        // Emoji replacement function inside the PDF (optional, if you want it dynamic in HTML)
-        function replaceEmojisWithImages(text) {
-          const emojiMap = {
-            '⏱️': 'https://twemoji.maxcdn.com/v/latest/72x72/23f1.png',
-            '🔥': 'https://twemoji.maxcdn.com/v/latest/72x72/1f525.png',
-            '⏳': 'https://twemoji.maxcdn.com/v/latest/72x72/23f3.png',
-            '🕒': 'https://twemoji.maxcdn.com/v/latest/72x72/1f552.png',
-            '⭐': 'https://twemoji.maxcdn.com/v/latest/72x72/2b50.png'
-          };
-          return text.split('').map(ch => emojiMap[ch] ? '<img src="'+emojiMap[ch]+'" style="width:18px;vertical-align:middle;margin-right:4px;">' : ch).join('');
-        }
-      </script>
-
+    
        <footer style="margin: 30px auto; text-align: center; font-size: 0.9rem; color: #888;">
         Created with ❤️ by <strong>Food Trek</strong> — Visit 
-        <a href="https://foodtrek.com" target="_blank" style="color: #ff7043; text-decoration: none;">foodtrek.com</a>
+        <a href="https://food-trek.com" target="_blank" style="color: #ff7043; text-decoration: none;">foodtrek.com</a>
       </footer>
     </body>
     </html>
     `;
   }
+
+
+  function replaceEmojisWithImages(text) {
+    const emojiMap = {
+      '⏱️': 'https://twemoji.maxcdn.com/v/latest/72x72/23f1.png',
+      '🔥': 'https://twemoji.maxcdn.com/v/latest/72x72/1f525.png',
+      '⏳': 'https://twemoji.maxcdn.com/v/latest/72x72/23f3.png',
+      '🕒': 'https://twemoji.maxcdn.com/v/latest/72x72/1f552.png',
+      '⭐': 'https://twemoji.maxcdn.com/v/latest/72x72/2b50.png'
+    };
+    return text.split('').map(ch =>
+      emojiMap[ch] ? `<img src="${emojiMap[ch]}" style="width:18px;vertical-align:middle;margin-right:4px;">` : ch
+    ).join('');
+  }
+
+  
   router.post('/premium-recipe', async (req, res) => {
     const { email, ...data } = req.body;
   
