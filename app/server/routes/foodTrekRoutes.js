@@ -75,7 +75,7 @@ function generateRecipeHtml(data) {
 
 .step-title {
   font-size: 1rem;
-  font-weight: bold;
+  font-weight: 700;
   color: #d84315;
   margin-top: 10px;
   margin-bottom: 4px;
@@ -86,7 +86,6 @@ function generateRecipeHtml(data) {
   font-size: 0.95rem;
   color: #4e342e;
   font-weight: 400;
-  font-style: italic;
   white-space: pre-wrap; /* preserve line breaks */
 }
 
