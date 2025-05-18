@@ -76,13 +76,14 @@ function generateRecipeHtml(data) {
   margin-top: 10px;
   margin-bottom: 4px;
   white-space: pre-wrap;
-   text-align: center;
+   
 }
 
 .step-description {
   font-size: 0.95rem;
   color: #4e342e;
-  font-weight: 400;
+  font-weight: 700;
+  text-align: center;
   white-space: pre-wrap; /* preserve line breaks */
 }
 
