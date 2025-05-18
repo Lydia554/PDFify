@@ -22,6 +22,29 @@ function parseArray(arr) {
       })
     : [];
 }
+function parseLabelValue(str) {
+  if (!str) return { label: '', val: '' };
+  
+  // Try splitting by colon first
+  if (str.includes(':')) {
+    const [label, ...rest] = str.split(':');
+    return { label: label.trim(), val: rest.join(':').trim() };
+  }
+  
+  // Otherwise, split by last space
+  const lastSpaceIndex = str.lastIndexOf(' ');
+  if (lastSpaceIndex > 0) {
+    const label = str.slice(0, lastSpaceIndex).trim();
+    const val = str.slice(lastSpaceIndex + 1).trim();
+    return { label, val };
+  }
+  
+  // fallback
+  return { label: str, val: '' };
+}
+
+
+
 
 function generateRecipeHtml(data) {
   const parsedData = {
@@ -31,11 +54,11 @@ function generateRecipeHtml(data) {
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
     metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
-    prepTime: {  val: parseEmoji(data.prepTime) },
-    cookTime: {  val: parseEmoji(data.cookTime) },
-    totalTime: {  val: parseEmoji(data.totalTime) },
-    restTime: { val: parseEmoji(data.restTime) },
-    difficulty: {  val: parseEmoji(data.difficulty) },
+    prepTime: parseLabelValue(parseEmoji(data.prepTime)),
+    cookTime: parseLabelValue(parseEmoji(data.cookTime)),
+    totalTime: parseLabelValue(parseEmoji(data.totalTime)),
+    restTime: parseLabelValue(parseEmoji(data.restTime)),
+    difficulty: parseLabelValue(parseEmoji(data.difficulty)),
   };
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
