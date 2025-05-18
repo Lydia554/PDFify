@@ -55,7 +55,7 @@ function generateRecipeHtml(data) {
     cookTime: cleanTimeField(data.cookTime, "Cook Time"),
     totalTime: cleanTimeField(data.totalTime, "Total Time"),
     restTime: cleanTimeField(data.restTime, "Rest Time"),
-    difficulty: cleanTimeField(data.difficulty, "Difficulty")
+    difficulty: cleanTimeField(data.difficulty,)
   };
   
 
