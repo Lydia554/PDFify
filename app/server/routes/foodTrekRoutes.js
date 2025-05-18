@@ -69,15 +69,7 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
-.step-title {
-  font-size: 1rem;
- font-weight: bold !important;
-  color: #d84315;
-  margin-top: 10px;
-  margin-bottom: 4px;
-  white-space: pre-wrap;
-   
-}
+
 
 .step-description {
   font-size: 0.95rem;
@@ -159,7 +151,7 @@ function generateRecipeHtml(data) {
         border-radius: 12px;
         box-shadow: 0 6px 18px rgba(255, 183, 77, 0.3);
         padding: 25px 30px;
-        margin-bottom: 35px;
+        margin-bottom: 20px;
       }
 
       section.card h2 {
