@@ -22,37 +22,42 @@ function parseArray(arr) {
       })
     : [];
 }
+function cleanTimeField(rawValue, expectedLabel) {
+  if (!rawValue || typeof rawValue !== 'string') {
+    return { label: expectedLabel, val: '' };
+  }
+
+ 
+  const cleaned = rawValue.replace(/\s+/g, ' ').trim();
+
+
+  const match = cleaned.match(/(\d+\s*(mins?|hours?|hr|h|sec|s))/i);
+
+  return {
+    label: expectedLabel,
+    val: match ? match[1] : cleaned 
+  };
+}
+
+
+
 
 
 function generateRecipeHtml(data) {
-  
-  const cleanMeta = (str, fallbackLabel = '') => {
-    if (!str) return { label: fallbackLabel, val: '' };
-  
-    const parts = str.trim().split(/[:\n]+/);
-    let label = parts[0]?.trim() || fallbackLabel;
-    let val = parts.slice(1).join('').trim();
-  
-    if (!val && str.includes(':')) {
-      const i = str.indexOf(':');
-      val = str.slice(i + 1).trim();
-    }
-  
-    return { label, val };
-  };
-
   const parsedData = {
     ...data,
     recipeName: parseEmoji(data.recipeName),
     description: parseEmoji(data.description),
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
-    prepTime: cleanMeta(data.prepTime, 'Prep Time'),
-cookTime: cleanMeta(data.cookTime, 'Cook Time'),
-totalTime: cleanMeta(data.totalTime, 'Total Time'),
-restTime: cleanMeta(data.restTime, 'Rest Time'),
-difficulty: cleanMeta(data.difficulty, 'Difficulty'),
+    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
+    prepTime: cleanTimeField(data.prepTime, "Prep Time"),
+    cookTime: cleanTimeField(data.cookTime, "Cook Time"),
+    totalTime: cleanTimeField(data.totalTime, "Total Time"),
+    restTime: cleanTimeField(data.restTime, "Rest Time"),
+    difficulty: cleanTimeField(data.difficulty, "Difficulty")
   };
+  
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
 
@@ -292,37 +297,28 @@ difficulty: cleanMeta(data.difficulty, 'Difficulty'),
     <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
 
-   <div class="meta-info">
-      ${parsedData.prepTime.val ? `
-        <div class="meta-item">
-          <span class="label">${parsedData.prepTime.label}</span>
-          <span class="value">${parsedData.prepTime.val}</span>
-        </div>` : ''}
-
-      ${parsedData.cookTime.val ? `
-        <div class="meta-item">
-          <span class="label">${parsedData.cookTime.label}</span>
-          <span class="value">${parsedData.cookTime.val}</span>
-        </div>` : ''}
-
-      ${parsedData.totalTime.val ? `
-        <div class="meta-item">
-          <span class="label">${parsedData.totalTime.label}</span>
-          <span class="value">${parsedData.totalTime.val}</span>
-        </div>` : ''}
-
-      ${parsedData.restTime.val ? `
-        <div class="meta-item">
-          <span class="label">${parsedData.restTime.label}</span>
-          <span class="value">${parsedData.restTime.val}</span>
-        </div>` : ''}
-
-      ${parsedData.difficulty.val ? `
-        <div class="meta-item">
-          <span class="label">${parsedData.difficulty.label}</span>
-          <span class="value">${parsedData.difficulty.val}</span>
-        </div>` : ''}
-    </div>
+<div class="meta-info">
+  <div class="meta-item">
+    <span class="label">${parsedData.prepTime.label}</span>
+    <span class="value">${parsedData.prepTime.val}</span>
+  </div>
+  <div class="meta-item">
+    <span class="label">${parsedData.cookTime.label}</span>
+    <span class="value">${parsedData.cookTime.val}</span>
+  </div>
+  <div class="meta-item">
+    <span class="label">${parsedData.totalTime.label}</span>
+    <span class="value">${parsedData.totalTime.val}</span>
+  </div>
+  <div class="meta-item">
+    <span class="label">${parsedData.restTime.label}</span>
+    <span class="value">${parsedData.restTime.val}</span>
+  </div>
+  <div class="meta-item">
+   
+    <span class="value">${parsedData.difficulty.val}</span>
+  </div>
+</div>
 
 
    ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
