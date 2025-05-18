@@ -31,25 +31,26 @@ function generateRecipeHtml(data) {
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
     prepTime: {
-      label: parseEmoji(data?.prepTime?.label),
-      val: parseEmoji(data?.prepTime?.val),
+      label: 'Prep Time',
+      val: document.querySelector('.dr-prep-time')?.textContent.trim() || '',
     },
     cookTime: {
-      label: parseEmoji(data?.cookTime?.label),
-      val: parseEmoji(data?.cookTime?.val),
+      label: 'Cook Time',
+      val: document.querySelector('.dr-cook-time')?.textContent.trim() || '',
     },
     totalTime: {
-      label: parseEmoji(data?.totalTime?.label),
-      val: parseEmoji(data?.totalTime?.val),
+      label: 'Total Time',
+      val: document.querySelector('.dr-total-time')?.textContent.trim() || '',
     },
     restTime: {
-      label: parseEmoji(data?.restTime?.label),
-      val: parseEmoji(data?.restTime?.val),
+      label: 'Rest Time',
+      val: document.querySelector('.dr-rest-time')?.textContent.trim() || '',
     },
     difficulty: {
-      label: parseEmoji(data?.difficulty?.label),
-      val: parseEmoji(data?.difficulty?.val),
+      label: 'Difficulty',
+      val: document.querySelector('.wpdelicious-meta.dr-label')?.textContent.trim() || '',
     },
+    
   };
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
@@ -151,7 +152,7 @@ function generateRecipeHtml(data) {
         border-radius: 12px;
         box-shadow: 0 6px 18px rgba(255, 183, 77, 0.3);
         padding: 25px 30px;
-        margin-bottom: 20px;
+        margin-bottom: 35px;
       }
 
       section.card h2 {
