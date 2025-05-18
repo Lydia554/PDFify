@@ -4,18 +4,21 @@ const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 const twemoji = require('twemoji');
-
-// Helper: parse individual text string to twemoji <img> if emoji is found
-function parseEmoji(text) {
-  return text ? twemoji.parse(text, { folder: '72x72', ext: '.png' }) : '';
-}
-
-// Helper: parse an array of text strings
 function parseArray(arr) {
-  return Array.isArray(arr) ? arr.map(item => parseEmoji(item)) : [];
+  return Array.isArray(arr)
+    ? arr.map(item => {
+        if (typeof item === 'string') {
+          return { description: parseEmoji(item) };
+        } else {
+          return {
+            title: parseEmoji(item.title || ''),
+            description: parseEmoji(item.description || ''),
+          };
+        }
+      })
+    : [];
 }
 
-// Generate HTML content from recipe data
 function generateRecipeHtml(data) {
   const parsedData = {
     ...data,
@@ -264,6 +267,7 @@ function generateRecipeHtml(data) {
     <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
   </header>
 
+
   <div class="container">
     <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
@@ -276,27 +280,31 @@ function generateRecipeHtml(data) {
     </div>
 
     ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
-    ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i}</li>`).join('')}</ul></section>` : ''}
-   
+    ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
+
     ${parsedData.imageUrls?.length ? `
       <section class="card">
         <h2>Instructions</h2>
         <div class="images-with-steps">
-          ${parsedData.imageUrls.map((url, i) => `
-            <div class="image-step-pair">
-              <img src="${url}" alt="Recipe image ${i + 1}" />
-              <p class="step-text">${parsedData.instructions[i] || ''}</p>
-            </div>
-          `).join('')}
+          ${parsedData.imageUrls.map((url, i) => {
+            const step = parsedData.instructions[i] || {};
+            return `
+              <div class="image-step-pair">
+                <img src="${url}" alt="Step ${i + 1}" />
+                ${step.title ? `<h5 class="step-title">${step.title}</h5>` : ''}
+                <p class="step-text">${step.description || ''}</p>
+              </div>
+            `;
+          }).join('')}
         </div>
       </section>
     ` : ''}
   </div>
 
 
-    <footer>
-      Created with ❤️ by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
-    </footer>
+   <footer>
+    Created with ❤️ by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
+  </footer>
   </body>
   </html>`;
 }
