@@ -22,28 +22,18 @@ function parseArray(arr) {
       })
     : [];
 }
-function cleanTimeField(rawValue, expectedLabel) {
-  if (!rawValue || typeof rawValue !== 'string') {
-    return { label: expectedLabel, val: '' };
-  }
-
- 
-  const cleaned = rawValue.replace(/\s+/g, ' ').trim();
-
-
-  const match = cleaned.match(/(\d+\s*(mins?|hours?|hr|h|sec|s))/i);
-
-  return {
-    label: expectedLabel,
-    val: match ? match[1] : cleaned 
-  };
-}
-
-
-
 
 
 function generateRecipeHtml(data) {
+  
+  const cleanMeta = str => {
+    if (!str) return { label: '', val: '' };
+    const parts = str.trim().split(/[:\n]+/);
+    const label = parts[0]?.trim() || '';
+    const val = parts.slice(1).join('').trim();
+    return { label, val };
+  };
+
   const parsedData = {
     ...data,
     recipeName: parseEmoji(data.recipeName),
@@ -54,9 +44,8 @@ function generateRecipeHtml(data) {
     cookTime: cleanMeta(data.cookTime),
     totalTime: cleanMeta(data.totalTime),
     restTime: cleanMeta(data.restTime),
-    difficulty: cleanMeta(data.difficulty), 
+    difficulty: cleanMeta(data.difficulty),
   };
-  
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
 
