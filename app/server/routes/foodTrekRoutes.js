@@ -26,6 +26,7 @@ function parseArray(arr) {
     : [];
 }
 
+
 function generateRecipeHtml(data) {
   const parsedData = {
     ...data,
@@ -54,6 +55,8 @@ function generateRecipeHtml(data) {
       val: parseEmoji(data?.difficulty?.val),
     },
   };
+
+  const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
 
   return `
   <!DOCTYPE html>
@@ -312,7 +315,7 @@ function generateRecipeHtml(data) {
       ${parsedData.difficulty.label ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
     </div>
 
-   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
+
    ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
 
 
