@@ -3,14 +3,11 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const twemoji = require('twemoji');
 
 function parseEmoji(str) {
-  return twemoji.parse(str || '', {
-    folder: '72x72',
-    ext: '.png',
-  });
+  return str || '';
 }
+
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
@@ -25,7 +22,6 @@ function parseArray(arr) {
       })
     : [];
 }
-
 
 function generateRecipeHtml(data) {
   const parsedData = {
@@ -75,7 +71,7 @@ function generateRecipeHtml(data) {
 
 .step-title {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: bold;
   color: #d84315;
   margin-top: 10px;
   margin-bottom: 4px;
@@ -100,6 +96,25 @@ function generateRecipeHtml(data) {
         max-width: 150px;
         height: auto;
       }
+
+
+          .image-step-pair {
+      flex: 1 1 150px;
+      max-width: 200px;
+      text-align: center;
+       box-shadow: 0 2px 6px rgba(255,183,77,0.15);
+    }
+
+    .image-step-pair img {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .image-step-pair img:hover {
+      transform: scale(1.05);
+    }
 
       .container {
         max-width: 300px;
@@ -186,13 +201,6 @@ function generateRecipeHtml(data) {
 
 
 
-  img.emoji {
-    height: 1em;
-    width: 1em;
-    margin: 0 .05em 0 .1em;
-    vertical-align: -0.1em;
-  }
-
       .images {
         display: flex;
         flex-wrap: wrap;
@@ -219,23 +227,7 @@ function generateRecipeHtml(data) {
       justify-content: center;
     }
 
-    .image-step-pair {
-      flex: 1 1 150px;
-      max-width: 200px;
-      text-align: center;
-       box-shadow: 0 2px 6px rgba(255,183,77,0.15);
-    }
 
-    .image-step-pair img {
-      max-width: 100%;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }
-
-    .image-step-pair img:hover {
-      transform: scale(1.05);
-    }
 
     .step-text {
       margin-top: 8px;
@@ -345,7 +337,7 @@ function generateRecipeHtml(data) {
 
 
    <footer>
-    Created with ❤️ by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
+    Created with by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
   </footer>
   </body>
   </html>`;
