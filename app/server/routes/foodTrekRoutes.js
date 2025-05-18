@@ -76,6 +76,7 @@ function generateRecipeHtml(data) {
   margin-top: 10px;
   margin-bottom: 4px;
   white-space: pre-wrap;
+   text-align: center;
 }
 
 .step-description {
@@ -213,6 +214,10 @@ function generateRecipeHtml(data) {
       flex: 1 1 150px;
       max-width: 200px;
       text-align: center;
+        background: #fff8f1;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(255,183,77,0.15);
       
     }
 
