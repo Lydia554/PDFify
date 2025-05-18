@@ -234,14 +234,6 @@ function generateRecipeHtml(data) {
     }
 
 
-
-    .step-text {
-      margin-top: 8px;
-      font-size: 0.95rem;
-      color: #4e342e;
-      font-weight: 600;
-    }
-
       footer {
         text-align: center;
         margin: 30px auto;
