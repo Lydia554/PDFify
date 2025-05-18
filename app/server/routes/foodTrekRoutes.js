@@ -22,26 +22,23 @@ function parseArray(arr) {
       })
     : [];
 }
-function parseLabelValue(str) {
-  if (!str) return { label: '', val: '' };
-  
-
-  if (str.includes(':')) {
-    const [label, ...rest] = str.split(':');
-    return { label: label.trim(), val: rest.join(':').trim() };
+function cleanTimeField(rawValue, expectedLabel) {
+  if (!rawValue || typeof rawValue !== 'string') {
+    return { label: expectedLabel, val: '' };
   }
-  
 
-  const lastSpaceIndex = str.lastIndexOf(' ');
-  if (lastSpaceIndex > 0) {
-    const label = str.slice(0, lastSpaceIndex).trim();
-    const val = str.slice(lastSpaceIndex + 1).trim();
-    return { label, val };
-  }
-  
+ 
+  const cleaned = rawValue.replace(/\s+/g, ' ').trim();
 
-  return { label: str, val: '' };
+
+  const match = cleaned.match(/(\d+\s*(mins?|hours?|hr|h|sec|s))/i);
+
+  return {
+    label: expectedLabel,
+    val: match ? match[1] : cleaned 
+  };
 }
+
 
 
 
@@ -54,24 +51,16 @@ function generateRecipeHtml(data) {
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
     metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
-    prepTime: parseLabelValue(parseEmoji(data.prepTime)),
-    cookTime: parseLabelValue(parseEmoji(data.cookTime)),
-    totalTime: parseLabelValue(parseEmoji(data.totalTime)),
-    restTime: parseLabelValue(parseEmoji(data.restTime)),
-    difficulty: parseLabelValue(parseEmoji(data.difficulty)),
+    prepTime: cleanTimeField(data.prepTime, "Prep Time"),
+    cookTime: cleanTimeField(data.cookTime, "Cook Time"),
+    totalTime: cleanTimeField(data.totalTime, "Total Time"),
+    restTime: cleanTimeField(data.restTime, "Rest Time"),
+    difficulty: cleanTimeField(data.difficulty, "Difficulty")
   };
+  
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
 
-
-  console.log('DEBUG input times:', {
-    prepTime: data.prepTime,
-    cookTime: data.cookTime,
-    totalTime: data.totalTime,
-    restTime: data.restTime,
-    difficulty: data.difficulty,
-  });
-  
 
   return `
   <!DOCTYPE html>
