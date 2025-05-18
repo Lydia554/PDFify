@@ -26,11 +26,18 @@ function parseArray(arr) {
 
 function generateRecipeHtml(data) {
   
-  const cleanMeta = str => {
-    if (!str) return { label: '', val: '' };
+  const cleanMeta = (str, fallbackLabel = '') => {
+    if (!str) return { label: fallbackLabel, val: '' };
+  
     const parts = str.trim().split(/[:\n]+/);
-    const label = parts[0]?.trim() || '';
-    const val = parts.slice(1).join('').trim();
+    let label = parts[0]?.trim() || fallbackLabel;
+    let val = parts.slice(1).join('').trim();
+  
+    if (!val && str.includes(':')) {
+      const i = str.indexOf(':');
+      val = str.slice(i + 1).trim();
+    }
+  
     return { label, val };
   };
 
@@ -40,11 +47,11 @@ function generateRecipeHtml(data) {
     description: parseEmoji(data.description),
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
-    prepTime: cleanMeta(data.prepTime),
-    cookTime: cleanMeta(data.cookTime),
-    totalTime: cleanMeta(data.totalTime),
-    restTime: cleanMeta(data.restTime),
-    difficulty: cleanMeta(data.difficulty),
+    prepTime: cleanMeta(data.prepTime, 'Prep Time'),
+cookTime: cleanMeta(data.cookTime, 'Cook Time'),
+totalTime: cleanMeta(data.totalTime, 'Total Time'),
+restTime: cleanMeta(data.restTime, 'Rest Time'),
+difficulty: cleanMeta(data.difficulty, 'Difficulty'),
   };
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
