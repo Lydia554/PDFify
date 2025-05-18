@@ -290,7 +290,7 @@ function generateRecipeHtml(data) {
     <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
 
-    <div class="meta-info">
+<div class="meta-info">
   <div class="meta-item">
     <span class="label">${parsedData.prepTime.label}</span>
     <span class="value">${parsedData.prepTime.val}</span>
