@@ -97,25 +97,6 @@ function generateRecipeHtml(data) {
         height: auto;
       }
 
-
-          .image-step-pair {
-      flex: 1 1 150px;
-      max-width: 200px;
-      text-align: center;
-       box-shadow: 0 2px 6px rgba(255,183,77,0.15);
-    }
-
-    .image-step-pair img {
-      max-width: 100%;
-      border-radius: 10px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      transition: transform 0.3s ease;
-    }
-
-    .image-step-pair img:hover {
-      transform: scale(1.05);
-    }
-
       .container {
         max-width: 300px;
         margin: 30px auto;
@@ -225,6 +206,25 @@ function generateRecipeHtml(data) {
       flex-wrap: wrap;
       gap: 15px;
       justify-content: center;
+    }
+
+    
+          .image-step-pair {
+      flex: 1 1 150px;
+      max-width: 200px;
+      text-align: center;
+      
+    }
+
+    .image-step-pair img {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .image-step-pair img:hover {
+      transform: scale(1.05);
     }
 
 
