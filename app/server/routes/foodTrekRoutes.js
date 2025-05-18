@@ -270,13 +270,12 @@ function generateRecipeHtml(data) {
 
   <div class="container">
     <h1>${parsedData.recipeName || 'Recipe'}</h1>
-
 <div class="meta-info">
-  ${parsedData.prepTime.val ? `<div class="meta-item"><span class="label">${parsedData.prepTime.label}:</span><span class="value">${parsedData.prepTime.val}</span></div>` : ''}
-  ${parsedData.cookTime.val ? `<div class="meta-item"><span class="label">${parsedData.cookTime.label}:</span><span class="value">${parsedData.cookTime.val}</span></div>` : ''}
-  ${parsedData.totalTime.val ? `<div class="meta-item"><span class="label">${parsedData.totalTime.label}:</span><span class="value">${parsedData.totalTime.val}</span></div>` : ''}
-  ${parsedData.restTime.val ? `<div class="meta-item"><span class="label">${parsedData.restTime.label}:</span><span class="value">${parsedData.restTime.val}</span></div>` : ''}
-  ${parsedData.difficulty.val ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
+  DEBUG: PrepTime = ${parsedData.prepTime.val}<br/>
+  DEBUG: CookTime = ${parsedData.cookTime.val}<br/>
+  DEBUG: TotalTime = ${parsedData.totalTime.val}<br/>
+  DEBUG: RestTime = ${parsedData.restTime.val}<br/>
+  DEBUG: Difficulty = ${parsedData.difficulty.val}<br/>
 </div>
 
 
