@@ -50,12 +50,11 @@ function generateRecipeHtml(data) {
     description: parseEmoji(data.description),
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
-    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
-    prepTime: cleanTimeField(data.prepTime, "Prep Time"),
-    cookTime: cleanTimeField(data.cookTime, "Cook Time"),
-    totalTime: cleanTimeField(data.totalTime, "Total Time"),
-    restTime: cleanTimeField(data.restTime, "Rest Time"),
-    difficulty: cleanTimeField(data.difficulty,)
+    prepTime: cleanMeta(data.prepTime),
+    cookTime: cleanMeta(data.cookTime),
+    totalTime: cleanMeta(data.totalTime),
+    restTime: cleanMeta(data.restTime),
+    difficulty: cleanMeta(data.difficulty), 
   };
   
 
@@ -297,28 +296,37 @@ function generateRecipeHtml(data) {
     <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
 
-<div class="meta-info">
-  <div class="meta-item">
-    <span class="label">${parsedData.prepTime.label}</span>
-    <span class="value">${parsedData.prepTime.val}</span>
-  </div>
-  <div class="meta-item">
-    <span class="label">${parsedData.cookTime.label}</span>
-    <span class="value">${parsedData.cookTime.val}</span>
-  </div>
-  <div class="meta-item">
-    <span class="label">${parsedData.totalTime.label}</span>
-    <span class="value">${parsedData.totalTime.val}</span>
-  </div>
-  <div class="meta-item">
-    <span class="label">${parsedData.restTime.label}</span>
-    <span class="value">${parsedData.restTime.val}</span>
-  </div>
-  <div class="meta-item">
-    <span class="label">${parsedData.difficulty.label}</span>
-    <span class="value">${parsedData.difficulty.val}</span>
-  </div>
-</div>
+   <div class="meta-info">
+      ${parsedData.prepTime.val ? `
+        <div class="meta-item">
+          <span class="label">${parsedData.prepTime.label}</span>
+          <span class="value">${parsedData.prepTime.val}</span>
+        </div>` : ''}
+
+      ${parsedData.cookTime.val ? `
+        <div class="meta-item">
+          <span class="label">${parsedData.cookTime.label}</span>
+          <span class="value">${parsedData.cookTime.val}</span>
+        </div>` : ''}
+
+      ${parsedData.totalTime.val ? `
+        <div class="meta-item">
+          <span class="label">${parsedData.totalTime.label}</span>
+          <span class="value">${parsedData.totalTime.val}</span>
+        </div>` : ''}
+
+      ${parsedData.restTime.val ? `
+        <div class="meta-item">
+          <span class="label">${parsedData.restTime.label}</span>
+          <span class="value">${parsedData.restTime.val}</span>
+        </div>` : ''}
+
+      ${parsedData.difficulty.val ? `
+        <div class="meta-item">
+          <span class="label">${parsedData.difficulty.label}</span>
+          <span class="value">${parsedData.difficulty.val}</span>
+        </div>` : ''}
+    </div>
 
 
    ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
