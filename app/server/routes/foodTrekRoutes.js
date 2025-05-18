@@ -32,25 +32,24 @@ function generateRecipeHtml(data) {
     instructions: parseArray(data.instructions),
     prepTime: {
       label: 'Prep Time',
-      val: document.querySelector('.dr-prep-time')?.textContent.trim() || '',
+      val: parseEmoji(data.prepTime || ''),
     },
     cookTime: {
       label: 'Cook Time',
-      val: document.querySelector('.dr-cook-time')?.textContent.trim() || '',
+      val: parseEmoji(data.cookTime || ''),
     },
     totalTime: {
       label: 'Total Time',
-      val: document.querySelector('.dr-total-time')?.textContent.trim() || '',
+      val: parseEmoji(data.totalTime || ''),
     },
     restTime: {
       label: 'Rest Time',
-      val: document.querySelector('.dr-rest-time')?.textContent.trim() || '',
+      val: parseEmoji(data.restTime || ''),
     },
     difficulty: {
       label: 'Difficulty',
-      val: document.querySelector('.wpdelicious-meta.dr-label')?.textContent.trim() || '',
+      val: parseEmoji(data.difficulty || ''),
     },
-    
   };
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
