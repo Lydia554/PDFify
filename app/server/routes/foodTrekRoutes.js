@@ -3,6 +3,14 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const twemoji = require('twemoji');
+
+function parseEmoji(str) {
+  return twemoji.parse(str || '', {
+    folder: 'svg',
+    ext: '.svg',
+  });
+}
 
 function parseArray(arr) {
   return Array.isArray(arr)
