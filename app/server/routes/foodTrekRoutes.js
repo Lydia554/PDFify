@@ -70,6 +70,23 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
+.step-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #d84315;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  white-space: pre-wrap;
+}
+
+.step-description {
+  font-size: 0.95rem;
+  color: #4e342e;
+  font-weight: 400;
+  white-space: pre-wrap; /* preserve line breaks */
+}
+
+
       header.logo-header {
         text-align: center;
         padding: 5px 0 10px;
@@ -164,21 +181,6 @@ function generateRecipeHtml(data) {
         margin-bottom: 14px;
       }
 
-.step-title {
-  font-size: 1rem;
-  font-weight: bold;
-  color: #d84315;
-  margin-top: 10px;
-  margin-bottom: 4px;
-  white-space: pre-wrap;
-}
-
-.step-description {
-  font-size: 0.95rem;
-  color: #4e342e;
-  font-weight: 400;
-  white-space: pre-wrap; /* preserve line breaks */
-}
 
 
   img.emoji {
@@ -310,7 +312,10 @@ function generateRecipeHtml(data) {
       ${parsedData.difficulty.label ? `<div class="meta-item"><span class="label">${parsedData.difficulty.label}:</span><span class="value">${parsedData.difficulty.val}</span></div>` : ''}
     </div>
 
-    ${parsedData.description ? `<section class="card"><h2>Description</h2><p>${parsedData.description}</p></section>` : ''}
+   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
+   ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
+
+
     ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
 
     ${parsedData.imageUrls?.length ? `
