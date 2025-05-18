@@ -3,7 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const twemoji = require('twemoji');
+
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
