@@ -86,6 +86,7 @@ function generateRecipeHtml(data) {
   font-size: 0.95rem;
   color: #4e342e;
   font-weight: 400;
+  font-style: italic;
   white-space: pre-wrap; /* preserve line breaks */
 }
 
@@ -223,6 +224,7 @@ function generateRecipeHtml(data) {
       flex: 1 1 150px;
       max-width: 200px;
       text-align: center;
+       box-shadow: 0 2px 6px rgba(255,183,77,0.15);
     }
 
     .image-step-pair img {
@@ -330,7 +332,8 @@ function generateRecipeHtml(data) {
   return `
     <div class="image-step-pair">
       <img src="${url}" alt="Step ${i + 1}" />
-      ${step.title ? `<div class="step-title">${step.title}</div>` : ''}
+     ${step.title ? `<div class="step-title"><strong>${step.title}</strong></div>` : ''}
+
       ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
     </div>
   `;
