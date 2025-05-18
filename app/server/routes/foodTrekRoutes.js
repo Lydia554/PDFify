@@ -7,11 +7,10 @@ const twemoji = require('twemoji');
 
 function parseEmoji(str) {
   return twemoji.parse(str || '', {
-    folder: 'svg',
-    ext: '.svg',
+    folder: '72x72',
+    ext: '.png',
   });
 }
-
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
@@ -164,6 +163,13 @@ function generateRecipeHtml(data) {
       ol.instructions li {
         margin-bottom: 14px;
       }
+
+  img.emoji {
+    height: 1em;
+    width: 1em;
+    margin: 0 .05em 0 .1em;
+    vertical-align: -0.1em;
+  }
 
       .images {
         display: flex;
