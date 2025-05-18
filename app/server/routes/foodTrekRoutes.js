@@ -32,10 +32,10 @@ function generateRecipeHtml(data) {
     instructions: parseArray(data.instructions),
     metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
     prepTime: {  val: parseEmoji(data.prepTime) },
-    cookTime: { label: '🔥 Cook Time', val: parseEmoji(data.cookTime) },
-    totalTime: { label: '⏳ Total Time', val: parseEmoji(data.totalTime) },
-    restTime: { label: '🛋️ Rest Time', val: parseEmoji(data.restTime) },
-    difficulty: { label: '💪 Difficulty', val: parseEmoji(data.difficulty) },
+    cookTime: {  val: parseEmoji(data.cookTime) },
+    totalTime: {  val: parseEmoji(data.totalTime) },
+    restTime: { val: parseEmoji(data.restTime) },
+    difficulty: {  val: parseEmoji(data.difficulty) },
   };
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
@@ -100,7 +100,7 @@ function generateRecipeHtml(data) {
 
       .meta-info {
         display: flex;
-        gap: 20px;
+        gap: 10px;
         flex-wrap: wrap;
         margin-bottom: 30px;
       }
@@ -109,21 +109,11 @@ function generateRecipeHtml(data) {
         background: #fff3e0;
         box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
         border-radius: 8px;
-        padding: 10px 18px;
-        min-width: 110px;
+        padding: 5px 5px;
+        min-width: 70px;
         text-align: center;
         font-weight: 600;
         color: #bf360c;
-      }
-
-      .meta-item .label {
-        display: block;
-        font-size: 0.9rem;
-        font-weight: 700;
-        margin-bottom: 6px;
-        text-transform: uppercase;
-        letter-spacing: 1.3px;
-        color: #e65100;
       }
 
       .meta-item .value {
