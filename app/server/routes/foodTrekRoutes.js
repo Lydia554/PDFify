@@ -25,13 +25,13 @@ function parseArray(arr) {
 function parseLabelValue(str) {
   if (!str) return { label: '', val: '' };
   
-  // Try splitting by colon first
+
   if (str.includes(':')) {
     const [label, ...rest] = str.split(':');
     return { label: label.trim(), val: rest.join(':').trim() };
   }
   
-  // Otherwise, split by last space
+
   const lastSpaceIndex = str.lastIndexOf(' ');
   if (lastSpaceIndex > 0) {
     const label = str.slice(0, lastSpaceIndex).trim();
@@ -39,7 +39,7 @@ function parseLabelValue(str) {
     return { label, val };
   }
   
-  // fallback
+
   return { label: str, val: '' };
 }
 
@@ -127,32 +127,31 @@ function generateRecipeHtml(data) {
         flex-wrap: wrap;
         margin-bottom: 30px;
       }
-.meta-item {
-  background: #fff3e0;
-  box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
-  border-radius: 8px;
-  padding: 5px5x;
-  min-width: 70px;
-  text-align: center;
-  font-weight: 400; /* normal weight here */
-  color: #4e342e;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
 
-.meta-item .label {
+      .meta-item {
+        background: #fff3e0;
+        box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
+        border-radius: 8px;
+        padding: 5px 5px;
+        min-width: 70px;
+        text-align: center;
+        font-weight: 600;
+        color: #bf360c;
+      }
+
+      .meta-item .label {
   font-weight: 700; /* bold label */
   font-size: 0.9rem;
   text-transform: uppercase;
-  letter-spacing: 1.3px;
+  letter-spacing: 1px;
   color: #e65100;
 }
 
-.meta-item .value {
-  font-weight: 400; /* normal value */
-  font-size: 1.1rem;
-}
+      .meta-item .value {
+        font-size: 1.1rem;
+        font-weight: 400;
+        color: #4e342e;
+      }
 
       section.card {
         background: #fff;
