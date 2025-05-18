@@ -63,6 +63,16 @@ function generateRecipeHtml(data) {
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
 
+
+  console.log('DEBUG input times:', {
+    prepTime: data.prepTime,
+    cookTime: data.cookTime,
+    totalTime: data.totalTime,
+    restTime: data.restTime,
+    difficulty: data.difficulty,
+  });
+  
+
   return `
   <!DOCTYPE html>
   <html>
