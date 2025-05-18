@@ -164,13 +164,22 @@ function generateRecipeHtml(data) {
         margin-bottom: 14px;
       }
 
-      .step-title {
+.step-title {
   font-size: 1rem;
   font-weight: bold;
-  margin: 10px 0 4px;
   color: #d84315;
-  text-align: left;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  white-space: pre-wrap;
 }
+
+.step-description {
+  font-size: 0.95rem;
+  color: #4e342e;
+  font-weight: 400;
+  white-space: pre-wrap; /* preserve line breaks */
+}
+
 
   img.emoji {
     height: 1em;
@@ -308,16 +317,17 @@ function generateRecipeHtml(data) {
       <section class="card">
         <h2>Instructions</h2>
         <div class="images-with-steps">
-          ${parsedData.imageUrls.map((url, i) => {
-            const step = parsedData.instructions[i] || {};
-            return `
-              <div class="image-step-pair">
-                <img src="${url}" alt="Step ${i + 1}" />
-                ${step.title ? `<h5 class="step-title">${step.title}</h5>` : ''}
-                <p class="step-text">${step.description || ''}</p>
-              </div>
-            `;
-          }).join('')}
+     ${parsedData.imageUrls.map((url, i) => {
+  const step = parsedData.instructions[i] || {};
+  return `
+    <div class="image-step-pair">
+      <img src="${url}" alt="Step ${i + 1}" />
+      ${step.title ? `<div class="step-title">${step.title}</div>` : ''}
+      ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
+    </div>
+  `;
+}).join('')}
+
         </div>
       </section>
     ` : ''}
