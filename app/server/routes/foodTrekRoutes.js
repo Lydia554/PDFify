@@ -164,6 +164,14 @@ function generateRecipeHtml(data) {
         margin-bottom: 14px;
       }
 
+      .step-title {
+  font-size: 1rem;
+  font-weight: bold;
+  margin: 10px 0 4px;
+  color: #d84315;
+  text-align: left;
+}
+
   img.emoji {
     height: 1em;
     width: 1em;
