@@ -50,6 +50,7 @@ function generateRecipeHtml(data) {
       label: 'Difficulty',
       val: parseEmoji(data.difficulty || ''),
     },
+    
   };
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
