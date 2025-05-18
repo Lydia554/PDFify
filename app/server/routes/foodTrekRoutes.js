@@ -31,6 +31,11 @@ function generateRecipeHtml(data) {
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
     metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
+    prepTime: { label: '⏱️ Prep Time', val: parseEmoji(data.prepTime) },
+    cookTime: { label: '🔥 Cook Time', val: parseEmoji(data.cookTime) },
+    totalTime: { label: '⏳ Total Time', val: parseEmoji(data.totalTime) },
+    restTime: { label: '🛋️ Rest Time', val: parseEmoji(data.restTime) },
+    difficulty: { label: '💪 Difficulty', val: parseEmoji(data.difficulty) },
   };
 
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
