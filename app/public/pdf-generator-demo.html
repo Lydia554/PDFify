@@ -493,6 +493,9 @@ generatePdfBtn.addEventListener('click', async () => {
       cookTime: document.getElementById('cookTime').value,
       ingredients: document.getElementById('ingredients').value.split(',').map(i => i.trim()),
       instructions: document.getElementById('instructions').value.split(';').map(i => i.trim()),
+      includeTitle: document.getElementById('includeTitle')?.checked || false,
+      includeIngredients: document.getElementById('includeIngredients')?.checked || true,
+      includeInstructions: document.getElementById('includeInstructions')?.checked || true,
     };
   }
 
