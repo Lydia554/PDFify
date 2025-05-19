@@ -77,10 +77,10 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
- .step-title {
-  border: 1px solid red;
-  background: yellow;
+.step-title strong {
   font-weight: bold;
+  font-size: 1.3rem;
+  color: #bf360c;
 }
 
 
@@ -349,7 +349,8 @@ function generateRecipeHtml(data) {
   return `
     <div class="image-step-pair">
       <img src="${url}" alt="Step ${i + 1}" />
-     ${title ? `<div class="step-title">${title}</div>` : ''}
+${title ? `<div class="step-title"><strong>${title}</strong></div>` : ''}
+
 
       ${desc ? `<div class="step-description">${desc}</div>` : ''}
     </div>
