@@ -26,6 +26,8 @@ function renderForm(template) {
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
+      
+      <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
   }
   formContainer.innerHTML = html;
@@ -69,18 +71,18 @@ generatePdfBtn.addEventListener('click', async () => {
         includeTitle: document.getElementById('includeTitle').checked,
       }
 
-    }  else if (template === 'recipe') {
-        formData = {
-          recipeName: document.getElementById('recipeName').value,
-          author: document.getElementById('author').value,
-          prepTime: document.getElementById('prepTime').value,
-          cookTime: document.getElementById('cookTime').value,
-          ingredients: document.getElementById('ingredients').value.split(',').map(s => s.trim()),
-          instructions: document.getElementById('instructions').value.split(';').map(s => s.trim()),
-        };
-        
-  
-  }
+    } else if (template === 'recipe') {
+      formData = {
+        recipeName: document.getElementById('recipeName').value,
+        author: document.getElementById('author').value,
+        prepTime: document.getElementById('prepTime').value,
+        cookTime: document.getElementById('cookTime').value,
+        ingredients: document.getElementById('ingredients').value.split(',').map(s => s.trim()),
+        instructions: document.getElementById('instructions').value.split(';').map(s => s.trim()),
+        includeTitle: document.getElementById('includeTitle').checked,
+      };
+    }
+    
 
   friendlyResult.textContent = 'Generating PDF...';
 
