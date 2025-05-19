@@ -12,6 +12,9 @@ const templates = {
   recipe: recipeTemplate,
 };
 
+console.log('Incoming recipe data:', data);
+
+
 router.post('/generate', async (req, res) => {
   const { template, ...formData } = req.body; 
 

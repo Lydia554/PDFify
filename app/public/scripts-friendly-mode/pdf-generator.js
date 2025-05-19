@@ -32,7 +32,7 @@ function renderForm(template) {
     `;
   }
   formContainer.innerHTML = html;
-  console.log(`✅ Rendered form for template: ${template}`);
+ 
 }
 
 renderForm(templateSelect.value);
@@ -45,7 +45,6 @@ generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
 
-  console.log(`🔍 Selected template: ${template}`);
 
   try {
     if (template === 'invoice') {
@@ -65,7 +64,7 @@ generatePdfBtn.addEventListener('click', async () => {
       const total = subtotal + taxAmount;
 
       const includeTitle = document.getElementById('includeTitle');
-      console.log("🔧 includeTitle for invoice exists:", !!includeTitle);
+    
 
       formData = {
         customerName: document.getElementById('customerName')?.value,
@@ -81,7 +80,7 @@ generatePdfBtn.addEventListener('click', async () => {
 
     } else if (template === 'recipe') {
       const includeTitle = document.getElementById('includeTitle');
-      console.log("🔧 includeTitle for recipe exists:", !!includeTitle);
+ 
 
       formData = {
         recipeName: document.getElementById('recipeName')?.value,
@@ -94,7 +93,7 @@ generatePdfBtn.addEventListener('click', async () => {
       };
     }
 
-    console.log("📦 Final formData to send:", formData);
+   
 
     friendlyResult.textContent = 'Generating PDF...';
 
@@ -104,11 +103,11 @@ generatePdfBtn.addEventListener('click', async () => {
       body: JSON.stringify({ template, ...formData }),
     });
 
-    console.log("📤 Sent request to server");
+    
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("❌ Server responded with error:", errorData);
+    
       throw new Error(errorData.error || 'Failed to generate PDF');
     }
 
@@ -123,9 +122,9 @@ generatePdfBtn.addEventListener('click', async () => {
     URL.revokeObjectURL(url);
 
     friendlyResult.textContent = '✅ PDF downloaded!';
-    console.log("✅ PDF generated and downloaded!");
+   
   } catch (error) {
-    console.error("❗ Error during PDF generation:", error);
+   
     friendlyResult.textContent = `Error: ${error.message}`;
   }
 });
