@@ -6,6 +6,17 @@ const puppeteer = require('puppeteer');
 const twemoji = require('twemoji');
 
 
+function parseEmojisToImg(text) {
+  return twemoji.parse(text, {
+    ext: '.svg',
+    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/',
+    attributes: () => ({
+      height: '20',
+      width: '20',
+      style: 'display:inline;vertical-align:middle;'
+    })
+  });
+}
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
@@ -74,13 +85,6 @@ function generateRecipeHtml(data) {
         font-family: 'Open Sans', sans-serif;
         color: #333;
       }
-
-       img.emoji {
-      height: 20px;
-      width: 20px;
-      display: inline;
-      vertical-align: middle;
-    }
 
 
 .step-description {
@@ -291,8 +295,32 @@ function generateRecipeHtml(data) {
       }
     </style>
 
-      <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
+  <meta charset="UTF-8" />
+  <style>
+    body { font-family: sans-serif; font-size: 16px; }
+    img.emoji {
+      height: 20px;
+      width: 20px;
+      display: inline;
+      vertical-align: middle;
+    }
+  </style>
+  <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      twemoji.parse(document.body, {
+        folder: 'svg',
+        ext: '.svg',
+        base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/'
+      });
+    });
+  </script>
+
+
   </head>
+
+
+  
   <body>
   <header class="logo-header" id="header-logo">
     <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
@@ -413,13 +441,5 @@ router.post('/premium-recipe', async (req, res) => {
   }
 });
 
-
-document.addEventListener("DOMContentLoaded", function () {
-  twemoji.parse(document.body, {
-    folder: 'svg',
-    ext: '.svg',
-    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/'
-  });
-});
 
 module.exports = router;
