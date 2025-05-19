@@ -4,24 +4,24 @@ const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 
-function parseEmoji(str) {
-  return str || '';
-}
 
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
         if (typeof item === 'string') {
-          return { description: parseEmoji(item) };
+          return { description: item };
         } else {
           return {
-            title: parseEmoji(item.title || ''),
-            description: parseEmoji(item.description || ''),
+            title: item.title || '',
+            description: item.description || '',
           };
         }
       })
     : [];
 }
+
+
+
 function cleanTimeField(rawValue, expectedLabel) {
   if (!rawValue || typeof rawValue !== 'string') {
     return { label: expectedLabel, val: '' };
@@ -40,27 +40,23 @@ function cleanTimeField(rawValue, expectedLabel) {
 }
 
 
-
-
-
 function generateRecipeHtml(data) {
   const parsedData = {
     ...data,
-    recipeName: parseEmoji(data.recipeName),
-    description: parseEmoji(data.description),
+    recipeName: data.recipeName || '',
+    description: data.description || '',
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
-    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
+    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes : [],
     prepTime: cleanTimeField(data.prepTime, "⏰Prep Time"),
     cookTime: cleanTimeField(data.cookTime, "⏰Cook Time"),
     totalTime: cleanTimeField(data.totalTime, "⌛Total Time"),
     restTime: cleanTimeField(data.restTime, "⏱️Rest Time"),
     difficulty: cleanTimeField(data.difficulty, "Difficulty"),
-    servings: parseEmoji(data.servings),
+    servings: data.servings || '',
     scaleIngredients: parseArray(data.scaleIngredients),
   };
   
-
   const cleanedDescription = parsedData.description?.replace(/^Description[:\s]*/i, '');
 
 

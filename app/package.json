@@ -17,7 +17,6 @@
     "body-parser": "^1.20.3",
     "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
-    "twemoji": "^14.0.2",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
