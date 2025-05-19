@@ -1,12 +1,14 @@
 FROM node:20-slim
 
-# Puppeteer dependencies
+
+# Puppeteer dependencies + fonts
 RUN apt-get update && apt-get install -y \
     wget \
     ca-certificates \
+    fonts-noto-color-emoji \
+    fonts-noto \
     fonts-liberation \
     libappindicator3-1 \
-    fonts-noto-color-emoji \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \

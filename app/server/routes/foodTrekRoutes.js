@@ -74,7 +74,8 @@ function generateRecipeHtml(data) {
         margin: 0;
         padding: 0;
         background: #fff;
-         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Noto Color Emoji", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Open Sans', 'Merriweather', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
         color: #333;
       }
 
