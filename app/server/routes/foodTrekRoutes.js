@@ -3,20 +3,30 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const twemoji = require('twemoji');
 
-function parseEmoji(str) {
-  return str || '';
+function parseEmojisToImg(text) {
+  return twemoji.parse(text, {
+    folder: 'svg',
+    ext: '.svg',
+    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/', // use CDN
+    attributes: () => ({
+      height: '20',
+      width: '20',
+      style: 'display:inline;vertical-align:middle;'
+    })
+  });
 }
 
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
         if (typeof item === 'string') {
-          return { description: parseEmoji(item) };
+          return { description: parseEmojisToImg(item) };
         } else {
           return {
-            title: parseEmoji(item.title || ''),
-            description: parseEmoji(item.description || ''),
+            title: parseEmojisToImg(item.title || ''),
+            description: parseEmojisToImg(item.description || ''),
           };
         }
       })
@@ -46,11 +56,11 @@ function cleanTimeField(rawValue, expectedLabel) {
 function generateRecipeHtml(data) {
   const parsedData = {
     ...data,
-    recipeName: parseEmoji(data.recipeName),
-    description: parseEmoji(data.description),
+    recipeName: parseEmojisToImg(data.recipeName),
+    description: parseEmojisToImg(data.description),
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
-    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
+    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmojisToImg) : [],
     prepTime: cleanTimeField(data.prepTime, "Prep Time"),
     cookTime: cleanTimeField(data.cookTime, "Cook Time"),
     totalTime: cleanTimeField(data.totalTime, "Total Time"),
@@ -76,16 +86,6 @@ function generateRecipeHtml(data) {
         font-family: 'Open Sans', sans-serif;
         color: #333;
       }
-
-.step-title {
-border: 2px solid red !important;
-  background: yellow !important;
-  font-weight: bold !important;
-  font-size: 1.3rem !important;
-  margin-bottom: 8px !important;
-  padding: 4px !important;
-}
-
 
 
 .step-description {
@@ -301,31 +301,29 @@ border: 2px solid red !important;
     <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
   </header>
 
+<div class="container">
+  <h1>${parseEmojisToImg(parsedData.recipeName || 'Recipe')}</h1>
 
-  <div class="container">
-    <h1>${parsedData.recipeName || 'Recipe'}</h1>
-
-
-<div class="meta-info">
-  <div class="meta-item">
-    <span class="label">${parsedData.prepTime.label}</span>
-    <span class="value">${parsedData.prepTime.val}</span>
-  </div>
-  <div class="meta-item">
-    <span class="label">${parsedData.cookTime.label}</span>
-    <span class="value">${parsedData.cookTime.val}</span>
-  </div>
-  <div class="meta-item">
-    <span class="label">${parsedData.totalTime.label}</span>
-    <span class="value">${parsedData.totalTime.val}</span>
-  </div>
-  <div class="meta-item">
-    <span class="label">${parsedData.restTime.label}</span>
-    <span class="value">${parsedData.restTime.val}</span>
-  </div>
-  <div class="meta-item">
-   
-    <span class="value">${parsedData.difficulty.val}</span>
+  <div class="meta-info">
+    <div class="meta-item">
+      <span class="label">${parseEmojisToImg(parsedData.prepTime.label)}</span>
+      <span class="value">${parseEmojisToImg(parsedData.prepTime.val)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">${parseEmojisToImg(parsedData.cookTime.label)}</span>
+      <span class="value">${parseEmojisToImg(parsedData.cookTime.val)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">${parseEmojisToImg(parsedData.totalTime.label)}</span>
+      <span class="value">${parseEmojisToImg(parsedData.totalTime.val)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">${parseEmojisToImg(parsedData.restTime.label)}</span>
+      <span class="value">${parseEmojisToImg(parsedData.restTime.val)}</span>
+    </div>
+    <div class="meta-item">
+      <span class="value">${parseEmojisToImg(parsedData.difficulty.val)}</span>
+    </div>
   </div>
 </div>
 
@@ -352,7 +350,7 @@ border: 2px solid red !important;
   return `
     <div class="image-step-pair">
       <img src="${url}" alt="Step ${i + 1}" />
-${title ? `<div class="step-title"><strong>${title}</strong></div>` : ''}
+${title ? `<div class="step-title">${title}</div>` : ''}
 
 
       ${desc ? `<div class="step-description">${desc}</div>` : ''}
@@ -397,6 +395,7 @@ router.post('/premium-recipe', async (req, res) => {
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
+
 
     await page.pdf({
       path: pdfPath,
