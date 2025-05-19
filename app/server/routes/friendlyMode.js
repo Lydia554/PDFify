@@ -4,8 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
 
-const invoiceTemplate = require('../../server/templates-friendly-mode/invoice');
-const recipeTemplate = require('../../server/templates-friendly-mode/recipe');
+const invoiceTemplate = require('../templates-friendly-mode/invoice');
+const recipeTemplate = require('../templates-friendly-mode/recipe');
 
 const templates = {
   invoice: invoiceTemplate,

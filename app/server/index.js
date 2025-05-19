@@ -24,7 +24,7 @@ const invoiceRoutes = require("./routes/invoiceRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const htmlRoutes = require("./routes/htmlRoutes");
 const packingSlipRoutes = require("./routes/packing-slipRoutes");
-const friendlyMode = require("../public/scripts-friendly-mode/friendlyMode");
+const friendlyMode = require("./routes/friendlyMode");
 const foodTrekRoutes = require('./routes/foodTrekRoutes');
 
 
