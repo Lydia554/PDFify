@@ -77,6 +77,13 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
+      .step-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #e65100;
+  margin-bottom: 4px;
+}
+
 
 
 .step-description {
@@ -330,15 +337,21 @@ function generateRecipeHtml(data) {
       <section class="card">
         <h2>Instructions</h2>
         <div class="images-with-steps">
-     ${parsedData.imageUrls.map((url, i) => {
+ ${parsedData.imageUrls.map((url, i) => {
   const step = parsedData.instructions[i] || {};
+  let raw = step.description || '';
+  let title = '';
+  let desc = raw;
+
+  if (raw.includes('::')) {
+    [title, desc] = raw.split(/::(.*)/s).map(str => str.trim());
+  }
+
   return `
     <div class="image-step-pair">
       <img src="${url}" alt="Step ${i + 1}" />
-     ${step.title ? `<div class="step-title" >${step.title}</div>` : ''}
-
-
-      ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
+      ${title ? `<div class="step-title">${title}</div>` : ''}
+      ${desc ? `<div class="step-description">${desc}</div>` : ''}
     </div>
   `;
 }).join('')}
