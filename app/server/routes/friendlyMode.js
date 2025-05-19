@@ -13,13 +13,16 @@ const templates = {
 };
 
 router.post('/generate', async (req, res) => {
-  const { template, formData } = req.body;
+  const { template, ...formData } = req.body; 
+
   const generateHtml = templates[template];
-  
   if (!generateHtml) return res.status(400).json({ error: 'Invalid template' });
 
   try {
-    const html = generateHtml(formData);
+    console.log('📥 Received template:', template);
+    console.log('🧾 Received formData:', formData); 
+
+    const html = generateHtml(formData); 
     const pdfPath = path.join(__dirname, '../../pdfs', `pdf_${Date.now()}.pdf`);
 
     const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
@@ -33,10 +36,11 @@ router.post('/generate', async (req, res) => {
       fs.unlinkSync(pdfPath);
     });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error generating PDF:', err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
 
 
 module.exports = router;
