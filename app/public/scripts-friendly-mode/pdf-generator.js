@@ -6,10 +6,17 @@ function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
     html = `
-      <label>Customer Name: <input id="customerName" /></label><br/>
-      <label>Date: <input type="date" id="date" /></label><br/>
-      <label>Amount: <input type="number" id="amount" /></label><br/>
-    `;
+    <label>Customer Name: <input id="customerName" /></label><br/>
+    <label>Date: <input type="date" id="date" /></label><br/>
+    <label>Invoice Number: <input id="invoiceNumber" /></label><br/>
+    
+    <label>Items (format: description,quantity,unitPrice per line):</label><br/>
+    <textarea id="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
+    
+    <label>Tax Rate (%): <input type="number" id="taxRate" value="0" /></label><br/>
+    
+    <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
+  `;
   } else if (template === 'recipe') {
     html = `
       <label>Recipe Name: <input id="recipeName" /></label><br/>
@@ -32,19 +39,31 @@ generatePdfBtn.addEventListener('click', async () => {
   let formData = {};
 
   if (template === 'invoice') {
+    const itemsText = document.getElementById('items').value.trim();
+    const items = itemsText ? itemsText.split('\n').map(line => {
+      const [description, quantity, unitPrice] = line.split(',').map(s => s.trim());
+      return {
+        description: description || 'N/A',
+        quantity: Number(quantity) || 0,
+        unitPrice: Number(unitPrice) || 0,
+      };
+    }) : [];
+
+    const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const taxRate = Number(document.getElementById('taxRate').value) || 0;
+    const taxAmount = subtotal * taxRate / 100;
+    const total = subtotal + taxAmount;
+
     formData = {
       customerName: document.getElementById('customerName').value,
       date: document.getElementById('date').value,
-      amount: document.getElementById('amount').value,
-    };
-  } else if (template === 'recipe') {
-    formData = {
-      recipeName: document.getElementById('recipeName').value,
-      author: document.getElementById('author').value,
-      prepTime: document.getElementById('prepTime').value,
-      cookTime: document.getElementById('cookTime').value,
-      ingredients: document.getElementById('ingredients').value.split(',').map(i => i.trim()),
-      instructions: document.getElementById('instructions').value.split(';').map(i => i.trim()),
+      invoiceNumber: document.getElementById('invoiceNumber').value || 'N/A',
+      items,
+      subtotal,
+      taxRate,
+      taxAmount,
+      total,
+      includeTitle: document.getElementById('includeTitle').checked,
     };
   }
 
