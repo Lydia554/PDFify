@@ -74,6 +74,7 @@ app.use("/api/stripe/webhook", stripeRoutes);
 app.use("/api/stripe", paymentRoutes);
 
 
+app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
 
 app.use(express.static(path.join(__dirname, "../public")));
 
