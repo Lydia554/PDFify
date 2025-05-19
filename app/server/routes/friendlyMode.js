@@ -12,7 +12,7 @@ const templates = {
   recipe: recipeTemplate,
 };
 
-console.log('Incoming recipe data:', data);
+
 
 
 router.post('/generate', async (req, res) => {
@@ -33,6 +33,8 @@ router.post('/generate', async (req, res) => {
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.pdf({ path: pdfPath, format: 'A4' });
     await browser.close();
+    console.log('Incoming recipe data:', data);
+
 
     res.download(pdfPath, err => {
       if (err) console.error(err);
