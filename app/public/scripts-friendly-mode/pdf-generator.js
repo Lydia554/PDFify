@@ -77,7 +77,8 @@ generatePdfBtn.addEventListener('click', async () => {
     const response = await fetch('/api/friendly/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template, formData }),
+      body: JSON.stringify({ template, ...formData }),
+
     });
 
     if (!response.ok) {
