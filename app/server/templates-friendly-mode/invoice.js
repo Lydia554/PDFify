@@ -100,4 +100,5 @@ function generateInvoiceHtml(data) {
   `;
 }
 
+
 module.exports = generateInvoiceHtml;
