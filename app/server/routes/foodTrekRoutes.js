@@ -56,7 +56,7 @@ function generateRecipeHtml(data) {
     totalTime: cleanTimeField(data.totalTime, "Total Time"),
     restTime: cleanTimeField(data.restTime, "Rest Time"),
     difficulty: cleanTimeField(data.difficulty, "Difficulty"),
-    servings: parseEmoji(data.servings),
+    servings: document.querySelector('.dr-yields')?.textContent.replace(/.*?:\s*/, '').trim() || '',
     scaleIngredients: parseArray(data.scaleIngredients),
   };
   
