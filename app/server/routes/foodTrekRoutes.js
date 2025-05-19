@@ -344,7 +344,7 @@ ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main
 
   ${parsedData.imageUrls?.length ? `
     <section class="card">
-      <h2>Instructions</h2>
+      <h2>👩‍🍳Instructions</h2>
       <div class="images-with-steps">
         ${parsedData.imageUrls.map((url, i) => {
           const step = parsedData.instructions[i] || {};
