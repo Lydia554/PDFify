@@ -24,6 +24,7 @@ router.post('/generate', async (req, res) => {
   try {
     console.log('📥 Received template:', template);
     console.log('🧾 Received formData:', formData); 
+    console.log('Incoming recipe data:', formData); 
 
     const html = generateHtml(formData); 
     const pdfPath = path.join(__dirname, '../../pdfs', `pdf_${Date.now()}.pdf`);
@@ -33,8 +34,6 @@ router.post('/generate', async (req, res) => {
     await page.setContent(html, { waitUntil: 'networkidle0' });
     await page.pdf({ path: pdfPath, format: 'A4' });
     await browser.close();
-    console.log('Incoming recipe data:', data);
-
 
     res.download(pdfPath, err => {
       if (err) console.error(err);
