@@ -91,7 +91,6 @@ friendlyBtn.addEventListener('click', () => {
   devSection.style.display = 'none';
   friendlySection.style.display = 'block';
 
-  // Render the form after showing the section
   renderForm(templateSelect.value);
 });
 
@@ -385,23 +384,7 @@ friendlyBtn.addEventListener('click', () => {
       }
     }
 
-    fetch('/api/generate-pdf-from-html', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: jsonData
-  })
-  .then((response) => response.blob())
-  .then((blob) => {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'generated_pdf.pdf';
-    link.click();
-  })
-  .catch((error) => {
-    console.error('Error generating PDF:', error);
-  });
+ 
     
     fetch('/get-stripe-key')
       .then(response => response.json())
