@@ -320,7 +320,8 @@ function generateRecipeHtml(data) {
   </div>
   <div class="meta-item">
     <span class="label">Servings</span>
-    <span class="value">${parsedData.servings}</span>
+   <span class="value">${parsedData.servings || 'N/A'}</span>
+
   </div>
   <div class="meta-item">
     <span class="value">${parsedData.difficulty.val}</span>
