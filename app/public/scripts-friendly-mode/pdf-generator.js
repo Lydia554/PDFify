@@ -1,6 +1,7 @@
 const templateSelect = document.getElementById('templateSelect');
 const formContainer = document.getElementById('formContainer');
 const generatePdfBtn = document.getElementById('generateFriendlyBtn');
+const friendlyResult = document.getElementById('friendlyResult');
 
 function renderForm(template) {
   let html = '';
@@ -30,53 +31,61 @@ function renderForm(template) {
   formContainer.innerHTML = html;
 }
 
+renderForm(templateSelect.value);
+
 templateSelect.addEventListener('change', () => {
   renderForm(templateSelect.value);
 });
 
 generatePdfBtn.addEventListener('click', async () => {
-  const template = templateSelect.value;
-  let formData = {};
-
-  if (template === 'invoice') {
-    const itemsText = document.getElementById('items').value.trim();
-    const items = itemsText ? itemsText.split('\n').map(line => {
-      const [description, quantity, unitPrice] = line.split(',').map(s => s.trim());
-      return {
-        description: description || 'N/A',
-        quantity: Number(quantity) || 0,
-        unitPrice: Number(unitPrice) || 0,
+    const template = templateSelect.value;
+    let formData = {};
+  
+    if (template === 'invoice') {
+      const itemsText = document.getElementById('items').value.trim();
+      const items = itemsText ? itemsText.split('\n').map(line => {
+        const [description, quantity, unitPrice] = line.split(',').map(s => s.trim());
+        return {
+          description: description || 'N/A',
+          quantity: Number(quantity) || 0,
+          unitPrice: Number(unitPrice) || 0,
+        };
+      }) : [];
+  
+      const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+      const taxRate = Number(document.getElementById('taxRate').value) || 0;
+      const taxAmount = subtotal * taxRate / 100;
+      const total = subtotal + taxAmount;
+  
+      formData = {
+        customerName: document.getElementById('customerName').value,
+        date: document.getElementById('date').value,
+        invoiceNumber: document.getElementById('invoiceNumber').value || 'N/A',
+        items,
+        subtotal,
+        taxRate,
+        taxAmount,
+        total,
+        includeTitle: document.getElementById('includeTitle').checked,
       };
-    }) : [];
-
-    const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-    const taxRate = Number(document.getElementById('taxRate').value) || 0;
-    const taxAmount = subtotal * taxRate / 100;
-    const total = subtotal + taxAmount;
-
-    formData = {
-      customerName: document.getElementById('customerName').value,
-      date: document.getElementById('date').value,
-      invoiceNumber: document.getElementById('invoiceNumber').value || 'N/A',
-      items,
-      subtotal,
-      taxRate,
-      taxAmount,
-      total,
-      includeTitle: document.getElementById('includeTitle').checked,
-    };
+  
   }
 
+  friendlyResult.textContent = 'Generating PDF...';
+
   try {
-    const res = await fetch('/api/friendly/generate', {
+    const response = await fetch('/api/friendly/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template, ...formData }),
-
+      body: JSON.stringify({ template, formData }),
     });
-    if (!res.ok) throw new Error('Failed to generate PDF');
 
-    const blob = await res.blob();
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate PDF');
+    }
+
+    const blob = await response.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -85,9 +94,9 @@ generatePdfBtn.addEventListener('click', async () => {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+
+    friendlyResult.textContent = '✅ PDF downloaded!';
   } catch (error) {
-    alert(error.message);
+    friendlyResult.textContent = `Error: ${error.message}`;
   }
 });
-
-renderForm(templateSelect.value);
