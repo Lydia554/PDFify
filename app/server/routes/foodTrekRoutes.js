@@ -333,9 +333,9 @@ function generateRecipeHtml(data) {
      ${parsedData.imageUrls.map((url, i) => {
   const step = parsedData.instructions[i] || {};
   return `
-    <div class="image-step-pair">
+    <div class="image-step-pair font-weight: 700;">
       <img src="${url}" alt="Step ${i + 1}" />
-     ${step.title ? `<div class="step-title font-weight: "700">${step.title}</div>` : ''}
+     ${step.title ? `<div class="step-title >${step.title}</div>` : ''}
 
 
       ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
