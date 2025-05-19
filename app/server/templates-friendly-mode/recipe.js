@@ -47,25 +47,25 @@ function generateRecipeHtml(data) {
       }
     </style>
   </head>
-  <body>
-    ${data.includeTitle ? `<h1>${data.recipeName} <span class="emoji">🍽️</span></h1>` : ''}
-    ${data.imageUrl ? `<img src="${data.imageUrl}" alt="Recipe Image" />` : ''}
-  
-    ${data.includePrepTime ? `<p><strong>Prep Time:</strong> ${data.prepTime}</p>` : ''}
-    ${data.includeCookTime ? `<p><strong>Cook Time:</strong> ${data.cookTime}</p>` : ''}
+ <body>
+  <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
 
-    ${data.includeIngredients ? `
-      <div class="section-title">Ingredients <span class="emoji">🥕</span></div>
-      <ul class="ingredients">
-        ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
-      </ul>` : ''}
+  ${data.imageUrl ? `<img src="${data.imageUrl}" alt="Recipe Image" />` : ''}
 
-    ${data.includeInstructions ? `
-      <div class="section-title">Instructions <span class="emoji">👩‍🍳</span></div>
-      <ol class="instructions">
-        ${data.instructions.map(i => `<li>${i}</li>`).join('')}
-      </ol>` : ''}
-  </body>
+  <p><strong>Prep Time:</strong> ${data.prepTime}</p>
+  <p><strong>Cook Time:</strong> ${data.cookTime}</p>
+
+  <div class="section-title">Ingredients <span class="emoji">🥕</span></div>
+  <ul class="ingredients">
+    ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
+  </ul>
+
+  <div class="section-title">Instructions <span class="emoji">👩‍🍳</span></div>
+  <ol class="instructions">
+    ${data.instructions.map(i => `<li>${i}</li>`).join('')}
+  </ol>
+</body>
+
   </html>
   `;
 }
