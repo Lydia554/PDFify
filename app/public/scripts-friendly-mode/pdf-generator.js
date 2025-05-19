@@ -40,9 +40,11 @@ templateSelect.addEventListener('change', () => {
 });
 
 generatePdfBtn.addEventListener('click', async () => {
-    const template = templateSelect.value;
-    let formData = {};
+  const template = templateSelect.value;
+  let formData = {};
+
   
+  setTimeout(async () => {
     if (template === 'invoice') {
       const itemsText = document.getElementById('items').value.trim();
       const items = itemsText ? itemsText.split('\n').map(line => {
@@ -53,12 +55,12 @@ generatePdfBtn.addEventListener('click', async () => {
           unitPrice: Number(unitPrice) || 0,
         };
       }) : [];
-  
+
       const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
       const taxRate = Number(document.getElementById('taxRate').value) || 0;
       const taxAmount = subtotal * taxRate / 100;
       const total = subtotal + taxAmount;
-  
+
       formData = {
         customerName: document.getElementById('customerName').value,
         date: document.getElementById('date').value,
@@ -68,8 +70,8 @@ generatePdfBtn.addEventListener('click', async () => {
         taxRate,
         taxAmount,
         total,
-        includeTitle: document.getElementById('includeTitle').checked,
-      }
+        includeTitle: document.getElementById('includeTitle')?.checked ?? false,
+      };
 
     } else if (template === 'recipe') {
       formData = {
@@ -79,38 +81,37 @@ generatePdfBtn.addEventListener('click', async () => {
         cookTime: document.getElementById('cookTime').value,
         ingredients: document.getElementById('ingredients').value.split(',').map(s => s.trim()),
         instructions: document.getElementById('instructions').value.split(';').map(s => s.trim()),
-        includeTitle: document.getElementById('includeTitle').checked,
+        includeTitle: document.getElementById('includeTitle')?.checked ?? false,  // 👈 safe access
       };
     }
-    
 
-  friendlyResult.textContent = 'Generating PDF...';
+    friendlyResult.textContent = 'Generating PDF...';
 
-  try {
-    const response = await fetch('/api/friendly/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-     body: JSON.stringify({ template, ...formData }),
+    try {
+      const response = await fetch('/api/friendly/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template, ...formData }),
+      });
 
-    });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate PDF');
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to generate PDF');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${template}_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      friendlyResult.textContent = '✅ PDF downloaded!';
+    } catch (error) {
+      friendlyResult.textContent = `Error: ${error.message}`;
     }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${template}_${Date.now()}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-
-    friendlyResult.textContent = '✅ PDF downloaded!';
-  } catch (error) {
-    friendlyResult.textContent = `Error: ${error.message}`;
-  }
+  }, 0); 
 });
