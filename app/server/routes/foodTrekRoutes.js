@@ -77,11 +77,10 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
-      .step-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #e65100;
-  margin-bottom: 4px;
+ .step-title {
+  border: 1px solid red;
+  background: yellow;
+  font-weight: bold;
 }
 
 
@@ -375,6 +374,7 @@ router.post('/premium-recipe', async (req, res) => {
 
   try {
     const html = generateRecipeHtml(data);
+    fs.writeFileSync('debug-output.html', html);
     const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
     const pdfDir = path.join(__dirname, '../../pdfs');
 
