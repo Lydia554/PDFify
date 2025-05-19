@@ -7,17 +7,17 @@ function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
     html = `
-    <label>Customer Name: <input id="customerName" /></label><br/>
-    <label>Date: <input type="date" id="date" /></label><br/>
-    <label>Invoice Number: <input id="invoiceNumber" /></label><br/>
-    
-    <label>Items (format: description,quantity,unitPrice per line):</label><br/>
-    <textarea id="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
-    
-    <label>Tax Rate (%): <input type="number" id="taxRate" value="0" /></label><br/>
-    
-    <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
-  `;
+      <label>Customer Name: <input id="customerName" /></label><br/>
+      <label>Date: <input type="date" id="date" /></label><br/>
+      <label>Invoice Number: <input id="invoiceNumber" /></label><br/>
+      
+      <label>Items (format: description,quantity,unitPrice per line):</label><br/>
+      <textarea id="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
+      
+      <label>Tax Rate (%): <input type="number" id="taxRate" value="0" /></label><br/>
+      
+      <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
+    `;
   } else if (template === 'recipe') {
     html = `
       <label>Recipe Name: <input id="recipeName" /></label><br/>
@@ -27,10 +27,12 @@ function renderForm(template) {
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
       
+      <!-- Include Title checkbox should be here too -->
       <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
   }
   formContainer.innerHTML = html;
+  console.log(`✅ Rendered form for template: ${template}`);
 }
 
 renderForm(templateSelect.value);
@@ -43,10 +45,11 @@ generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
 
-  
-  setTimeout(async () => {
+  console.log(`🔍 Selected template: ${template}`);
+
+  try {
     if (template === 'invoice') {
-      const itemsText = document.getElementById('items').value.trim();
+      const itemsText = document.getElementById('items')?.value.trim();
       const items = itemsText ? itemsText.split('\n').map(line => {
         const [description, quantity, unitPrice] = line.split(',').map(s => s.trim());
         return {
@@ -57,61 +60,72 @@ generatePdfBtn.addEventListener('click', async () => {
       }) : [];
 
       const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-      const taxRate = Number(document.getElementById('taxRate').value) || 0;
+      const taxRate = Number(document.getElementById('taxRate')?.value) || 0;
       const taxAmount = subtotal * taxRate / 100;
       const total = subtotal + taxAmount;
 
+      const includeTitle = document.getElementById('includeTitle');
+      console.log("🔧 includeTitle for invoice exists:", !!includeTitle);
+
       formData = {
-        customerName: document.getElementById('customerName').value,
-        date: document.getElementById('date').value,
-        invoiceNumber: document.getElementById('invoiceNumber').value || 'N/A',
+        customerName: document.getElementById('customerName')?.value,
+        date: document.getElementById('date')?.value,
+        invoiceNumber: document.getElementById('invoiceNumber')?.value || 'N/A',
         items,
         subtotal,
         taxRate,
         taxAmount,
         total,
-        includeTitle: document.getElementById('includeTitle')?.checked ?? false,
+        includeTitle: includeTitle?.checked ?? false,
       };
 
     } else if (template === 'recipe') {
+      const includeTitle = document.getElementById('includeTitle');
+      console.log("🔧 includeTitle for recipe exists:", !!includeTitle);
+
       formData = {
-        recipeName: document.getElementById('recipeName').value,
-        author: document.getElementById('author').value,
-        prepTime: document.getElementById('prepTime').value,
-        cookTime: document.getElementById('cookTime').value,
-        ingredients: document.getElementById('ingredients').value.split(',').map(s => s.trim()),
-        instructions: document.getElementById('instructions').value.split(';').map(s => s.trim()),
-        includeTitle: document.getElementById('includeTitle')?.checked ?? false,  // 👈 safe access
+        recipeName: document.getElementById('recipeName')?.value,
+        author: document.getElementById('author')?.value,
+        prepTime: document.getElementById('prepTime')?.value,
+        cookTime: document.getElementById('cookTime')?.value,
+        ingredients: document.getElementById('ingredients')?.value.split(',').map(s => s.trim()),
+        instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
+        includeTitle: includeTitle?.checked ?? false,
       };
     }
 
+    console.log("📦 Final formData to send:", formData);
+
     friendlyResult.textContent = 'Generating PDF...';
 
-    try {
-      const response = await fetch('/api/friendly/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template, ...formData }),
-      });
+    const response = await fetch('/api/friendly/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ template, ...formData }),
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate PDF');
-      }
+    console.log("📤 Sent request to server");
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${template}_${Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      friendlyResult.textContent = '✅ PDF downloaded!';
-    } catch (error) {
-      friendlyResult.textContent = `Error: ${error.message}`;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("❌ Server responded with error:", errorData);
+      throw new Error(errorData.error || 'Failed to generate PDF');
     }
-  }, 0); 
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template}_${Date.now()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    friendlyResult.textContent = '✅ PDF downloaded!';
+    console.log("✅ PDF generated and downloaded!");
+  } catch (error) {
+    console.error("❗ Error during PDF generation:", error);
+    friendlyResult.textContent = `Error: ${error.message}`;
+  }
 });
