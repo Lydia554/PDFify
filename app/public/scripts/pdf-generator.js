@@ -1,6 +1,6 @@
 const templateSelect = document.getElementById('templateSelect');
 const formContainer = document.getElementById('formContainer');
-const generatePdfBtn = document.getElementById('generatePdfBtn');
+const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 
 function renderForm(template) {
   let html = '';
