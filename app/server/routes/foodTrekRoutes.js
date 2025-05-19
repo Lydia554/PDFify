@@ -5,32 +5,22 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const twemoji = require('twemoji');
 
-
-function parseEmojisToImg(text) {
-  return twemoji.parse(text, {
-    ext: '.svg',
-    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/',
-    attributes: () => ({
-      height: '20',
-      width: '20',
-      style: 'display:inline;vertical-align:middle;'
-    })
-  });
-}
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
         if (typeof item === 'string') {
-          return { description: parseEmojisToImg(item) };
+          return { description: item };  
         } else {
           return {
-            title: parseEmojisToImg(item.title || ''),
-            description: parseEmojisToImg(item.description || ''),
+            title: item.title || '',
+            description: item.description || '',
           };
         }
       })
     : [];
 }
+
+
 function cleanTimeField(rawValue, expectedLabel) {
   if (!rawValue || typeof rawValue !== 'string') {
     return { label: expectedLabel, val: '' };
@@ -55,11 +45,11 @@ function cleanTimeField(rawValue, expectedLabel) {
 function generateRecipeHtml(data) {
   const parsedData = {
     ...data,
-    recipeName: parseEmojisToImg(data.recipeName),
-    description: parseEmojisToImg(data.description),
-    ingredients: parseArray(data.ingredients),
-    instructions: parseArray(data.instructions),
-    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmojisToImg) : [],
+    recipeName: data.recipeName,
+    description: data.description,
+    ingredients: data.ingredients || [],
+    instructions: data.instructions || [],
+    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes : [],
     prepTime: cleanTimeField(data.prepTime, "Prep Time"),
     cookTime: cleanTimeField(data.cookTime, "Cook Time"),
     totalTime: cleanTimeField(data.totalTime, "Total Time"),
@@ -327,30 +317,31 @@ function generateRecipeHtml(data) {
   </header>
 
 <div class="container">
-  <h1>${parseEmojisToImg(parsedData.recipeName || 'Recipe')}</h1>
+  <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
   <div class="meta-info">
     <div class="meta-item">
-      <span class="label">${parseEmojisToImg(parsedData.prepTime.label)}</span>
-      <span class="value">${parseEmojisToImg(parsedData.prepTime.val)}</span>
+      <span class="label">${parsedData.prepTime.label}</span>
+      <span class="value">${parsedData.prepTime.val}</span>
     </div>
     <div class="meta-item">
-      <span class="label">${parseEmojisToImg(parsedData.cookTime.label)}</span>
-      <span class="value">${parseEmojisToImg(parsedData.cookTime.val)}</span>
+      <span class="label">${parsedData.cookTime.label}</span>
+      <span class="value">${parsedData.cookTime.val}</span>
     </div>
     <div class="meta-item">
-      <span class="label">${parseEmojisToImg(parsedData.totalTime.label)}</span>
-      <span class="value">${parseEmojisToImg(parsedData.totalTime.val)}</span>
+      <span class="label">${parsedData.totalTime.label}</span>
+      <span class="value">${parsedData.totalTime.val}</span>
     </div>
     <div class="meta-item">
-      <span class="label">${parseEmojisToImg(parsedData.restTime.label)}</span>
-      <span class="value">${parseEmojisToImg(parsedData.restTime.val)}</span>
+      <span class="label">${parsedData.restTime.label}</span>
+      <span class="value">${parsedData.restTime.val}</span>
     </div>
     <div class="meta-item">
-      <span class="value">${parseEmojisToImg(parsedData.difficulty.val)}</span>
+      <span class="value">${parsedData.difficulty.val}</span>
     </div>
   </div>
 </div>
+
 
 
    ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
@@ -371,16 +362,15 @@ function generateRecipeHtml(data) {
   if (raw.includes('::')) {
     [title, desc] = raw.split(/::(.*)/s).map(str => str.trim());
   }
-
-  return `
-    <div class="image-step-pair">
-      <img src="${url}" alt="Step ${i + 1}" />
-${title ? `<div class="step-title">${parseEmojisToImg(title)}</div>` : ''}
-${desc ? `<div class="step-description">${parseEmojisToImg(desc)}</div>` : ''}
-
-    </div>
-  `;
+return `
+  <div class="image-step-pair">
+    <img src="${url}" alt="Step ${i + 1}" />
+    ${title ? `<div class="step-title">${title}</div>` : ''}
+    ${desc ? `<div class="step-description">${desc}</div>` : ''}
+  </div>
+`;
 }).join('')}
+
 
         </div>
       </section>
