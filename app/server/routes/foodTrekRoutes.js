@@ -78,11 +78,12 @@ function generateRecipeHtml(data) {
       }
 
 .image-step-pair .step-title {
-  font-weight: bold;
-  font-size: 1.3rem;
-  color: #bf360c;
-  border-bottom: 1px solid #ff7043;
-  margin-bottom: 8px;
+border: 2px solid red !important;
+  background: yellow !important;
+  font-weight: bold !important;
+  font-size: 1.3rem !important;
+  margin-bottom: 8px !important;
+  padding: 4px !important;
 }
 
 
