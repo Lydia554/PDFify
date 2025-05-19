@@ -55,7 +55,9 @@ function generateRecipeHtml(data) {
     cookTime: cleanTimeField(data.cookTime, "Cook Time"),
     totalTime: cleanTimeField(data.totalTime, "Total Time"),
     restTime: cleanTimeField(data.restTime, "Rest Time"),
-    difficulty: cleanTimeField(data.difficulty, "Difficulty")
+    difficulty: cleanTimeField(data.difficulty, "Difficulty"),
+    servings: parseEmoji(data.servings),
+    scaleIngredients: parseArray(data.scaleIngredients),
   };
   
 
@@ -317,38 +319,46 @@ function generateRecipeHtml(data) {
     <span class="value">${parsedData.restTime.val}</span>
   </div>
   <div class="meta-item">
-   
+    <span class="label">Servings</span>
+    <span class="value">${parsedData.servings}</span>
+  </div>
+  <div class="meta-item">
     <span class="value">${parsedData.difficulty.val}</span>
   </div>
 </div>
 
 
-   ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
+${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
 
+  ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
 
-    ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
+  ${parsedData.scaleIngredients?.length ? `
+    <section class="card">
+      <h2>Ingredients for Different Servings</h2>
+      <ul class="scaled-ingredients">
+        ${parsedData.scaleIngredients.map(i => `<li>${i}</li>`).join('')}
+      </ul>
+    </section>
+  ` : ''}
 
-    ${parsedData.imageUrls?.length ? `
-      <section class="card">
-        <h2>Instructions</h2>
-        <div class="images-with-steps">
-     ${parsedData.imageUrls.map((url, i) => {
-  const step = parsedData.instructions[i] || {};
-  return `
-    <div class="image-step-pair">
-      <img src="${url}" alt="Step ${i + 1}" />
-     ${step.title ? `<div class="step-title">${step.title}</div>` : ''}
-
-
-      ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
-    </div>
-  `;
-}).join('')}
-
-        </div>
-      </section>
-    ` : ''}
-  </div>
+  ${parsedData.imageUrls?.length ? `
+    <section class="card">
+      <h2>Instructions</h2>
+      <div class="images-with-steps">
+        ${parsedData.imageUrls.map((url, i) => {
+          const step = parsedData.instructions[i] || {};
+          return `
+            <div class="image-step-pair">
+              <img src="${url}" alt="Step ${i + 1}" />
+              ${step.title ? `<div class="step-title">${step.title}</div>` : ''}
+              ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </section>
+  ` : ''}
+</div>
 
 
    <footer>
