@@ -77,7 +77,7 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
-.image-step-pair .step-title {
+.step-title {
 border: 2px solid red !important;
   background: yellow !important;
   font-weight: bold !important;
