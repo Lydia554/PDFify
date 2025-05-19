@@ -55,8 +55,8 @@ function generateRecipeHtml(data) {
     cookTime: cleanTimeField(data.cookTime, "⏰Cook Time"),
     totalTime: cleanTimeField(data.totalTime, "⌛Total Time"),
     restTime: cleanTimeField(data.restTime, "⏱️Rest Time"),
-    difficulty: cleanTimeField(data.difficulty, "Difficulty"),
-    servings: parseEmoji(data.servings),
+    difficulty: cleanTimeField(data.difficulty, "👩‍🍳👩‍🍳Difficulty"),
+    servings: parseEmoji(data.servings,"🍱"),
     scaleIngredients: parseArray(data.scaleIngredients),
   };
   
@@ -329,7 +329,7 @@ function generateRecipeHtml(data) {
 </div>
 
 
-${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
+${cleanedDescription ? `<section class="card"><h2>🧾Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
 
   ${parsedData.ingredients.length ? `<section class="card"><h2>🔪🥩🍅Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
 
