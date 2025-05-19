@@ -51,10 +51,10 @@ function generateRecipeHtml(data) {
     ingredients: parseArray(data.ingredients),
     instructions: parseArray(data.instructions),
     metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
-    prepTime: cleanTimeField(data.prepTime, "Prep Time"),
-    cookTime: cleanTimeField(data.cookTime, "Cook Time"),
-    totalTime: cleanTimeField(data.totalTime, "Total Time"),
-    restTime: cleanTimeField(data.restTime, "Rest Time"),
+    prepTime: cleanTimeField(data.prepTime, "⏰Prep Time"),
+    cookTime: cleanTimeField(data.cookTime, "⏰Cook Time"),
+    totalTime: cleanTimeField(data.totalTime, "⌛Total Time"),
+    restTime: cleanTimeField(data.restTime, "⏱️Rest Time"),
     difficulty: cleanTimeField(data.difficulty, "Difficulty"),
     servings: parseEmoji(data.servings),
     scaleIngredients: parseArray(data.scaleIngredients),
@@ -335,7 +335,7 @@ ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main
 
   ${parsedData.scaleIngredients?.length ? `
     <section class="card">
-      <h2>Ingredients for Different Servings</h2>
+      <h2>🔪🥩🍅Ingredients for Different Servings</h2>
       <ul class="scaled-ingredients">
         ${parsedData.scaleIngredients.map(i => `<li>${i}</li>`).join('')}
       </ul>
@@ -344,7 +344,7 @@ ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main
 
   ${parsedData.imageUrls?.length ? `
     <section class="card">
-      <h2>👩‍🍳Instructions</h2>
+      <h2>👩‍🍳🍳Instructions</h2>
       <div class="images-with-steps">
         ${parsedData.imageUrls.map((url, i) => {
           const step = parsedData.instructions[i] || {};
