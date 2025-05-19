@@ -67,7 +67,18 @@ generatePdfBtn.addEventListener('click', async () => {
         taxAmount,
         total,
         includeTitle: document.getElementById('includeTitle').checked,
-      };
+      }
+
+    }  else if (template === 'recipe') {
+        formData = {
+          recipeName: document.getElementById('recipeName').value,
+          author: document.getElementById('author').value,
+          prepTime: document.getElementById('prepTime').value,
+          cookTime: document.getElementById('cookTime').value,
+          ingredients: document.getElementById('ingredients').value.split(',').map(s => s.trim()),
+          instructions: document.getElementById('instructions').value.split(';').map(s => s.trim()),
+        };
+        
   
   }
 
@@ -77,7 +88,7 @@ generatePdfBtn.addEventListener('click', async () => {
     const response = await fetch('/api/friendly/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template, ...formData }),
+     body: JSON.stringify({ template, ...formData }),
 
     });
 
