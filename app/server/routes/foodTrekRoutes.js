@@ -77,10 +77,12 @@ function generateRecipeHtml(data) {
         color: #333;
       }
 
-.step-title strong {
+.image-step-pair .step-title {
   font-weight: bold;
   font-size: 1.3rem;
   color: #bf360c;
+  border-bottom: 1px solid #ff7043;
+  margin-bottom: 8px;
 }
 
 
