@@ -335,7 +335,7 @@ function generateRecipeHtml(data) {
   return `
     <div class="image-step-pair">
       <img src="${url}" alt="Step ${i + 1}" />
-     ${step.title ? `<div class="step-title >${step.title}</div>` : ''}
+     ${step.title ? `<div class="step-title" >${step.title}</div>` : ''}
 
 
       ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
