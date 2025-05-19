@@ -363,7 +363,7 @@ ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main
 
 
    <footer>
-    Created with by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
+    Created by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
   </footer>
   </body>
   </html>`;
