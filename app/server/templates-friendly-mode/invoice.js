@@ -69,27 +69,29 @@ function generateInvoiceHtml(data) {
             <tr>
               <td>${item.description}</td>
               <td>${item.quantity}</td>
-              <td>${item.unitPrice.toFixed(2)}</td>
-              <td>${(item.quantity * item.unitPrice).toFixed(2)}</td>
+              <td>${typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : '0.00'}</td>
+<td>${(Number(item.quantity) * Number(item.unitPrice) || 0).toFixed(2)}</td>
+
             </tr>
           `).join('')
           : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`
         }
       </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="3" style="text-align:right;">Subtotal:</td>
-          <td>${data.subtotal.toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td colspan="3" style="text-align:right;">Tax (${data.taxRate || 0} %):</td>
-          <td>${data.taxAmount.toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td colspan="3" style="text-align:right;">Total:</td>
-          <td>${data.total.toFixed(2)}</td>
-        </tr>
-      </tfoot>
+    <tfoot>
+  <tr>
+    <td colspan="3" style="text-align:right;">Subtotal:</td>
+    <td>${(Number(data.subtotal) || 0).toFixed(2)}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="text-align:right;">Tax (${Number(data.taxRate) || 0} %):</td>
+    <td>${(Number(data.taxAmount) || 0).toFixed(2)}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="text-align:right;">Total:</td>
+    <td>${(Number(data.total) || 0).toFixed(2)}</td>
+  </tr>
+</tfoot>
+
     </table>
 
     ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ''}
