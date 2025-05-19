@@ -331,11 +331,11 @@ function generateRecipeHtml(data) {
 
 ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
 
-  ${parsedData.ingredients.length ? `<section class="card"><h2>Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
+  ${parsedData.ingredients.length ? `<section class="card"><h2>🔪🥩🍅Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
 
   ${parsedData.scaleIngredients?.length ? `
     <section class="card">
-      <h2>🔪🥩🍅Ingredients for Different Servings</h2>
+      <h2>Ingredients for Different Servings</h2>
       <ul class="scaled-ingredients">
         ${parsedData.scaleIngredients.map(i => `<li>${i}</li>`).join('')}
       </ul>
@@ -363,7 +363,7 @@ ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main
 
 
    <footer>
-    Created by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
+    Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
   </footer>
   </body>
   </html>`;
