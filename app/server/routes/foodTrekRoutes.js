@@ -374,6 +374,13 @@ router.post('/premium-recipe', async (req, res) => {
 
   try {
     const html = generateRecipeHtml(data);
+    const debugFolder = path.join(__dirname, '../../public/debug');
+    if (!fs.existsSync(debugFolder)) {
+      fs.mkdirSync(debugFolder, { recursive: true });
+    }
+    const debugPath = path.join(debugFolder, 'debug-output.html');
+    fs.writeFileSync(debugPath, html);
+    console.log('✅ debug-output.html saved at:', debugPath);
     const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
     const pdfDir = path.join(__dirname, '../../pdfs');
 
