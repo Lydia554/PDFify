@@ -52,8 +52,9 @@ function generateRecipeHtml(data) {
 
   ${data.imageUrl ? `<img src="${data.imageUrl}" alt="Recipe Image" />` : ''}
 
-  <p><strong>Prep Time:</strong> ${data.prepTime}</p>
-  <p><strong>Cook Time:</strong> ${data.cookTime}</p>
+  <p><strong>Prep Time:</strong> ${data.prepTime ? `${data.prepTime} min` : 'N/A'}</p>
+<p><strong>Cook Time:</strong> ${data.cookTime ? `${data.cookTime} min` : 'N/A'}</p>
+
 
   <div class="section-title">Ingredients <span class="emoji">🥕</span></div>
   <ul class="ingredients">
