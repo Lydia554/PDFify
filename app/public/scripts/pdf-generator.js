@@ -52,7 +52,8 @@ generatePdfBtn.addEventListener('click', async () => {
     const res = await fetch('/api/friendly/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ template, formData }),
+      body: JSON.stringify({ template, ...formData }),
+
     });
     if (!res.ok) throw new Error('Failed to generate PDF');
 
