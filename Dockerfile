@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     ca-certificates \
     fonts-liberation \
     libappindicator3-1 \
+    fonts-noto-color-emoji \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \

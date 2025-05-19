@@ -374,7 +374,7 @@ router.post('/premium-recipe', async (req, res) => {
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.waitForTimeout(1000);
+
 
     await page.pdf({
       path: pdfPath,
