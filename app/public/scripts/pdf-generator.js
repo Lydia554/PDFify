@@ -71,5 +71,4 @@ generatePdfBtn.addEventListener('click', async () => {
   }
 });
 
-// Initialize form
 renderForm(templateSelect.value);

@@ -383,7 +383,7 @@ friendlyBtn.addEventListener('click', () => {
         result.innerText = 'Error: ' + err.message;
       }
     }
-
+    document.getElementById('generateDevBtn').addEventListener('click', sendRequest);
  
     
     fetch('/get-stripe-key')
