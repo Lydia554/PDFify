@@ -5,11 +5,11 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const twemoji = require('twemoji');
 
+
 function parseEmojisToImg(text) {
   return twemoji.parse(text, {
-    folder: 'svg',
     ext: '.svg',
-    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/', // use CDN
+    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/',
     attributes: () => ({
       height: '20',
       width: '20',
@@ -17,7 +17,6 @@ function parseEmojisToImg(text) {
     })
   });
 }
-
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
@@ -350,10 +349,9 @@ function generateRecipeHtml(data) {
   return `
     <div class="image-step-pair">
       <img src="${url}" alt="Step ${i + 1}" />
-${title ? `<div class="step-title">${title}</div>` : ''}
+${title ? `<div class="step-title">${parseEmojisToImg(title)}</div>` : ''}
+${desc ? `<div class="step-description">${parseEmojisToImg(desc)}</div>` : ''}
 
-
-      ${desc ? `<div class="step-description">${desc}</div>` : ''}
     </div>
   `;
 }).join('')}
