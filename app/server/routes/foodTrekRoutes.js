@@ -21,6 +21,20 @@ function parseArray(arr) {
 }
 
 
+function parseEmojisToImg(text) {
+  return twemoji.parse(text, {
+    ext: '.svg',
+    base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/',
+    attributes: () => ({
+      height: '20',
+      width: '20',
+      style: 'display:inline;vertical-align:middle;'
+    })
+  });
+}
+
+
+
 function cleanTimeField(rawValue, expectedLabel) {
   if (!rawValue || typeof rawValue !== 'string') {
     return { label: expectedLabel, val: '' };
