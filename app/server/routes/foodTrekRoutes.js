@@ -3,24 +3,25 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const twemoji = require('twemoji');
+
+function parseEmoji(str) {
+  return str || '';
+}
 
 function parseArray(arr) {
   return Array.isArray(arr)
     ? arr.map(item => {
         if (typeof item === 'string') {
-          return { description: item };  
+          return { description: parseEmoji(item) };
         } else {
           return {
-            title: item.title || '',
-            description: item.description || '',
+            title: parseEmoji(item.title || ''),
+            description: parseEmoji(item.description || ''),
           };
         }
       })
     : [];
 }
-
-
 function cleanTimeField(rawValue, expectedLabel) {
   if (!rawValue || typeof rawValue !== 'string') {
     return { label: expectedLabel, val: '' };
@@ -45,11 +46,11 @@ function cleanTimeField(rawValue, expectedLabel) {
 function generateRecipeHtml(data) {
   const parsedData = {
     ...data,
-    recipeName: data.recipeName,
-    description: data.description,
-    ingredients: data.ingredients || [],
-    instructions: data.instructions || [],
-    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes : [],
+    recipeName: parseEmoji(data.recipeName),
+    description: parseEmoji(data.description),
+    ingredients: parseArray(data.ingredients),
+    instructions: parseArray(data.instructions),
+    metaTimes: Array.isArray(data.metaTimes) ? data.metaTimes.map(parseEmoji) : [],
     prepTime: cleanTimeField(data.prepTime, "Prep Time"),
     cookTime: cleanTimeField(data.cookTime, "Cook Time"),
     totalTime: cleanTimeField(data.totalTime, "Total Time"),
@@ -75,6 +76,7 @@ function generateRecipeHtml(data) {
         font-family: 'Open Sans', sans-serif;
         color: #333;
       }
+
 
 
 .step-description {
@@ -284,64 +286,39 @@ function generateRecipeHtml(data) {
         }
       }
     </style>
-
-  <meta charset="UTF-8" />
-  <style>
-    body { font-family: sans-serif; font-size: 16px; }
-    img.emoji {
-      height: 20px;
-      width: 20px;
-      display: inline;
-      vertical-align: middle;
-    }
-  </style>
-  <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      twemoji.parse(document.body, {
-        folder: 'svg',
-        ext: '.svg',
-        base: 'https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/'
-      });
-    });
-  </script>
-
-
   </head>
-
-
-  
   <body>
   <header class="logo-header" id="header-logo">
     <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
   </header>
 
-<div class="container">
-  <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
-  <div class="meta-info">
-    <div class="meta-item">
-      <span class="label">${parsedData.prepTime.label}</span>
-      <span class="value">${parsedData.prepTime.val}</span>
-    </div>
-    <div class="meta-item">
-      <span class="label">${parsedData.cookTime.label}</span>
-      <span class="value">${parsedData.cookTime.val}</span>
-    </div>
-    <div class="meta-item">
-      <span class="label">${parsedData.totalTime.label}</span>
-      <span class="value">${parsedData.totalTime.val}</span>
-    </div>
-    <div class="meta-item">
-      <span class="label">${parsedData.restTime.label}</span>
-      <span class="value">${parsedData.restTime.val}</span>
-    </div>
-    <div class="meta-item">
-      <span class="value">${parsedData.difficulty.val}</span>
-    </div>
+  <div class="container">
+    <h1>${parsedData.recipeName || 'Recipe'}</h1>
+
+
+<div class="meta-info">
+  <div class="meta-item">
+    <span class="label">${parsedData.prepTime.label}</span>
+    <span class="value">${parsedData.prepTime.val}</span>
+  </div>
+  <div class="meta-item">
+    <span class="label">${parsedData.cookTime.label}</span>
+    <span class="value">${parsedData.cookTime.val}</span>
+  </div>
+  <div class="meta-item">
+    <span class="label">${parsedData.totalTime.label}</span>
+    <span class="value">${parsedData.totalTime.val}</span>
+  </div>
+  <div class="meta-item">
+    <span class="label">${parsedData.restTime.label}</span>
+    <span class="value">${parsedData.restTime.val}</span>
+  </div>
+  <div class="meta-item">
+   
+    <span class="value">${parsedData.difficulty.val}</span>
   </div>
 </div>
-
 
 
    ${cleanedDescription ? `<section class="card"><h2>Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
@@ -353,24 +330,18 @@ function generateRecipeHtml(data) {
       <section class="card">
         <h2>Instructions</h2>
         <div class="images-with-steps">
- ${parsedData.imageUrls.map((url, i) => {
+     ${parsedData.imageUrls.map((url, i) => {
   const step = parsedData.instructions[i] || {};
-  let raw = step.description || '';
-  let title = '';
-  let desc = raw;
+  return `
+    <div class="image-step-pair">
+      <img src="${url}" alt="Step ${i + 1}" />
+     ${step.title ? `<div class="step-title">${step.title}</div>` : ''}
 
-  if (raw.includes('::')) {
-    [title, desc] = raw.split(/::(.*)/s).map(str => str.trim());
-  }
-return `
-  <div class="image-step-pair">
-    <img src="${url}" alt="Step ${i + 1}" />
-    ${title ? `<div class="step-title">${title}</div>` : ''}
-    ${desc ? `<div class="step-description">${desc}</div>` : ''}
-  </div>
-`;
+
+      ${step.description ? `<div class="step-description">${step.description}</div>` : ''}
+    </div>
+  `;
 }).join('')}
-
 
         </div>
       </section>
@@ -390,13 +361,6 @@ router.post('/premium-recipe', async (req, res) => {
 
   try {
     const html = generateRecipeHtml(data);
-    const debugFolder = path.join(__dirname, '../../public/debug');
-    if (!fs.existsSync(debugFolder)) {
-      fs.mkdirSync(debugFolder, { recursive: true });
-    }
-    const debugPath = path.join(debugFolder, 'debug-output.html');
-    fs.writeFileSync(debugPath, html);
-    console.log('✅ debug-output.html saved at:', debugPath);
     const fileName = `foodtrek_recipe_${Date.now()}.pdf`;
     const pdfDir = path.join(__dirname, '../../pdfs');
 
@@ -409,7 +373,6 @@ router.post('/premium-recipe', async (req, res) => {
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-
 
     await page.pdf({
       path: pdfPath,
@@ -430,6 +393,5 @@ router.post('/premium-recipe', async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-
 
 module.exports = router;
