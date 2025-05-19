@@ -1,44 +1,101 @@
-function generateRecipeHtml(data) {
+function generateInvoiceHtml(data) {
   return `
   <html>
   <head>
     <style>
-      body { font-family: Arial, sans-serif; margin: 20px; }
-      h1 { color: #e63946; }
-      h2 { color: #457b9d; margin-top: 1em; }
-      ul { list-style-type: disc; margin-left: 20px; }
-      .section-title { font-weight: bold; margin-top: 1em; }
-      .time-difficulty { font-style: italic; margin-bottom: 1em; }
-      .instructions { margin-top: 1em; }
-      a { color: #1d3557; text-decoration: none; }
-      a:hover { text-decoration: underline; }
+      body {
+        font-family: 'Arial', sans-serif;
+        padding: 30px;
+        color: #444;
+        background: #fff;
+      }
+      h1 {
+        color: #1565c0;
+        border-bottom: 3px solid #42a5f5;
+        padding-bottom: 10px;
+      }
+      p {
+        font-size: 16px;
+        line-height: 1.5;
+        margin: 4px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      th, td {
+        border: 1px solid #ccc;
+        padding: 10px;
+        text-align: left;
+      }
+      th {
+        background-color: #e3f2fd;
+      }
+      tfoot td {
+        font-weight: bold;
+        border-top: 2px solid #1565c0;
+      }
+      .section-title {
+        font-size: 22px;
+        color: #1565c0;
+        margin-top: 30px;
+        margin-bottom: 10px;
+        font-weight: bold;
+        border-bottom: 2px solid #42a5f5;
+        padding-bottom: 4px;
+      }
     </style>
   </head>
   <body>
-    <h1>${data.title}</h1>
-    <p>${data.description}</p>
+    ${data.includeTitle ? `<h1>Invoice for ${data.customerName}</h1>` : ''}
     
-    <p class="time-difficulty">
-      Prep Time: ${data.prepTime} | Cook Time: ${data.cookTime} | Total Time: ${data.totalTime}<br>
-      Difficulty: ${data.difficulty} | Cooking Temp: ${data.cookingTemp}
-    </p>
-    
-    ${data.ingredients.map(section => `
-      <h2>${section.section}</h2>
-      <ul>
-        ${section.items.map(item => `<li>${item}</li>`).join('')}
-      </ul>
-    `).join('')}
-    
-    <h2>Instructions</h2>
-    <ol class="instructions">
-      ${data.instructions.map(step => `<li>${step}</li>`).join('')}
-    </ol>
-    
-    <p>Read it online: <a href="${data.readOnlineUrl}">${data.readOnlineUrl}</a></p>
+    <p><strong>Date:</strong> ${data.date}</p>
+    <p><strong>Invoice Number:</strong> ${data.invoiceNumber || 'N/A'}</p>
+
+    <div class="section-title">Items</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Quantity</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.items && data.items.length > 0
+          ? data.items.map(item => `
+            <tr>
+              <td>${item.description}</td>
+              <td>${item.quantity}</td>
+              <td>${item.unitPrice.toFixed(2)}</td>
+              <td>${(item.quantity * item.unitPrice).toFixed(2)}</td>
+            </tr>
+          `).join('')
+          : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" style="text-align:right;">Subtotal:</td>
+          <td>${data.subtotal.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="text-align:right;">Tax (${data.taxRate || 0} %):</td>
+          <td>${data.taxAmount.toFixed(2)}</td>
+        </tr>
+        <tr>
+          <td colspan="3" style="text-align:right;">Total:</td>
+          <td>${data.total.toFixed(2)}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ''}
   </body>
   </html>
   `;
 }
 
-module.exports = generateRecipeHtml;
+module.exports = generateInvoiceHtml;
