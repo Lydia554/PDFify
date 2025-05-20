@@ -24,10 +24,21 @@ function renderForm(template) {
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
+      <label>Author Name: <input id="authorName" /></label><br/>
+      <label>Author Image URL: <input id="authorImageUrl" /></label><br/>
+      <label>Video URL: <input id="videoUrl" /></label><br/>
+      <fieldset>
+        <legend>Nutrition Info (optional)</legend>
+        <label>Calories: <input id="calories" /></label><br/>
+        <label>Protein: <input id="protein" /></label><br/>
+        <label>Fat: <input id="fat" /></label><br/>
+        <label>Carbs: <input id="carbs" /></label><br/>
+      </fieldset>
       <label>Upload Images: <input type="file" id="imageUpload" accept="image/*" multiple /></label><br/>
       <div id="imagePreviewContainer" style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;"></div>
       <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
+
   }
   formContainer.innerHTML = html;
 
@@ -128,7 +139,17 @@ generatePdfBtn.addEventListener('click', async () => {
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
         imageUrls: base64Images,
         includeTitle: includeTitle?.checked ?? false,
+        authorName: document.getElementById('authorName')?.value || undefined,
+        authorImageUrl: document.getElementById('authorImageUrl')?.value || undefined,
+        videoUrl: document.getElementById('videoUrl')?.value || undefined,
+        nutrition: {
+          Calories: document.getElementById('calories')?.value || undefined,
+          Protein: document.getElementById('protein')?.value || undefined,
+          Fat: document.getElementById('fat')?.value || undefined,
+          Carbs: document.getElementById('carbs')?.value || undefined,
+        }
       };
+
     }
 
     friendlyResult.textContent = 'Generating PDF...';

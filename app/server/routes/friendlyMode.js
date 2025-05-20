@@ -3,23 +3,32 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const pdfParse = require('pdf-parse'); 
+const pdfParse = require('pdf-parse');
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
-const recipeTemplate = require('../templates-friendly-mode/recipe');
+const recipeTemplateBasic = require('../templates-friendly-mode/recipe');
+const recipeTemplatePremium = require('../templates-friendly-mode/recipe-premium');
 
 const templates = {
-  invoice: invoiceTemplate,
-  recipe: recipeTemplate,
+  invoice: {
+    fn: () => invoiceTemplate,
+    premiumOnly: false,
+  },
+  recipe: {
+    fn: (isPremium) => isPremium ? recipeTemplatePremium : recipeTemplateBasic,
+    premiumOnly: false,
+  }
 };
 
-router.post('/generate', authenticate, async (req, res) => { 
+router.post('/generate', authenticate, async (req, res) => {
   const { template, ...formData } = req.body;
 
-  const generateHtml = templates[template];
-  if (!generateHtml) return res.status(400).json({ error: 'Invalid template' });
+  const templateConfig = templates[template];
+  if (!templateConfig) {
+    return res.status(400).json({ error: 'Invalid template' });
+  }
 
   try {
     const user = await User.findById(req.user.userId);
@@ -27,6 +36,15 @@ router.post('/generate', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
+    const isPremium = user.plan === 'premium';
+    
+    
+    if (templateConfig.premiumOnly && !isPremium) {
+      return res.status(403).json({ error: 'This template is available for premium users only.' });
+    }
+
+ 
+    const generateHtml = templateConfig.fn(isPremium);
     const html = generateHtml(formData);
 
     const pdfDir = path.join(__dirname, '../../pdfs');
@@ -42,14 +60,12 @@ router.post('/generate', authenticate, async (req, res) => {
     await page.pdf({ path: pdfPath, format: 'A4' });
     await browser.close();
 
-  
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
     console.log(`User will use ${pageCount} pages`);
 
-   
     if (user.usageCount + pageCount > user.maxUsage) {
       fs.unlinkSync(pdfPath);
       return res.status(403).json({
@@ -57,11 +73,9 @@ router.post('/generate', authenticate, async (req, res) => {
       });
     }
 
-   
     user.usageCount += pageCount;
     await user.save();
 
-  
     res.download(pdfPath, (err) => {
       if (err) console.error('Error sending file:', err);
       fs.unlinkSync(pdfPath);
