@@ -84,18 +84,33 @@ renderForm(templateSelect.value);
 templateSelect.addEventListener('change', () => {
   renderForm(templateSelect.value);
 });
-
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
 
   try {
     if (template === 'invoice') {
-  
+      formData = {
+        customerName: document.getElementById('customerName')?.value,
+        date: document.getElementById('date')?.value,
+        invoiceNumber: document.getElementById('invoiceNumber')?.value,
+        taxRate: parseFloat(document.getElementById('taxRate')?.value || '0'),
+        includeTitle: document.getElementById('includeTitle')?.checked ?? false,
+        items: document.getElementById('items')?.value
+          .split('\n')
+          .map(line => {
+            const [description, quantity, unitPrice] = line.split(',').map(s => s.trim());
+            return {
+              description,
+              quantity: parseFloat(quantity),
+              unitPrice: parseFloat(unitPrice),
+            };
+          })
+          .filter(item => item.description && !isNaN(item.quantity) && !isNaN(item.unitPrice)),
+      };
     } else if (template === 'recipe') {
       const includeTitle = document.getElementById('includeTitle');
 
-    
       const base64Images = await Promise.all(
         allSelectedFiles.map(file => new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -118,9 +133,20 @@ generatePdfBtn.addEventListener('click', async () => {
 
     friendlyResult.textContent = 'Generating PDF...';
 
+    const apiKey =
+      new URLSearchParams(window.location.search).get('apiKey') ||
+      localStorage.getItem('apiKey');
+
+    if (!apiKey) {
+      throw new Error('API key missing. Please log in or use a valid access link.');
+    }
+
     const response = await fetch('/api/friendly/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({ template, ...formData }),
     });
 
@@ -140,8 +166,8 @@ generatePdfBtn.addEventListener('click', async () => {
     URL.revokeObjectURL(url);
 
     friendlyResult.textContent = '✅ PDF downloaded!';
-
   } catch (error) {
-    friendlyResult.textContent = `Error: ${error.message}`;
+    console.error('PDF Generation Error:', error);
+    friendlyResult.textContent = `❌ Error: ${error.message}`;
   }
 });

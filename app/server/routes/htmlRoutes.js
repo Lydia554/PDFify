@@ -100,7 +100,6 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
   const { html } = req.body;
 
   if (!html) {
-    console.warn('⚠️ No HTML content provided in request body');
     return res.status(400).json({ error: 'No HTML content provided' });
   }
 
