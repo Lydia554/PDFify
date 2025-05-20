@@ -343,7 +343,7 @@ function generateRecipeHtml(data) {
 
 
   <div class="container">
-    <h1>✨${parsedData.recipeName || 'Recipe'}</h1>
+    <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
 
 <div class="meta-info">
@@ -376,7 +376,7 @@ function generateRecipeHtml(data) {
 
 ${cleanedDescription ? `<section class="card"><h2>🧾Description</h2><p class="main-description">${cleanedDescription}</p></section>` : ''}
 
-  ${parsedData.ingredients.length ? `<section class="card"><h2>🔪🥩🍅Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
+  ${parsedData.ingredients.length ? `<section class="card"><h2>🔪Ingredients</h2><ul class="ingredients">${parsedData.ingredients.map(i => `<li>${i.description || i}</li>`).join('')}</ul></section>` : ''}
 
   ${parsedData.scaleIngredients?.length ? `
     <section class="card">
