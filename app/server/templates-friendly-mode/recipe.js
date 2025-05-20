@@ -46,55 +46,54 @@ function generateRecipeHtml(data) {
         margin-right: 6px;
       }
 
-  /* MOBILE STYLES */
-  @media screen and (max-width: 600px) {
-    body {
-      padding: 20px;
-    }
+      @media screen and (max-width: 600px) {
+        body {
+          padding: 20px;
+        }
 
-    h1 {
-      font-size: 1.6rem;
-    }
+        h1 {
+          font-size: 1.6rem;
+        }
 
-    .section-title {
-      font-size: 18px;
-    }
+        .section-title {
+          font-size: 18px;
+        }
 
-    p, li {
-      font-size: 15px;
-    }
+        p, li {
+          font-size: 15px;
+        }
 
-    ul.ingredients,
-    ol.instructions {
-      margin-left: 16px;
-    }
-  }
-
-
-
+        ul.ingredients,
+        ol.instructions {
+          margin-left: 16px;
+        }
+      }
     </style>
   </head>
- <body>
-  <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
+  <body>
+    <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
 
-  ${data.imageUrl ? `<img src="${data.imageUrl}" alt="Recipe Image" />` : ''}
+    ${
+      Array.isArray(data.imageUrls)
+        ? data.imageUrls.map(src => `<img src="${src}" alt="Recipe Image" />`).join('')
+        : ''
+    }
 
-  <p><strong>⏰Prep Time:</strong> ${data.prepTime ? `${data.prepTime} min` : 'N/A'}</p>
-<p><strong>⏰Cook Time:</strong> ${data.cookTime ? `${data.cookTime} min` : 'N/A'}</p>
+    <p><strong>⏰ Prep Time:</strong> ${data.prepTime ? `${data.prepTime} min` : 'N/A'}</p>
+    <p><strong>⏰ Cook Time:</strong> ${data.cookTime ? `${data.cookTime} min` : 'N/A'}</p>
 
+    <div class="section-title">Ingredients <span class="emoji">🔪🥩🍅</span></div>
+    <ul class="ingredients">
+      ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
+    </ul>
 
-  <div class="section-title">Ingredients <span class="emoji">🔪🥩🍅</span></div>
-  <ul class="ingredients">
-    ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
-  </ul>
-
-  <div class="section-title">Instructions <span class="emoji">👩‍🍳🍳</span></div>
-  <ol class="instructions">
-    ${data.instructions.map(i => `<li>${i}</li>`).join('')}
-  </ol>
-</body>
-
+    <div class="section-title">Instructions <span class="emoji">👩‍🍳🍳</span></div>
+    <ol class="instructions">
+      ${data.instructions.map(i => `<li>${i}</li>`).join('')}
+    </ol>
+  </body>
   </html>
   `;
 }
+
 module.exports = generateRecipeHtml;
