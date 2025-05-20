@@ -47,6 +47,7 @@ generatePdfBtn.addEventListener('click', async () => {
       let base64Image = '';
 
       const imageInput = document.getElementById('imageUpload');
+console.log('Files selected:', imageInput.files);
       let base64Images = [];
       
       if (imageInput && imageInput.files.length > 0) {
