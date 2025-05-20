@@ -56,7 +56,7 @@
   <p id="result" style="margin-top: 20px; font-weight: bold; color: #333;"></p>
 
   <script>
-    // Reusable API wrapper with auth header
+    
     const api = axios.create({
       baseURL: "/api",
       timeout: 10000,
@@ -89,13 +89,13 @@
       }
     );
 
-    // Utility: Mask API Key for display
+   
     function maskApiKey(key) {
       if (!key) return "";
       return key.slice(0, 4) + "..." + key.slice(-4);
     }
 
-    // Central user info display function
+
     function displayUserInfo(data) {
       document.getElementById("email").textContent = data.email || "";
       document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || "");
@@ -127,7 +127,7 @@
       }
     }
 
-    // Navigation spinner logic
+
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
         event.preventDefault();
@@ -203,7 +203,7 @@
     upgradeBtn.addEventListener("click", () => handleSubscriptionChange("upgrade"));
     downgradeBtn.addEventListener("click", () => handleSubscriptionChange("downgrade"));
 
-    // Logout button with spinner
+    
     document.getElementById("logoutButton").addEventListener("click", () => {
       const loadingOverlay = document.getElementById("loadingOverlay");
       loadingOverlay.style.display = "flex";
@@ -214,7 +214,7 @@
       }, 500);
     });
 
-    // Update user info form
+    
     document.getElementById("updateUserForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const newEmail = document.getElementById("newEmail").value.trim();
@@ -235,7 +235,7 @@
       }
     });
 
-    // Delete account button
+  
     document.getElementById("deleteAccountButton").addEventListener("click", async () => {
       if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
         return;
@@ -252,7 +252,7 @@
       }
     });
 
-    // Initial fetch of user data on load
+
     fetchUserData();
   </script>
 

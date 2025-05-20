@@ -4,15 +4,20 @@ const authenticate = async (req, res, next) => {
   let apiKey;
 
   const authHeader = req.headers.authorization;
+  console.log("Authorization Header:", authHeader); // 🔍
+
   if (authHeader && authHeader.startsWith("Bearer ")) {
     apiKey = authHeader.split(" ")[1];
+    console.log("Extracted API Key from header:", apiKey); // 🔍
   }
 
   if (!apiKey) {
     apiKey = req.query.apiKey;
+    console.log("Fallback API Key from query:", apiKey); // 🔍
   }
 
   if (!apiKey) {
+    console.warn("❌ No API key provided");
     return res.status(403).json({ error: "API key not provided" });
   }
 
@@ -29,10 +34,12 @@ const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
+      console.warn("❌ No user matched the API key");
       return res.status(403).json({ error: "User not found or API key is invalid" });
     }
 
     const decryptedKey = user.getDecryptedApiKey();
+    console.log("✅ Authenticated user:", user.email);
 
     req.user = {
       userId: user._id,
@@ -42,7 +49,6 @@ const authenticate = async (req, res, next) => {
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
     };
-
 
     req.fullUser = user;
 
