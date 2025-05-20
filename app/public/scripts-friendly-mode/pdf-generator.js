@@ -3,6 +3,8 @@ const formContainer = document.getElementById('formContainer');
 const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
+let allSelectedFiles = []; 
+
 function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
@@ -22,11 +24,59 @@ function renderForm(template) {
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
-      <label>Upload Image: <input type="file" id="imageUpload" accept="image/*" multiple /></label><br/>
+      <label>Upload Images: <input type="file" id="imageUpload" accept="image/*" multiple /></label><br/>
+      <div id="imagePreviewContainer" style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;"></div>
       <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
   }
   formContainer.innerHTML = html;
+
+  allSelectedFiles = [];
+  updateImagePreview();
+
+
+  if (template === 'recipe') {
+    const imageInput = document.getElementById('imageUpload');
+    imageInput.addEventListener('change', onImagesSelected);
+  }
+}
+
+function updateImagePreview() {
+  const previewContainer = document.getElementById('imagePreviewContainer');
+  if (!previewContainer) return;
+
+  previewContainer.innerHTML = '';
+  allSelectedFiles.forEach(file => {
+    const img = document.createElement('img');
+    img.style.maxWidth = '80px';
+    img.style.maxHeight = '80px';
+    img.style.borderRadius = '8px';
+    img.style.objectFit = 'cover';
+
+    const reader = new FileReader();
+    reader.onload = e => {
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    previewContainer.appendChild(img);
+  });
+}
+
+function onImagesSelected(event) {
+  const newFiles = Array.from(event.target.files);
+
+
+  newFiles.forEach(file => {
+    if (!allSelectedFiles.some(f => f.name === file.name && f.size === file.size)) {
+      allSelectedFiles.push(file);
+    }
+  });
+
+
+  event.target.value = '';
+
+  updateImagePreview();
 }
 
 renderForm(templateSelect.value);
@@ -41,30 +91,19 @@ generatePdfBtn.addEventListener('click', async () => {
 
   try {
     if (template === 'invoice') {
-     
+  
     } else if (template === 'recipe') {
       const includeTitle = document.getElementById('includeTitle');
-      let base64Image = '';
 
-      const imageInput = document.getElementById('imageUpload');
-console.log('Files selected:', imageInput.files);
-      let base64Images = [];
-      
-      if (imageInput && imageInput.files.length > 0) {
-        const files = Array.from(imageInput.files);
-      
-        base64Images = await Promise.all(
-          files.map(file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-          }))
-        );
-
-        console.log('Image array:', base64Images);
-
-      }
+    
+      const base64Images = await Promise.all(
+        allSelectedFiles.map(file => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        }))
+      );
 
       formData = {
         recipeName: document.getElementById('recipeName')?.value,
@@ -72,8 +111,8 @@ console.log('Files selected:', imageInput.files);
         cookTime: document.getElementById('cookTime')?.value,
         ingredients: document.getElementById('ingredients')?.value.split(',').map(s => s.trim()),
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
-        imageUrls: base64Images, 
-         includeTitle: includeTitle?.checked ?? false,
+        imageUrls: base64Images,
+        includeTitle: includeTitle?.checked ?? false,
       };
     }
 
