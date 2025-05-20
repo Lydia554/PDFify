@@ -22,6 +22,23 @@ const templates = {
   }
 };
 
+
+router.get('/check-access', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const accessType = user.plan === 'premium' ? 'premium' : 'basic';
+    res.json({ accessType });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to determine access type' });
+  }
+});
+
 router.post('/generate', authenticate, async (req, res) => {
   const { template, ...formData } = req.body;
 
