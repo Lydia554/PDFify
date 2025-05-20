@@ -73,7 +73,8 @@ app.use("/api", packingSlipRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
 
-
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
