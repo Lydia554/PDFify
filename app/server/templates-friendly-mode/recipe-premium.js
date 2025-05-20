@@ -346,4 +346,8 @@ function extractYouTubeId(url) {
   `;
 }
 
-module.exports = generatePremiumRecipeHtml;
+module.exports = (data) => {
+    console.log('✅ PREMIUM template function is being used');
+    return generatePremiumRecipeHtml(data);
+  };
+  
