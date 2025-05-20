@@ -24,7 +24,6 @@ function renderForm(template) {
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
-      <label>Author Name: <input id="authorName" /></label><br/>
       <label>Author Image URL: <input id="authorImageUrl" /></label><br/>
       <label>Video URL: <input id="videoUrl" /></label><br/>
       <fieldset>
@@ -139,7 +138,6 @@ generatePdfBtn.addEventListener('click', async () => {
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
         imageUrls: base64Images,
         includeTitle: includeTitle?.checked ?? false,
-        authorName: document.getElementById('authorName')?.value || undefined,
         authorImageUrl: document.getElementById('authorImageUrl')?.value || undefined,
         videoUrl: document.getElementById('videoUrl')?.value || undefined,
         nutrition: {

@@ -1,5 +1,5 @@
 function generatePremiumRecipeHtml(data) {
-    // Prepare nutrition table rows if nutrition data exists
+  
     const nutritionRows = data.nutrition
       ? Object.entries(data.nutrition)
           .map(
@@ -13,7 +13,7 @@ function generatePremiumRecipeHtml(data) {
           .join('')
       : '';
   
-    // QR code image (using Google Charts API) for recipe video or URL if available
+ 
     const qrCodeUrl = data.videoUrl
       ? `https://chart.googleapis.com/chart?cht=qr&chs=150x150&chl=${encodeURIComponent(
           data.videoUrl
