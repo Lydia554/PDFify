@@ -73,7 +73,7 @@ app.use("/api", packingSlipRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));

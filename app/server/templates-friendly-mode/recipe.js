@@ -88,7 +88,7 @@ function generateRecipeHtml(data) {
     ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
   </ul>
 
-  <div class="section-title">Instructions <span class="emoji">👩👩‍🍳🍳</span></div>
+  <div class="section-title">Instructions <span class="emoji">👩‍🍳🍳</span></div>
   <ol class="instructions">
     ${data.instructions.map(i => `<li>${i}</li>`).join('')}
   </ol>

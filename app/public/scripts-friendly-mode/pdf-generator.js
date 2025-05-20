@@ -18,12 +18,11 @@ function renderForm(template) {
   } else if (template === 'recipe') {
     html = `
       <label>Recipe Name: <input id="recipeName" /></label><br/>
-      <label>Author: <input id="author" /></label><br/>
       <label>Prep Time: <input id="prepTime" /></label><br/>
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
-      <label>Upload Image: <input type="file" id="imageUpload" accept="image/*" /></label><br/>
+      <label>Upload Image: <input type="file" id="imageUpload" accept="image/*" multiple /></label><br/>
       <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
   }
@@ -39,75 +38,38 @@ templateSelect.addEventListener('change', () => {
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
-  let imageUrl = '';
 
   try {
-   
-    if (template === 'recipe') {
-      const imageInput = document.getElementById('imageUpload');
-      if (imageInput && imageInput.files.length > 0) {
-        const file = imageInput.files[0];
-        const uploadData = new FormData();
-        uploadData.append('image', file);
-
-        friendlyResult.textContent = 'Uploading image...';
-
-        const uploadRes = await fetch('/api/friendly/upload-image', {
-          method: 'POST',
-          body: uploadData,
-        });
-
-        if (!uploadRes.ok) {
-          throw new Error('Image upload failed');
-        }
-
-        const uploadJson = await uploadRes.json();
-        imageUrl = uploadJson.imageUrl || '';
-      }
-    }
-
     if (template === 'invoice') {
-      const itemsText = document.getElementById('items')?.value.trim();
-      const items = itemsText ? itemsText.split('\n').map(line => {
-        const [description, quantity, unitPrice] = line.split(',').map(s => s.trim());
-        return {
-          description: description || 'N/A',
-          quantity: Number(quantity) || 0,
-          unitPrice: Number(unitPrice) || 0,
-        };
-      }) : [];
-
-      const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-      const taxRate = Number(document.getElementById('taxRate')?.value) || 0;
-      const taxAmount = subtotal * taxRate / 100;
-      const total = subtotal + taxAmount;
-
-      const includeTitle = document.getElementById('includeTitle');
-
-      formData = {
-        customerName: document.getElementById('customerName')?.value,
-        date: document.getElementById('date')?.value,
-        invoiceNumber: document.getElementById('invoiceNumber')?.value || 'N/A',
-        items,
-        subtotal,
-        taxRate,
-        taxAmount,
-        total,
-        includeTitle: includeTitle?.checked ?? false,
-      };
-
+     
     } else if (template === 'recipe') {
       const includeTitle = document.getElementById('includeTitle');
+      let base64Image = '';
+
+      const imageInput = document.getElementById('imageUpload');
+      let base64Images = [];
+      
+      if (imageInput && imageInput.files.length > 0) {
+        const files = Array.from(imageInput.files);
+      
+        base64Images = await Promise.all(
+          files.map(file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+          }))
+        );
+      }
 
       formData = {
         recipeName: document.getElementById('recipeName')?.value,
-        author: document.getElementById('author')?.value,
         prepTime: document.getElementById('prepTime')?.value,
         cookTime: document.getElementById('cookTime')?.value,
         ingredients: document.getElementById('ingredients')?.value.split(',').map(s => s.trim()),
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
-        imageUrl, 
-        includeTitle: includeTitle?.checked ?? false,
+        imageUrls: base64Images, 
+         includeTitle: includeTitle?.checked ?? false,
       };
     }
 
