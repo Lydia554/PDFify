@@ -260,13 +260,7 @@ function extractYouTubeId(url) {
             flex-direction: column;
             align-items: center;
           }
-          .author {
-            flex-direction: column;
-            text-align: center;
-          }
-          .author-info {
-            font-size: 0.9rem;
-          }
+          
         }
       </style>
     </head>
