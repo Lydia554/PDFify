@@ -152,6 +152,39 @@ function generateInvoiceHTML(data) {
             font-size: 12px;
             color: #aaa;
           }
+
+       /* MOBILE STYLES */
+  @media (max-width: 768px) {
+    .container {
+      margin: 20px auto;
+      padding: 20px;
+    }
+
+    .invoice-header {
+      flex-direction: column;
+      text-align: left;
+    }
+
+    .invoice-header .right {
+      text-align: left;
+    }
+
+    .table {
+      min-width: 100%;
+    }
+
+    h1 {
+      font-size: 22px;
+    }
+
+    .total {
+      font-size: 16px;
+    }
+
+    .chart-container h2 {
+      font-size: 16px;
+    }
+  }
         </style>
       </head>
       <body>

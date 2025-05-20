@@ -6,7 +6,15 @@ const router = express.Router();
 const authenticate = require('../middleware/authenticate'); 
 const User = require('../models/User');
 const pdfParse = require("pdf-parse");
+const { wrapHtmlWithBranding } = require('../utils/htmlWrapper');
 
+
+
+const log = (message, data = null) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[DEV LOG] ${message}`, data || '');
+  }
+};
 
 
 if (typeof ReadableStream === 'undefined') {
@@ -49,6 +57,28 @@ function wrapHtmlWithBranding(htmlContent) {
           .footer a:hover {
             text-decoration: underline;
           }
+
+
+         /* MOBILE STYLES */
+          @media (max-width: 600px) {
+            body {
+              padding: 20px;
+            }
+        
+            .content {
+              font-size: 15px;
+            }
+        
+            .footer {
+              font-size: 13px;
+              padding-top: 16px;
+            }
+        
+            .logo {
+              max-width: 100px;
+            }
+          }
+
         </style>
       </head>
       <body>
@@ -67,8 +97,6 @@ function wrapHtmlWithBranding(htmlContent) {
 
 
 router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
-  console.log('📥 POST /generate-pdf-from-html called');
-  console.log('🔐 Authenticated user:', req.user ? req.user.email : 'Not Authenticated');
   const { html } = req.body;
 
   if (!html) {
@@ -76,50 +104,55 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
     return res.status(400).json({ error: 'No HTML content provided' });
   }
 
-  console.log('📝 HTML content received (first 200 chars):', html.substring(0, 200));
-
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
+      log('User not found for ID:', req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
 
+    log('User found:', user.email);
+
     const wrappedHtml = wrapHtmlWithBranding(html);
+    log('HTML wrapped with branding');
 
     const pdfDir = './pdfs';
     if (!fs.existsSync(pdfDir)) {
-      console.log('📁 Creating PDF directory...');
       fs.mkdirSync(pdfDir, { recursive: true });
+      log('PDF directory created:', pdfDir);
     }
 
     const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
-    console.log(`📄 PDF will be saved to: ${pdfPath}`);
+    log('PDF path determined:', pdfPath);
 
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
+    log('Puppeteer browser launched');
 
     const page = await browser.newPage();
     await page.setContent(wrappedHtml, { waitUntil: 'networkidle0' });
-    console.log('📄 HTML content loaded into Puppeteer');
+    log('HTML content set on Puppeteer page');
 
     await page.pdf({
       path: pdfPath,
       format: 'A4',
       printBackground: true,
     });
-    console.log('✅ PDF successfully generated');
+    log('PDF successfully generated');
 
     await browser.close();
+    log('Puppeteer browser closed');
 
-  
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
+    log('PDF parsed for page count:', pageCount);
 
     if (user.usageCount + pageCount > user.maxUsage) {
       fs.unlinkSync(pdfPath);
+      log('Usage limit exceeded, PDF deleted');
       return res.status(403).json({
         error: "Monthly usage limit reached. Upgrade to premium for more pages.",
       });
@@ -127,18 +160,19 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
 
     user.usageCount += pageCount;
     await user.save();
+    log('User usage count updated:', user.usageCount);
 
     res.download(pdfPath, (err) => {
       if (err) {
-        console.error('❌ Error sending file:', err);
+        log('Error during PDF download:', err);
       } else {
-        console.log('📤 PDF sent to client, deleting temp file');
         fs.unlinkSync(pdfPath);
+        log('PDF sent and deleted from server');
       }
     });
 
   } catch (error) {
-    console.error('❌ PDF generation failed:', error);
+    log('Unhandled error in PDF generation route:', error);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });

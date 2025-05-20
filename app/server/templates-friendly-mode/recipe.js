@@ -45,6 +45,33 @@ function generateRecipeHtml(data) {
         font-size: 1.3em;
         margin-right: 6px;
       }
+
+  /* MOBILE STYLES */
+  @media screen and (max-width: 600px) {
+    body {
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+    }
+
+    .section-title {
+      font-size: 18px;
+    }
+
+    p, li {
+      font-size: 15px;
+    }
+
+    ul.ingredients,
+    ol.instructions {
+      margin-left: 16px;
+    }
+  }
+
+
+
     </style>
   </head>
  <body>

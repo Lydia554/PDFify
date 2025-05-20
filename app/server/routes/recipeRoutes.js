@@ -140,6 +140,55 @@ function generateRecipeHTML(data) {
             margin: 0 auto 30px;
             max-width: 100px;
           }
+
+
+          
+  /* MOBILE STYLES */
+  @media (max-width: 600px) {
+    .container {
+      padding: 20px;
+      margin: 20px;
+    }
+
+    h1 {
+      font-size: 1.8em;
+      letter-spacing: 1px;
+    }
+
+    h2 {
+      font-size: 1.4em;
+    }
+
+    p {
+      font-size: 1em;
+    }
+
+    .label {
+      font-size: 1em;
+    }
+
+    .ingredients li,
+    .instructions li {
+      font-size: 1em;
+    }
+
+    .chart-container h2 {
+      font-size: 16px;
+    }
+
+    .footer {
+      font-size: 13px;
+    }
+
+    .terms {
+      font-size: 11px;
+    }
+
+    .logo {
+      max-width: 80px;
+      margin-bottom: 20px;
+    }
+  }
         </style>
       </head>
       <body>

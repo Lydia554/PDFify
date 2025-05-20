@@ -89,6 +89,43 @@ function generatePackingSlipHTML(data) {
             text-align: center;
             color: #777;
           }
+
+ /* MOBILE STYLES */
+  @media (max-width: 600px) {
+    body {
+      padding: 20px;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    h1 {
+      font-size: 20px;
+      text-align: left;
+    }
+
+    .info p {
+      font-size: 15px;
+    }
+
+    table th,
+    table td {
+      font-size: 14px;
+      padding: 10px;
+    }
+
+    .footer {
+      font-size: 13px;
+    }
+  }
+
+
         </style>
       </head>
       <body>

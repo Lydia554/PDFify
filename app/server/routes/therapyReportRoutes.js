@@ -173,6 +173,49 @@ function generateTherapyReportHTML(data) {
           .footer a:hover {
             text-decoration: underline;
           }
+
+
+        /* MOBILE STYLES */
+          @media (max-width: 600px) {
+            body {
+              padding: 20px;
+            }
+        
+            h1 {
+              font-size: 20px;
+            }
+        
+            .section-title {
+              font-size: 16px;
+            }
+        
+            p {
+              font-size: 14px;
+            }
+        
+            .multi-column {
+              grid-template-columns: 1fr;
+            }
+        
+            .logo {
+              width: 90px;
+            }
+        
+            .chart-container {
+              height: 300px;
+            }
+        
+            .table th, .table td {
+              padding: 8px;
+              font-size: 13px;
+            }
+        
+            .footer {
+              font-size: 12px;
+            }
+          }
+
+
         </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       </head>

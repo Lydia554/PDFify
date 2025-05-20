@@ -45,6 +45,35 @@ function generateInvoiceHtml(data) {
         border-bottom: 2px solid #42a5f5;
         padding-bottom: 4px;
       }
+
+ /* MOBILE STYLES */
+  @media screen and (max-width: 600px) {
+    body {
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+    }
+
+    .section-title {
+      font-size: 18px;
+    }
+
+    p {
+      font-size: 15px;
+    }
+
+    th, td {
+      padding: 8px;
+      font-size: 14px;
+    }
+
+    table {
+      min-width: 100%;
+    }
+  }
+
     </style>
   </head>
   <body>
@@ -54,6 +83,7 @@ function generateInvoiceHtml(data) {
     <p><strong>Invoice Number:</strong> ${data.invoiceNumber || 'N/A'}</p>
 
     <div class="section-title">Items</div>
+    <div class="table-wrapper">
     <table>
       <thead>
         <tr>
@@ -93,6 +123,7 @@ function generateInvoiceHtml(data) {
 </tfoot>
 
     </table>
+    </div>
 
     ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ''}
   </body>

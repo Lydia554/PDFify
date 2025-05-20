@@ -96,6 +96,44 @@ function generateShopOrderHTML(data) {
           .footer a:hover {
             text-decoration: underline;
           }
+
+/* MOBILE STYLES */
+  @media (max-width: 600px) {
+    body {
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 1.5em;
+    }
+
+    h2 {
+      font-size: 1.2em;
+    }
+
+    .section {
+      padding: 15px;
+    }
+
+    .products-list {
+      padding: 8px;
+    }
+
+    .total {
+      font-size: 1em;
+    }
+
+    img.logo {
+      width: 100px;
+    }
+
+    .footer {
+      font-size: 12px;
+    }
+  }
+
+
+
         </style>
       </head>
       <body>
