@@ -63,7 +63,9 @@ router.post('/generate', authenticate, async (req, res) => {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
- 
+    console.log('isPremium:', isPremium);
+    console.log('Using template:', template);
+    console.log('HTML output preview:', html.substring(0, 200));
     const generateHtml = templateConfig.fn(isPremium);
     const html = generateHtml(formData);
 
