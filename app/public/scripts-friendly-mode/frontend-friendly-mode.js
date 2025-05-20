@@ -5,6 +5,12 @@ const friendlyResult = document.getElementById('friendlyResult');
 
 let allSelectedFiles = []; 
 
+
+function isValidYouTubeUrl(url) {
+  const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}$/;
+  return regex.test(url.trim());
+}
+
 function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
@@ -24,7 +30,7 @@ function renderForm(template) {
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
-       <label>Recipe Video URL (YouTube): <input id="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
+      <label>Recipe Video URL (YouTube): <input id="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
       <fieldset>
         <legend>Nutrition Info (optional)</legend>
         <label>Calories: <input id="calories" /></label><br/>
@@ -36,13 +42,11 @@ function renderForm(template) {
       <div id="imagePreviewContainer" style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;"></div>
       <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
-
   }
   formContainer.innerHTML = html;
 
   allSelectedFiles = [];
   updateImagePreview();
-
 
   if (template === 'recipe') {
     const imageInput = document.getElementById('imageUpload');
@@ -75,13 +79,11 @@ function updateImagePreview() {
 function onImagesSelected(event) {
   const newFiles = Array.from(event.target.files);
 
-
   newFiles.forEach(file => {
     if (!allSelectedFiles.some(f => f.name === file.name && f.size === file.size)) {
       allSelectedFiles.push(file);
     }
   });
-
 
   event.target.value = '';
 
@@ -93,6 +95,7 @@ renderForm(templateSelect.value);
 templateSelect.addEventListener('change', () => {
   renderForm(templateSelect.value);
 });
+
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
@@ -129,6 +132,11 @@ generatePdfBtn.addEventListener('click', async () => {
         }))
       );
 
+      const videoUrl = document.getElementById('videoUrl')?.value.trim();
+      if (videoUrl && !isValidYouTubeUrl(videoUrl)) {
+        throw new Error('Please enter a valid YouTube video URL.');
+      }
+
       formData = {
         recipeName: document.getElementById('recipeName')?.value,
         prepTime: document.getElementById('prepTime')?.value,
@@ -137,7 +145,7 @@ generatePdfBtn.addEventListener('click', async () => {
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
         imageUrls: base64Images,
         includeTitle: includeTitle?.checked ?? false,
-        videoUrl: document.getElementById('videoUrl')?.value,
+        videoUrl,
         nutrition: {
           Calories: document.getElementById('calories')?.value || undefined,
           Protein: document.getElementById('protein')?.value || undefined,
@@ -145,7 +153,6 @@ generatePdfBtn.addEventListener('click', async () => {
           Carbs: document.getElementById('carbs')?.value || undefined,
         }
       };
-
     }
 
     friendlyResult.textContent = 'Generating PDF...';

@@ -1,24 +1,25 @@
-function generatePremiumRecipeHtml(data) {
+function extractYouTubeId(url) {
+    const regExp = /^.*(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]{11}).*/;
+    const match = url.match(regExp);
+    return match && match[1] ? match[1] : null;
+  }
   
+  function generatePremiumRecipeHtml(data) {
     const nutritionRows = data.nutrition
       ? Object.entries(data.nutrition)
           .map(
             ([key, value]) => `
-            <tr>
-              <td>${key}</td>
-              <td>${value}</td>
-            </tr>
-          `
+          <tr>
+            <td>${key}</td>
+            <td>${value}</td>
+          </tr>
+        `
           )
           .join('')
       : '';
   
- 
-    const qrCodeUrl = data.videoUrl
-      ? `https://chart.googleapis.com/chart?cht=qr&chs=150x150&chl=${encodeURIComponent(
-          data.videoUrl
-        )}`
-      : '';
+    const videoId = data.videoUrl ? extractYouTubeId(data.videoUrl) : null;
+  
   
     return `
     <html>
@@ -207,50 +208,30 @@ function generatePremiumRecipeHtml(data) {
           color: #2e7d32;
         }
   
-        /* Author section */
-        .author {
-          margin-top: 50px;
-          display: flex;
-          align-items: center;
-          gap: 15px;
-        }
-  
-        .author img {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
-          object-fit: cover;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-  
-        .author-info {
-          font-size: 1rem;
-          color: #2e7d32;
-        }
-  
-        .author-info strong {
-          display: block;
-          font-weight: 700;
-        }
-  
+      
         /* QR Code */
-        .qr-container {
-          margin-top: 40px;
-          text-align: center;
-        }
-  
-        .qr-container img {
-          width: 150px;
-          height: 150px;
-          border-radius: 12px;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-  
-        .qr-container p {
-          margin-top: 8px;
-          font-size: 0.9rem;
-          color: #4e342e;
-        }
+   .qr-box {
+        margin-top: 40px;
+        text-align: center;
+      }
+
+      .qr-box img {
+        max-width: 150px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      }
+
+      .qr-box .thumb {
+        display: block;
+        margin: 12px auto 0 auto;
+        max-width: 220px;
+        border-radius: 12px;
+      }
+
+      .qr-box em {
+        color: #666;
+        font-size: 0.95rem;
+      }
   
         .footer {
           text-align: center;
@@ -289,98 +270,86 @@ function generatePremiumRecipeHtml(data) {
         }
       </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Logo" class="logo" />
-          <h1>${data.recipeName}</h1>
-          <div class="tags">
-            <div class="tag">⏰ Prep: ${data.prepTime || 'N/A'} min</div>
-            <div class="tag">🔥 Cook: ${data.cookTime || 'N/A'} min</div>
-            ${
-              data.servings
-                ? `<div class="tag">🍽️ Serves: ${data.servings}</div>`
-                : ''
-            }
-          </div>
-        </div>
-  
-        ${
-          Array.isArray(data.imageUrls)
-            ? `<div class="images">${data.imageUrls
-                .map(
-                  (src) =>
-                    `<img src="${src}" alt="Recipe Image" loading="lazy" />`
-                )
-                .join('')}</div>`
-            : ''
-        }
-  
-        <div class="section grid">
-          <div>
-            <h2>📝 Ingredients</h2>
-            <ul>
-              ${data.ingredients.map((i) => `<li>${i}</li>`).join('')}
-            </ul>
-          </div>
-          <div>
-            <h2>👨‍🍳 Instructions</h2>
-            <ol>
-              ${data.instructions.map((i) => `<li>${i}</li>`).join('')}
-            </ol>
-          </div>
-        </div>
-  
-        ${
-          nutritionRows
-            ? `<div class="section">
-            <h2>📊 Nutrition Facts</h2>
-            <table>
-              <thead>
-                <tr><th>Nutrient</th><th>Amount</th></tr>
-              </thead>
-              <tbody>
-                ${nutritionRows}
-              </tbody>
-            </table>
-          </div>`
-            : ''
-        }
-  
-        ${
-          data.authorName
-            ? `<div class="author">
-              ${
-                data.authorImageUrl
-                  ? `<img src="${data.authorImageUrl}" alt="${data.authorName}" loading="lazy" />`
-                  : ''
-              }
-              <div class="author-info">
-                <strong>${data.authorName}</strong>
-                <span>Recipe Author</span>
-              </div>
-            </div>`
-            : ''
-        }
-  
-        ${
-          qrCodeUrl
-            ? `<div class="qr-container">
-            <img src="${qrCodeUrl}" alt="QR Code for Recipe Video" />
-            <p>Scan to watch recipe video</p>
-          </div>`
-            : ''
-        }
-  
-        <div class="footer">
-          <p>Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com">food-trek.com</a></p>
-          <p>Need help? Contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
+   <body>
+    <div class="container">
+      <div class="header">
+        <img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Logo" class="logo" />
+        <h1>${data.recipeName}</h1>
+        <div class="tags">
+          <div class="tag">⏰ Prep: ${data.prepTime || 'N/A'} min</div>
+          <div class="tag">🔥 Cook: ${data.cookTime || 'N/A'} min</div>
+          ${
+            data.servings
+              ? `<div class="tag">🍽️ Serves: ${data.servings}</div>`
+              : ''
+          }
         </div>
       </div>
-    </body>
-    </html>
-    `;
-  }
-  
-  module.exports = generatePremiumRecipeHtml;
-  
+
+      ${
+        Array.isArray(data.imageUrls)
+          ? `<div class="images">${data.imageUrls
+              .map(
+                (src) =>
+                  `<img src="${src}" alt="Recipe Image" loading="lazy" />`
+              )
+              .join('')}</div>`
+          : ''
+      }
+
+      <div class="section grid">
+        <div>
+          <h2>📝 Ingredients</h2>
+          <ul>
+            ${data.ingredients.map((i) => `<li>${i}</li>`).join('')}
+          </ul>
+        </div>
+        <div>
+          <h2>👨‍🍳 Instructions</h2>
+          <ol>
+            ${data.instructions.map((i) => `<li>${i}</li>`).join('')}
+          </ol>
+        </div>
+      </div>
+
+      ${
+        nutritionRows
+          ? `<div class="section">
+          <h2>📊 Nutrition Facts</h2>
+          <table>
+            <thead>
+              <tr><th>Nutrient</th><th>Amount</th></tr>
+            </thead>
+            <tbody>
+              ${nutritionRows}
+            </tbody>
+          </table>
+        </div>`
+          : ''
+      }
+
+      <div class="qr-box">
+        ${
+          data.videoUrl && videoId
+            ? `
+          <div><strong>🎥 Watch the Recipe Video:</strong></div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
+            data.videoUrl
+          )}" alt="QR code" />
+          <img class="thumb" src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="Video thumbnail" />
+        `
+            : `<em>No video link provided.</em>`
+        }
+      </div>
+
+      <div class="footer">
+        <p>Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com">food-trek.com</a></p>
+        <p>Need help? Contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
+      </div>
+    </div>
+  </body>
+  </html>
+  `;
+}
+
+module.exports = generatePremiumRecipeHtml;
