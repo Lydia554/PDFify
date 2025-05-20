@@ -14,6 +14,7 @@ const templates = {
 
 router.post('/generate', async (req, res) => {
   const { template, ...formData } = req.body;
+  console.log('Received formData:', formData.imageUrls?.length);
 
   const generateHtml = templates[template];
   if (!generateHtml) return res.status(400).json({ error: 'Invalid template' });

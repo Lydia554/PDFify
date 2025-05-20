@@ -60,6 +60,9 @@ generatePdfBtn.addEventListener('click', async () => {
             reader.onerror = error => reject(error);
           }))
         );
+
+        console.log('Image array:', base64Images);
+
       }
 
       formData = {
