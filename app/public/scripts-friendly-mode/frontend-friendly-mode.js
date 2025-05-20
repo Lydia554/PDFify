@@ -3,12 +3,35 @@ const formContainer = document.getElementById('formContainer');
 const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
-let allSelectedFiles = []; 
-
+let allSelectedFiles = [];
+let userAccessType = 'basic'; 
 
 function isValidYouTubeUrl(url) {
   const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}$/;
   return regex.test(url.trim());
+}
+
+async function fetchAccessType() {
+  const apiKey =
+    new URLSearchParams(window.location.search).get('apiKey') ||
+    localStorage.getItem('apiKey');
+
+  if (!apiKey) return;
+
+  try {
+    const res = await fetch('/api/check-access', {
+      headers: {
+        Authorization: `Bearer ${apiKey}`
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      userAccessType = data.accessType === 'premium' ? 'premium' : 'basic';
+    }
+  } catch (err) {
+    console.warn('Access check failed, falling back to basic.');
+  }
 }
 
 function renderForm(template) {
@@ -30,27 +53,36 @@ function renderForm(template) {
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
-      <label>Recipe Video URL (YouTube): <input id="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
-      <fieldset>
-        <legend>Nutrition Info (optional)</legend>
-        <label>Calories: <input id="calories" /></label><br/>
-        <label>Protein: <input id="protein" /></label><br/>
-        <label>Fat: <input id="fat" /></label><br/>
-        <label>Carbs: <input id="carbs" /></label><br/>
-      </fieldset>
-      <label>Upload Images: <input type="file" id="imageUpload" accept="image/*" multiple /></label><br/>
-      <div id="imagePreviewContainer" style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;"></div>
-      <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
+
+    if (userAccessType === 'premium') {
+      html += `
+        <label>Recipe Video URL (YouTube): <input id="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
+        <fieldset>
+          <legend>Nutrition Info (optional)</legend>
+          <label>Calories: <input id="calories" /></label><br/>
+          <label>Protein: <input id="protein" /></label><br/>
+          <label>Fat: <input id="fat" /></label><br/>
+          <label>Carbs: <input id="carbs" /></label><br/>
+        </fieldset>
+        <label>Upload Images: <input type="file" id="imageUpload" accept="image/*" multiple /></label><br/>
+        <div id="imagePreviewContainer" style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;"></div>
+      `;
+    }
+
+    html += `<label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>`;
   }
+
   formContainer.innerHTML = html;
 
   allSelectedFiles = [];
   updateImagePreview();
 
-  if (template === 'recipe') {
+  if (template === 'recipe' && userAccessType === 'premium') {
     const imageInput = document.getElementById('imageUpload');
-    imageInput.addEventListener('change', onImagesSelected);
+    if (imageInput) {
+      imageInput.addEventListener('change', onImagesSelected);
+    }
   }
 }
 
@@ -86,15 +118,8 @@ function onImagesSelected(event) {
   });
 
   event.target.value = '';
-
   updateImagePreview();
 }
-
-renderForm(templateSelect.value);
-
-templateSelect.addEventListener('change', () => {
-  renderForm(templateSelect.value);
-});
 
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
@@ -123,19 +148,21 @@ generatePdfBtn.addEventListener('click', async () => {
     } else if (template === 'recipe') {
       const includeTitle = document.getElementById('includeTitle');
 
-      const base64Images = await Promise.all(
-        allSelectedFiles.map(file => new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.readAsDataURL(file);
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = error => reject(error);
-        }))
-      );
-
-      const videoUrl = document.getElementById('videoUrl')?.value.trim();
+      const videoUrl = userAccessType === 'premium' ? document.getElementById('videoUrl')?.value.trim() : '';
       if (videoUrl && !isValidYouTubeUrl(videoUrl)) {
         throw new Error('Please enter a valid YouTube video URL.');
       }
+
+      const base64Images = userAccessType === 'premium'
+        ? await Promise.all(allSelectedFiles.map(file =>
+            new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.readAsDataURL(file);
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = error => reject(error);
+            })
+          ))
+        : [];
 
       formData = {
         recipeName: document.getElementById('recipeName')?.value,
@@ -145,13 +172,13 @@ generatePdfBtn.addEventListener('click', async () => {
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
         imageUrls: base64Images,
         includeTitle: includeTitle?.checked ?? false,
-        videoUrl,
-        nutrition: {
+        videoUrl: videoUrl || undefined,
+        nutrition: userAccessType === 'premium' ? {
           Calories: document.getElementById('calories')?.value || undefined,
           Protein: document.getElementById('protein')?.value || undefined,
           Fat: document.getElementById('fat')?.value || undefined,
           Carbs: document.getElementById('carbs')?.value || undefined,
-        }
+        } : undefined
       };
     }
 
@@ -161,9 +188,7 @@ generatePdfBtn.addEventListener('click', async () => {
       new URLSearchParams(window.location.search).get('apiKey') ||
       localStorage.getItem('apiKey');
 
-    if (!apiKey) {
-      throw new Error('API key missing. Please log in or use a valid access link.');
-    }
+    if (!apiKey) throw new Error('API key missing. Please log in or use a valid access link.');
 
     const response = await fetch('/api/friendly/generate', {
       method: 'POST',
@@ -195,3 +220,12 @@ generatePdfBtn.addEventListener('click', async () => {
     friendlyResult.textContent = `❌ Error: ${error.message}`;
   }
 });
+
+templateSelect.addEventListener('change', () => {
+  renderForm(templateSelect.value);
+});
+
+(async () => {
+  await fetchAccessType();
+  renderForm(templateSelect.value);
+})();
