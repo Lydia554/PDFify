@@ -19,11 +19,12 @@ async function fetchAccessType() {
   if (!apiKey) return;
 
   try {
-    const res = await fetch('/api/check-access', {
+    const res = await fetch('/api/friendly/check-access', {
       headers: {
         Authorization: `Bearer ${apiKey}`
       }
     });
+    
 
     if (res.ok) {
       const data = await res.json();
