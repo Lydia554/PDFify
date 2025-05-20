@@ -5,7 +5,7 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const multer = require('multer');
 
-// Setup multer storage for uploaded images
+
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    // keep original extension
+  
     const ext = path.extname(file.originalname);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
@@ -31,15 +31,15 @@ const templates = {
   recipe: recipeTemplate,
 };
 
-// Serve the uploads folder statically so uploaded images are accessible by URL
+
 router.use('/uploads', express.static(uploadDir));
 
-// Image upload route
+
 router.post('/upload-image', upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  // Construct public URL for the uploaded image
+  
   const imageUrl = `/api/friendly/uploads/${req.file.filename}`;
   res.json({ imageUrl });
 });
