@@ -2,80 +2,146 @@ function generateRecipeHtml(data) {
   return `
   <html>
   <head>
+    <meta charset="UTF-8" />
     <style>
-      body {
-        font-family: 'Arial', sans-serif;
-        padding: 30px;
-        color: #444;
+      @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
+
+      body, html {
+        margin: 0;
+        padding: 0;
         background: #fff;
+        font-family: 'Open Sans', 'Merriweather', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
       }
+
+      .logo {
+        display: block;
+        margin: 30px auto 10px auto;
+        max-width: 100px;
+      }
+
       h1 {
-        color: #d84315;
+        font-family: 'Merriweather', serif;
+        font-weight: 700;
+        font-size: 2.8rem;
+        color: #e65100;
+        margin: 20px auto 20px auto;
         border-bottom: 3px solid #ff7043;
-        padding-bottom: 10px;
+        padding-bottom: 8px;
+        max-width: 600px;
+        text-align: center;
       }
-      p, li {
-        font-size: 16px;
-        line-height: 1.5;
+
+      p {
+        font-size: 1rem;
+        color: #4e342e;
+        font-weight: 400;
+        margin: 0 0 10px 0;
+        text-align: center;
       }
-      ul.ingredients {
-        list-style-type: disc;
-        margin-left: 20px;
-        margin-bottom: 20px;
-      }
-      ol.instructions {
-        margin-left: 20px;
-        margin-bottom: 20px;
-      }
-      img {
-        max-width: 100%;
-        border-radius: 10px;
-        margin-bottom: 20px;
-      }
+
       .section-title {
-        font-size: 22px;
+        font-family: 'Merriweather', serif;
+        font-weight: 700;
+        font-size: 1.9rem;
         color: #bf360c;
-        margin-top: 30px;
-        margin-bottom: 10px;
-        font-weight: bold;
-        border-bottom: 2px solid #ff8a65;
-        padding-bottom: 4px;
+        border-bottom: 2px solid #ffab91;
+        padding-bottom: 8px;
+        margin: 40px auto 20px auto;
+        max-width: 600px;
+        text-align: left;
       }
+
+      ul.ingredients, ol.instructions {
+        max-width: 600px;
+        margin: 0 auto 40px auto;
+        padding-left: 25px;
+        font-size: 1.1rem;
+        color: #4e342e;
+      }
+
+      ol.instructions li {
+        margin-bottom: 14px;
+      }
+
+      img.recipe-img {
+        display: block;
+        max-width: 600px;
+        width: 100%;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        margin: 10px auto 30px auto;
+        transition: transform 0.3s ease;
+      }
+
+      img.recipe-img:hover {
+        transform: scale(1.05);
+      }
+
       .emoji {
         font-size: 1.3em;
-        margin-right: 6px;
+        margin-left: 6px;
+      }
+
+      .footer {
+        text-align: center;
+        margin: 40px auto 20px auto;
+        font-size: 13px;
+        color: #888;
+        max-width: 600px;
+        border-top: 1px dashed #ccc;
+        padding-top: 20px;
+      }
+
+      .footer a {
+        color: #6d4c41;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
       }
 
       @media screen and (max-width: 600px) {
-        body {
-          padding: 20px;
-        }
-
         h1 {
-          font-size: 1.6rem;
+          font-size: 1.8rem;
+          margin: 20px auto 15px auto;
         }
 
         .section-title {
-          font-size: 18px;
+          font-size: 1.3rem;
+          margin: 30px auto 15px auto;
         }
 
-        p, li {
-          font-size: 15px;
+        ul.ingredients, ol.instructions {
+          padding-left: 18px;
+          font-size: 0.95rem;
+          margin-bottom: 30px;
         }
 
-        ul.ingredients,
-        ol.instructions {
-          margin-left: 16px;
+        p {
+          font-size: 0.95rem;
+          margin-bottom: 8px;
+        }
+
+        img.recipe-img {
+          max-width: 100%;
+          margin-bottom: 20px;
+        }
+
+        .footer {
+          font-size: 12px;
         }
       }
     </style>
   </head>
   <body>
+    <img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Food Trek Logo" class="logo" />
     <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
 
     ${
       Array.isArray(data.imageUrls)
-        ? data.imageUrls.map(src => `<img src="${src}" alt="Recipe Image" />`).join('')
+        ? data.imageUrls.map(src => `<img src="${src}" alt="Recipe Image" class="recipe-img" />`).join('')
         : ''
     }
 
@@ -91,6 +157,11 @@ function generateRecipeHtml(data) {
     <ol class="instructions">
       ${data.instructions.map(i => `<li>${i}</li>`).join('')}
     </ol>
+
+    <div class="footer">
+      <p>Need help? Contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
+     Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
+    </div>
   </body>
   </html>
   `;

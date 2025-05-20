@@ -297,24 +297,23 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-    // 🔢 Get number of pages
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
     console.log(`User used ${pageCount} pages`);
 
-    // ✅ Check against usage limits
+
     if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath); // clean up
+      fs.unlinkSync(pdfPath); 
       return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
     }
 
-    // 📈 Update usage by number of pages
+   
     user.usageCount += pageCount;
     await user.save();
 
-    // 📤 Send file to user
+    
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
