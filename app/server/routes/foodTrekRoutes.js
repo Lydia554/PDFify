@@ -285,6 +285,55 @@ function generateRecipeHtml(data) {
           color: #000;
         }
       }
+
+
+      /* MOBILE STYLES */
+      @media screen and (max-width: 600px) {
+        h1 {
+          font-size: 1.8rem;
+        }
+    
+        section.card h2 {
+          font-size: 1.3rem;
+        }
+    
+        .container {
+          padding: 15px;
+          margin: 20px auto;
+        }
+    
+        .meta-info {
+          flex-direction: column;
+          align-items: center;
+        }
+    
+        .meta-item {
+          min-width: 100%;
+        }
+    
+        ul.ingredients,
+        ol.instructions {
+          font-size: 0.95rem;
+          padding-left: 18px;
+        }
+    
+        .images-with-steps {
+          flex-direction: column;
+          align-items: center;
+        }
+    
+        .image-step-pair {
+          max-width: 100%;
+        }
+    
+        .images img {
+          max-width: 100%;
+        }
+      }
+
+
+
+
     </style>
   </head>
   <body>
