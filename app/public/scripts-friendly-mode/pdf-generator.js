@@ -10,12 +10,9 @@ function renderForm(template) {
       <label>Customer Name: <input id="customerName" /></label><br/>
       <label>Date: <input type="date" id="date" /></label><br/>
       <label>Invoice Number: <input id="invoiceNumber" /></label><br/>
-      
       <label>Items (format: description,quantity,unitPrice per line):</label><br/>
       <textarea id="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
-      
       <label>Tax Rate (%): <input type="number" id="taxRate" value="0" /></label><br/>
-      
       <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
   } else if (template === 'recipe') {
@@ -26,13 +23,11 @@ function renderForm(template) {
       <label>Cook Time: <input id="cookTime" /></label><br/>
       <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
       <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
-      
-      <!-- Include Title checkbox should be here too -->
+      <label>Upload Image: <input type="file" id="imageUpload" accept="image/*" /></label><br/>
       <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
   }
   formContainer.innerHTML = html;
- 
 }
 
 renderForm(templateSelect.value);
@@ -44,9 +39,33 @@ templateSelect.addEventListener('change', () => {
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
-
+  let imageUrl = '';
 
   try {
+   
+    if (template === 'recipe') {
+      const imageInput = document.getElementById('imageUpload');
+      if (imageInput && imageInput.files.length > 0) {
+        const file = imageInput.files[0];
+        const uploadData = new FormData();
+        uploadData.append('image', file);
+
+        friendlyResult.textContent = 'Uploading image...';
+
+        const uploadRes = await fetch('/api/friendly/upload-image', {
+          method: 'POST',
+          body: uploadData,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error('Image upload failed');
+        }
+
+        const uploadJson = await uploadRes.json();
+        imageUrl = uploadJson.imageUrl || '';
+      }
+    }
+
     if (template === 'invoice') {
       const itemsText = document.getElementById('items')?.value.trim();
       const items = itemsText ? itemsText.split('\n').map(line => {
@@ -64,7 +83,6 @@ generatePdfBtn.addEventListener('click', async () => {
       const total = subtotal + taxAmount;
 
       const includeTitle = document.getElementById('includeTitle');
-    
 
       formData = {
         customerName: document.getElementById('customerName')?.value,
@@ -80,7 +98,6 @@ generatePdfBtn.addEventListener('click', async () => {
 
     } else if (template === 'recipe') {
       const includeTitle = document.getElementById('includeTitle');
- 
 
       formData = {
         recipeName: document.getElementById('recipeName')?.value,
@@ -89,11 +106,10 @@ generatePdfBtn.addEventListener('click', async () => {
         cookTime: document.getElementById('cookTime')?.value,
         ingredients: document.getElementById('ingredients')?.value.split(',').map(s => s.trim()),
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
+        imageUrl, 
         includeTitle: includeTitle?.checked ?? false,
       };
     }
-
-   
 
     friendlyResult.textContent = 'Generating PDF...';
 
@@ -103,11 +119,8 @@ generatePdfBtn.addEventListener('click', async () => {
       body: JSON.stringify({ template, ...formData }),
     });
 
-    
-
     if (!response.ok) {
       const errorData = await response.json();
-    
       throw new Error(errorData.error || 'Failed to generate PDF');
     }
 
@@ -122,9 +135,8 @@ generatePdfBtn.addEventListener('click', async () => {
     URL.revokeObjectURL(url);
 
     friendlyResult.textContent = '✅ PDF downloaded!';
-   
+
   } catch (error) {
-   
     friendlyResult.textContent = `Error: ${error.message}`;
   }
 });

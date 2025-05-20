@@ -3,6 +3,25 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
+const multer = require('multer');
+
+// Setup multer storage for uploaded images
+const uploadDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    // keep original extension
+    const ext = path.extname(file.originalname);
+    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+  }
+});
+const upload = multer({ storage });
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const recipeTemplate = require('../templates-friendly-mode/recipe');
@@ -12,8 +31,18 @@ const templates = {
   recipe: recipeTemplate,
 };
 
+// Serve the uploads folder statically so uploaded images are accessible by URL
+router.use('/uploads', express.static(uploadDir));
 
-
+// Image upload route
+router.post('/upload-image', upload.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+  // Construct public URL for the uploaded image
+  const imageUrl = `/api/friendly/uploads/${req.file.filename}`;
+  res.json({ imageUrl });
+});
 
 router.post('/generate', async (req, res) => {
   const { template, ...formData } = req.body; 
@@ -22,10 +51,6 @@ router.post('/generate', async (req, res) => {
   if (!generateHtml) return res.status(400).json({ error: 'Invalid template' });
 
   try {
-    console.log('📥 Received template:', template);
-    console.log('🧾 Received formData:', formData); 
-    console.log('Incoming recipe data:', formData); 
-
     const html = generateHtml(formData); 
     const pdfPath = path.join(__dirname, '../../pdfs', `pdf_${Date.now()}.pdf`);
 
@@ -40,11 +65,8 @@ router.post('/generate', async (req, res) => {
       fs.unlinkSync(pdfPath);
     });
   } catch (err) {
-    console.error('❌ Error generating PDF:', err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
-
-
 
 module.exports = router;
