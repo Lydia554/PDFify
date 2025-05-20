@@ -53,7 +53,7 @@ router.post('/generate', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    let userAccessType = 'premium';
+    const isPremium = true;
 
     //const isPremium = user.plan === 'premium';
 
