@@ -23,21 +23,38 @@ const templates = {
 };
 
 
+//router.get('/check-access', authenticate, async (req, res) => {
+ // try {
+   // const user = await User.findById(req.user.userId);
+
+   // if (!user) {
+    //  return res.status(404).json({ error: 'User not found' });
+   // }
+
+    //const accessType = user.plan === 'premium' ? 'premium' : 'basic';
+   // res.json({ accessType });
+  //} catch (err) {
+  //  console.error(err);
+   // res.status(500).json({ error: 'Failed to determine access type' });
+  //}
+//});
+
+
 router.get('/check-access', authenticate, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    // TEMP: Force premium access during development
+    return res.json({ accessType: 'premium' });
 
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const accessType = user.plan === 'premium' ? 'premium' : 'basic';
-    res.json({ accessType });
+    // const user = await User.findById(req.user.userId);
+    // if (!user) return res.status(404).json({ error: 'User not found' });
+    // const accessType = user.plan === 'premium' ? 'premium' : 'basic';
+    // res.json({ accessType });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to determine access type' });
   }
 });
+
 
 router.post('/generate', authenticate, async (req, res) => {
   const { template, ...formData } = req.body;
@@ -57,7 +74,7 @@ router.post('/generate', authenticate, async (req, res) => {
     const isPremium = isDevMode ? true : user.plan === 'premium';
     
     
-    console.log('isPremium:', isPremium);
+
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
