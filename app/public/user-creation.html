@@ -81,7 +81,7 @@
       }
   
       try {
-        const response = await axios.post(`/api/user/user-creation`, { email, password });
+        const response = await axios.post(`/api/user-creation`, { email, password });
         result.innerText = `🎉 Success: ${response.data.message}`;
         result.className = "result success";
         result.style.display = "block";
