@@ -142,7 +142,8 @@ function generateInvoiceHTML(data) {
       </head>
       <body>
         <div class="container">
-        ${logoUrl ? `<div class="logo-wrapper"><img src="${logoUrl}" alt="Company Logo" class="logo" /></div>` : ""}
+        ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ""}
+
 
           <h1>Invoice for ${data.customerName}</h1>
 
