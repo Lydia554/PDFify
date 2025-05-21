@@ -13,7 +13,7 @@ const log = (message, data = null) => {
   }
 };
 
-router.post("/create-user", async (req, res) => {
+router.post("/user-creation", async (req, res) => {
   const { email, password } = req.body;
 
   try {
