@@ -162,7 +162,7 @@ function generatePackingSlipHTML(data) {
           </table>
 
           <div class="footer">
-            <p>Thank you for your order!</p>
+            <p>Thanks for using our service!</p>
             <p>If you have any questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
           </div>
         </div>

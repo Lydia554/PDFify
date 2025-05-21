@@ -207,12 +207,12 @@ function generateInvoiceHTML(data) {
           ` : ''}
 
           <div class="footer">
-            <p>Thank you for your business!</p>
+             <p>Thanks for using our service!</p>
             <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-            <p>&copy; 2025 TetaFit Store — All rights reserved.</p>
+            <p>&copy; 2025 PDFify — All rights reserved.</p>
             ${!data.isPremium ? `
               <p class="terms">
-                Generated using <strong>PDFify API</strong>. Visit <a href="https://pdfify.lidija-jokic.com">our site</a> for more.
+                Generated using <strong>PDFify API</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
               </p>` : ''}
             <p class="terms">
               Terms & Conditions: Payment due within 14 days. Late payments may result in additional fees.
@@ -235,7 +235,10 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     }
 
 
-    const isPremium = user.isPremium;
+    //const isPremium = user.isPremium;
+    // const isPremium = user.isPremium;
+const isPremium = true; 
+
     const cleanedData = {
       ...data,
       isPremium: isPremium,
