@@ -157,7 +157,6 @@
       loadingOverlay.style.display = "none";
     });
 
-    // Subscription management with improved UX
     const upgradeBtn = document.getElementById("upgradeSubscriptionButton");
     const downgradeBtn = document.getElementById("downgradeSubscriptionButton");
     const resultMessage = document.getElementById("result");
@@ -245,7 +244,7 @@
         const response = await api.delete("/user/delete");
         resultMessage.textContent = response.data.message || "Account deleted.";
         localStorage.removeItem("apiKey");
-        setTimeout(() => window.location.href = "/user-creation.html.html", 2000);
+        setTimeout(() => window.location.href = "/user-creation.html", 2000);
       } catch (error) {
         console.error("Error deleting account:", error);
         resultMessage.textContent = "Failed to delete account. Please try again.";
