@@ -16,17 +16,13 @@ const log = (message, data = null) => {
 
 
 function generateInvoiceHTML(data) {
-  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-
-
-  
   return `
     <html>
       <head>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-
           body {
             font-family: 'Open Sans', sans-serif;
             color: #333;
@@ -34,7 +30,6 @@ function generateInvoiceHTML(data) {
             margin: 0;
             padding: 0;
           }
-
           .container {
             max-width: 800px;
             margin: 50px auto;
@@ -44,12 +39,10 @@ function generateInvoiceHTML(data) {
             border-radius: 12px;
             position: relative;
           }
-
           .logo {
             width: 150px;
             margin-bottom: 20px;
           }
-
           h1 {
             font-size: 28px;
             color: #2a3d66;
@@ -57,7 +50,6 @@ function generateInvoiceHTML(data) {
             margin: 20px 0;
             letter-spacing: 1px;
           }
-
           .invoice-header {
             display: flex;
             justify-content: space-between;
@@ -66,50 +58,41 @@ function generateInvoiceHTML(data) {
             padding-bottom: 20px;
             margin-bottom: 30px;
           }
-
           .invoice-header .left,
           .invoice-header .right {
             font-size: 16px;
             line-height: 1.5;
           }
-
           .invoice-header .right {
             text-align: right;
             color: #777;
           }
-
           .table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
           }
-
           .table th,
           .table td {
             padding: 12px;
             border: 1px solid #ddd;
             text-align: left;
           }
-
           .table th {
             background-color: #eaf0fb;
             color: #2a3d66;
             font-weight: 600;
           }
-
           .table td {
             color: #444;
           }
-
           .table tr:nth-child(even) td {
             background-color: #f9fbff;
           }
-
           .table tfoot td {
             background-color: #eaf0fb;
             font-weight: bold;
           }
-
           .total {
             text-align: right;
             font-size: 18px;
@@ -117,18 +100,15 @@ function generateInvoiceHTML(data) {
             color: #2a3d66;
             margin-top: 10px;
           }
-
           .chart-container {
             text-align: center;
             margin: 40px 0 20px;
           }
-
           .chart-container h2 {
             font-size: 18px;
             color: #2a3d66;
             margin-bottom: 10px;
           }
-
           .footer {
             text-align: center;
             margin-top: 40px;
@@ -137,61 +117,32 @@ function generateInvoiceHTML(data) {
             border-top: 1px dashed #ccc;
             padding-top: 20px;
           }
-
           .footer a {
             color: #2a3d66;
             text-decoration: none;
           }
-
           .footer a:hover {
             text-decoration: underline;
           }
-
           .terms {
             margin-top: 15px;
             font-size: 12px;
             color: #aaa;
           }
 
-       /* MOBILE STYLES */
-  @media (max-width: 768px) {
-    .container {
-      margin: 20px auto;
-      padding: 20px;
-    }
-
-    .invoice-header {
-      flex-direction: column;
-      text-align: left;
-    }
-
-    .invoice-header .right {
-      text-align: left;
-    }
-
-    .table {
-      min-width: 100%;
-    }
-
-    h1 {
-      font-size: 22px;
-    }
-
-    .total {
-      font-size: 16px;
-    }
-
-    .chart-container h2 {
-      font-size: 16px;
-    }
-  }
+          @media (max-width: 768px) {
+            .container { margin: 20px auto; padding: 20px; }
+            .invoice-header { flex-direction: column; text-align: left; }
+            .invoice-header .right { text-align: left; }
+            h1 { font-size: 22px; }
+            .total { font-size: 16px; }
+            .chart-container h2 { font-size: 16px; }
+          }
         </style>
       </head>
       <body>
         <div class="container">
-       <img src="${logoUrl}" alt="Company Logo" class="logo" />
-
-
+          <img src="${logoUrl}" alt="Company Logo" class="logo" />
           <h1>Invoice for ${data.customerName}</h1>
 
           <div class="invoice-header">
@@ -244,21 +195,27 @@ function generateInvoiceHTML(data) {
             <p>Total Amount Due: ${data.total}</p>
           </div>
 
-          <div class="chart-container">
-            <h2>Breakdown</h2>
-            <img src="https://quickchart.io/chart?c={
-              type:'pie',
-              data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
-              ]}
-            }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
-          </div>
+          ${data.showChart ? `
+            <div class="chart-container">
+              <h2>Breakdown</h2>
+              <img src="https://quickchart.io/chart?c={
+                type:'pie',
+                data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
+                ]}
+              }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
+            </div>
+          ` : ''}
 
           <div class="footer">
             <p>Thank you for your business!</p>
             <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
             <p>&copy; 2025 TetaFit Store — All rights reserved.</p>
+            ${!data.isPremium ? `
+              <p class="terms">
+                Generated using <strong>PDFify API</strong>. Visit <a href="https://pdfify.lidija-jokic.com">our site</a> for more.
+              </p>` : ''}
             <p class="terms">
-              Terms & Conditions: Payment due within 14 days. Late payments may result in additional fees. Refer to our website for full terms.
+              Terms & Conditions: Payment due within 14 days. Late payments may result in additional fees.
             </p>
           </div>
         </div>
@@ -266,7 +223,6 @@ function generateInvoiceHTML(data) {
     </html>
   `;
 }
-
 
 
 
