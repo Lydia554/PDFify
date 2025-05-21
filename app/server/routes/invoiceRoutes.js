@@ -43,6 +43,12 @@ function generateInvoiceHTML(data) {
             width: 150px;
             margin-bottom: 20px;
           }
+
+
+          .logo:empty {
+  display: none;
+}
+
           h1 {
             font-size: 28px;
             color: #2a3d66;
@@ -142,7 +148,8 @@ function generateInvoiceHTML(data) {
       </head>
       <body>
         <div class="container">
-        ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ""}
+        ${(logoUrl && logoUrl !== "null") ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ""}
+
 
 
           <h1>Invoice for ${data.customerName}</h1>
@@ -237,7 +244,6 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     }
 
 
-    //const isPremium = user.isPremium;
     // const isPremium = user.isPremium;
 const isPremium = true; 
 

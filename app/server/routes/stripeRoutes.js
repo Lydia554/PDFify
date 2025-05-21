@@ -29,7 +29,6 @@ router.post(
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    // 🔔 Handle checkout session completed
     if (event.type === "checkout.session.completed") {
       const session = event.data.object;
 
@@ -84,7 +83,7 @@ router.post(
       }
     }
 
-    // 🔔 Handle subscription cancellation
+ 
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object;
       const customerId = subscription.customer;
