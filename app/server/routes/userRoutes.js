@@ -2,7 +2,6 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
-const checkSubscription = require("../middleware/checkSubscription");
 const sendEmail = require("../sendEmail");
 const router = express.Router();
 
