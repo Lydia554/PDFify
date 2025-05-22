@@ -16,8 +16,6 @@ router.post("/user-creation", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    log("Received data:", { email });
-
     let user = await User.findOne({ email });
 
     if (user) {
@@ -25,20 +23,38 @@ router.post("/user-creation", async (req, res) => {
         return res.status(400).json({ error: "User already exists" });
       }
 
-      // Restore soft-deleted user
+    
+      const deletedAt = user.deletedAt || new Date(0);
+      const now = new Date();
+      const hoursSinceDeleted = (now - deletedAt) / (1000 * 60 * 60);
+
+      if (hoursSinceDeleted < 24) {
+        const remaining = Math.ceil(24 - hoursSinceDeleted);
+        return res.status(403).json({
+          error: `You must wait ${remaining} more hour(s) before you can reactivate this account.`,
+        });
+      }
+
+     
+      const newApiKey = require("crypto").randomBytes(24).toString("hex");
       user.password = password;
+      user.apiKey = newApiKey;
       user.deleted = false;
-      user.apiKey = require("crypto").randomBytes(24).toString("hex");
+      user.deletedAt = null;
       await user.save();
 
       const subject = "Welcome back to PDFify!";
-      const text = `Hi ${email},\n\nYour account has been restored. Your API key is: ${user.apiKey}\n\nWelcome back!\n\nBest,\nPDFify Team`;
+      const text = `Hi ${email},\n\nThis account was previously deleted. It has now been restored. Your new API key is: ${newApiKey}\n\nWelcome back!\n\nPDFify Team`;
 
       await sendEmail({ to: email, subject, text });
-      return res.status(200).json({ message: "Account restored", redirect: "/login.html" });
+
+      return res.status(200).json({
+        message: "This account was previously deleted. Restoring...",
+        redirect: "/login.html",
+      });
     }
 
-    // Create new user
+   
     const apiKey = require("crypto").randomBytes(24).toString("hex");
     const newUser = new User({ email, password, apiKey });
     await newUser.save();
@@ -143,15 +159,13 @@ router.delete("/delete", authenticate, async (req, res) => {
 
   try {
     const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     user.deleted = true;
+    user.deletedAt = new Date();
     await user.save();
 
-    log("User account soft-deleted:", user.email);
+    log("User marked as deleted:", user.email);
 
     res.json({ message: "Account deleted successfully!" });
   } catch (error) {
@@ -159,6 +173,7 @@ router.delete("/delete", authenticate, async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 
 
 

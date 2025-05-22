@@ -44,6 +44,7 @@ const userSchema = new mongoose.Schema(
     maxUsage: { type: Number, default: 30 },
     isPremium: { type: Boolean, default: false },
     deleted: { type: Boolean, default: false },
+deletedAt: { type: Date, default: null },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     isActive: { type: Boolean, default: true },
     resetToken: { type: String },
