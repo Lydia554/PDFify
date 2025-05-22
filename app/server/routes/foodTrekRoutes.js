@@ -128,21 +128,20 @@ function generateRecipeHtml(data) {
       }
 
           /* Watermark */
-        body::before {
-          content: "Food Trek";
-          position: fixed;
-          top: 40%;
-          left: 50%;
-          font-size: 6rem;
-          font-weight: 700;
-          color: #eee;
-          opacity: 0.05;
-          transform: translate(-50%, -50%) rotate(-30deg);
-          pointer-events: none;
-          user-select: none;
-          z-index: 0;
-          font-family: 'Playfair Display', serif;
-        }
+   .watermark {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-30deg);
+  font-size: 6rem;
+  font-weight: 700;
+  color: #eee;
+  opacity: 0.05;
+  font-family: 'Playfair Display', serif;
+  pointer-events: none;
+  z-index: -1;
+}
+
 
       .meta-item {
         background: #fff3e0;
