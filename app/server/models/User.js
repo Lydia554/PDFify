@@ -43,6 +43,7 @@ const userSchema = new mongoose.Schema(
     usageCount: { type: Number, default: 0 },
     maxUsage: { type: Number, default: 30 },
     isPremium: { type: Boolean, default: false },
+    deleted: { type: Boolean, default: false },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     isActive: { type: Boolean, default: true },
     resetToken: { type: String },
@@ -50,6 +51,9 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+
+
 
 
 userSchema.pre("save", async function (next) {

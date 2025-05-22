@@ -16,37 +16,42 @@ router.post("/user-creation", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    log("Received data:", { email, password });
+    log("Received data:", { email });
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ error: "User already exists" });
+    let user = await User.findOne({ email });
+
+    if (user) {
+      if (!user.deleted) {
+        return res.status(400).json({ error: "User already exists" });
+      }
+
+      // Restore soft-deleted user
+      user.password = password;
+      user.deleted = false;
+      user.apiKey = require("crypto").randomBytes(24).toString("hex");
+      await user.save();
+
+      const subject = "Welcome back to PDFify!";
+      const text = `Hi ${email},\n\nYour account has been restored. Your API key is: ${user.apiKey}\n\nWelcome back!\n\nBest,\nPDFify Team`;
+
+      await sendEmail({ to: email, subject, text });
+      return res.status(200).json({ message: "Account restored", redirect: "/login.html" });
     }
 
+    // Create new user
     const apiKey = require("crypto").randomBytes(24).toString("hex");
-
-    const newUser = new User({
-      email,
-      password,
-      apiKey,
-    });
-
+    const newUser = new User({ email, password, apiKey });
     await newUser.save();
-    log("User created successfully:", newUser);
 
     const subject = "Welcome to PDFify!";
-    const text = `Hi ${email},\n\nThank you for signing up for PDFify! Your API key is: ${apiKey}\n\nEnjoy using our service!\n\nBest regards,\nThe PDFify Team`;
+    const text = `Hi ${email},\n\nThank you for signing up! Your API key is: ${apiKey}\n\nEnjoy!\n\nThe PDFify Team`;
 
-    await sendEmail({
-      to: email,
-      subject,
-      text,
-    });
-    log("Welcome email sent to:", email);
+    await sendEmail({ to: email, subject, text });
 
-    res.status(201).json({ message: "User created successfully", redirect: "/login.html" });
+    res.status(201).json({ message: "User created", redirect: "/login.html" });
+
   } catch (error) {
-    console.error("Error creating user or sending email:", error);
+    console.error("User creation error:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
@@ -137,18 +142,21 @@ router.delete("/delete", authenticate, async (req, res) => {
   const userId = req.user.userId;
 
   try {
-    const deletedUser = await User.findByIdAndDelete(userId);
+    const user = await User.findById(userId);
 
-    if (!deletedUser) {
+    if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    log("User account deleted successfully:", deletedUser);
+    user.deleted = true;
+    await user.save();
 
-    res.json({ message: "User account deleted successfully!" });
+    log("User account soft-deleted:", user.email);
+
+    res.json({ message: "Account deleted successfully!" });
   } catch (error) {
-    console.error("Error deleting user account:", error);
-    res.status(500).json({ error: "Error deleting user account" });
+    console.error("Account delete error:", error);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
