@@ -77,53 +77,94 @@
         </ul>
       </section>
 
-      <!-- Developer Mode Previews -->
       <section>
         <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Developer Mode)</h3>
         <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        
+          <!-- Shop Order (one image) -->
           <div class="relative border p-4 rounded-lg shadow bg-white">
             <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
             <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Shop-Order.jpg" class="rounded" alt="Shop Order" />
+            <img src="/demo/Shop-Order.jpg" class="rounded mb-2" alt="Shop Order" />
+            <a href="/preview/shop-order.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+              📄 Preview PDF
+            </a>
             <h4 class="font-semibold mt-2">Shop Order</h4>
           </div>
+          
+          <!-- Therapy Report (two images side by side) -->
           <div class="relative border p-4 rounded-lg shadow bg-white">
             <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
             <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded" alt="Therapy Report" />
-            <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded" alt="Therapy Report" />
+            
+            <div class="flex gap-2 mb-2">
+              <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded w-1/2 object-cover" alt="Therapy Report" />
+              <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded w-1/2 object-cover" alt="Therapy Report" />
+            </div>
+            
+            <a href="/preview/therapy-report.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+              📄 Preview PDF
+            </a>
+            
             <h4 class="font-semibold mt-2">Therapy Report</h4>
           </div>
+          
+          <!-- Packing Slip (one image) -->
           <div class="relative border p-4 rounded-lg shadow bg-white">
             <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
             <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Packing Slip.jpg" class="rounded" alt="Packing Slip" />
+            <img src="/demo/Packing Slip.jpg" class="rounded mb-2" alt="Packing Slip" />
+            <a href="/preview/packing-slip.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+              📄 Preview PDF
+            </a>
             <h4 class="font-semibold mt-2">Packing Slip</h4>
           </div>
+          
+          <!-- Invoice (two images side by side) -->
           <div class="relative border p-4 rounded-lg shadow bg-white">
             <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
             <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Invoice-Large1.jpg" class="rounded" alt="Invoice" />
-            <img src="/demo/Invoice-Large2.jpg" class="rounded" alt="Invoice" />
+            
+            <div class="flex gap-2 mb-2">
+              <img src="/demo/Invoice-Large1.jpg" class="rounded w-1/2 object-cover" alt="Invoice" />
+              <img src="/demo/Invoice-Large2.jpg" class="rounded w-1/2 object-cover" alt="Invoice" />
+            </div>
+            
+            <a href="/preview/invoice.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+              📄 Preview PDF
+            </a>
+            
             <h4 class="font-semibold mt-2">Invoice</h4>
           </div>
+          
+          <!-- Recipe (one image, Premium) -->
           <div class="relative border p-4 rounded-lg shadow bg-white">
             <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
             <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Recipe-Large.jpg" class="rounded" alt="Recipe" />
+            <img src="/demo/Recipe-Large.jpg" class="rounded mb-2" alt="Recipe" />
+            <a href="/preview/recipe.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+              📄 Preview PDF
+            </a>
             <h4 class="font-semibold mt-2">Recipe</h4>
           </div>
+          
+          <!-- Raw HTML (one image, Developer Only badge only) -->
           <div class="relative border p-4 rounded-lg shadow bg-white">
             <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/RawHTML-Large-1.jpg" class="rounded" alt="Raw HTML" />
+            <img src="/demo/RawHTML-Large-1.jpg" class="rounded mb-2" alt="Raw HTML" />
+            <a href="/preview/raw-html.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+              📄 Preview PDF
+            </a>
             <h4 class="font-semibold mt-2">Raw HTML</h4>
           </div>
+          
         </div>
+        
         <p class="mt-4 text-sm text-gray-600 italic">
           Note: In Developer Mode, all templates are accessible with the ability to customize or remove logos and charts as you want.
         </p>
       </section>
-    </div>
+      
 
     <!-- Friendly Mode Section -->
     <div id="friendlySection" class="hidden">
