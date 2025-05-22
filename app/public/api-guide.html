@@ -123,8 +123,8 @@
 
       <!-- Invoice (two images with toggle) -->
       <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+        <span class="badge badge-basic">Basic</span>
+        <span class="badge badge-devonly">Developer Only</span>
 
         <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
           <img src="/demo/Invoice-Large1.jpg" class="rounded zoomable" alt="Invoice" />
@@ -244,7 +244,19 @@
 
   <style>
 
-
+.badge {
+      display: inline-block;
+      padding: 0.15em 0.5em;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: white;
+      user-select: none;
+      vertical-align: middle;
+    }
+    .badge-basic { background-color: #6b7280; }   /* gray-500 */
+    .badge-premium { background-color: #7c3aed; } /* purple-700 */
+    .badge-devonly { background-color: #db2777; } /* pink-600 */
 
   /* Hover zoom effect */
   img.zoomable {
