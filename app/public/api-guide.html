@@ -29,8 +29,56 @@
       <button id="friendlyBtn" class="px-4 py-2 rounded-r-md bg-gray-200 text-gray-800 hover:bg-purple-100">Friendly Mode</button>
     </div>
 
+    <div id="developerSection">
+      <h2 class="text-3xl font-bold mb-4">API Integration Guide (Developer Mode)</h2>
+      <p class="text-lg mb-6">
+        Learn how to use our PDF Generator API. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs from your data.
+      </p>
+
+      <section class="mb-10">
+        <h3 class="text-2xl font-semibold mb-2 text-purple-700">🛍️ What Can You Do With It?</h3>
+        <ul class="list-disc pl-6 text-base space-y-1">
+          <li>Generate product information sheets directly from your data</li>
+          <li>Create downloadable invoices for orders</li>
+          <li>Print shipping labels or packing slips</li>
+          <li>Design custom PDFs for gift cards or marketing inserts</li>
+        </ul>
+      </section>
+
+      <section class="mb-10">
+        <h3 class="text-2xl font-semibold mb-2 text-purple-700">⚙️ How It Works</h3>
+        <ol class="list-decimal pl-6 text-base space-y-4">
+          <li>
+            <strong>Prepare Your JSON or Raw HTML</strong>
+            <p>You can provide structured JSON data or raw HTML content to generate a PDF.</p>
+          </li>
+          <li>
+            <strong>Upload to PDF Generator</strong>
+            <p>Submit your data or HTML through our interface. JSON will be parsed with the selected template, while HTML is directly rendered.</p>
+          </li>
+          <li>
+            <strong>Choose or Customize Template</strong>
+            <p>Select a built-in template or design your layout with HTML and CSS.</p>
+          </li>
+          <li>
+            <strong>Download the Result</strong>
+            <p>Click 'Generate' and your file will be ready to download.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="mb-10">
+        <h3 class="text-2xl font-semibold mb-2 text-purple-700">🔐 Developer Premium Benefits</h3>
+        <ul class="list-disc pl-6 text-base space-y-1">
+          <li>Up to 1000 PDF pages/month</li>
+          <li>Remove or customize the watermark/logo</li>
+          <li>Inject or remove custom charts via code</li>
+        </ul>
+      </section>
+  
+
      <!-- Developer Mode Previews -->
-     <section id="developerSection">
+     <section>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Developer Mode)</h3>
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 
@@ -203,7 +251,7 @@
     cursor: pointer;
   }
   img.zoomable:hover {
-    transform: scale(2.05);
+    transform: scale(1.50);
   }
   .hidden {
     display: none;
