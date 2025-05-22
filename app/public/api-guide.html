@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>API Guide | PDFify</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -30,116 +30,163 @@
     </div>
 
     <!-- Developer Mode Section -->
-    <!-- Developer Mode Section -->
-<section>
-  <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Basic PDF Templates (Visual Preview)</h3>
-  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    <div class="relative border p-4 rounded-lg shadow bg-white">
-      <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-      <img src="/demo/Shop-Order.jpg" class="rounded" alt="Shop Order" />
-      <h4 class="font-semibold mt-2">Shop Order</h4>
+    <div id="developerSection">
+      <h2 class="text-3xl font-bold mb-4">API Integration Guide (Developer Mode)</h2>
+      <p class="text-lg mb-6">
+        Learn how to use our PDF Generator API. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs from your data.
+      </p>
+
+      <section class="mb-10">
+        <h3 class="text-2xl font-semibold mb-2 text-purple-700">🛍️ What Can You Do With It?</h3>
+        <ul class="list-disc pl-6 text-base space-y-1">
+          <li>Generate product information sheets directly from your data</li>
+          <li>Create downloadable invoices for orders</li>
+          <li>Print shipping labels or packing slips</li>
+          <li>Design custom PDFs for gift cards or marketing inserts</li>
+        </ul>
+      </section>
+
+      <section class="mb-10">
+        <h3 class="text-2xl font-semibold mb-2 text-purple-700">⚙️ How It Works</h3>
+        <ol class="list-decimal pl-6 text-base space-y-4">
+          <li>
+            <strong>Prepare Your JSON or Raw HTML</strong>
+            <p>You can provide structured JSON data or raw HTML content to generate a PDF.</p>
+          </li>
+          <li>
+            <strong>Upload to PDF Generator</strong>
+            <p>Submit your data or HTML through our interface. JSON will be parsed with the selected template, while HTML is directly rendered.</p>
+          </li>
+          <li>
+            <strong>Choose or Customize Template</strong>
+            <p>Select a built-in template or design your layout with HTML and CSS.</p>
+          </li>
+          <li>
+            <strong>Download the Result</strong>
+            <p>Click 'Generate' and your file will be ready to download.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="mb-10">
+        <h3 class="text-2xl font-semibold mb-2 text-purple-700">🔐 Developer Premium Benefits</h3>
+        <ul class="list-disc pl-6 text-base space-y-1">
+          <li>Up to 1000 PDF pages/month</li>
+          <li>Remove or customize the watermark/logo</li>
+          <li>Inject or remove custom charts via code</li>
+        </ul>
+      </section>
+
+      <!-- Developer Mode Previews -->
+      <section>
+        <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Developer Mode)</h3>
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="relative border p-4 rounded-lg shadow bg-white">
+            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+            <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+            <img src="/demo/Shop-Order.jpg" class="rounded" alt="Shop Order" />
+            <h4 class="font-semibold mt-2">Shop Order</h4>
+          </div>
+          <div class="relative border p-4 rounded-lg shadow bg-white">
+            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+            <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+            <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded" alt="Therapy Report" />
+            <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded" alt="Therapy Report" />
+            <h4 class="font-semibold mt-2">Therapy Report</h4>
+          </div>
+          <div class="relative border p-4 rounded-lg shadow bg-white">
+            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+            <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+            <img src="/demo/Packing Slip.jpg" class="rounded" alt="Packing Slip" />
+            <h4 class="font-semibold mt-2">Packing Slip</h4>
+          </div>
+          <div class="relative border p-4 rounded-lg shadow bg-white">
+            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+            <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+            <img src="/demo/Invoice-Large1.jpg" class="rounded" alt="Invoice" />
+            <img src="/demo/Invoice-Large2.jpg" class="rounded" alt="Invoice" />
+            <h4 class="font-semibold mt-2">Invoice</h4>
+          </div>
+          <div class="relative border p-4 rounded-lg shadow bg-white">
+            <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
+            <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+            <img src="/demo/Recipe-Large.jpg" class="rounded" alt="Recipe" />
+            <h4 class="font-semibold mt-2">Recipe</h4>
+          </div>
+          <div class="relative border p-4 rounded-lg shadow bg-white">
+            <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+            <img src="/demo/RawHTML-Large-1.jpg" class="rounded" alt="Raw HTML" />
+            <h4 class="font-semibold mt-2">Raw HTML</h4>
+          </div>
+        </div>
+        <p class="mt-4 text-sm text-gray-600 italic">
+          Note: In Developer Mode, all templates are accessible with the ability to customize or remove logos and charts as you want.
+        </p>
+      </section>
     </div>
-    <div class="relative border p-4 rounded-lg shadow bg-white">
-      <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-      <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded" alt="Therapy Report" />
-      <h4 class="font-semibold mt-2">Therapy Report</h4>
-    </div>
-    <div class="relative border p-4 rounded-lg shadow bg-white">
-      <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-      <img src="/demo/Packing Slip.jpg" class="rounded" alt="Packing Slip" />
-      <h4 class="font-semibold mt-2">Packing Slip</h4>
-    </div>
-    <div class="relative border p-4 rounded-lg shadow bg-white">
-      <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-      <span class="absolute top-2 right-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-      <img src="/demo/RawHTML-Large-1.jpg" class="rounded" alt="Raw HTML" />
-      <h4 class="font-semibold mt-2">Raw HTML</h4>
-    </div>
-  </div>
-  <p class="mt-4 text-sm text-gray-600 italic">
-    Note: Premium templates are available with upgrade, but in Developer Mode you can customize and remove logos or charts on any template.
-  </p>
-</section>
 
     <!-- Friendly Mode Section -->
-<!-- Friendly Mode Section -->
-<div id="friendlySection" class="hidden">
-  <h2 class="text-3xl font-bold mb-4">PDF Templates (Friendly Mode)</h2>
-  <p class="text-lg mb-6">Choose a PDF layout that fits your needs. Visual previews help you pick your favorite. Premium templates require an upgrade.</p>
+    <div id="friendlySection" class="hidden">
+      <h2 class="text-3xl font-bold mb-4">PDF Templates (Friendly Mode)</h2>
+      <p class="text-lg mb-6">Choose a PDF layout that fits your needs. Visual previews help you pick your favorite. Premium templates require an upgrade.</p>
 
-  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-    <div class="relative border p-4 rounded-lg shadow bg-white">
-      <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
-      <img src="/demo/Recipe-Large.jpg" class="rounded" alt="Recipe" />
-      <h4 class="font-semibold mt-2">Recipe</h4>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <img src="/demo/Shop-Order.jpg" class="rounded" alt="Shop Order" />
+          <h4 class="font-semibold mt-2">Shop Order</h4>
+        </div>
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
+          <img src="/demo/Recipe-Large.jpg" class="rounded" alt="Recipe" />
+          <h4 class="font-semibold mt-2">Recipe</h4>
+        </div>
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <img src="/demo/Packing Slip.jpg" class="rounded" alt="Packing Slip" />
+          <h4 class="font-semibold mt-2">Packing Slip</h4>
+        </div>
+      </div>
+
+      <div class="mt-10 text-sm text-gray-600">
+        <p><strong>Note:</strong> Basic templates are available to all users. Premium templates are available to upgraded accounts and offer advanced styles, layout enhancements, and branding options.</p>
+      </div>
     </div>
-  </div>
-
-  <div class="mt-10 text-sm text-gray-600">
-    <p><strong>Note:</strong> Basic templates are available to all users. Premium templates are available to upgraded accounts and offer advanced styles, layout enhancements, and branding options.</p>
-  </div>
-</div>
-
-  <footer class="bg-white border-t mt-12">
-    <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-      &copy; 2025 PDFify. Built for creators and developers.
-    </div>
-  </footer>
+  </main>
 
   <script>
-    document.querySelectorAll("nav a").forEach(link => {
-      link.addEventListener("click", event => {
-        event.preventDefault();
-        const targetUrl = event.target.href;
-        document.getElementById("loadingOverlay").style.display = "flex";
-        if (targetUrl) {
-          setTimeout(() => { window.location.href = targetUrl; }, 500);
-        }
-      });
+    const developerBtn = document.getElementById('developerBtn');
+    const friendlyBtn = document.getElementById('friendlyBtn');
+    const developerSection = document.getElementById('developerSection');
+    const friendlySection = document.getElementById('friendlySection');
+
+    developerBtn.addEventListener('click', () => {
+      developerBtn.classList.add('bg-purple-700', 'text-white');
+      developerBtn.classList.remove('bg-gray-200', 'text-gray-800');
+      friendlyBtn.classList.add('bg-gray-200', 'text-gray-800');
+      friendlyBtn.classList.remove('bg-purple-700', 'text-white');
+
+      developerSection.classList.remove('hidden');
+      friendlySection.classList.add('hidden');
     });
 
-    window.addEventListener("load", () => {
-      document.getElementById("loadingOverlay").style.display = "none";
+    friendlyBtn.addEventListener('click', () => {
+      friendlyBtn.classList.add('bg-purple-700', 'text-white');
+      friendlyBtn.classList.remove('bg-gray-200', 'text-gray-800');
+      developerBtn.classList.add('bg-gray-200', 'text-gray-800');
+      developerBtn.classList.remove('bg-purple-700', 'text-white');
+
+      friendlySection.classList.remove('hidden');
+      developerSection.classList.add('hidden');
     });
 
-    const apiKey = localStorage.getItem("apiKey");
-    const userDashboardLink = document.getElementById("userDashboardLink");
-    userDashboardLink.href = apiKey ? `/user-dashboard?apiKey=${apiKey}` : "/login.html";
-
-    // Toggle between Developer and Friendly Modes
-    const devBtn = document.getElementById("developerBtn");
-    const friendlyBtn = document.getElementById("friendlyBtn");
-    const devSection = document.getElementById("developerSection");
-    const friendlySection = document.getElementById("friendlySection");
-
-    devBtn.addEventListener("click", () => {
-      devSection.classList.remove("hidden");
-      friendlySection.classList.add("hidden");
-      devBtn.classList.add("bg-purple-700", "text-white");
-      devBtn.classList.remove("bg-gray-200");
-      friendlyBtn.classList.remove("bg-purple-700", "text-white");
-      friendlyBtn.classList.add("bg-gray-200");
-    });
-
-    friendlyBtn.addEventListener("click", () => {
-      devSection.classList.add("hidden");
-      friendlySection.classList.remove("hidden");
-      friendlyBtn.classList.add("bg-purple-700", "text-white");
-      friendlyBtn.classList.remove("bg-gray-200");
-      devBtn.classList.remove("bg-purple-700", "text-white");
-      devBtn.classList.add("bg-gray-200");
-    });
+    // Initialize with Developer Mode visible
+    developerSection.classList.remove('hidden');
+    friendlySection.classList.add('hidden');
   </script>
-
-  <style>
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-  </style>
 </body>
 </html>
+
 
 
 
