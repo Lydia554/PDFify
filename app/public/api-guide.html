@@ -2,11 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>API Guide | PDFify</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .badge {
+      display: inline-block;
+      padding: 0.15em 0.5em;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: white;
+      user-select: none;
+      vertical-align: middle;
+    }
+    .badge-basic { background-color: #6b7280; }   /* gray-500 */
+    .badge-premium { background-color: #7c3aed; } /* purple-700 */
+    .badge-devonly { background-color: #db2777; } /* pink-600 */
+  </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
+
   <div id="loadingOverlay" class="fixed top-0 left-0 w-full h-full bg-white bg-opacity-80 z-50 hidden flex justify-center items-center">
     <div class="border-4 border-blue-200 border-l-blue-600 rounded-full w-10 h-10 animate-spin"></div>
   </div>
@@ -24,13 +40,18 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-6 py-12">
+
     <div class="flex justify-center mb-8">
-      <button id="developerBtn" class="px-4 py-2 rounded-l-md bg-purple-700 text-white hover:bg-purple-800">Developer Mode</button>
-      <button id="friendlyBtn" class="px-4 py-2 rounded-r-md bg-gray-200 text-gray-800 hover:bg-purple-100">Friendly Mode</button>
+      <button id="developerBtn" class="px-5 py-2 rounded-l-md bg-purple-700 text-white hover:bg-purple-800 focus:outline-none focus:ring-2 focus:ring-purple-500">
+        Developer Mode
+      </button>
+      <button id="friendlyBtn" class="px-5 py-2 rounded-r-md bg-gray-200 text-gray-800 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-purple-500">
+        Friendly Mode
+      </button>
     </div>
 
     <!-- Developer Mode Section -->
-    <div id="developerSection">
+    <section id="developerSection" class="">
       <h2 class="text-3xl font-bold mb-4">API Integration Guide (Developer Mode)</h2>
       <p class="text-lg mb-6">
         Learn how to use our PDF Generator API. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs from your data.
@@ -78,46 +99,72 @@
       </section>
 
       <!-- Existing PDF Previews (Developer Mode Only) -->
-      <section id="devPreviews"></section>
-    </div>
+      <section id="devPreviews" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="border p-4 rounded-lg shadow bg-white">
+          <img src="/demo/Invoice-Preview.png" alt="Invoice Template" class="rounded mb-2" />
+          <h4 class="font-semibold flex items-center justify-between">
+            Invoice <span class="badge badge-basic">Basic</span>
+          </h4>
+        </div>
+        <div class="border p-4 rounded-lg shadow bg-white">
+          <img src="/demo/RawHTML-Large-1.jpg" alt="Raw HTML Template" class="rounded mb-2" />
+          <h4 class="font-semibold flex items-center justify-between">
+            Raw HTML <span class="badge badge-devonly">Developer-only</span>
+          </h4>
+        </div>
+        <div class="border p-4 rounded-lg shadow bg-white">
+          <img src="/demo/Chart-Customization.png" alt="Chart Customization" class="rounded mb-2" />
+          <h4 class="font-semibold flex items-center justify-between">
+            Custom Charts <span class="badge badge-devonly">Developer-only</span>
+          </h4>
+        </div>
+      </section>
+    </section>
 
     <!-- Friendly Mode Section -->
-    <div id="friendlySection" class="hidden">
+    <section id="friendlySection" class="hidden">
       <h2 class="text-3xl font-bold mb-4">PDF Templates (Friendly Mode)</h2>
-      <p class="text-lg mb-6">Choose a PDF layout that fits your needs. Visual previews help you pick your favorite. Premium templates require an upgrade.</p>
+      <p class="text-lg mb-6">
+        Choose a PDF layout that fits your needs. Visual previews help you pick your favorite. Premium templates require an upgrade.
+      </p>
 
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <div class="border p-4 rounded-lg shadow bg-white">
-          <img src="/demo/Shop-Order.jpg" class="rounded mb-2" alt="Shop Order" />
-          <h4 class="font-semibold">Shop Order (Basic)</h4>
+          <img src="/demo/Shop-Order.jpg" alt="Shop Order" class="rounded mb-2" />
+          <h4 class="font-semibold flex items-center justify-between">
+            Shop Order <span class="badge badge-basic">Basic</span>
+          </h4>
         </div>
         <div class="border p-4 rounded-lg shadow bg-white">
-          <img src="/demo/Recipe-Large.jpg" class="rounded mb-2" alt="Recipe" />
-          <h4 class="font-semibold">Recipe (Premium)</h4>
+          <img src="/demo/Recipe-Large.jpg" alt="Recipe" class="rounded mb-2" />
+          <h4 class="font-semibold flex items-center justify-between">
+            Recipe <span class="badge badge-premium">Premium</span>
+          </h4>
         </div>
         <div class="border p-4 rounded-lg shadow bg-white">
-          <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded mb-2" alt="Therapy Report" />
-          <h4 class="font-semibold">Therapy Report (Basic)</h4>
+          <img src="/demo/Therapy-Report-Large-1.jpg" alt="Therapy Report" class="rounded mb-2" />
+          <h4 class="font-semibold flex items-center justify-between">
+            Therapy Report <span class="badge badge-basic">Basic</span>
+          </h4>
         </div>
         <div class="border p-4 rounded-lg shadow bg-white">
-          <img src="/demo/RawHTML-Large-1.jpg" class="rounded mb-2" alt="Raw HTML" />
-          <h4 class="font-semibold">Raw HTML (Developer-only)</h4>
-        </div>
-        <div class="border p-4 rounded-lg shadow bg-white">
-          <img src="/demo/Packing Slip.jpg" class="rounded mb-2" alt="Packing Slip" />
-          <h4 class="font-semibold">Packing Slip (Basic)</h4>
+          <img src="/demo/Packing Slip.jpg" alt="Packing Slip" class="rounded mb-2" />
+          <h4 class="font-semibold flex items-center justify-between">
+            Packing Slip <span class="badge badge-basic">Basic</span>
+          </h4>
         </div>
       </div>
 
       <div class="mt-10 text-sm text-gray-600">
         <p><strong>Note:</strong> Basic templates are available to all users. Premium templates are available to upgraded accounts and offer advanced styles, layout enhancements, and branding options.</p>
       </div>
-    </div>
+    </section>
 
     <section class="mt-16">
       <h3 class="text-2xl font-semibold text-purple-700 mb-2">📹 Coming Soon: Video Demo</h3>
       <p class="text-base">We’re working on a short tutorial video showing how to generate PDFs in under 3 minutes. Stay tuned!</p>
     </section>
+
   </main>
 
   <footer class="bg-white border-t mt-12">
@@ -127,6 +174,7 @@
   </footer>
 
   <script>
+    // Navigation links loading overlay
     document.querySelectorAll("nav a").forEach(link => {
       link.addEventListener("click", event => {
         event.preventDefault();
@@ -142,6 +190,7 @@
       document.getElementById("loadingOverlay").style.display = "none";
     });
 
+    // User dashboard link with API key
     const apiKey = localStorage.getItem("apiKey");
     const userDashboardLink = document.getElementById("userDashboardLink");
     userDashboardLink.href = apiKey ? `/user-dashboard?apiKey=${apiKey}` : "/login.html";
@@ -152,24 +201,36 @@
     const devSection = document.getElementById("developerSection");
     const friendlySection = document.getElementById("friendlySection");
 
-    devBtn.addEventListener("click", () => {
+    function activateDeveloperMode() {
       devSection.classList.remove("hidden");
       friendlySection.classList.add("hidden");
+
       devBtn.classList.add("bg-purple-700", "text-white");
       devBtn.classList.remove("bg-gray-200");
       friendlyBtn.classList.remove("bg-purple-700", "text-white");
       friendlyBtn.classList.add("bg-gray-200");
-    });
+    }
 
-    friendlyBtn.addEventListener("click", () => {
+    function activateFriendlyMode() {
       devSection.classList.add("hidden");
       friendlySection.classList.remove("hidden");
+
       friendlyBtn.classList.add("bg-purple-700", "text-white");
       friendlyBtn.classList.remove("bg-gray-200");
       devBtn.classList.remove("bg-purple-700", "text-white");
       devBtn.classList.add("bg-gray-200");
-    });
+    }
+
+    devBtn.addEventListener("click", activateDeveloperMode);
+    friendlyBtn.addEventListener("click", activateFriendlyMode);
+
+    // Start in Developer Mode by default
+    activateDeveloperMode();
   </script>
+
+</body>
+</html>
+
 
   <style>
     @keyframes spin {

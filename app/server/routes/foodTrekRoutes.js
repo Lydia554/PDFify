@@ -128,19 +128,20 @@ function generateRecipeHtml(data) {
       }
 
           /* Watermark */
-   .watermark {
+.watermark {
   position: fixed;
-  top: 40%;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) rotate(-30deg);
   font-size: 6rem;
   font-weight: 700;
-  color: #eee;
-  opacity: 0.05;
   font-family: 'Playfair Display', serif;
+  color: rgba(0, 0, 0, 0.05);
   pointer-events: none;
-  z-index: -1;
+  user-select: none;
+  z-index: 0;
 }
+
 
 
       .meta-item {
@@ -447,6 +448,7 @@ router.post('/premium-recipe', async (req, res) => {
     const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.evaluateHandle('document.fonts.ready');
 
 
     await page.pdf({
