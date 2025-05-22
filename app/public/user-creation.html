@@ -54,63 +54,68 @@
       const password = document.getElementById("password").value.trim();
       const result = document.getElementById("result");
   
-      
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
- 
       const passwordRegex = /^(?=.*[0-9]).{8,}$/;
   
       if (!email || !password) {
-        result.innerText = "Please enter both email and password.";
-        result.className = "result error";
-        result.style.display = "block";
+        showResult("Please enter both email and password.", "error");
         return;
       }
   
       if (!emailRegex.test(email)) {
-        result.innerText = "Invalid email format.";
-        result.className = "result error";
-        result.style.display = "block";
+        showResult("Invalid email format.", "error");
         return;
       }
   
       if (!passwordRegex.test(password)) {
-        result.innerText = "Password must be at least 8 characters long and include at least one number.";
-        result.className = "result error";
-        result.style.display = "block";
+        showResult("Password must be at least 8 characters long and include at least one number.", "error");
         return;
       }
   
       try {
         const response = await axios.post(`/api/user/user-creation`, { email, password });
-        result.innerText = `🎉 Success: ${response.data.message}`;
-        result.className = "result success";
-        result.style.display = "block";
   
-        setTimeout(() => {
-          window.location.href = response.data.redirect;
-        }, 2000);
+        const message = response.data.message || "Account created successfully.";
+        const redirect = response.data.redirect || "/login.html";
+  
+        if (message.includes("previously deleted")) {
+          showResult(`🔁 ${message}`, "success");
+          setTimeout(() => {
+            window.location.href = redirect;
+          }, 3000);
+        } else {
+          showResult(`🎉 Success: ${message}`, "success");
+          setTimeout(() => {
+            window.location.href = redirect;
+          }, 2000);
+        }
+  
       } catch (error) {
-        result.innerText = `❌ Error: ${error.response?.data?.error || "Something went wrong"}`;
-        result.className = "result error";
-        result.style.display = "block";
+        const errMsg = error.response?.data?.error || "Something went wrong";
+        showResult(`❌ Error: ${errMsg}`, "error");
       }
     });
+  
+    function showResult(msg, type) {
+      const result = document.getElementById("result");
+      result.innerText = msg;
+      result.className = "result " + type;
+      result.style.display = "block";
+    }
   
     window.addEventListener("load", () => {
       const loadingOverlay = document.getElementById("loadingOverlay");
       loadingOverlay.style.display = "none";
       console.log("Spinner hidden on page load");
     });
-
-
+  
     window.addEventListener("pageshow", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none";
-  console.log("Spinner hidden on page show (e.g., back navigation)");
-});
-
-
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "none";
+      console.log("Spinner hidden on page show (e.g., back navigation)");
+    });
   </script>
+  
   
 
   <style>
