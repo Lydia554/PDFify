@@ -1,181 +1,119 @@
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API Guide | PDFify</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDFify API Guide</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
-  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
-  </div>
+<body class="bg-gray-50 text-gray-800">
+  <main class="max-w-5xl mx-auto p-6">
+    <h1 class="text-4xl font-bold mb-6 text-center text-purple-700">📄 PDFify API Guide</h1>
 
-  <header class="bg-white shadow">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-purple-700">PDFify</h1>
-      <nav class="space-x-4">
-        <a href="/" class="text-gray-600 hover:text-purple-600">Home</a>
-        <a href="#" id="userDashboardLink" class="text-gray-600 hover:text-purple-600">Dashboard</a>
-        <a href="#" class="text-purple-700 font-semibold">API Docs</a>
-        <a href="/pdf-generator-demo" class="text-gray-600 hover:text-purple-600">📄 PDF Generator</a>
-      </nav>
+    <!-- Toggle Buttons -->
+    <div class="flex justify-center mb-6">
+      <button onclick="switchMode('dev')" class="toggle-btn px-4 py-2 rounded-l bg-purple-600 text-white">Developer Mode</button>
+      <button onclick="switchMode('friendly')" class="toggle-btn px-4 py-2 rounded-r bg-gray-200 hover:bg-gray-300">Friendly Mode</button>
     </div>
-  </header>
 
-  <main class="max-w-4xl mx-auto px-6 py-12">
-    <h2 class="text-3xl font-bold mb-4">API Integration Guide</h2>
-    <p class="text-lg mb-6">
-      Learn how to use our PDF Generator API. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs from your data.
-    </p>
-
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">🛍️ What Can You Do With It?</h3>
-      <ul class="list-disc pl-6 text-base space-y-1">
-        <li>Generate product information sheets directly from your data</li>
-        <li>Create downloadable invoices for orders</li>
-        <li>Print shipping labels or packing slips</li>
-        <li>Design custom PDFs for gift cards or marketing inserts</li>
-      </ul>
-    </section>
-
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">⚙️ How It Works</h3>
-      <p class="text-lg mb-4">
-        Follow these simple steps to generate your PDFs using structured JSON data or raw HTML content:
-      </p>
-      <ol class="list-decimal pl-6 text-base space-y-4">
-        <li>
-          <strong>Step 1: Prepare Your JSON or Raw HTML</strong>
-          <p class="text-base">You can either provide structured JSON data (such as product details, orders, customer data, etc.) or create raw HTML content that you'd like to convert into a PDF.</p>
-        </li>
-        <li>
-          <strong>Step 2: Upload Data or HTML to PDF Generator</strong>
-          <p class="text-base">Upload your JSON data or raw HTML file to the PDF Generator interface. For JSON, the system will parse the data and automatically generate the PDF based on the selected template. For raw HTML, the system will directly convert the HTML into a styled PDF document.</p>
-        </li>
-        <li>
-          <strong>Step 3: Choose a PDF Template or Customize Layout</strong>
-          <p class="text-base">Select a pre-designed PDF template, or, if you’re uploading raw HTML, you can specify any custom styles or layout adjustments in your HTML code. Our system will keep your styles intact when generating the PDF.</p>
-        </li>
-        <li>
-          <strong>Step 4: Download Your PDF</strong>
-          <p class="text-base">Once the PDF is generated, click 'Generate' and download your PDF. Whether you're using structured data or raw HTML, the result will be a ready-to-use PDF document that you can print, email, or store digitally.</p>
-        </li>
+    <!-- Developer Mode Section -->
+    <div id="devMode" class="mode-section">
+      <h2 class="text-2xl font-semibold mb-4">🛠 Developer Mode</h2>
+      <p class="mb-4">Use our JSON or raw HTML endpoints to generate PDF files. Here's how to use them:</p>
+      <ol class="list-decimal list-inside space-y-2">
+        <li>Choose a template endpoint (e.g. <code>/generate/invoice</code>).</li>
+        <li>POST your JSON payload with required fields.</li>
+        <li>Receive a downloadable PDF file URL in the response.</li>
       </ol>
-    </section>
 
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">📁 Example PDF Downloads</h3>
-      <p class="mb-2">Preview some example PDFs:</p>
-      <ul class="list-disc pl-6">
-        <li><a href="/demo/Shop Order.pdf" class="text-blue-600 hover:underline">Sample Shop Order Invoice</a></li>
-        <img src="/demo/Shop-Order.jpg" alt="Sample Invoice Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
-      </ul>
-    </section>
+      <div class="bg-yellow-100 border border-yellow-300 p-4 rounded mt-6">
+        <h4 class="text-lg font-semibold text-yellow-700">💡 Developer Premium Features</h4>
+        <ul class="list-disc pl-5 text-sm mt-2 text-yellow-800">
+          <li>Generate up to <strong>1000 PDF pages/month</strong></li>
+          <li>Remove or customize the PDFify logo</li>
+          <li>Add or remove chart components in raw HTML mode</li>
+          <li>Fully control layout via custom HTML/CSS</li>
+        </ul>
+      </div>
+    </div>
 
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">📄 Recipe PDF</h3>
-      <p class="mb-2">Preview a recipe PDF generated from your data:</p>
-      <ul class="list-disc pl-6">
-        <li><a href="/demo/Recipe.pdf" class="text-blue-600 hover:underline">Sample Recipe PDF</a></li>
-        <img src="/demo/Recipe-Large.jpg" alt="Recipe PDF Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
-      </ul>
-    </section>
+    <!-- Friendly Mode Section -->
+    <div id="friendlyMode" class="mode-section hidden">
+      <h2 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Explore Our PDF Templates</h2>
+      <div class="grid gap-6 sm:grid-cols-2">
 
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">📄 Therapy Report PDF</h3>
-      <p class="mb-2">Preview a therapy report PDF generated from your data:</p>
-      <ul class="list-disc pl-6">
-        <li><a href="/demo/Therapy Report.pdf" class="text-blue-600 hover:underline">Sample Therapy Report PDF</a></li>
-        <img src="/demo/Therapy-Report-Large-1.jpg" alt="Therapy Report PDF Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
-        <img src="/demo/Therapy-Report-Large-2.jpg" alt="Therapy Report PDF Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
-      </ul>
-    </section>
+        <!-- Invoice Card -->
+        <div class="bg-white border rounded shadow p-4">
+          <h4 class="font-semibold text-lg mb-1">Invoice</h4>
+          <span class="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded">Basic</span>
+          <img src="/demo/Shop-Order.jpg" alt="Invoice Preview" class="my-3 rounded border">
+          <p class="text-sm mb-2">Generate clean and printable invoices from your order data.</p>
+          <a href="/demo/Shop Order.pdf" target="_blank" class="text-blue-600 hover:underline">Preview PDF</a>
+        </div>
 
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">📄 Raw Html</h3>
-      <p class="mb-2">Preview a Raw Html PDF generated from your data:</p>
-      <ul class="list-disc pl-6">
-        <li><a href="/demo/Raw HTML.pdf" class="text-blue-600 hover:underline">Sample Raw Html PDF</a></li>
-        <img src="/demo/RawHTML-Large-1.jpg" alt="Raw HTML PDF Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
-      </ul>
-    </section>
+        <!-- Recipe Card -->
+        <div class="bg-white border rounded shadow p-4">
+          <h4 class="font-semibold text-lg mb-1">Recipe</h4>
+          <span class="inline-block px-2 py-1 text-xs bg-purple-100 text-purple-700 rounded">Premium</span>
+          <img src="/demo/Recipe-Large.jpg" alt="Recipe Preview" class="my-3 rounded border">
+          <p class="text-sm mb-2">Turn recipe data into beautifully styled, printable PDFs.</p>
+          <a href="/demo/Recipe.pdf" target="_blank" class="text-blue-600 hover:underline">Preview PDF</a>
+        </div>
 
-    
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">📄 Packing Slip</h3>
-      <p class="mb-2">Preview some example PDFs:</p>
-      <ul class="list-disc pl-6">
-        <li><a href="/demo/Packing Slip.pdf" class="text-blue-600 hover:underline">Sample Packing Slip</a></li>
-        <img src="/demo/Packing Slip.jpg" alt="Sample Invoice Preview" class="mt-3 rounded shadow-md w-full sm:w-2/3 mx-auto border" />
-      </ul>
-    </section>
-  
+        <!-- Therapy Report Card -->
+        <div class="bg-white border rounded shadow p-4">
+          <h4 class="font-semibold text-lg mb-1">Therapy Report</h4>
+          <span class="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded">Basic</span>
+          <img src="/demo/Therapy-Report.jpg" alt="Therapy Report Preview" class="my-3 rounded border">
+          <p class="text-sm mb-2">Summarize patient care sessions and generate printable therapy reports.</p>
+          <a href="/demo/Therapy Report.pdf" target="_blank" class="text-blue-600 hover:underline">Preview PDF</a>
+        </div>
 
+        <!-- Packing Slip Card -->
+        <div class="bg-white border rounded shadow p-4">
+          <h4 class="font-semibold text-lg mb-1">Packing Slip</h4>
+          <span class="inline-block px-2 py-1 text-xs bg-green-100 text-green-700 rounded">Basic</span>
+          <img src="/demo/Packing-Slip.jpg" alt="Packing Slip Preview" class="my-3 rounded border">
+          <p class="text-sm mb-2">Automatically generate packing slips for your e-commerce shipments.</p>
+          <a href="/demo/Packing Slip.pdf" target="_blank" class="text-blue-600 hover:underline">Preview PDF</a>
+        </div>
+      </div>
 
-
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-2 text-purple-700">📹 Coming Soon: Video Demo</h3>
-      <p class="text-base">We’re working on a short tutorial video showing how to generate PDFs in under 3 minutes. Stay tuned!</p>
-    </section>
+      <div class="bg-purple-100 border border-purple-300 p-4 rounded mt-8">
+        <h4 class="text-lg font-semibold text-purple-800">💎 Premium Perks (Friendly Mode)</h4>
+        <ul class="list-disc pl-5 text-sm mt-2 text-purple-800">
+          <li>Use Premium Templates with enhanced design</li>
+          <li>Priority PDF rendering</li>
+          <li>Access future template types as they are released</li>
+        </ul>
+      </div>
+    </div>
   </main>
 
-  <footer class="bg-white border-t mt-12">
-    <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-      &copy; 2025 PDFify. Built for creators and developers.
-    </div>
-  </footer>
+  <script>
+    function switchMode(mode) {
+      const devMode = document.getElementById("devMode");
+      const friendlyMode = document.getElementById("friendlyMode");
+      const buttons = document.querySelectorAll(".toggle-btn");
 
-<script>
-document.querySelectorAll("nav a").forEach((link) => {
-  link.addEventListener("click", (event) => {
-    event.preventDefault(); 
-    const targetUrl = event.target.href; 
-
-    const loadingOverlay = document.getElementById("loadingOverlay");
-    loadingOverlay.style.display = "flex"; 
-
-    if (!targetUrl) {
-      loadingOverlay.style.display = "none"; 
-      return;
+      if (mode === "dev") {
+        devMode.classList.remove("hidden");
+        friendlyMode.classList.add("hidden");
+        buttons[0].classList.add("bg-purple-600", "text-white");
+        buttons[1].classList.remove("bg-purple-600", "text-white");
+        buttons[1].classList.add("bg-gray-200");
+      } else {
+        friendlyMode.classList.remove("hidden");
+        devMode.classList.add("hidden");
+        buttons[1].classList.add("bg-purple-600", "text-white");
+        buttons[0].classList.remove("bg-purple-600", "text-white");
+        buttons[0].classList.add("bg-gray-200");
+      }
     }
+  </script>
+</body>
+</html>
 
-    setTimeout(() => {
-      window.location.href = targetUrl; 
-    }, 500); 
-  });
-});
-
-window.addEventListener("load", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none"; 
-});
-
-const apiKey = localStorage.getItem("apiKey");
-const userDashboardLink = document.getElementById("userDashboardLink");
-
-if (apiKey) {
-  userDashboardLink.href = `/user-dashboard?apiKey=${apiKey}`;
-} else {
-  userDashboardLink.href = "/login.html"; 
-}
-
-window.addEventListener("load", () => {
-    const loadingOverlay = document.getElementById("loadingOverlay");
-    loadingOverlay.style.display = "none";
-    console.log("Spinner hidden on page load");
-  });
-
-
-  window.addEventListener("pageshow", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none";
-  console.log("Spinner hidden on page show (e.g., back navigation)");
-});
-
-</script>
 
 <style>
   @keyframes spin {

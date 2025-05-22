@@ -127,6 +127,23 @@ function generateRecipeHtml(data) {
         margin-bottom: 30px;
       }
 
+          /* Watermark */
+        body::before {
+          content: "Food Trek";
+          position: fixed;
+          top: 40%;
+          left: 50%;
+          font-size: 6rem;
+          font-weight: 700;
+          color: #eee;
+          opacity: 0.05;
+          transform: translate(-50%, -50%) rotate(-30deg);
+          pointer-events: none;
+          user-select: none;
+          z-index: 0;
+          font-family: 'Playfair Display', serif;
+        }
+
       .meta-item {
         background: #fff3e0;
         box-shadow: 0 4px 10px rgba(255, 152, 0, 0.3);
