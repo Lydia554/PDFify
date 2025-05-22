@@ -358,7 +358,7 @@ function generateRecipeHtml(data) {
     <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" />
   </header>
 
-
+<div class="watermark">Food Trek</div>
   <div class="container">
     <h1>${parsedData.recipeName || 'Recipe'}</h1>
 
