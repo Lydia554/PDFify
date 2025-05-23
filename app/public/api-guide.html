@@ -189,6 +189,46 @@
     </div>
       
 
+
+    <section class="mb-10">
+      <h3 class="text-2xl font-semibold mb-4 text-purple-700">API Usage Examples</h3>
+      <div class="flex space-x-4 mb-4">
+        <button id="devCurlBtn" class="px-4 py-2 rounded bg-purple-700 text-white hover:bg-purple-800">cURL</button>
+        <button id="devFetchBtn" class="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-400">fetch</button>
+      </div>
+      
+      <pre id="devCurlExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+    curl -X POST "https://api.pdfify.com/generate" \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer YOUR_API_KEY" \
+    -d '{"template":"invoice","data":{...}}' --output result.pdf
+      </pre>
+    
+      <pre id="devFetchExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto hidden">
+    fetch('https://api.pdfify.com/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer YOUR_API_KEY'
+      },
+      body: JSON.stringify({ template: 'invoice', data: { /*...*/ } })
+    })
+    .then(res => res.blob())
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'result.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+      </pre>
+    </section>
+
+
+
+
     <!-- Friendly Mode Section -->
     <div id="friendlySection" class="hidden">
       <h2 class="text-3xl font-bold mb-4">PDF Templates (Friendly Mode)</h2>
@@ -216,6 +256,41 @@
         <p><strong>Note:</strong> Basic templates are available to all users. Premium templates are available to upgraded accounts and offer advanced styles, layout enhancements, and branding options.</p>
         
       </div>
+
+
+      <section class="mb-10">
+        <h3 class="text-2xl font-semibold mb-4 text-purple-700">API Usage Examples</h3>
+        <div class="flex space-x-4 mb-4">
+          <button id="friendlyCurlBtn" class="px-4 py-2 rounded bg-purple-700 text-white hover:bg-purple-800">cURL</button>
+          <button id="friendlyFetchBtn" class="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-400">fetch</button>
+        </div>
+        
+        <pre id="friendlyCurlExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
+      curl -X POST "https://api.pdfify.com/generate" \
+      -H "Content-Type: application/json" \
+      -d '{"template":"shop-order","data":{...}}' --output result.pdf
+        </pre>
+      
+        <pre id="friendlyFetchExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto hidden">
+      fetch('https://api.pdfify.com/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ template: 'shop-order', data: { /*...*/ } })
+      })
+      .then(res => res.blob())
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'result.pdf';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+        </pre>
+      </section>
+
+
     </div>
   </main>
 
@@ -255,6 +330,59 @@
     // Initialize with Developer Mode visible
     developerSection.classList.remove('hidden');
     friendlySection.classList.add('hidden');
+
+
+
+// Developer Mode toggles
+const devCurlBtn = document.getElementById('devCurlBtn');
+const devFetchBtn = document.getElementById('devFetchBtn');
+const devCurlExample = document.getElementById('devCurlExample');
+const devFetchExample = document.getElementById('devFetchExample');
+
+devCurlBtn.addEventListener('click', () => {
+  devCurlBtn.classList.add('bg-purple-700', 'text-white');
+  devCurlBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  devFetchBtn.classList.remove('bg-purple-700', 'text-white');
+  devFetchBtn.classList.add('bg-gray-200', 'text-gray-800');
+  devCurlExample.classList.remove('hidden');
+  devFetchExample.classList.add('hidden');
+});
+
+devFetchBtn.addEventListener('click', () => {
+  devFetchBtn.classList.add('bg-purple-700', 'text-white');
+  devFetchBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  devCurlBtn.classList.remove('bg-purple-700', 'text-white');
+  devCurlBtn.classList.add('bg-gray-200', 'text-gray-800');
+  devFetchExample.classList.remove('hidden');
+  devCurlExample.classList.add('hidden');
+});
+
+// Friendly Mode toggles
+const friendlyCurlBtn = document.getElementById('friendlyCurlBtn');
+const friendlyFetchBtn = document.getElementById('friendlyFetchBtn');
+const friendlyCurlExample = document.getElementById('friendlyCurlExample');
+const friendlyFetchExample = document.getElementById('friendlyFetchExample');
+
+friendlyCurlBtn.addEventListener('click', () => {
+  friendlyCurlBtn.classList.add('bg-purple-700', 'text-white');
+  friendlyCurlBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  friendlyFetchBtn.classList.remove('bg-purple-700', 'text-white');
+  friendlyFetchBtn.classList.add('bg-gray-200', 'text-gray-800');
+  friendlyCurlExample.classList.remove('hidden');
+  friendlyFetchExample.classList.add('hidden');
+});
+
+friendlyFetchBtn.addEventListener('click', () => {
+  friendlyFetchBtn.classList.add('bg-purple-700', 'text-white');
+  friendlyFetchBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  friendlyCurlBtn.classList.remove('bg-purple-700', 'text-white');
+  friendlyCurlBtn.classList.add('bg-gray-200', 'text-gray-800');
+  friendlyFetchExample.classList.remove('hidden');
+  friendlyCurlExample.classList.add('hidden');
+});
+
+
+
 
   
   function toggleImage(container) {
