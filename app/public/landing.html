@@ -9,21 +9,9 @@
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
 
-  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; justify-content: center; align-items: center;">
+  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
     <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
   </div>
-  
-  <header class="bg-white shadow">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-2xl font-bold text-purple-700">PDFify</h1>
-      <nav class="space-x-4">
-        <a href="/" class="text-gray-600 hover:text-purple-600">Home</a>
-        <a href="#" class="text-purple-700 font-semibold">API Docs</a>
-      </nav>
-    </div>
-  </header>
-
-  
   <!-- Hero -->
   <section class="bg-white py-16 text-center shadow">
     <div class="max-w-3xl mx-auto">
@@ -36,17 +24,17 @@
     </div>
   </section>
 
-<!-- How it works -->
-<section class="py-16 bg-gray-100">
-  <div class="max-w-4xl mx-auto px-4">
-    <h2 class="text-2xl font-bold mb-6 text-center">How It Works</h2>
-    <ol class="space-y-4 text-lg text-gray-700">
-      <li class="list">1. Register and get your unique API token.</li>
-      <li class="list">2. Send HTML content via our API endpoint.</li>
-      <li class="list">3. Receive a downloadable PDF in response.</li>
-    </ol>
-</section>
-
+  <!-- How it works -->
+  <section class="py-16 bg-gray-100">
+    <div class="max-w-4xl mx-auto px-4">
+      <h2 class="text-2xl font-bold mb-6 text-center">How It Works</h2>
+      <ol class="space-y-4 text-lg text-gray-700">
+        <li class="list">1. Register and get your unique API token.</li>
+        <li class="list">2. Send HTML content via our API endpoint.</li>
+        <li class="list">3. Receive a downloadable PDF in response.</li>
+      </ol>
+    </div>
+  </section>
 
   <section class="py-16">
     <div class="max-w-4xl mx-auto px-4 text-center">
@@ -56,305 +44,6 @@
       <a href="/demo/Invoice.pdf" class="mt-4 inline-block text-blue-600 hover:underline text-sm">Download PDF</a>
     </div>
   </section>
-  
-<!-- Toggle Tabs -->
-<div class="flex flex-col items-center mt-8">
-  <div class="flex">
-    <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
-    <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
-  </div>
-
-  <!-- Developer Sub-Tabs -->
-  <div id="devSubTabs" class="flex mt-4 hidden">
-    <button class="px-4 py-1 border border-gray-300 bg-white text-sm text-gray-800 rounded-l hover:bg-gray-100">JavaScript</button>
-
-    <button id="terminalModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r shadow hover:bg-gray-300 transition-all">Terminal</button>
-  </div>
-</div>
-
-<!-- FRIENDLY MODE SECTION -->
-<section id="userSection" class="py-16">
-  <div class="max-w-3xl mx-auto text-center px-4">
-    <h2 class="text-2xl font-bold mb-4">Generate Beautiful PDFs Without Writing a Single Line of Code</h2>
-    <p class="text-lg mb-6">
-      Select a template, fill out a simple form, and download a polished PDF in seconds. Whether it's a recipe, invoice, or report—no coding or formatting required.
-    </p>
-  </div>
-</section>
-
-<section id="devCodeSection" class="py-16 bg-gray-100 max-w-none w-full space-y-16">
-
-  <!-- Packing Slip -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
-
-<div class="js-group">
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      orderId: "98765",
-      customerName: "John Smith",
-      shippingAddress: "1234 Maple Street, Springfield, USA",
-      date: "2025-05-14",
-      items: [
-        { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
-        { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
-        { name: "Water Bottle", sku: "WB-003", quantity: 3 }
-      ]
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "PackingSlip_98765.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-  </div>
-
-  <div class="terminal-group hidden">
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "title": "Order #1234",
-  "customer": "Jane Doe",
-  "items": [
-    {"name": "Shirt", "quantity": 2, "price": 24.99}
-  ]
-}' --output packing-slip.pdf
-    </pre>
-  </div>
-
-  <!-- Invoice -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
-    <div class="js-group">
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      invoiceNumber: "INV-2025-001",
-      date: "2025-05-20",
-      billTo: "Acme Corp",
-      items: [
-        { description: "Consulting", quantity: 10, price: 100 },
-        { description: "Development", quantity: 20, price: 80 }
-      ],
-      total: 2600
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Invoice_INV-2025-001.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-  </div>
-
-  <div class="terminal-group hidden">
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "invoiceNumber": "INV-2025-001",
-  "date": "2025-05-20",
-  "billTo": "Acme Corp",
-  "items": [
-    {"description": "Consulting", "quantity": 10, "price": 100},
-    {"description": "Development", "quantity": 20, "price": 80}
-  ],
-  "total": 2600
-}' --output invoice.pdf
-    </pre>
-  </div>
-
-  <!-- Recipe -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
-    <div class="js-group">
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      title: "Chocolate Cake",
-      author: "Kate Brown",
-      servings: 8,
-      ingredients: [
-        "200g flour",
-        "100g sugar",
-        "50g cocoa powder",
-        "3 eggs"
-      ],
-      instructions: [
-        "Mix ingredients",
-        "Bake for 30 minutes at 180°C"
-      ]
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Recipe_Chocolate_Cake.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-    </div>
-
-    <div class="terminal-group hidden">
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "title": "Chocolate Cake",
-  "author": "Lidija Jokić",
-  "servings": 8,
-  "ingredients": [
-    "200g flour",
-    "100g sugar",
-    "50g cocoa powder",
-    "3 eggs"
-  ],
-  "instructions": [
-    "Mix ingredients",
-    "Bake for 30 minutes at 180°C"
-  ]
-}' --output recipe.pdf
-    </pre>
-  </div>
-
-  <!-- Therapy Report -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
-    <div class="js-group">
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      patientName: "Anna Lee",
-      date: "2025-05-20",
-      therapist: "Dr. Smith",
-      notes: "Patient is progressing well."
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "TherapyReport_Anna_Lee.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-    </div>
-
-    <div class="terminal-group hidden">
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "patientName": "Anna Lee",
-  "date": "2025-05-20",
-  "therapist": "Dr. Smith",
-  "notes": "Patient is progressing well."
-}' --output therapy-report.pdf
-    </pre>
-  </div>
-
-  <!-- Raw HTML -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Raw HTML</h3>
-    <div class="js-group">
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    html: "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a PDF generated from raw HTML.&lt;/p&gt;"
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "RawHTML.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-    </div>
-
-    <div class="terminal-group hidden">
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "html": "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a PDF generated from raw HTML.&lt;/p&gt;"
-}' --output raw-html.pdf
-    </pre>
-  </div>
-
-</section>
 
 
 
@@ -414,206 +103,78 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 </body>
 </html>
 
+
+
 <script>
+ 
 
-document.addEventListener("DOMContentLoaded", () => {
-    const userModeBtn = document.getElementById("userModeBtn");
-    const devModeBtn = document.getElementById("devModeBtn");
-    const devSubTabs = document.getElementById("devSubTabs");
-    const userSection = document.getElementById("userSection");
-    const devCodeSection = document.getElementById("devCodeSection");
+document.getElementById("signUpButton").addEventListener("click", (event) => {
+  event.preventDefault();
+  const targetUrl = event.target.href;
 
-    // Developer sub tab buttons
-    const devSubTabButtons = Array.from(devSubTabs.querySelectorAll("button"));
-    // Code groups for JS and terminal
-    const jsGroups = Array.from(document.querySelectorAll(".js-group"));
-    const terminalGroups = Array.from(document.querySelectorAll(".terminal-group"));
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "flex"; 
+  console.log("Spinner shown for Sign Up button");
 
-    // Initialize: show user mode, hide dev mode section and sub-tabs
-    function showUserMode() {
-      userSection.style.display = "block";
-      devCodeSection.style.display = "none";
-      devSubTabs.classList.add("hidden");
-      userModeBtn.classList.add("bg-blue-600", "text-white");
-      userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
-      devModeBtn.classList.remove("bg-blue-600", "text-white");
-      devModeBtn.classList.add("bg-gray-200", "text-gray-800");
-    }
+  setTimeout(() => {
+    console.log("Navigating to:", targetUrl);
+    window.location.href = targetUrl; 
+  }, 500); 
+});
 
-    // Show developer mode + show dev sub-tabs + default to JS tab
-    function showDevMode() {
-      userSection.style.display = "none";
-      devCodeSection.style.display = "block";
-      devSubTabs.classList.remove("hidden");
-      devModeBtn.classList.add("bg-blue-600", "text-white");
-      devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
-      userModeBtn.classList.remove("bg-blue-600", "text-white");
-      userModeBtn.classList.add("bg-gray-200", "text-gray-800");
-      activateDevSubTab("JavaScript");
-    }
+document.getElementById("loginButton").addEventListener("click", (event) => {
+  event.preventDefault();
+  const targetUrl = event.target.href;
 
-    // Activate developer sub tab: "JavaScript" or "Terminal"
-    function activateDevSubTab(tabName) {
-      devSubTabButtons.forEach(btn => {
-        if (btn.textContent.includes(tabName)) {
-          btn.classList.add("bg-gray-200", "text-gray-800");
-          btn.classList.remove("bg-white");
-        } else {
-          btn.classList.remove("bg-gray-200", "text-gray-800");
-          btn.classList.add("bg-white");
-        }
-      });
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "flex"; 
+  console.log("Spinner shown for Login button");
 
-      // Show/hide code groups accordingly
-      if (tabName === "JavaScript") {
-        jsGroups.forEach(el => el.style.display = "block");
-        terminalGroups.forEach(el => el.style.display = "none");
-      } else if (tabName === "Terminal") {
-        jsGroups.forEach(el => el.style.display = "none");
-        terminalGroups.forEach(el => el.style.display = "block");
-      }
-    }
-
-    // Set initial state: user mode active
-    showUserMode();
-
-    // Event listeners for user/dev toggle buttons
-    userModeBtn.addEventListener("click", showUserMode);
-    devModeBtn.addEventListener("click", showDevMode);
-
-    // Event listeners for developer sub-tabs
-    devSubTabButtons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        if (btn.textContent.includes("JavaScript")) {
-          activateDevSubTab("JavaScript");
-        } else if (btn.textContent.includes("Terminal")) {
-          activateDevSubTab("Terminal");
-        }
-      });
-    });
-  
-
-
-
-    ["signUpButton", "loginButton"].forEach(id => {
-  const btn = document.getElementById(id);
-  if (btn) {
-    btn.addEventListener("click", (event) => {
-      event.preventDefault();
-      const targetUrl = btn.getAttribute("href");
-      if (!targetUrl) return;
-
-      const loadingOverlay = document.getElementById("loadingOverlay");
-      if (loadingOverlay) loadingOverlay.style.display = "flex";
-
-      console.log(`Spinner shown for ${id}`);
-      setTimeout(() => {
-        console.log("Navigating to:", targetUrl);
-        window.location.href = targetUrl;
-      }, 500);
-    });
-  }
+  setTimeout(() => {
+    console.log("Navigating to:", targetUrl);
+    window.location.href = targetUrl; 
+  }, 500); 
 });
 
 
-    // Hide spinner on load and back nav
-    window.addEventListener("load", () => {
-      if (loadingOverlay) loadingOverlay.style.display = "none";
-      console.log("Spinner hidden on page load");
-    });
-
-    window.addEventListener("pageshow", () => {
-      if (loadingOverlay) loadingOverlay.style.display = "none";
-      console.log("Spinner hidden on page show (e.g., back navigation)");
-    });
+  window.addEventListener("load", () => {
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    loadingOverlay.style.display = "none";
+    console.log("Spinner hidden on page load");
   });
+
+  const userSection = document.getElementById("userSection");
+
+userModeBtn.addEventListener("click", () => {
+  devCodeSection.classList.add("hidden");
+  userSection.classList.remove("hidden");
+
+  userModeBtn.classList.add("bg-blue-600", "text-white");
+  userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+  devModeBtn.classList.remove("bg-blue-600", "text-white");
+  devModeBtn.classList.add("bg-gray-200", "text-gray-800");
+});
+
+devModeBtn.addEventListener("click", () => {
+  devCodeSection.classList.remove("hidden");
+  userSection.classList.add("hidden");
+
+  devModeBtn.classList.add("bg-blue-600", "text-white");
+  devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+  userModeBtn.classList.remove("bg-blue-600", "text-white");
+  userModeBtn.classList.add("bg-gray-200", "text-gray-800");
+});
+
+
+window.addEventListener("pageshow", () => {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "none";
+  console.log("Spinner hidden on page show (e.g., back navigation)");
+});
+  
 </script>
 
-
 <style>
-
-/* Container for the main toggle */
-.flex > button {
-  cursor: pointer;
-  font-weight: 600;
-  user-select: none;
-  border: 1px solid transparent;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-/* Main toggle buttons - left and right */
-#userModeBtn {
-  border-top-left-radius: 0.5rem;
-  border-bottom-left-radius: 0.5rem;
-  border-right: none; /* merge with next button */
-}
-
-#devModeBtn {
-  border-top-right-radius: 0.5rem;
-  border-bottom-right-radius: 0.5rem;
-  border-left: none;
-}
-
-/* Hover states for main toggle */
-#userModeBtn:hover:not(.active) {
-  background-color: #2563eb; /* deeper blue */
-}
-
-#devModeBtn:hover:not(.active) {
-  background-color: #d1d5db; /* light gray */
-}
-
-/* Active state (for whichever mode is selected) */
-button.active {
-  background-color: #1d4ed8 !important; /* stronger blue for active */
-  color: white !important;
-  box-shadow: 0 0 8px rgba(29, 78, 216, 0.6);
-  border-color: #1e40af !important;
-  pointer-events: none; /* disable clicking active button */
-}
-
-/* Developer Sub-Tabs styling */
-#devSubTabs button {
-  font-weight: 500;
-  border: 1px solid #d1d5db;
-  background-color: rgb(77, 2, 60);
-  color: #ffffff;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  user-select: none;
-}
-
-/* Rounded corners for sub-tabs */
-#devSubTabs button:first-child {
-  border-top-left-radius: 0.4rem;
-  border-bottom-left-radius: 0.4rem;
-  border-right: none;
-}
-
-#devSubTabs button:last-child {
-  border-top-right-radius: 0.4rem;
-  border-bottom-right-radius: 0.4rem;
-}
-
-/* Hover sub-tabs */
-#devSubTabs button:hover {
-  background-color: #f3f4f6;
-}
-
-/* Active sub-tab */
-#devSubTabs button.active {
-  background-color: #2563eb;
-  color: white;
-  border-color: #2563eb;
-  pointer-events: none;
-}
-
-/* Spacing between main toggles and sub-tabs */
-#devSubTabs {
-  gap: 0; /* no gap, they are tightly connected */
-}
-
-
 
 
 .hover\:shadow-lg:hover {
@@ -632,47 +193,20 @@ button.active {
     transition: all 0.3s ease-in-out;
   }
 
-  
-#devCodeSection > div {
-  margin-bottom: 3rem; 
+.code-js {
+    margin-left: 40%;
 }
 
 
-.code-js, .code-cl {
-  background-color: #1e293b; 
-  color: #4ade80; 
-  padding: 1rem;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-  overflow-x: auto;
-  font-family: 'Source Code Pro', monospace, monospace;
-  font-size: 0.9rem;
-  line-height: 1.4;
-  max-width: 100%;
-  margin: 0 auto; 
-  white-space: pre-wrap; 
+.code-cl {
+    margin-left: 40%;
 }
 
 
-#devCodeSection h3, #devCodeSection h4 {
-  text-align: center;
-  color: #6b21a8; 
-  margin-bottom: 0.5rem;
+.list {
+  margin-left: 30%;
+ 
 }
-
-
-#devCodeSection h4 {
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-
-#devCodeSection {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 2rem 1rem;
-}
-
 
 
   @keyframes spin {
@@ -682,22 +216,6 @@ button.active {
   }
 
 
-
-@media (max-width: 640px) {
-  .code-js, .code-cl {
-    font-size: 0.8rem;
-    padding: 0.75rem;
-  }
-}
-
-
-
-  .flex > button,
-  #devSubTabs button {
-    padding-left: 1rem;
-    padding-right: 1rem;
-    font-size: 0.9rem;
-  }
 
 
 </style>
