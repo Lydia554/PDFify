@@ -414,73 +414,85 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 </html>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const devModeBtn = document.getElementById("devModeBtn");
+
+document.addEventListener("DOMContentLoaded", () => {
     const userModeBtn = document.getElementById("userModeBtn");
+    const devModeBtn = document.getElementById("devModeBtn");
     const devSubTabs = document.getElementById("devSubTabs");
-
-    const jsBtn = document.getElementById("jsModeBtn");
-    const terminalBtn = document.getElementById("terminalModeBtn");
-
-    const jsGroups = document.querySelectorAll(".js-group");
-    const terminalGroups = document.querySelectorAll(".terminal-group");
-
-    const devCodeSection = document.getElementById("devCodeSection");
     const userSection = document.getElementById("userSection");
+    const devCodeSection = document.getElementById("devCodeSection");
 
-    const loadingOverlay = document.getElementById("loadingOverlay");
+    // Developer sub tab buttons
+    const devSubTabButtons = Array.from(devSubTabs.querySelectorAll("button"));
+    // Code groups for JS and terminal
+    const jsGroups = Array.from(document.querySelectorAll(".js-group"));
+    const terminalGroups = Array.from(document.querySelectorAll(".terminal-group"));
 
-    // Toggle Developer Mode
-    devModeBtn.addEventListener("click", () => {
-      devSubTabs.classList.remove("hidden");
-      devCodeSection.classList.remove("hidden");
-      userSection.classList.add("hidden");
-
-      devModeBtn.classList.add("bg-blue-600", "text-white");
-      devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
-      userModeBtn.classList.remove("bg-blue-600", "text-white");
-      userModeBtn.classList.add("bg-gray-200", "text-gray-800");
-
-      showJs(); // default to JavaScript tab
-    });
-
-    // Toggle User Mode
-    userModeBtn.addEventListener("click", () => {
+    // Initialize: show user mode, hide dev mode section and sub-tabs
+    function showUserMode() {
+      userSection.style.display = "block";
+      devCodeSection.style.display = "none";
       devSubTabs.classList.add("hidden");
-      devCodeSection.classList.add("hidden");
-      userSection.classList.remove("hidden");
-
       userModeBtn.classList.add("bg-blue-600", "text-white");
       userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
       devModeBtn.classList.remove("bg-blue-600", "text-white");
       devModeBtn.classList.add("bg-gray-200", "text-gray-800");
+    }
+
+    // Show developer mode + show dev sub-tabs + default to JS tab
+    function showDevMode() {
+      userSection.style.display = "none";
+      devCodeSection.style.display = "block";
+      devSubTabs.classList.remove("hidden");
+      devModeBtn.classList.add("bg-blue-600", "text-white");
+      devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+      userModeBtn.classList.remove("bg-blue-600", "text-white");
+      userModeBtn.classList.add("bg-gray-200", "text-gray-800");
+      activateDevSubTab("JavaScript");
+    }
+
+    // Activate developer sub tab: "JavaScript" or "Terminal"
+    function activateDevSubTab(tabName) {
+      devSubTabButtons.forEach(btn => {
+        if (btn.textContent.includes(tabName)) {
+          btn.classList.add("bg-gray-200", "text-gray-800");
+          btn.classList.remove("bg-white");
+        } else {
+          btn.classList.remove("bg-gray-200", "text-gray-800");
+          btn.classList.add("bg-white");
+        }
+      });
+
+      // Show/hide code groups accordingly
+      if (tabName === "JavaScript") {
+        jsGroups.forEach(el => el.style.display = "block");
+        terminalGroups.forEach(el => el.style.display = "none");
+      } else if (tabName === "Terminal") {
+        jsGroups.forEach(el => el.style.display = "none");
+        terminalGroups.forEach(el => el.style.display = "block");
+      }
+    }
+
+    // Set initial state: user mode active
+    showUserMode();
+
+    // Event listeners for user/dev toggle buttons
+    userModeBtn.addEventListener("click", showUserMode);
+    devModeBtn.addEventListener("click", showDevMode);
+
+    // Event listeners for developer sub-tabs
+    devSubTabButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (btn.textContent.includes("JavaScript")) {
+          activateDevSubTab("JavaScript");
+        } else if (btn.textContent.includes("Terminal")) {
+          activateDevSubTab("Terminal");
+        }
+      });
     });
+  
 
-    // Developer Sub-Tabs
-    jsBtn.addEventListener("click", showJs);
-    terminalBtn.addEventListener("click", showTerminal);
 
-    function showJs() {
-      jsBtn.classList.add("bg-blue-100", "text-blue-700");
-      jsBtn.classList.remove("bg-gray-200", "text-gray-800");
-
-      terminalBtn.classList.remove("bg-blue-100", "text-blue-700");
-      terminalBtn.classList.add("bg-gray-200", "text-gray-800");
-
-      jsGroups.forEach(el => el.classList.remove("hidden"));
-      terminalGroups.forEach(el => el.classList.add("hidden"));
-    }
-
-    function showTerminal() {
-      terminalBtn.classList.add("bg-blue-100", "text-blue-700");
-      terminalBtn.classList.remove("bg-gray-200", "text-gray-800");
-
-      jsBtn.classList.remove("bg-blue-100", "text-blue-700");
-      jsBtn.classList.add("bg-gray-200", "text-gray-800");
-
-      terminalGroups.forEach(el => el.classList.remove("hidden"));
-      jsGroups.forEach(el => el.classList.add("hidden"));
-    }
 
     ["signUpButton", "loginButton"].forEach(id => {
   const btn = document.getElementById(id);
