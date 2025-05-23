@@ -673,20 +673,19 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-pdf-from-h
   </footer>
 
   <script>
-    // Mode toggle buttons
+ 
     const userModeBtn = document.getElementById('userModeBtn');
     const devModeBtn = document.getElementById('devModeBtn');
     const userSection = document.getElementById('userSection');
     const devCodeSections = document.querySelectorAll('.dev-only');
     const devSubTabs = document.getElementById('devSubTabs');
 
-    document.querySelectorAll('.dev-mode-only').forEach(el => el.classList.add('hidden'));
-
-
-  
     userModeBtn.addEventListener('click', () => {
   userSection.classList.remove('hidden');
+
   devCodeSections.forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.dev-mode-only').forEach(el => el.classList.add('hidden'));
+
   devSubTabs.classList.add('hidden');
 
   userModeBtn.classList.add('bg-blue-600', 'text-white');
@@ -698,7 +697,10 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-pdf-from-h
 
 devModeBtn.addEventListener('click', () => {
   userSection.classList.add('hidden');
+
   devCodeSections.forEach(el => el.classList.remove('hidden'));
+  document.querySelectorAll('.dev-mode-only').forEach(el => el.classList.remove('hidden'));
+
   devSubTabs.classList.remove('hidden');
 
   devModeBtn.classList.add('bg-blue-600', 'text-white');
@@ -707,6 +709,7 @@ devModeBtn.addEventListener('click', () => {
   userModeBtn.classList.remove('bg-blue-600', 'text-white');
   userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
 });
+
   
 
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
