@@ -130,7 +130,7 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-sli
   <!-- Invoice -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
-
+    <div class="js-group">
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
@@ -165,7 +165,9 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
 })
 .catch(console.error);
     </pre>
+  </div>
 
+  <div class="terminal-group hidden">
     <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
     <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice \
@@ -187,7 +189,7 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice \
   <!-- Recipe -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
-
+    <div class="js-group">
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
@@ -199,7 +201,7 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
   body: JSON.stringify({
     data: {
       title: "Chocolate Cake",
-      author: "Lidija Jokić",
+      author: "Kate Brown",
       servings: 8,
       ingredients: [
         "200g flour",
@@ -227,7 +229,9 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
 })
 .catch(console.error);
     </pre>
+    </div>
 
+    <div class="terminal-group hidden">
     <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
     <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe \
@@ -254,7 +258,7 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe \
   <!-- Therapy Report -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
-
+    <div class="js-group">
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
@@ -285,7 +289,9 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", 
 })
 .catch(console.error);
     </pre>
+    </div>
 
+    <div class="terminal-group hidden">
     <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
     <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report \
@@ -303,7 +309,7 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-rep
   <!-- Raw HTML -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Raw HTML</h3>
-
+    <div class="js-group">
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
@@ -329,7 +335,9 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
 })
 .catch(console.error);
     </pre>
+    </div>
 
+    <div class="terminal-group hidden">
     <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
     <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
@@ -401,101 +409,105 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 </body>
 </html>
 
-
-
 <script>
- 
-
-document.getElementById("signUpButton").addEventListener("click", (event) => {
-  event.preventDefault();
-  const targetUrl = event.target.href;
-
+  document.addEventListener("DOMContentLoaded", () => {
+    const devModeBtn = document.getElementById("devModeBtn");
+    const userModeBtn = document.getElementById("userModeBtn");
+    const devSubTabs = document.getElementById("devSubTabs");
+  
+    const jsBtn = document.getElementById("jsModeBtn");
+    const terminalBtn = document.getElementById("terminalModeBtn");
+  
+    const jsGroups = document.querySelectorAll(".js-group");
+    const terminalGroups = document.querySelectorAll(".terminal-group");
+  
+    const devCodeSection = document.getElementById("devCodeSection");
+    const userSection = document.getElementById("userSection");
+  
+    // Toggle Developer Mode
+    devModeBtn.addEventListener("click", () => {
+      devSubTabs.classList.remove("hidden");
+      devCodeSection.classList.remove("hidden");
+      userSection.classList.add("hidden");
+  
+      devModeBtn.classList.add("bg-blue-600", "text-white");
+      devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+      userModeBtn.classList.remove("bg-blue-600", "text-white");
+      userModeBtn.classList.add("bg-gray-200", "text-gray-800");
+  
+      showJs(); // default to JavaScript
+    });
+  
+    // Toggle User Mode
+    userModeBtn.addEventListener("click", () => {
+      devSubTabs.classList.add("hidden");
+      devCodeSection.classList.add("hidden");
+      userSection.classList.remove("hidden");
+  
+      userModeBtn.classList.add("bg-blue-600", "text-white");
+      userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+      devModeBtn.classList.remove("bg-blue-600", "text-white");
+      devModeBtn.classList.add("bg-gray-200", "text-gray-800");
+    });
+  
+    // Developer Sub-Tabs
+    jsBtn.addEventListener("click", showJs);
+    terminalBtn.addEventListener("click", showTerminal);
+  
+    function showJs() {
+      jsBtn.classList.add("bg-blue-100", "text-blue-700");
+      jsBtn.classList.remove("bg-gray-200", "text-gray-800");
+  
+      terminalBtn.classList.remove("bg-blue-100", "text-blue-700");
+      terminalBtn.classList.add("bg-gray-200", "text-gray-800");
+  
+      jsGroups.forEach(el => el.classList.remove("hidden"));
+      terminalGroups.forEach(el => el.classList.add("hidden"));
+    }
+  
+    function showTerminal() {
+      terminalBtn.classList.add("bg-blue-100", "text-blue-700");
+      terminalBtn.classList.remove("bg-gray-200", "text-gray-800");
+  
+      jsBtn.classList.remove("bg-blue-100", "text-blue-700");
+      jsBtn.classList.add("bg-gray-200", "text-gray-800");
+  
+      terminalGroups.forEach(el => el.classList.remove("hidden"));
+      jsGroups.forEach(el => el.classList.add("hidden"));
+    }
+  });
+  
+  // Sign Up & Login Buttons with Spinner
+  ["signUpButton", "loginButton"].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        const targetUrl = event.target.href;
+        const loadingOverlay = document.getElementById("loadingOverlay");
+        loadingOverlay.style.display = "flex";
+        console.log(`Spinner shown for ${id}`);
+  
+        setTimeout(() => {
+          console.log("Navigating to:", targetUrl);
+          window.location.href = targetUrl;
+        }, 500);
+      });
+    }
+  });
+  
+  // Hide spinner on load and back nav
   const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "flex"; 
-  console.log("Spinner shown for Sign Up button");
-
-  setTimeout(() => {
-    console.log("Navigating to:", targetUrl);
-    window.location.href = targetUrl; 
-  }, 500); 
-});
-
-document.getElementById("loginButton").addEventListener("click", (event) => {
-  event.preventDefault();
-  const targetUrl = event.target.href;
-
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "flex"; 
-  console.log("Spinner shown for Login button");
-
-  setTimeout(() => {
-    console.log("Navigating to:", targetUrl);
-    window.location.href = targetUrl; 
-  }, 500); 
-});
-
-
   window.addEventListener("load", () => {
-    const loadingOverlay = document.getElementById("loadingOverlay");
     loadingOverlay.style.display = "none";
     console.log("Spinner hidden on page load");
   });
-
-  const userSection = document.getElementById("userSection");
-
-userModeBtn.addEventListener("click", () => {
-  devCodeSection.classList.add("hidden");
-  userSection.classList.remove("hidden");
-
-  userModeBtn.classList.add("bg-blue-600", "text-white");
-  userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
-  devModeBtn.classList.remove("bg-blue-600", "text-white");
-  devModeBtn.classList.add("bg-gray-200", "text-gray-800");
-});
-
-devModeBtn.addEventListener("click", () => {
-  devCodeSection.classList.remove("hidden");
-  userSection.classList.add("hidden");
-
-  devModeBtn.classList.add("bg-blue-600", "text-white");
-  devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
-  userModeBtn.classList.remove("bg-blue-600", "text-white");
-  userModeBtn.classList.add("bg-gray-200", "text-gray-800");
-});
-
-
-  // Toggle inner developer examples (JS vs curl)
-  const jsBtn = document.getElementById('jsExampleBtn');
-  const curlBtn = document.getElementById('curlExampleBtn');
-  const jsExample = document.getElementById('jsExample');
-  const curlExample = document.getElementById('curlExample');
-
-  jsBtn.addEventListener('click', () => {
-    jsExample.classList.remove('hidden');
-    curlExample.classList.add('hidden');
-    jsBtn.classList.add('bg-purple-600', 'text-white');
-    jsBtn.classList.remove('bg-gray-300', 'text-gray-800');
-    curlBtn.classList.remove('bg-purple-600', 'text-white');
-    curlBtn.classList.add('bg-gray-300', 'text-gray-800');
+  window.addEventListener("pageshow", () => {
+    loadingOverlay.style.display = "none";
+    console.log("Spinner hidden on page show (e.g., back navigation)");
   });
-
-  curlBtn.addEventListener('click', () => {
-    curlExample.classList.remove('hidden');
-    jsExample.classList.add('hidden');
-    curlBtn.classList.add('bg-purple-600', 'text-white');
-    curlBtn.classList.remove('bg-gray-300', 'text-gray-800');
-    jsBtn.classList.remove('bg-purple-600', 'text-white');
-    jsBtn.classList.add('bg-gray-300', 'text-gray-800');
-  });
-
-
-window.addEventListener("pageshow", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none";
-  console.log("Spinner hidden on page show (e.g., back navigation)");
-});
+  </script>
   
-</script>
 
 <style>
 
