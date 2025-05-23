@@ -25,17 +25,35 @@
     </div>
   </section>
 
-  <!-- How it works -->
-  <section class="py-16 bg-gray-100">
-    <div class="max-w-4xl mx-auto px-4">
-      <h2 class="text-2xl font-bold mb-6 text-center">How It Works</h2>
-      <ol class="space-y-4 text-lg text-gray-700">
-        <li class="list">1. Register and get your unique API token.</li>
-        <li class="list">2. Send HTML content via our API endpoint.</li>
-        <li class="list">3. Receive a downloadable PDF in response.</li>
-      </ol>
+<!-- How it works -->
+<section class="py-16 bg-gray-100">
+  <div class="max-w-4xl mx-auto px-4">
+    <h2 class="text-2xl font-bold mb-6 text-center">How It Works</h2>
+    <ol class="space-y-4 text-lg text-gray-700">
+      <li class="list">1. Register and get your unique API token.</li>
+      <li class="list">2. Send HTML content via our API endpoint.</li>
+      <li class="list">3. Receive a downloadable PDF in response.</li>
+    </ol>
+
+    <!-- Developer Note -->
+    <div class="mt-10 bg-white p-6 rounded-lg shadow border border-gray-300">
+      <h3 class="text-xl font-semibold mb-3">📢 Note for Developers: Handling the PDF Response</h3>
+      <p class="mb-2 text-gray-700">
+        Our API returns the full PDF file data immediately in the response. Your application is responsible for processing this data to download or save the PDF file.
+      </p>
+      <p class="mb-2 text-gray-700">
+        <strong>In Postman:</strong> After making the POST request, switch to the <code>Body</code> tab of the response, click <em>Save Response</em> (floppy disk icon), and save the file with a <code>.pdf</code> extension.
+      </p>
+      <p class="mb-2 text-gray-700">
+        <strong>In your code:</strong> Handle the API response as a binary <code>Blob</code> (JavaScript) or save the raw response stream to disk (server-side), then trigger a file download or store the PDF as needed.
+      </p>
+      <p class="text-gray-600 text-sm">
+        This approach gives you full control over how and when the PDF is saved or shown to your users.
+      </p>
     </div>
-  </section>
+  </div>
+</section>
+
 
   <section class="py-16">
     <div class="max-w-4xl mx-auto px-4 text-center">
@@ -565,8 +583,8 @@ button.active {
 #devSubTabs button {
   font-weight: 500;
   border: 1px solid #d1d5db;
-  background-color: white;
-  color: #374151;
+  background-color: rgb(77, 2, 60);
+  color: #ffffff;
   cursor: pointer;
   transition: background-color 0.3s ease;
   user-select: none;
