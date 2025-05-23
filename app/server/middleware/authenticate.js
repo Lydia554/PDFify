@@ -59,4 +59,14 @@ const authenticate = async (req, res, next) => {
   }
 };
 
+const users = await User.find();
+users.forEach(u => {
+  try {
+    console.log("Decrypted key:", u.getDecryptedApiKey());
+  } catch(e) {
+    console.log("Decryption failed for user:", u.email);
+  }
+});
+
+
 module.exports = authenticate;

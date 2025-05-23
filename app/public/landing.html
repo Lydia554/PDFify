@@ -70,17 +70,42 @@
 
     <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
       <pre class="code-js"><code>
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip
-", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_TOKEN"
-  },
-  body: JSON.stringify({
-    html: "<h1>Invoice for {{ order.name }}</h1>"
-  })
-});
+        fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer YOUR_API_TOKEN"
+          },
+          body: JSON.stringify({
+            data: {
+              orderId: "98765",
+              customerName: "John Smith",
+              shippingAddress: "1234 Maple Street, Springfield, USA",
+              date: "2025-05-14",
+              items: [
+                { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
+                { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
+                { name: "Water Bottle", sku: "WB-003", quantity: 3 }
+              ]
+            }
+          })
+        })
+        .then(res => {
+          if (!res.ok) throw new Error("Network response was not ok");
+          return res.blob();
+        })
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "PackingSlip.pdf";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        })
+        .catch(err => console.error("Error downloading PDF:", err));
+        
       </code></pre>
     </div>
 
