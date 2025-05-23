@@ -45,48 +45,7 @@
     </div>
   </section>
 
-<!-- Toggle Tabs -->
-<div class="flex justify-center mt-8">
-  <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
-  <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
-</div>
 
-<!-- FRIENDLY MODE SECTION -->
-<section id="userSection" class="py-16">
-  <div class="max-w-3xl mx-auto text-center px-4">
-    <h2 class="text-2xl font-bold mb-4">Generate Beautiful PDFs Without Writing a Single Line of Code</h2>
-    <p class="text-lg mb-6">
-      Select a template, fill out a simple form, and download a polished PDF in seconds. Whether it's a recipe, invoice, or report—no coding or formatting required.
-    </p>
-  </div>
-</section>
-
-
-
-<!-- User Section -->
-<div id="userSection">
-  <p>This is User Mode content...</p>
-</div>
-
-<!-- Dev Code Section -->
-<div id="devCodeSection" class="hidden p-4 border rounded bg-gray-50">
-
-  <!-- Dev Mode main content can go here -->
-  <p class="mb-4 font-semibold text-lg">Development Examples</p>
-
-  <!-- Terminal/JS toggle buttons -->
-  <div class="toggle-buttons mb-4">
-    <button id="terminalToggle" class="toggle-btn active px-3 py-1 rounded border border-gray-300 mr-2">Terminal (curl)</button>
-    <button id="jsToggle" class="toggle-btn px-3 py-1 rounded border border-gray-300">JavaScript</button>
-  </div>
-
-  <!-- List of examples -->
-  <ul id="examplesList" class="mb-4 list-disc list-inside text-gray-700 cursor-pointer max-h-40 overflow-auto border rounded p-2">
-    <!-- JS fills this with all example names -->
-  </ul>
-
-  <!-- Code block that updates based on selected example & toggle -->
-  <pre id="exampleCode" class="bg-white p-4 rounded shadow text-sm overflow-auto max-h-64 hidden"></pre>
 
 
   <!-- Features -->
@@ -146,193 +105,99 @@
 
 
 
-<script> 
+<script>
+ 
 
+document.getElementById("signUpButton").addEventListener("click", (event) => {
+  event.preventDefault();
+  const targetUrl = event.target.href;
 
-const userBtn = document.getElementById("userModeBtn");
-  const devBtn = document.getElementById("devModeBtn");
-  const devCodeSection = document.getElementById("devCodeSection");
-  const userSection = document.getElementById("userSection");
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "flex"; 
+  console.log("Spinner shown for Sign Up button");
 
-  const terminalToggle = document.getElementById("terminalToggle");
-  const jsToggle = document.getElementById("jsToggle");
-  const examplesList = document.getElementById("examplesList");
-  const exampleCode = document.getElementById("exampleCode");
+  setTimeout(() => {
+    console.log("Navigating to:", targetUrl);
+    window.location.href = targetUrl; 
+  }, 500); 
+});
 
-  // Example data array
-  const examples = [
-    {
-      name: "Create User",
-      terminal: `curl -X POST https://api.example.com/users \\
-  -H "Authorization: Bearer TOKEN" \\
-  -d '{"name":"John Doe"}'`,
-      javascript: `fetch('https://api.example.com/users', {
-  method: 'POST',
-  headers: {
-    'Authorization': 'Bearer TOKEN',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({name: 'John Doe'})
-});`
-    },
-    {
-      name: "Get User",
-      terminal: `curl https://api.example.com/users/123 \\
-  -H "Authorization: Bearer TOKEN"`,
-      javascript: `fetch('https://api.example.com/users/123', {
-  headers: {
-    'Authorization': 'Bearer TOKEN'
-  }
-});`
-    },
-    {
-      name: "Update User",
-      terminal: `curl -X PUT https://api.example.com/users/123 \\
-  -H "Authorization: Bearer TOKEN" \\
-  -d '{"name":"Jane Doe"}'`,
-      javascript: `fetch('https://api.example.com/users/123', {
-  method: 'PUT',
-  headers: {
-    'Authorization': 'Bearer TOKEN',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({name: 'Jane Doe'})
-});`
-    },
-    {
-      name: "Delete User",
-      terminal: `curl -X DELETE https://api.example.com/users/123 \\
-  -H "Authorization: Bearer TOKEN"`,
-      javascript: `fetch('https://api.example.com/users/123', {
-  method: 'DELETE',
-  headers: {
-    'Authorization': 'Bearer TOKEN'
-  }
-});`
-    }
-  ];
+document.getElementById("loginButton").addEventListener("click", (event) => {
+  event.preventDefault();
+  const targetUrl = event.target.href;
 
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "flex"; 
+  console.log("Spinner shown for Login button");
 
+  setTimeout(() => {
+    console.log("Navigating to:", targetUrl);
+    window.location.href = targetUrl; 
+  }, 500); 
+});
 
-
-
-
-
-
-
-let currentMode = "terminal"; // 'terminal' or 'javascript'
-  let selectedExampleIndex = null;
-
-  function renderExampleList() {
-    examplesList.innerHTML = "";
-    examples.forEach((ex, i) => {
-      const li = document.createElement("li");
-      li.textContent = ex.name;
-      li.classList.toggle("selected", i === selectedExampleIndex);
-      li.addEventListener("click", () => {
-        selectedExampleIndex = i;
-        renderExampleList();
-        renderExampleCode();
-      });
-      examplesList.appendChild(li);
-    });
-  }
-
-  function renderExampleCode() {
-    if (selectedExampleIndex === null) {
-      exampleCode.classList.add("hidden");
-      exampleCode.textContent = "";
-      return;
-    }
-    exampleCode.classList.remove("hidden");
-    const example = examples[selectedExampleIndex];
-    exampleCode.textContent = currentMode === "terminal" ? example.terminal : example.javascript;
-  }
-
-  terminalToggle.addEventListener("click", () => {
-    if (currentMode !== "terminal") {
-      currentMode = "terminal";
-      terminalToggle.classList.add("active");
-      jsToggle.classList.remove("active");
-      renderExampleCode();
-    }
-  });
-
-  jsToggle.addEventListener("click", () => {
-    if (currentMode !== "javascript") {
-      currentMode = "javascript";
-      jsToggle.classList.add("active");
-      terminalToggle.classList.remove("active");
-      renderExampleCode();
-    }
-  });
-
-  function activateUserMode() {
-    userSection.classList.remove("hidden");
-    devCodeSection.classList.add("hidden");
-
-    userBtn.classList.add("bg-blue-600", "text-white");
-    userBtn.classList.remove("bg-gray-200", "text-gray-800");
-
-    devBtn.classList.remove("bg-blue-600", "text-white");
-    devBtn.classList.add("bg-gray-200", "text-gray-800");
-
-    selectedExampleIndex = null;
-    renderExampleList();
-    renderExampleCode();
-  }
-
-  function activateDevMode() {
-    userSection.classList.add("hidden");
-    devCodeSection.classList.remove("hidden");
-
-    devBtn.classList.add("bg-blue-600", "text-white");
-    devBtn.classList.remove("bg-gray-200", "text-gray-800");
-
-    userBtn.classList.remove("bg-blue-600", "text-white");
-    userBtn.classList.add("bg-gray-200", "text-gray-800");
-
-    selectedExampleIndex = null;
-    renderExampleList();
-    renderExampleCode();
-  }
-
-  userBtn.addEventListener("click", activateUserMode);
-  devBtn.addEventListener("click", activateDevMode);
-
-  activateUserMode();
-
-
-  function handleButtonClick(event) {
-    event.preventDefault();
-    const targetUrl = event.currentTarget.href; 
-
-    loadingOverlay.style.display = "flex";
-    console.log("Spinner shown for button click");
-
-    setTimeout(() => {
-      console.log("Navigating to:", targetUrl);
-      window.location.href = targetUrl;
-    }, 500);
-  }
-
-  const signUpBtn = document.getElementById("signUpButton");
-  const loginBtn = document.getElementById("loginButton");
-
-  if (signUpBtn) signUpBtn.addEventListener("click", handleButtonClick);
-  if (loginBtn) loginBtn.addEventListener("click", handleButtonClick);
 
   window.addEventListener("load", () => {
+    const loadingOverlay = document.getElementById("loadingOverlay");
     loadingOverlay.style.display = "none";
     console.log("Spinner hidden on page load");
   });
 
-  window.addEventListener("pageshow", () => {
-    loadingOverlay.style.display = "none";
-    console.log("Spinner hidden on page show (e.g., back navigation)");
-  });
-</script>
+  const userSection = document.getElementById("userSection");
 
+userModeBtn.addEventListener("click", () => {
+  devCodeSection.classList.add("hidden");
+  userSection.classList.remove("hidden");
+
+  userModeBtn.classList.add("bg-blue-600", "text-white");
+  userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+  devModeBtn.classList.remove("bg-blue-600", "text-white");
+  devModeBtn.classList.add("bg-gray-200", "text-gray-800");
+});
+
+devModeBtn.addEventListener("click", () => {
+  devCodeSection.classList.remove("hidden");
+  userSection.classList.add("hidden");
+
+  devModeBtn.classList.add("bg-blue-600", "text-white");
+  devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
+  userModeBtn.classList.remove("bg-blue-600", "text-white");
+  userModeBtn.classList.add("bg-gray-200", "text-gray-800");
+});
+
+
+  // Toggle inner developer examples (JS vs curl)
+  const jsBtn = document.getElementById('jsExampleBtn');
+  const curlBtn = document.getElementById('curlExampleBtn');
+  const jsExample = document.getElementById('jsExample');
+  const curlExample = document.getElementById('curlExample');
+
+  jsBtn.addEventListener('click', () => {
+    jsExample.classList.remove('hidden');
+    curlExample.classList.add('hidden');
+    jsBtn.classList.add('bg-purple-600', 'text-white');
+    jsBtn.classList.remove('bg-gray-300', 'text-gray-800');
+    curlBtn.classList.remove('bg-purple-600', 'text-white');
+    curlBtn.classList.add('bg-gray-300', 'text-gray-800');
+  });
+
+  curlBtn.addEventListener('click', () => {
+    curlExample.classList.remove('hidden');
+    jsExample.classList.add('hidden');
+    curlBtn.classList.add('bg-purple-600', 'text-white');
+    curlBtn.classList.remove('bg-gray-300', 'text-gray-800');
+    jsBtn.classList.remove('bg-purple-600', 'text-white');
+    jsBtn.classList.add('bg-gray-300', 'text-gray-800');
+  });
+
+
+window.addEventListener("pageshow", () => {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "none";
+  console.log("Spinner hidden on page show (e.g., back navigation)");
+});
+  
+</script>
 
 <style>
 
@@ -374,26 +239,7 @@ let currentMode = "terminal"; // 'terminal' or 'javascript'
   white-space: pre-wrap; 
 }
 
-.toggle-btn {
-    cursor: pointer;
-    background: white;
-    border: 1px solid #ccc;
-    user-select: none;
-  }
-  .toggle-btn.active {
-    background: #2563eb;
-    color: white;
-    border-color: #2563eb;
-  }
-  #examplesList li:hover {
-    background-color: #e0e7ff;
-  }
-  #examplesList li.selected {
-    font-weight: bold;
-    background-color: #c7d2fe;
-  }
 
-  
 #devCodeSection h3, #devCodeSection h4 {
   text-align: center;
   color: #6b21a8; 
