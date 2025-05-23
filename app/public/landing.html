@@ -61,279 +61,71 @@
   </div>
 </section>
 
-<section id="devCodeSection" class="py-16 bg-gray-100 max-w-none w-full space-y-16">
+<!-- DEVELOPER MODE SECTION -->
+<section id="devCodeSection" class="py-16 hidden bg-gray-100">
+  <div class="max-w-none w-full">
 
-  <!-- Packing Slip -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
+    <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 JavaScript Example</h3>
+    <p class="mb-6 text-center text-gray-700">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
 
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      orderId: "98765",
-      customerName: "John Smith",
-      shippingAddress: "1234 Maple Street, Springfield, USA",
-      date: "2025-05-14",
-      items: [
-        { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
-        { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
-        { name: "Water Bottle", sku: "WB-003", quantity: 3 }
-      ]
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "PackingSlip_98765.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
+      <pre class="code-js"><code>
+        fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer YOUR_API_KEY"
+          },
+          body: JSON.stringify({
+            data: {
+              orderId: "98765",
+              customerName: "John Smith",
+              shippingAddress: "1234 Maple Street, Springfield, USA",
+              date: "2025-05-14",
+              items: [
+                { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
+                { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
+                { name: "Water Bottle", sku: "WB-003", quantity: 3 }
+              ]
+            }
+          })
+        })
+        .then(response => response.blob())
+        .then(blob => {
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "PackingSlip_98765.pdf";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+        })
+        .catch(console.error);
+        
+        
+      </code></pre>
+    </div>
 
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "title": "Order #1234",
-  "customer": "Jane Doe",
-  "items": [
-    {"name": "Shirt", "quantity": 2, "price": 24.99}
-  ]
-}' --output packing-slip.pdf
-    </pre>
+    <h3 class="text-2xl font-semibold mt-12 mb-2 text-purple-700 text-center">💻 Command Line Example</h3>
+    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
+      <pre class="code-cl"><code>
+        curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
+        -H "Authorization: Bearer <your-token>" \
+        -H "Content-Type: application/json" \
+        -d '{
+          "title": "Order #1234",
+          "customer": "Jane Doe",
+          "items": [
+            {"name": "Shirt", "quantity": 2, "price": 24.99}
+          ]
+        }' --output packing-slip.pdf
+        
+      </code></pre>
+    </div>
+
   </div>
-
-  <!-- Invoice -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
-
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      invoiceNumber: "INV-2025-001",
-      date: "2025-05-20",
-      billTo: "Acme Corp",
-      items: [
-        { description: "Consulting", quantity: 10, price: 100 },
-        { description: "Development", quantity: 20, price: 80 }
-      ],
-      total: 2600
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Invoice_INV-2025-001.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "invoiceNumber": "INV-2025-001",
-  "date": "2025-05-20",
-  "billTo": "Acme Corp",
-  "items": [
-    {"description": "Consulting", "quantity": 10, "price": 100},
-    {"description": "Development", "quantity": 20, "price": 80}
-  ],
-  "total": 2600
-}' --output invoice.pdf
-    </pre>
-  </div>
-
-  <!-- Recipe -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
-
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      title: "Chocolate Cake",
-      author: "Lidija Jokić",
-      servings: 8,
-      ingredients: [
-        "200g flour",
-        "100g sugar",
-        "50g cocoa powder",
-        "3 eggs"
-      ],
-      instructions: [
-        "Mix ingredients",
-        "Bake for 30 minutes at 180°C"
-      ]
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Recipe_Chocolate_Cake.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "title": "Chocolate Cake",
-  "author": "Lidija Jokić",
-  "servings": 8,
-  "ingredients": [
-    "200g flour",
-    "100g sugar",
-    "50g cocoa powder",
-    "3 eggs"
-  ],
-  "instructions": [
-    "Mix ingredients",
-    "Bake for 30 minutes at 180°C"
-  ]
-}' --output recipe.pdf
-    </pre>
-  </div>
-
-  <!-- Therapy Report -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
-
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      patientName: "Anna Lee",
-      date: "2025-05-20",
-      therapist: "Dr. Smith",
-      notes: "Patient is progressing well."
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "TherapyReport_Anna_Lee.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "patientName": "Anna Lee",
-  "date": "2025-05-20",
-  "therapist": "Dr. Smith",
-  "notes": "Patient is progressing well."
-}' --output therapy-report.pdf
-    </pre>
-  </div>
-
-  <!-- Raw HTML -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Raw HTML</h3>
-
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    html: "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a PDF generated from raw HTML.&lt;/p&gt;"
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "RawHTML.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "html": "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a PDF generated from raw HTML.&lt;/p&gt;"
-}' --output raw-html.pdf
-    </pre>
-  </div>
-
 </section>
-
 
 
 
