@@ -221,19 +221,20 @@
     </div>
 
 
-
-    <div id="modeToggleContainer" class="my-8">
-      <div class="flex flex-col items-center">
-        <div class="flex rounded-lg overflow-hidden border border-gray-300">
-          <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
-          <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
-        </div>
-        <div id="devSubTabs" class="flex mt-4 hidden rounded-lg border border-gray-300 overflow-hidden">
-          <button id="jsModeBtn" class="px-4 py-1 bg-white text-sm text-gray-800 rounded-l hover:bg-gray-100 transition">JavaScript</button>
-          <button id="curlModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r hover:bg-gray-300 transition">Terminal (curl)</button>
-        </div>
-      </div>
+<!-- Mode Toggle Buttons -->
+<div id="modeToggleContainer" class="my-8">
+  <div class="flex flex-col items-center">
+    <div class="flex rounded-lg overflow-hidden border border-gray-300">
+      <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
+      <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
     </div>
+    <div id="devSubTabs" class="flex mt-4 hidden rounded-lg border border-gray-300 overflow-hidden">
+      <!-- Optional: You can remove these if you want only per-snippet toggles -->
+      <button id="jsModeBtn" class="px-4 py-1 bg-white text-sm text-gray-800 rounded-l hover:bg-gray-100 transition">JavaScript</button>
+      <button id="curlModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r hover:bg-gray-300 transition">Terminal (curl)</button>
+    </div>
+  </div>
+</div>
     
 
   <!-- Friendly Mode Section -->
@@ -533,33 +534,68 @@
   </footer>
 
   <script>
-document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
-  toggleGroup.addEventListener('click', (event) => {
-    const clickedBtn = event.target;
-    if (!clickedBtn.classList.contains('toggle-btn')) return; // only respond to buttons
-    
-    // Remove active class from all buttons in this group
-    toggleGroup.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-    
-    // Add active class to clicked button
-    clickedBtn.classList.add('active');
-    
-    const targetId = clickedBtn.getAttribute('data-target');
-    if (!targetId) return;
-    
-    // The snippet container for this toggle group is the closest parent with class 'mb-10' or similar
-    const snippetContainer = toggleGroup.closest('.mb-10');
-    if (!snippetContainer) return;
-    
-    // Hide all <pre> inside this snippetContainer
-    snippetContainer.querySelectorAll('pre').forEach(pre => pre.style.display = 'none');
-    
-    // Show the targeted snippet
-    const targetSnippet = snippetContainer.querySelector('#' + targetId);
-    if (targetSnippet) targetSnippet.style.display = 'block';
-  });
-});
-
+    // Mode toggle buttons
+    const userModeBtn = document.getElementById('userModeBtn');
+    const devModeBtn = document.getElementById('devModeBtn');
+    const userSection = document.getElementById('userSection');
+    const devCodeSection = document.getElementById('devCodeSection');
+    const devSubTabs = document.getElementById('devSubTabs');
+  
+    userModeBtn.addEventListener('click', () => {
+      userSection.classList.remove('hidden');
+      devCodeSection.classList.add('hidden');
+      devSubTabs.classList.add('hidden');
+  
+      userModeBtn.classList.add('bg-blue-600', 'text-white');
+      userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+      devModeBtn.classList.remove('bg-blue-600', 'text-white');
+      devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+    });
+  
+    devModeBtn.addEventListener('click', () => {
+      userSection.classList.add('hidden');
+      devCodeSection.classList.remove('hidden');
+      devSubTabs.classList.remove('hidden');
+  
+      devModeBtn.classList.add('bg-blue-600', 'text-white');
+      devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+      userModeBtn.classList.remove('bg-blue-600', 'text-white');
+      userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+    });
+  
+    // Per-snippet toggle button logic
+    document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
+      toggleGroup.addEventListener('click', (event) => {
+        const clickedBtn = event.target;
+        if (!clickedBtn.classList.contains('toggle-btn')) return;
+  
+        // Remove active class from all buttons in this toggle group
+        toggleGroup.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+  
+        // Add active class to clicked button
+        clickedBtn.classList.add('active');
+  
+        const targetId = clickedBtn.getAttribute('data-target');
+        if (!targetId) return;
+  
+        // Get the snippet container (closest parent with 'mb-10')
+        const snippetContainer = toggleGroup.closest('.mb-10');
+        if (!snippetContainer) return;
+  
+        // Hide all <pre> elements inside this snippet container
+        snippetContainer.querySelectorAll('pre').forEach(pre => pre.style.display = 'none');
+  
+        // Show the targeted snippet
+        const targetSnippet = snippetContainer.querySelector('#' + targetId);
+        if (targetSnippet) targetSnippet.style.display = 'block';
+      });
+    });
+  
+    // Initialize page showing "For Developers" or "For Everyone" mode as you want:
+    // Default: For Everyone
+    userModeBtn.click();
 
     const developerBtn = document.getElementById('developerBtn');
     const friendlyBtn = document.getElementById('friendlyBtn');
