@@ -284,280 +284,242 @@
   </section>
 
     
-
+  <section>
     <!-- Packing Slip -->
-    <div>
+    <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
-      <div class="js-group">
-        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      orderId: "98765",
-      customerName: "John Smith",
-      shippingAddress: "1234 Maple Street, Springfield, USA",
-      date: "2025-05-14",
-      items: [
-        { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
-        { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
-        { name: "Water Bottle", sku: "WB-003", quantity: 3 }
-      ]
-    }
+  
+      <div class="toggle-buttons mb-3">
+        <button class="toggle-btn active" data-target="packing-slip-js">JavaScript</button>
+        <button class="toggle-btn" data-target="packing-slip-curl">Terminal</button>
+      </div>
+  
+      <pre id="packing-slip-js" class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+  fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_API_KEY"
+    },
+    body: JSON.stringify({
+      data: {
+        orderId: "98765",
+        customerName: "John Smith",
+        shippingAddress: "1234 Maple Street, Springfield, USA",
+        date: "2025-05-14",
+        items: [
+          { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
+          { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
+          { name: "Water Bottle", sku: "WB-003", quantity: 3 }
+        ]
+      }
+    })
   })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "packing-slip.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
-        </pre>
-      </div>
-      <div class="terminal-group hidden">
-        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": {
-      "orderId": "98765",
-      "customerName": "John Smith",
-      "shippingAddress": "1234 Maple Street, Springfield, USA",
-      "date": "2025-05-14",
-      "items": [
-        { "name": "Yoga Mat", "sku": "YM-001", "quantity": 1 },
-        { "name": "Dumbbells Set", "sku": "DB-002", "quantity": 2 },
-        { "name": "Water Bottle", "sku": "WB-003", "quantity": 3 }
-      ]
-    }
-  }'
-        </pre>
-      </div>
+  .then(response => response.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "packing-slip.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+      </pre>
+  
+      <pre id="packing-slip-curl" class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto" style="display:none;">
+  curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip" \
+    -H "Authorization: Bearer YOUR_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "data": {
+        "orderId": "98765",
+        "customerName": "John Smith",
+        "shippingAddress": "1234 Maple Street, Springfield, USA",
+        "date": "2025-05-14",
+        "items": [
+          { "name": "Yoga Mat", "sku": "YM-001", "quantity": 1 },
+          { "name": "Dumbbells Set", "sku": "DB-002", "quantity": 2 },
+          { "name": "Water Bottle", "sku": "WB-003", "quantity": 3 }
+        ]
+      }
+    }'
+      </pre>
     </div>
-
+  
     <!-- Invoice -->
-    <div>
+    <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
-      <div class="js-group">
-        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    invoiceNumber: "INV-2025-0423",
-    date: "2025-05-14",
-    billingAddress: "123 Business Rd, Commerce City, USA",
-    items: [
-      { description: "Web Design Services", quantity: 1, price: 1200 },
-      { description: "Hosting (12 months)", quantity: 1, price: 240 }
-    ],
-    total: 1440
+  
+      <div class="toggle-buttons mb-3">
+        <button class="toggle-btn active" data-target="invoice-js">JavaScript</button>
+        <button class="toggle-btn" data-target="invoice-curl">Terminal</button>
+      </div>
+  
+      <pre id="invoice-js" class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+  fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_API_KEY"
+    },
+    body: JSON.stringify({
+      invoiceNumber: "INV-2025-0423",
+      date: "2025-05-14",
+      billingAddress: "123 Business Rd, Commerce City, USA",
+      items: [
+        { description: "Web Design Services", quantity: 1, price: 1200 },
+        { description: "Hosting (12 months)", quantity: 1, price: 240 }
+      ],
+      total: 1440
+    })
   })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "invoice.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
-        </pre>
-      </div>
-      <div class="terminal-group hidden">
-        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "invoiceNumber": "INV-2025-0423",
-    "date": "2025-05-14",
-    "billingAddress": "123 Business Rd, Commerce City, USA",
-    "items": [
-      { "description": "Web Design Services", "quantity": 1, "price": 1200 },
-      { "description": "Hosting (12 months)", "quantity": 1, "price": 240 }
-    ],
-    "total": 1440
-  }'
-        </pre>
-      </div>
+  .then(response => response.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "invoice.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+      </pre>
+  
+      <pre id="invoice-curl" class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto" style="display:none;">
+  curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice" \
+    -H "Authorization: Bearer YOUR_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "invoiceNumber": "INV-2025-0423",
+      "date": "2025-05-14",
+      "billingAddress": "123 Business Rd, Commerce City, USA",
+      "items": [
+        { "description": "Web Design Services", "quantity": 1, "price": 1200 },
+        { "description": "Hosting (12 months)", "quantity": 1, "price": 240 }
+      ],
+      "total": 1440
+    }'
+      </pre>
     </div>
-
+  
     <!-- Recipe -->
-    <div>
+    <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
-      <div class="js-group">
-        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    title: "Chocolate Cake",
-    servings: 8,
-    ingredients: [
-      { name: "Flour", quantity: "2 cups" },
-      { name: "Sugar", quantity: "1.5 cups" },
-      { name: "Cocoa Powder", quantity: "0.75 cup" },
-      { name: "Baking Powder", quantity: "1.5 tsp" },
-      { name: "Salt", quantity: "0.5 tsp" }
-    ],
-    instructions: [
-      "Preheat oven to 350°F (175°C).",
-      "Mix dry ingredients.",
-      "Add wet ingredients and stir until smooth.",
-      "Pour into a greased pan and bake for 35 minutes."
-    ]
+  
+      <div class="toggle-buttons mb-3">
+        <button class="toggle-btn active" data-target="recipe-js">JavaScript</button>
+        <button class="toggle-btn" data-target="recipe-curl">Terminal</button>
+      </div>
+  
+      <pre id="recipe-js" class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+  fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_API_KEY"
+    },
+    body: JSON.stringify({
+      title: "Chocolate Cake",
+      servings: 8,
+      ingredients: [
+        { name: "Flour", quantity: "2 cups" },
+        { name: "Sugar", quantity: "1.5 cups" },
+        { name: "Cocoa Powder", quantity: "0.75 cup" },
+        { name: "Baking Powder", quantity: "1.5 tsp" },
+        { name: "Salt", quantity: "0.5 tsp" }
+      ],
+      instructions: [
+        "Preheat oven to 350°F (175°C).",
+        "Mix dry ingredients.",
+        "Add wet ingredients and stir until smooth.",
+        "Pour into a greased pan and bake for 35 minutes."
+      ]
+    })
   })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "recipe.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
-        </pre>
-      </div>
-      <div class="terminal-group hidden">
-        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Chocolate Cake",
-    "servings": 8,
-    "ingredients": [
-      { "name": "Flour", "quantity": "2 cups" },
-      { "name": "Sugar", "quantity": "1.5 cups" },
-      { "name": "Cocoa Powder", "quantity": "0.75 cup" },
-      { "name": "Baking Powder", "quantity": "1.5 tsp" },
-      { "name": "Salt", "quantity": "0.5 tsp" }
-    ],
-    "instructions": [
-      "Preheat oven to 350°F (175°C).",
-      "Mix dry ingredients.",
-      "Add wet ingredients and stir until smooth.",
-      "Pour into a greased pan and bake for 35 minutes."
-    ]
-  }'
-        </pre>
-      </div>
+  .then(response => response.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "recipe.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+      </pre>
+  
+      <pre id="recipe-curl" class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto" style="display:none;">
+  curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe" \
+    -H "Authorization: Bearer YOUR_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "title": "Chocolate Cake",
+      "servings": 8,
+      "ingredients": [
+        { "name": "Flour", "quantity": "2 cups" },
+        { "name": "Sugar", "quantity": "1.5 cups" },
+        { "name": "Cocoa Powder", "quantity": "0.75 cup" },
+        { "name": "Baking Powder", "quantity": "1.5 tsp" },
+        { "name": "Salt", "quantity": "0.5 tsp" }
+      ],
+      "instructions": [
+        "Preheat oven to 350°F (175°C).",
+        "Mix dry ingredients.",
+        "Add wet ingredients and stir until smooth.",
+        "Pour into a greased pan and bake for 35 minutes."
+      ]
+    }'
+      </pre>
     </div>
-
+  
     <!-- Therapy Report -->
-    <div>
+    <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
-      <div class="js-group">
-        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    patientName: "Jane Doe",
-    date: "2025-05-14",
-    sessionNotes: "Patient made good progress on balance exercises.",
-    recommendations: "Continue with weekly sessions for next 6 weeks."
+  
+      <div class="toggle-buttons mb-3">
+        <button class="toggle-btn active" data-target="therapy-js">JavaScript</button>
+        <button class="toggle-btn" data-target="therapy-curl">Terminal</button>
+      </div>
+  
+      <pre id="therapy-js" class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+  fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_API_KEY"
+    },
+    body: JSON.stringify({
+      patientName: "Jane Doe",
+      date: "2025-05-14",
+      sessionNotes: "Patient made good progress on balance exercises.",
+      recommendations: "Continue with weekly sessions for next 6 weeks."
+    })
   })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "therapy-report.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
-        </pre>
-      </div>
-      <div class="terminal-group hidden">
-        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "patientName": "Jane Doe",
-    "date": "2025-05-14",
-    "sessionNotes": "Patient made good progress on balance exercises.",
-    "recommendations": "Continue with weekly sessions for next 6 weeks."
-  }'
-        </pre>
-      </div>
+  .then(response => response.blob())
+  .then(blob => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "therapy-report.pdf";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+      </pre>
+  
+      <pre id="therapy-curl" class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto" style="display:none;">
+  curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report" \
+    -H "Authorization: Bearer YOUR_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "patientName": "Jane Doe",
+      "date": "2025-05-14",
+      "sessionNotes": "Patient made good progress on balance exercises.",
+      "recommendations": "Continue with weekly sessions for next 6 weeks."
+    }'
+      </pre>
     </div>
-
-    <!-- Raw HTML -->
-    <div>
-      <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Raw HTML</h3>
-      <div class="js-group">
-        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    html: "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a test PDF generated from raw HTML.&lt;/p&gt;"
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "raw-html.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-});
-        </pre>
-      </div>
-      <div class="terminal-group hidden">
-        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "html": "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a test PDF generated from raw HTML.&lt;/p&gt;"
-  }'
-        </pre>
-      </div>
-    </div>
-
   </section>
 
 
@@ -580,8 +542,8 @@ const jsModeBtn = document.getElementById('jsModeBtn');
 const curlModeBtn = document.getElementById('curlModeBtn');
 
 // Containers for code snippet groups
-const jsGroups = document.querySelectorAll('.js-group');          // JS fetch examples
-const terminalGroups = document.querySelectorAll('.terminal-group'); // Curl examples
+const jsGroups = document.querySelectorAll('.js-snippet');          // JS fetch examples
+const terminalGroups = document.querySelectorAll('.curl-snippet'); // Curl examples
 
 // Helper to hide all dev code snippets
 function hideAllDevSnippets() {
@@ -619,9 +581,7 @@ devModeBtn.addEventListener('click', () => {
   userModeBtn.classList.remove('bg-blue-600', 'text-white');
   userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
   
-  // Default to showing JavaScript snippets on dev mode load
-  jsModeBtn.classList.add('bg-white');
-  jsModeBtn.classList.remove('bg-gray-200');
+
   
   curlModeBtn.classList.remove('bg-white');
   curlModeBtn.classList.add('bg-gray-200');
