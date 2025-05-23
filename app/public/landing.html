@@ -521,6 +521,89 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <style>
 
+/* Container for the main toggle */
+.flex > button {
+  cursor: pointer;
+  font-weight: 600;
+  user-select: none;
+  border: 1px solid transparent;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Main toggle buttons - left and right */
+#userModeBtn {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+  border-right: none; /* merge with next button */
+}
+
+#devModeBtn {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  border-left: none;
+}
+
+/* Hover states for main toggle */
+#userModeBtn:hover:not(.active) {
+  background-color: #2563eb; /* deeper blue */
+}
+
+#devModeBtn:hover:not(.active) {
+  background-color: #d1d5db; /* light gray */
+}
+
+/* Active state (for whichever mode is selected) */
+button.active {
+  background-color: #1d4ed8 !important; /* stronger blue for active */
+  color: white !important;
+  box-shadow: 0 0 8px rgba(29, 78, 216, 0.6);
+  border-color: #1e40af !important;
+  pointer-events: none; /* disable clicking active button */
+}
+
+/* Developer Sub-Tabs styling */
+#devSubTabs button {
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  user-select: none;
+}
+
+/* Rounded corners for sub-tabs */
+#devSubTabs button:first-child {
+  border-top-left-radius: 0.4rem;
+  border-bottom-left-radius: 0.4rem;
+  border-right: none;
+}
+
+#devSubTabs button:last-child {
+  border-top-right-radius: 0.4rem;
+  border-bottom-right-radius: 0.4rem;
+}
+
+/* Hover sub-tabs */
+#devSubTabs button:hover {
+  background-color: #f3f4f6;
+}
+
+/* Active sub-tab */
+#devSubTabs button.active {
+  background-color: #2563eb;
+  color: white;
+  border-color: #2563eb;
+  pointer-events: none;
+}
+
+/* Spacing between main toggles and sub-tabs */
+#devSubTabs {
+  gap: 0; /* no gap, they are tightly connected */
+}
+
+
+
 
 .hover\:shadow-lg:hover {
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
@@ -595,6 +678,15 @@ document.addEventListener("DOMContentLoaded", () => {
     padding: 0.75rem;
   }
 }
+
+
+
+  .flex > button,
+  #devSubTabs button {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-size: 0.9rem;
+  }
 
 
 </style>
