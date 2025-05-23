@@ -389,10 +389,11 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 
 
 <script>
- 
- const userBtn = document.getElementById("userModeBtn");
+  const userBtn = document.getElementById("userModeBtn");
   const devBtn = document.getElementById("devModeBtn");
+  const userSection = document.getElementById("userSection");
   const devCodeSection = document.getElementById("devCodeSection");
+  const loadingOverlay = document.getElementById("loadingOverlay");
 
   function activateUserMode() {
     userSection.classList.remove("hidden");
@@ -419,77 +420,40 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
   userBtn.addEventListener("click", activateUserMode);
   devBtn.addEventListener("click", activateDevMode);
 
-  // Default start in User Mode
+
   activateUserMode();
 
-document.getElementById("signUpButton").addEventListener("click", (event) => {
-  event.preventDefault();
-  const targetUrl = event.target.href;
+ 
+  function handleButtonClick(event) {
+    event.preventDefault();
+    const targetUrl = event.currentTarget.href; 
 
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "flex"; 
-  console.log("Spinner shown for Sign Up button");
+    loadingOverlay.style.display = "flex";
+    console.log("Spinner shown for button click");
 
-  setTimeout(() => {
-    console.log("Navigating to:", targetUrl);
-    window.location.href = targetUrl; 
-  }, 500); 
-});
+    setTimeout(() => {
+      console.log("Navigating to:", targetUrl);
+      window.location.href = targetUrl;
+    }, 500);
+  }
 
-document.getElementById("loginButton").addEventListener("click", (event) => {
-  event.preventDefault();
-  const targetUrl = event.target.href;
+  const signUpBtn = document.getElementById("signUpButton");
+  const loginBtn = document.getElementById("loginButton");
 
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "flex"; 
-  console.log("Spinner shown for Login button");
-
-  setTimeout(() => {
-    console.log("Navigating to:", targetUrl);
-    window.location.href = targetUrl; 
-  }, 500); 
-});
-
+  if (signUpBtn) signUpBtn.addEventListener("click", handleButtonClick);
+  if (loginBtn) loginBtn.addEventListener("click", handleButtonClick);
 
   window.addEventListener("load", () => {
-    const loadingOverlay = document.getElementById("loadingOverlay");
     loadingOverlay.style.display = "none";
     console.log("Spinner hidden on page load");
   });
 
-  const userSection = document.getElementById("userSection");
-
-userModeBtn.addEventListener("click", () => {
-  devCodeSection.classList.add("hidden");
-  userSection.classList.remove("hidden");
-
-  userModeBtn.classList.add("bg-blue-600", "text-white");
-  userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
-  devModeBtn.classList.remove("bg-blue-600", "text-white");
-  devModeBtn.classList.add("bg-gray-200", "text-gray-800");
-});
-
-devModeBtn.addEventListener("click", () => {
-  devCodeSection.classList.remove("hidden");
-  userSection.classList.add("hidden");
-
-  devModeBtn.classList.add("bg-blue-600", "text-white");
-  devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
-  userModeBtn.classList.remove("bg-blue-600", "text-white");
-  userModeBtn.classList.add("bg-gray-200", "text-gray-800");
-});
-
-
-
-
-
-window.addEventListener("pageshow", () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "none";
-  console.log("Spinner hidden on page show (e.g., back navigation)");
-});
-  
+  window.addEventListener("pageshow", () => {
+    loadingOverlay.style.display = "none";
+    console.log("Spinner hidden on page show (e.g., back navigation)");
+  });
 </script>
+
 
 <style>
 
