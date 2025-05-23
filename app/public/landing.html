@@ -74,7 +74,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer YOUR_API_TOKEN"
+            "Authorization": "Bearer YOUR_API_KEY"
           },
           body: JSON.stringify({
             data: {
@@ -90,21 +90,19 @@
             }
           })
         })
-        .then(res => {
-          if (!res.ok) throw new Error("Network response was not ok");
-          return res.blob();
-        })
+        .then(response => response.blob())
         .then(blob => {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
-          a.download = "PackingSlip.pdf";
+          a.download = "PackingSlip_98765.pdf";
           document.body.appendChild(a);
           a.click();
           a.remove();
           window.URL.revokeObjectURL(url);
         })
-        .catch(err => console.error("Error downloading PDF:", err));
+        .catch(console.error);
+        
         
       </code></pre>
     </div>
