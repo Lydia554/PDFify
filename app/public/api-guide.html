@@ -222,8 +222,7 @@
 
 
 
-    <main id="devModeContainer" class="my-8">
-      <!-- Developer Mode Section -->
+    <div id="modeToggleContainer" class="my-8">
       <div class="flex flex-col items-center">
         <div class="flex rounded-lg overflow-hidden border border-gray-300">
           <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
@@ -234,9 +233,8 @@
           <button id="curlModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r hover:bg-gray-300 transition">Terminal (curl)</button>
         </div>
       </div>
-    </main>
+    </div>
     
-
 
   <!-- Friendly Mode Section -->
   <section id="userSection" class="py-16 max-w-4xl mx-auto text-center px-4">
@@ -573,66 +571,89 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html" 
   </footer>
 
   <script>
+const userModeBtn = document.getElementById('userModeBtn');
+const devModeBtn = document.getElementById('devModeBtn');
+const userSection = document.getElementById('userSection');       // Friendly examples container
+const devCodeSection = document.getElementById('devCodeSection'); // Developer code snippets container
+const devSubTabs = document.getElementById('devSubTabs');         // JS / Terminal toggle buttons
+const jsModeBtn = document.getElementById('jsModeBtn');
+const curlModeBtn = document.getElementById('curlModeBtn');
 
-      // Elements
-      const userModeBtn = document.getElementById('userModeBtn');
-    const devModeBtn = document.getElementById('devModeBtn');
-    const userSection = document.getElementById('userSection');
-    const devCodeSection = document.getElementById('devCodeSection');
-    const devSubTabs = document.getElementById('devSubTabs');
-    const jsModeBtn = document.getElementById('jsModeBtn');
-    const curlModeBtn = document.getElementById('curlModeBtn');
+// Containers for code snippet groups
+const jsGroups = document.querySelectorAll('.js-group');          // JS fetch examples
+const terminalGroups = document.querySelectorAll('.terminal-group'); // Curl examples
 
-    function setMode(mode) {
-      if (mode === 'user') {
-        userModeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
-        userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
-        devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-        devModeBtn.classList.remove('bg-blue-600', 'text-white', 'shadow');
+// Helper to hide all dev code snippets
+function hideAllDevSnippets() {
+  jsGroups.forEach(el => el.classList.add('hidden'));
+  terminalGroups.forEach(el => el.classList.add('hidden'));
+}
 
-        userSection.classList.remove('hidden');
-        devCodeSection.classList.add('hidden');
-        devSubTabs.classList.add('hidden');
-      } else if (mode === 'dev') {
-        userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-        userModeBtn.classList.remove('bg-blue-600', 'text-white', 'shadow');
-        devModeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
-        devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+// When clicking "For Everyone"
+userModeBtn.addEventListener('click', () => {
+  userSection.classList.remove('hidden');       // Show friendly examples
+  devCodeSection.classList.add('hidden');      // Hide dev code snippets
+  devSubTabs.classList.add('hidden');           // Hide JS/Curl toggle buttons
+  
+  // Toggle button styles
+  userModeBtn.classList.add('bg-blue-600', 'text-white');
+  userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+  devModeBtn.classList.remove('bg-blue-600', 'text-white');
+  devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+  
+  // Hide all dev code snippets just in case
+  hideAllDevSnippets();
+});
 
-        userSection.classList.add('hidden');
-        devCodeSection.classList.remove('hidden');
-        devSubTabs.classList.remove('hidden');
-        setDevSubTab('js');
-      }
-    }
+// When clicking "For Developers"
+devModeBtn.addEventListener('click', () => {
+  userSection.classList.add('hidden');          // Hide friendly examples
+  devCodeSection.classList.remove('hidden');   // Show dev code snippets container
+  devSubTabs.classList.remove('hidden');       // Show JS / Curl toggle buttons
+  
+  // Toggle button styles
+  devModeBtn.classList.add('bg-blue-600', 'text-white');
+  devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+  userModeBtn.classList.remove('bg-blue-600', 'text-white');
+  userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+  
+  // Default to showing JavaScript snippets on dev mode load
+  jsModeBtn.classList.add('bg-white');
+  jsModeBtn.classList.remove('bg-gray-200');
+  
+  curlModeBtn.classList.remove('bg-white');
+  curlModeBtn.classList.add('bg-gray-200');
+  
+  jsGroups.forEach(el => el.classList.remove('hidden'));
+  terminalGroups.forEach(el => el.classList.add('hidden'));
+});
 
-    function setDevSubTab(subTab) {
-      if (subTab === 'js') {
-        jsModeBtn.classList.add('bg-white');
-        jsModeBtn.classList.remove('bg-gray-200');
-        curlModeBtn.classList.add('bg-gray-200');
-        curlModeBtn.classList.remove('bg-white');
+// Toggle JavaScript code snippets in dev mode
+jsModeBtn.addEventListener('click', () => {
+  jsModeBtn.classList.add('bg-white');
+  jsModeBtn.classList.remove('bg-gray-200');
+  
+  curlModeBtn.classList.remove('bg-white');
+  curlModeBtn.classList.add('bg-gray-200');
+  
+  jsGroups.forEach(el => el.classList.remove('hidden'));
+  terminalGroups.forEach(el => el.classList.add('hidden'));
+});
 
-        document.querySelectorAll('#devCodeSection .js-group').forEach(el => el.classList.remove('hidden'));
-        document.querySelectorAll('#devCodeSection .terminal-group').forEach(el => el.classList.add('hidden'));
-      } else if (subTab === 'curl') {
-        curlModeBtn.classList.add('bg-white');
-        curlModeBtn.classList.remove('bg-gray-200');
-        jsModeBtn.classList.add('bg-gray-200');
-        jsModeBtn.classList.remove('bg-white');
+// Toggle Terminal (curl) code snippets in dev mode
+curlModeBtn.addEventListener('click', () => {
+  curlModeBtn.classList.add('bg-white');
+  curlModeBtn.classList.remove('bg-gray-200');
+  
+  jsModeBtn.classList.remove('bg-white');
+  jsModeBtn.classList.add('bg-gray-200');
+  
+  jsGroups.forEach(el => el.classList.add('hidden'));
+  terminalGroups.forEach(el => el.classList.remove('hidden'));
+});
 
-        document.querySelectorAll('#devCodeSection .js-group').forEach(el => el.classList.add('hidden'));
-        document.querySelectorAll('#devCodeSection .terminal-group').forEach(el => el.classList.remove('hidden'));
-      }
-    }
-
-    userModeBtn.addEventListener('click', () => setMode('user'));
-    devModeBtn.addEventListener('click', () => setMode('dev'));
-    jsModeBtn.addEventListener('click', () => setDevSubTab('js'));
-    curlModeBtn.addEventListener('click', () => setDevSubTab('curl'));
-
-    // Initialize with user mode by default
-    setMode('user');
 
 
     const developerBtn = document.getElementById('developerBtn');
