@@ -187,45 +187,7 @@
     </p>
   </section>
     </div>
-      
-
-
-    <section class="mb-10">
-      <h3 class="text-2xl font-semibold mb-4 text-purple-700">API Usage Examples</h3>
-      <div class="flex space-x-4 mb-4">
-        <button id="devCurlBtn" class="px-4 py-2 rounded bg-purple-700 text-white hover:bg-purple-800">cURL</button>
-        <button id="devFetchBtn" class="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-400">fetch</button>
-      </div>
-      
-      <pre id="devCurlExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
-    curl -X POST "https://api.pdfify.com/generate" \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer YOUR_API_KEY" \
-    -d '{"template":"invoice","data":{...}}' --output result.pdf
-      </pre>
     
-      <pre id="devFetchExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto hidden">
-    fetch('https://api.pdfify.com/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer YOUR_API_KEY'
-      },
-      body: JSON.stringify({ template: 'invoice', data: { /*...*/ } })
-    })
-    .then(res => res.blob())
-    .then(blob => {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'result.pdf';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    });
-      </pre>
-    </section>
-
 
 
 
@@ -256,42 +218,348 @@
         <p><strong>Note:</strong> Basic templates are available to all users. Premium templates are available to upgraded accounts and offer advanced styles, layout enhancements, and branding options.</p>
         
       </div>
+    </div>
 
 
-      <section class="mb-10">
-        <h3 class="text-2xl font-semibold mb-4 text-purple-700">API Usage Examples</h3>
-        <div class="flex space-x-4 mb-4">
-          <button id="friendlyCurlBtn" class="px-4 py-2 rounded bg-purple-700 text-white hover:bg-purple-800">cURL</button>
-          <button id="friendlyFetchBtn" class="px-4 py-2 rounded bg-gray-200 text-gray-800 hover:bg-gray-400">fetch</button>
-        </div>
-        
-        <pre id="friendlyCurlExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto">
-      curl -X POST "https://api.pdfify.com/generate" \
-      -H "Content-Type: application/json" \
-      -d '{"template":"shop-order","data":{...}}' --output result.pdf
-        </pre>
-      
-        <pre id="friendlyFetchExample" class="bg-gray-100 p-4 rounded text-sm overflow-x-auto hidden">
-      fetch('https://api.pdfify.com/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ template: 'shop-order', data: { /*...*/ } })
-      })
-      .then(res => res.blob())
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'result.pdf';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      });
-        </pre>
-      </section>
+  <!-- Friendly Mode Section -->
+  <section id="userSection" class="py-16 max-w-4xl mx-auto text-center px-4">
+    <h2 class="text-2xl font-bold mb-4">Generate Beautiful PDFs Without Writing a Single Line of Code</h2>
+    <p class="text-lg mb-6">
+      Select a template, fill out a simple form, and download a polished PDF in seconds. Whether it's a recipe, invoice, or report—no coding or formatting required.
+    </p>
 
+    <div class="grid gap-10 sm:grid-cols-2">
+
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+        <h3 class="text-xl font-semibold mb-2">📦 Packing Slip</h3>
+        <p class="mb-4">Generate detailed packing slips for your orders quickly and easily.</p>
+        <img src="/demo/packing-slip-thumbnail.jpg" alt="Packing Slip Preview" class="rounded shadow mb-3" />
+        <a href="/demo/PackingSlip.pdf" class="text-blue-600 hover:underline">Download PDF</a>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+        <h3 class="text-xl font-semibold mb-2">🧾 Invoice</h3>
+        <p class="mb-4">Create professional invoices suitable for printing and emailing.</p>
+        <img src="/demo/invoice-thumbnail.jpg" alt="Invoice Preview" class="rounded shadow mb-3" />
+        <a href="/demo/Invoice.pdf" class="text-blue-600 hover:underline">Download PDF</a>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+        <h3 class="text-xl font-semibold mb-2">🍳 Recipe</h3>
+        <p class="mb-4">Beautiful recipe cards that are printable and shareable.</p>
+        <img src="/demo/recipe-thumbnail.jpg" alt="Recipe Preview" class="rounded shadow mb-3" />
+        <a href="/demo/Recipe.pdf" class="text-blue-600 hover:underline">Download PDF</a>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+        <h3 class="text-xl font-semibold mb-2">📝 Therapy Report</h3>
+        <p class="mb-4">Generate therapy and progress reports in seconds.</p>
+        <img src="/demo/therapy-report-thumbnail.jpg" alt="Therapy Report Preview" class="rounded shadow mb-3" />
+        <a href="/demo/TherapyReport.pdf" class="text-blue-600 hover:underline">Download PDF</a>
+      </div>
+
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition sm:col-span-2">
+        <h3 class="text-xl font-semibold mb-2">📄 Raw HTML</h3>
+        <p class="mb-4">Generate PDFs from any custom HTML markup you provide.</p>
+        <img src="/demo/raw-html-thumbnail.jpg" alt="Raw HTML Preview" class="rounded shadow mb-3" />
+        <a href="/demo/RawHTML.pdf" class="text-blue-600 hover:underline">Download PDF</a>
+      </div>
 
     </div>
+  </section>
+
+  <!-- Developer Mode Section -->
+      <!-- Mode Toggle Buttons -->
+      <div class="flex flex-col items-center mt-8">
+        <div class="flex rounded-lg overflow-hidden border border-gray-300">
+          <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
+          <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
+        </div>
+        <div id="devSubTabs" class="flex mt-4 hidden rounded-lg border border-gray-300 overflow-hidden">
+          <button id="jsModeBtn" class="px-4 py-1 bg-white text-sm text-gray-800 rounded-l hover:bg-gray-100 transition">JavaScript</button>
+          <button id="curlModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r hover:bg-gray-300 transition">Terminal (curl)</button>
+        </div>
+      </div>
+    
+    
+    
+
+    <!-- Packing Slip -->
+    <div>
+      <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
+      <div class="js-group">
+        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
+        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+  },
+  body: JSON.stringify({
+    data: {
+      orderId: "98765",
+      customerName: "John Smith",
+      shippingAddress: "1234 Maple Street, Springfield, USA",
+      date: "2025-05-14",
+      items: [
+        { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
+        { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
+        { name: "Water Bottle", sku: "WB-003", quantity: 3 }
+      ]
+    }
+  })
+})
+.then(response => response.blob())
+.then(blob => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "packing-slip.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+        </pre>
+      </div>
+      <div class="terminal-group hidden">
+        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
+        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "data": {
+      "orderId": "98765",
+      "customerName": "John Smith",
+      "shippingAddress": "1234 Maple Street, Springfield, USA",
+      "date": "2025-05-14",
+      "items": [
+        { "name": "Yoga Mat", "sku": "YM-001", "quantity": 1 },
+        { "name": "Dumbbells Set", "sku": "DB-002", "quantity": 2 },
+        { "name": "Water Bottle", "sku": "WB-003", "quantity": 3 }
+      ]
+    }
+  }'
+        </pre>
+      </div>
+    </div>
+
+    <!-- Invoice -->
+    <div>
+      <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
+      <div class="js-group">
+        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
+        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+  },
+  body: JSON.stringify({
+    invoiceNumber: "INV-2025-0423",
+    date: "2025-05-14",
+    billingAddress: "123 Business Rd, Commerce City, USA",
+    items: [
+      { description: "Web Design Services", quantity: 1, price: 1200 },
+      { description: "Hosting (12 months)", quantity: 1, price: 240 }
+    ],
+    total: 1440
+  })
+})
+.then(response => response.blob())
+.then(blob => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "invoice.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+        </pre>
+      </div>
+      <div class="terminal-group hidden">
+        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
+        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "invoiceNumber": "INV-2025-0423",
+    "date": "2025-05-14",
+    "billingAddress": "123 Business Rd, Commerce City, USA",
+    "items": [
+      { "description": "Web Design Services", "quantity": 1, "price": 1200 },
+      { "description": "Hosting (12 months)", "quantity": 1, "price": 240 }
+    ],
+    "total": 1440
+  }'
+        </pre>
+      </div>
+    </div>
+
+    <!-- Recipe -->
+    <div>
+      <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
+      <div class="js-group">
+        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
+        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+  },
+  body: JSON.stringify({
+    title: "Chocolate Cake",
+    servings: 8,
+    ingredients: [
+      { name: "Flour", quantity: "2 cups" },
+      { name: "Sugar", quantity: "1.5 cups" },
+      { name: "Cocoa Powder", quantity: "0.75 cup" },
+      { name: "Baking Powder", quantity: "1.5 tsp" },
+      { name: "Salt", quantity: "0.5 tsp" }
+    ],
+    instructions: [
+      "Preheat oven to 350°F (175°C).",
+      "Mix dry ingredients.",
+      "Add wet ingredients and stir until smooth.",
+      "Pour into a greased pan and bake for 35 minutes."
+    ]
+  })
+})
+.then(response => response.blob())
+.then(blob => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "recipe.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+        </pre>
+      </div>
+      <div class="terminal-group hidden">
+        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
+        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Chocolate Cake",
+    "servings": 8,
+    "ingredients": [
+      { "name": "Flour", "quantity": "2 cups" },
+      { "name": "Sugar", "quantity": "1.5 cups" },
+      { "name": "Cocoa Powder", "quantity": "0.75 cup" },
+      { "name": "Baking Powder", "quantity": "1.5 tsp" },
+      { "name": "Salt", "quantity": "0.5 tsp" }
+    ],
+    "instructions": [
+      "Preheat oven to 350°F (175°C).",
+      "Mix dry ingredients.",
+      "Add wet ingredients and stir until smooth.",
+      "Pour into a greased pan and bake for 35 minutes."
+    ]
+  }'
+        </pre>
+      </div>
+    </div>
+
+    <!-- Therapy Report -->
+    <div>
+      <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
+      <div class="js-group">
+        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
+        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+  },
+  body: JSON.stringify({
+    patientName: "Jane Doe",
+    date: "2025-05-14",
+    sessionNotes: "Patient made good progress on balance exercises.",
+    recommendations: "Continue with weekly sessions for next 6 weeks."
+  })
+})
+.then(response => response.blob())
+.then(blob => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "therapy-report.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+        </pre>
+      </div>
+      <div class="terminal-group hidden">
+        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
+        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "patientName": "Jane Doe",
+    "date": "2025-05-14",
+    "sessionNotes": "Patient made good progress on balance exercises.",
+    "recommendations": "Continue with weekly sessions for next 6 weeks."
+  }'
+        </pre>
+      </div>
+    </div>
+
+    <!-- Raw HTML -->
+    <div>
+      <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Raw HTML</h3>
+      <div class="js-group">
+        <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
+        <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+  },
+  body: JSON.stringify({
+    html: "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a test PDF generated from raw HTML.&lt;/p&gt;"
+  })
+})
+.then(response => response.blob())
+.then(blob => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "raw-html.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+        </pre>
+      </div>
+      <div class="terminal-group hidden">
+        <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
+        <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
+curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "html": "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a test PDF generated from raw HTML.&lt;/p&gt;"
+  }'
+        </pre>
+      </div>
+    </div>
+
+  </section>
+
+
   </main>
 
 
@@ -302,6 +570,68 @@
   </footer>
 
   <script>
+
+      // Elements
+      const userModeBtn = document.getElementById('userModeBtn');
+    const devModeBtn = document.getElementById('devModeBtn');
+    const userSection = document.getElementById('userSection');
+    const devCodeSection = document.getElementById('devCodeSection');
+    const devSubTabs = document.getElementById('devSubTabs');
+    const jsModeBtn = document.getElementById('jsModeBtn');
+    const curlModeBtn = document.getElementById('curlModeBtn');
+
+    function setMode(mode) {
+      if (mode === 'user') {
+        userModeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
+        userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+        devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+        devModeBtn.classList.remove('bg-blue-600', 'text-white', 'shadow');
+
+        userSection.classList.remove('hidden');
+        devCodeSection.classList.add('hidden');
+        devSubTabs.classList.add('hidden');
+      } else if (mode === 'dev') {
+        userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+        userModeBtn.classList.remove('bg-blue-600', 'text-white', 'shadow');
+        devModeBtn.classList.add('bg-blue-600', 'text-white', 'shadow');
+        devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+
+        userSection.classList.add('hidden');
+        devCodeSection.classList.remove('hidden');
+        devSubTabs.classList.remove('hidden');
+        setDevSubTab('js');
+      }
+    }
+
+    function setDevSubTab(subTab) {
+      if (subTab === 'js') {
+        jsModeBtn.classList.add('bg-white');
+        jsModeBtn.classList.remove('bg-gray-200');
+        curlModeBtn.classList.add('bg-gray-200');
+        curlModeBtn.classList.remove('bg-white');
+
+        document.querySelectorAll('#devCodeSection .js-group').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('#devCodeSection .terminal-group').forEach(el => el.classList.add('hidden'));
+      } else if (subTab === 'curl') {
+        curlModeBtn.classList.add('bg-white');
+        curlModeBtn.classList.remove('bg-gray-200');
+        jsModeBtn.classList.add('bg-gray-200');
+        jsModeBtn.classList.remove('bg-white');
+
+        document.querySelectorAll('#devCodeSection .js-group').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('#devCodeSection .terminal-group').forEach(el => el.classList.remove('hidden'));
+      }
+    }
+
+    userModeBtn.addEventListener('click', () => setMode('user'));
+    devModeBtn.addEventListener('click', () => setMode('dev'));
+    jsModeBtn.addEventListener('click', () => setDevSubTab('js'));
+    curlModeBtn.addEventListener('click', () => setDevSubTab('curl'));
+
+    // Initialize with user mode by default
+    setMode('user');
+
+    
     const developerBtn = document.getElementById('developerBtn');
     const friendlyBtn = document.getElementById('friendlyBtn');
     const developerSection = document.getElementById('developerSection');
@@ -330,59 +660,6 @@
     // Initialize with Developer Mode visible
     developerSection.classList.remove('hidden');
     friendlySection.classList.add('hidden');
-
-
-
-// Developer Mode toggles
-const devCurlBtn = document.getElementById('devCurlBtn');
-const devFetchBtn = document.getElementById('devFetchBtn');
-const devCurlExample = document.getElementById('devCurlExample');
-const devFetchExample = document.getElementById('devFetchExample');
-
-devCurlBtn.addEventListener('click', () => {
-  devCurlBtn.classList.add('bg-purple-700', 'text-white');
-  devCurlBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  devFetchBtn.classList.remove('bg-purple-700', 'text-white');
-  devFetchBtn.classList.add('bg-gray-200', 'text-gray-800');
-  devCurlExample.classList.remove('hidden');
-  devFetchExample.classList.add('hidden');
-});
-
-devFetchBtn.addEventListener('click', () => {
-  devFetchBtn.classList.add('bg-purple-700', 'text-white');
-  devFetchBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  devCurlBtn.classList.remove('bg-purple-700', 'text-white');
-  devCurlBtn.classList.add('bg-gray-200', 'text-gray-800');
-  devFetchExample.classList.remove('hidden');
-  devCurlExample.classList.add('hidden');
-});
-
-// Friendly Mode toggles
-const friendlyCurlBtn = document.getElementById('friendlyCurlBtn');
-const friendlyFetchBtn = document.getElementById('friendlyFetchBtn');
-const friendlyCurlExample = document.getElementById('friendlyCurlExample');
-const friendlyFetchExample = document.getElementById('friendlyFetchExample');
-
-friendlyCurlBtn.addEventListener('click', () => {
-  friendlyCurlBtn.classList.add('bg-purple-700', 'text-white');
-  friendlyCurlBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  friendlyFetchBtn.classList.remove('bg-purple-700', 'text-white');
-  friendlyFetchBtn.classList.add('bg-gray-200', 'text-gray-800');
-  friendlyCurlExample.classList.remove('hidden');
-  friendlyFetchExample.classList.add('hidden');
-});
-
-friendlyFetchBtn.addEventListener('click', () => {
-  friendlyFetchBtn.classList.add('bg-purple-700', 'text-white');
-  friendlyFetchBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  friendlyCurlBtn.classList.remove('bg-purple-700', 'text-white');
-  friendlyCurlBtn.classList.add('bg-gray-200', 'text-gray-800');
-  friendlyFetchExample.classList.remove('hidden');
-  friendlyCurlExample.classList.add('hidden');
-});
-
-
-
 
   
   function toggleImage(container) {
