@@ -545,11 +545,7 @@ const curlModeBtn = document.getElementById('curlModeBtn');
 const jsGroups = document.querySelectorAll('.js-snippet');          // JS fetch examples
 const terminalGroups = document.querySelectorAll('.curl-snippet'); // Curl examples
 
-// Helper to hide all dev code snippets
-function hideAllDevSnippets() {
-  jsGroups.forEach(el => el.classList.add('hidden'));
-  terminalGroups.forEach(el => el.classList.add('hidden'));
-}
+
 
 // When clicking "For Everyone"
 userModeBtn.addEventListener('click', () => {
@@ -583,36 +579,9 @@ devModeBtn.addEventListener('click', () => {
   
 
   
-  curlModeBtn.classList.remove('bg-white');
-  curlModeBtn.classList.add('bg-gray-200');
-  
-  jsGroups.forEach(el => el.classList.remove('hidden'));
-  terminalGroups.forEach(el => el.classList.add('hidden'));
 });
 
-// Toggle JavaScript code snippets in dev mode
-jsModeBtn.addEventListener('click', () => {
-  jsModeBtn.classList.add('bg-white');
-  jsModeBtn.classList.remove('bg-gray-200');
-  
-  curlModeBtn.classList.remove('bg-white');
-  curlModeBtn.classList.add('bg-gray-200');
-  
-  jsGroups.forEach(el => el.classList.remove('hidden'));
-  terminalGroups.forEach(el => el.classList.add('hidden'));
-});
 
-// Toggle Terminal (curl) code snippets in dev mode
-curlModeBtn.addEventListener('click', () => {
-  curlModeBtn.classList.add('bg-white');
-  curlModeBtn.classList.remove('bg-gray-200');
-  
-  jsModeBtn.classList.remove('bg-white');
-  jsModeBtn.classList.add('bg-gray-200');
-  
-  jsGroups.forEach(el => el.classList.add('hidden'));
-  terminalGroups.forEach(el => el.classList.remove('hidden'));
-});
 
 
 
