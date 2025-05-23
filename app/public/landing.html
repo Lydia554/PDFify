@@ -70,7 +70,8 @@
 
     <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
       <pre class="code-js"><code>
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip", {
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip
+", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -86,7 +87,7 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-pack
     <h3 class="text-2xl font-semibold mt-12 mb-2 text-purple-700 text-center">💻 Command Line Example</h3>
     <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
       <pre class="code-cl"><code>
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/packing-slip/generate-packing-slip \
+curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
 -H "Authorization: Bearer <your-token>" \
 -H "Content-Type: application/json" \
 -d '{
