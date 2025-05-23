@@ -65,63 +65,72 @@
 <section id="devCodeSection" class="py-16 hidden bg-gray-100">
   <div class="max-w-none w-full">
 
-    <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 JavaScript Example</h3>
-    <p class="mb-6 text-center text-gray-700">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
-
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
-      <pre class="code-js"><code>
-        fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer YOUR_API_KEY"
-          },
-          body: JSON.stringify({
-            data: {
-              orderId: "98765",
-              customerName: "John Smith",
-              shippingAddress: "1234 Maple Street, Springfield, USA",
-              date: "2025-05-14",
-              items: [
-                { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
-                { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
-                { name: "Water Bottle", sku: "WB-003", quantity: 3 }
-              ]
-            }
-          })
-        })
-        .then(response => response.blob())
-        .then(blob => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = "PackingSlip_98765.pdf";
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          window.URL.revokeObjectURL(url);
-        })
-        .catch(console.error);
-        
-        
-      </code></pre>
+    <!-- Inner toggle for JS vs curl -->
+    <div class="flex justify-center mb-6 space-x-4">
+      <button id="jsExampleBtn" class="px-4 py-2 bg-purple-600 text-white rounded shadow hover:bg-purple-700 transition duration-300">💻 JavaScript Example</button>
+      <button id="curlExampleBtn" class="px-4 py-2 bg-gray-300 text-gray-800 rounded shadow hover:bg-gray-400 transition duration-300">🖥️ curl / Terminal Example</button>
     </div>
 
-    <h3 class="text-2xl font-semibold mt-12 mb-2 text-purple-700 text-center">💻 Command Line Example</h3>
-    <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
-      <pre class="code-cl"><code>
-        curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
-        -H "Authorization: Bearer <your-token>" \
-        -H "Content-Type: application/json" \
-        -d '{
-          "title": "Order #1234",
-          "customer": "Jane Doe",
-          "items": [
-            {"name": "Shirt", "quantity": 2, "price": 24.99}
-          ]
-        }' --output packing-slip.pdf
-        
-      </code></pre>
+    <!-- JavaScript Example -->
+    <div id="jsExample" class="">
+      <h3 class="text-2xl font-semibold mb-2 text-purple-700 text-center">💻 JavaScript Example</h3>
+      <p class="mb-6 text-center text-gray-700">Want to automate PDF generation using your own data? You can use our API with custom scripts or webhooks.</p>  
+
+      <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
+        <pre class="code-js"><code>
+fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer YOUR_API_KEY"
+  },
+  body: JSON.stringify({
+    data: {
+      orderId: "98765",
+      customerName: "John Smith",
+      shippingAddress: "1234 Maple Street, Springfield, USA",
+      date: "2025-05-14",
+      items: [
+        { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
+        { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
+        { name: "Water Bottle", sku: "WB-003", quantity: 3 }
+      ]
+    }
+  })
+})
+.then(response => response.blob())
+.then(blob => {
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "PackingSlip_98765.pdf";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+})
+.catch(console.error);
+        </code></pre>
+      </div>
+    </div>
+
+    <!-- curl Example -->
+    <div id="curlExample" class="hidden">
+      <h3 class="text-2xl font-semibold mt-12 mb-2 text-purple-700 text-center">🖥️ Command Line Example</h3>
+      <div class="bg-gray-900 text-green-400 px-4 py-6 w-full shadow overflow-x-auto">
+        <pre class="code-cl"><code>
+curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
+-H "Authorization: Bearer &lt;your-token&gt;" \
+-H "Content-Type: application/json" \
+-d '{
+  "title": "Order #1234",
+  "customer": "Jane Doe",
+  "items": [
+    {"name": "Shirt", "quantity": 2, "price": 24.99}
+  ]
+}' --output packing-slip.pdf
+        </code></pre>
+      </div>
     </div>
 
   </div>
@@ -245,6 +254,31 @@ devModeBtn.addEventListener("click", () => {
   userModeBtn.classList.remove("bg-blue-600", "text-white");
   userModeBtn.classList.add("bg-gray-200", "text-gray-800");
 });
+
+
+  // Toggle inner developer examples (JS vs curl)
+  const jsBtn = document.getElementById('jsExampleBtn');
+  const curlBtn = document.getElementById('curlExampleBtn');
+  const jsExample = document.getElementById('jsExample');
+  const curlExample = document.getElementById('curlExample');
+
+  jsBtn.addEventListener('click', () => {
+    jsExample.classList.remove('hidden');
+    curlExample.classList.add('hidden');
+    jsBtn.classList.add('bg-purple-600', 'text-white');
+    jsBtn.classList.remove('bg-gray-300', 'text-gray-800');
+    curlBtn.classList.remove('bg-purple-600', 'text-white');
+    curlBtn.classList.add('bg-gray-300', 'text-gray-800');
+  });
+
+  curlBtn.addEventListener('click', () => {
+    curlExample.classList.remove('hidden');
+    jsExample.classList.add('hidden');
+    curlBtn.classList.add('bg-purple-600', 'text-white');
+    curlBtn.classList.remove('bg-gray-300', 'text-gray-800');
+    jsBtn.classList.remove('bg-purple-600', 'text-white');
+    jsBtn.classList.add('bg-gray-300', 'text-gray-800');
+  });
 
 
 window.addEventListener("pageshow", () => {
