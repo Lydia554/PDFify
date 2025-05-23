@@ -44,17 +44,20 @@
       <a href="/demo/Invoice.pdf" class="mt-4 inline-block text-blue-600 hover:underline text-sm">Download PDF</a>
     </div>
   </section>
-
+  
 <!-- Toggle Tabs -->
-<div class="flex justify-center mt-8">
-  <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
-  <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
-  <!-- Developer Sub-Tabs -->
-<div id="devSubTabs" class="flex justify-center mt-4 hidden">
-  <button id="jsModeBtn" class="px-4 py-1 bg-blue-100 text-blue-700 rounded-l shadow hover:bg-blue-200 transition-all">JavaScript</button>
-  <button id="terminalModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r shadow hover:bg-gray-300 transition-all">Terminal</button>
-</div>
+<div class="flex flex-col items-center mt-8">
+  <div class="flex">
+    <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
+    <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
+  </div>
 
+  <!-- Developer Sub-Tabs -->
+  <div id="devSubTabs" class="flex mt-4 hidden">
+    <button class="px-4 py-1 border border-gray-300 bg-white text-sm text-gray-800 rounded-l hover:bg-gray-100">JavaScript</button>
+
+    <button id="terminalModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r shadow hover:bg-gray-300 transition-all">Terminal</button>
+  </div>
 </div>
 
 <!-- FRIENDLY MODE SECTION -->
@@ -414,100 +417,101 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
     const devModeBtn = document.getElementById("devModeBtn");
     const userModeBtn = document.getElementById("userModeBtn");
     const devSubTabs = document.getElementById("devSubTabs");
-  
+
     const jsBtn = document.getElementById("jsModeBtn");
     const terminalBtn = document.getElementById("terminalModeBtn");
-  
+
     const jsGroups = document.querySelectorAll(".js-group");
     const terminalGroups = document.querySelectorAll(".terminal-group");
-  
+
     const devCodeSection = document.getElementById("devCodeSection");
     const userSection = document.getElementById("userSection");
-  
+
+    const loadingOverlay = document.getElementById("loadingOverlay");
+
     // Toggle Developer Mode
     devModeBtn.addEventListener("click", () => {
       devSubTabs.classList.remove("hidden");
       devCodeSection.classList.remove("hidden");
       userSection.classList.add("hidden");
-  
+
       devModeBtn.classList.add("bg-blue-600", "text-white");
       devModeBtn.classList.remove("bg-gray-200", "text-gray-800");
       userModeBtn.classList.remove("bg-blue-600", "text-white");
       userModeBtn.classList.add("bg-gray-200", "text-gray-800");
-  
-      showJs(); // default to JavaScript
+
+      showJs(); // default to JavaScript tab
     });
-  
+
     // Toggle User Mode
     userModeBtn.addEventListener("click", () => {
       devSubTabs.classList.add("hidden");
       devCodeSection.classList.add("hidden");
       userSection.classList.remove("hidden");
-  
+
       userModeBtn.classList.add("bg-blue-600", "text-white");
       userModeBtn.classList.remove("bg-gray-200", "text-gray-800");
       devModeBtn.classList.remove("bg-blue-600", "text-white");
       devModeBtn.classList.add("bg-gray-200", "text-gray-800");
     });
-  
+
     // Developer Sub-Tabs
     jsBtn.addEventListener("click", showJs);
     terminalBtn.addEventListener("click", showTerminal);
-  
+
     function showJs() {
       jsBtn.classList.add("bg-blue-100", "text-blue-700");
       jsBtn.classList.remove("bg-gray-200", "text-gray-800");
-  
+
       terminalBtn.classList.remove("bg-blue-100", "text-blue-700");
       terminalBtn.classList.add("bg-gray-200", "text-gray-800");
-  
+
       jsGroups.forEach(el => el.classList.remove("hidden"));
       terminalGroups.forEach(el => el.classList.add("hidden"));
     }
-  
+
     function showTerminal() {
       terminalBtn.classList.add("bg-blue-100", "text-blue-700");
       terminalBtn.classList.remove("bg-gray-200", "text-gray-800");
-  
+
       jsBtn.classList.remove("bg-blue-100", "text-blue-700");
       jsBtn.classList.add("bg-gray-200", "text-gray-800");
-  
+
       terminalGroups.forEach(el => el.classList.remove("hidden"));
       jsGroups.forEach(el => el.classList.add("hidden"));
     }
+
+    // Sign Up & Login Buttons with Spinner
+    ["signUpButton", "loginButton"].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) {
+        btn.addEventListener("click", (event) => {
+          event.preventDefault();
+          const targetUrl = btn.href;
+          if (loadingOverlay) loadingOverlay.style.display = "flex";
+          console.log(`Spinner shown for ${id}`);
+
+          setTimeout(() => {
+            console.log("Navigating to:", targetUrl);
+            window.location.href = targetUrl;
+          }, 500);
+        });
+      }
+    });
+
+    // Hide spinner on load and back nav
+    window.addEventListener("load", () => {
+      if (loadingOverlay) loadingOverlay.style.display = "none";
+      console.log("Spinner hidden on page load");
+    });
+
+    window.addEventListener("pageshow", () => {
+      if (loadingOverlay) loadingOverlay.style.display = "none";
+      console.log("Spinner hidden on page show (e.g., back navigation)");
+    });
   });
-  
-  // Sign Up & Login Buttons with Spinner
-  ["signUpButton", "loginButton"].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) {
-      btn.addEventListener("click", (event) => {
-        event.preventDefault();
-        const targetUrl = event.target.href;
-        const loadingOverlay = document.getElementById("loadingOverlay");
-        loadingOverlay.style.display = "flex";
-        console.log(`Spinner shown for ${id}`);
-  
-        setTimeout(() => {
-          console.log("Navigating to:", targetUrl);
-          window.location.href = targetUrl;
-        }, 500);
-      });
-    }
-  });
-  
-  // Hide spinner on load and back nav
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  window.addEventListener("load", () => {
-    loadingOverlay.style.display = "none";
-    console.log("Spinner hidden on page load");
-  });
-  window.addEventListener("pageshow", () => {
-    loadingOverlay.style.display = "none";
-    console.log("Spinner hidden on page show (e.g., back navigation)");
-  });
-  </script>
-  
+</script>
+
 
 <style>
 
