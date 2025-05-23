@@ -502,17 +502,7 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 });
 
 
-    // Hide spinner on load and back nav
-    window.addEventListener("load", () => {
-      if (loadingOverlay) loadingOverlay.style.display = "none";
-      console.log("Spinner hidden on page load");
-    });
 
-    window.addEventListener("pageshow", () => {
-      if (loadingOverlay) loadingOverlay.style.display = "none";
-      console.log("Spinner hidden on page show (e.g., back navigation)");
-    });
-  });
 </script>
 
 
