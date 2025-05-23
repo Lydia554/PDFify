@@ -61,274 +61,32 @@
   </div>
 </section>
 
-<!-- DEVELOPER MODE SECTION -->
-<section id="devCodeSection" class="py-16 bg-gray-100 max-w-none w-full space-y-16 hidden">
 
-  <!-- Packing Slip -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      orderId: "98765",
-      customerName: "John Smith",
-      shippingAddress: "1234 Maple Street, Springfield, USA",
-      date: "2025-05-14",
-      items: [
-        { name: "Yoga Mat", sku: "YM-001", quantity: 1 },
-        { name: "Dumbbells Set", sku: "DB-002", quantity: 2 },
-        { name: "Water Bottle", sku: "WB-003", quantity: 3 }
-      ]
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "PackingSlip_98765.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
 
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "title": "Order #1234",
-  "customer": "Jane Doe",
-  "items": [
-    {"name": "Shirt", "quantity": 2, "price": 24.99}
-  ]
-}' --output packing-slip.pdf
-    </pre>
+<!-- User Section -->
+<div id="userSection">
+  <p>This is User Mode content...</p>
+</div>
+
+<!-- Dev Code Section -->
+<div id="devCodeSection" class="hidden p-4 border rounded bg-gray-50">
+
+  <!-- Dev Mode main content can go here -->
+  <p class="mb-4 font-semibold text-lg">Development Examples</p>
+
+  <!-- Terminal/JS toggle buttons -->
+  <div class="toggle-buttons mb-4">
+    <button id="terminalToggle" class="toggle-btn active px-3 py-1 rounded border border-gray-300 mr-2">Terminal (curl)</button>
+    <button id="jsToggle" class="toggle-btn px-3 py-1 rounded border border-gray-300">JavaScript</button>
   </div>
 
-  <!-- Invoice -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      invoiceNumber: "INV-2025-001",
-      date: "2025-05-20",
-      billTo: "Acme Corp",
-      items: [
-        { description: "Consulting", quantity: 10, price: 100 },
-        { description: "Development", quantity: 20, price: 80 }
-      ],
-      total: 2600
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Invoice_INV-2025-001.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
+  <!-- List of examples -->
+  <ul id="examplesList" class="mb-4 list-disc list-inside text-gray-700 cursor-pointer max-h-40 overflow-auto border rounded p-2">
+    <!-- JS fills this with all example names -->
+  </ul>
 
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "invoiceNumber": "INV-2025-001",
-  "date": "2025-05-20",
-  "billTo": "Acme Corp",
-  "items": [
-    {"description": "Consulting", "quantity": 10, "price": 100},
-    {"description": "Development", "quantity": 20, "price": 80}
-  ],
-  "total": 2600
-}' --output invoice.pdf
-    </pre>
-  </div>
-
-  <!-- Recipe -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      title: "Chocolate Cake",
-      author: "Kate Brown",
-      servings: 8,
-      ingredients: [
-        "200g flour",
-        "100g sugar",
-        "50g cocoa powder",
-        "3 eggs"
-      ],
-      instructions: [
-        "Mix ingredients",
-        "Bake for 30 minutes at 180°C"
-      ]
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Recipe_Chocolate_Cake.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "title": "Chocolate Cake",
-  "author": "Kate Brown",
-  "servings": 8,
-  "ingredients": [
-    "200g flour",
-    "100g sugar",
-    "50g cocoa powder",
-    "3 eggs"
-  ],
-  "instructions": [
-    "Mix ingredients",
-    "Bake for 30 minutes at 180°C"
-  ]
-}' --output recipe.pdf
-    </pre>
-  </div>
-
-  <!-- Therapy Report -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    data: {
-      patientName: "Anna Lee",
-      date: "2025-05-20",
-      therapist: "Dr. Smith",
-      notes: "Patient is progressing well."
-    }
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "TherapyReport_Anna_Lee.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "patientName": "Anna Lee",
-  "date": "2025-05-20",
-  "therapist": "Dr. Smith",
-  "notes": "Patient is progressing well."
-}' --output therapy-report.pdf
-    </pre>
-  </div>
-
-  <!-- Raw HTML -->
-  <div>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Raw HTML</h3>
-    <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
-    <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY"
-  },
-  body: JSON.stringify({
-    html: "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a PDF generated from raw HTML.&lt;/p&gt;"
-  })
-})
-.then(response => response.blob())
-.then(blob => {
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "RawHTML.pdf";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-})
-.catch(console.error);
-    </pre>
-
-    <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
-    <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
-curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
--H "Authorization: Bearer &lt;your-token&gt;" \
--H "Content-Type: application/json" \
--d '{
-  "html": "&lt;h1&gt;Hello World&lt;/h1&gt;&lt;p&gt;This is a PDF generated from raw HTML.&lt;/p&gt;"
-}' --output raw-html.pdf
-    </pre>
-  </div>
-
-</section>
+  <!-- Code block that updates based on selected example & toggle -->
+  <pre id="exampleCode" class="bg-white p-4 rounded shadow text-sm overflow-auto max-h-64 hidden"></pre>
 
 
   <!-- Features -->
@@ -388,12 +146,126 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 
 
 
-<script>
-  const userBtn = document.getElementById("userModeBtn");
+<script> 
+
+
+const userBtn = document.getElementById("userModeBtn");
   const devBtn = document.getElementById("devModeBtn");
-  const userSection = document.getElementById("userSection");
   const devCodeSection = document.getElementById("devCodeSection");
-  const loadingOverlay = document.getElementById("loadingOverlay");
+  const userSection = document.getElementById("userSection");
+
+  const terminalToggle = document.getElementById("terminalToggle");
+  const jsToggle = document.getElementById("jsToggle");
+  const examplesList = document.getElementById("examplesList");
+  const exampleCode = document.getElementById("exampleCode");
+
+  // Example data array
+  const examples = [
+    {
+      name: "Create User",
+      terminal: `curl -X POST https://api.example.com/users \\
+  -H "Authorization: Bearer TOKEN" \\
+  -d '{"name":"John Doe"}'`,
+      javascript: `fetch('https://api.example.com/users', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({name: 'John Doe'})
+});`
+    },
+    {
+      name: "Get User",
+      terminal: `curl https://api.example.com/users/123 \\
+  -H "Authorization: Bearer TOKEN"`,
+      javascript: `fetch('https://api.example.com/users/123', {
+  headers: {
+    'Authorization': 'Bearer TOKEN'
+  }
+});`
+    },
+    {
+      name: "Update User",
+      terminal: `curl -X PUT https://api.example.com/users/123 \\
+  -H "Authorization: Bearer TOKEN" \\
+  -d '{"name":"Jane Doe"}'`,
+      javascript: `fetch('https://api.example.com/users/123', {
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Bearer TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({name: 'Jane Doe'})
+});`
+    },
+    {
+      name: "Delete User",
+      terminal: `curl -X DELETE https://api.example.com/users/123 \\
+  -H "Authorization: Bearer TOKEN"`,
+      javascript: `fetch('https://api.example.com/users/123', {
+  method: 'DELETE',
+  headers: {
+    'Authorization': 'Bearer TOKEN'
+  }
+});`
+    }
+  ];
+
+
+
+
+
+
+
+
+
+let currentMode = "terminal"; // 'terminal' or 'javascript'
+  let selectedExampleIndex = null;
+
+  function renderExampleList() {
+    examplesList.innerHTML = "";
+    examples.forEach((ex, i) => {
+      const li = document.createElement("li");
+      li.textContent = ex.name;
+      li.classList.toggle("selected", i === selectedExampleIndex);
+      li.addEventListener("click", () => {
+        selectedExampleIndex = i;
+        renderExampleList();
+        renderExampleCode();
+      });
+      examplesList.appendChild(li);
+    });
+  }
+
+  function renderExampleCode() {
+    if (selectedExampleIndex === null) {
+      exampleCode.classList.add("hidden");
+      exampleCode.textContent = "";
+      return;
+    }
+    exampleCode.classList.remove("hidden");
+    const example = examples[selectedExampleIndex];
+    exampleCode.textContent = currentMode === "terminal" ? example.terminal : example.javascript;
+  }
+
+  terminalToggle.addEventListener("click", () => {
+    if (currentMode !== "terminal") {
+      currentMode = "terminal";
+      terminalToggle.classList.add("active");
+      jsToggle.classList.remove("active");
+      renderExampleCode();
+    }
+  });
+
+  jsToggle.addEventListener("click", () => {
+    if (currentMode !== "javascript") {
+      currentMode = "javascript";
+      jsToggle.classList.add("active");
+      terminalToggle.classList.remove("active");
+      renderExampleCode();
+    }
+  });
 
   function activateUserMode() {
     userSection.classList.remove("hidden");
@@ -404,6 +276,10 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 
     devBtn.classList.remove("bg-blue-600", "text-white");
     devBtn.classList.add("bg-gray-200", "text-gray-800");
+
+    selectedExampleIndex = null;
+    renderExampleList();
+    renderExampleCode();
   }
 
   function activateDevMode() {
@@ -415,15 +291,18 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 
     userBtn.classList.remove("bg-blue-600", "text-white");
     userBtn.classList.add("bg-gray-200", "text-gray-800");
+
+    selectedExampleIndex = null;
+    renderExampleList();
+    renderExampleCode();
   }
 
   userBtn.addEventListener("click", activateUserMode);
   devBtn.addEventListener("click", activateDevMode);
 
-
   activateUserMode();
 
- 
+
   function handleButtonClick(event) {
     event.preventDefault();
     const targetUrl = event.currentTarget.href; 
@@ -495,7 +374,26 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
   white-space: pre-wrap; 
 }
 
+.toggle-btn {
+    cursor: pointer;
+    background: white;
+    border: 1px solid #ccc;
+    user-select: none;
+  }
+  .toggle-btn.active {
+    background: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+  #examplesList li:hover {
+    background-color: #e0e7ff;
+  }
+  #examplesList li.selected {
+    font-weight: bold;
+    background-color: #c7d2fe;
+  }
 
+  
 #devCodeSection h3, #devCodeSection h4 {
   text-align: center;
   color: #6b21a8; 
