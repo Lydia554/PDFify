@@ -333,7 +333,7 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-sl
   <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
 
   <!-- Developer-only section -->
-  <div id="dev-only" class="hidden">
+  <div id="dev-only">
     <div class="toggle-buttons mb-3 inline-flex rounded-md shadow-sm border border-gray-300 overflow-hidden">
       <button 
         class="toggle-btn px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
@@ -400,7 +400,7 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice" \
   <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
 
   <!-- Developer-only section -->
-  <div id="dev-only" class="hidden">
+  <div id="dev-only">
     <div class="toggle-buttons mb-3 inline-flex rounded-md shadow-sm border border-gray-300 overflow-hidden">
       <button 
         class="toggle-btn px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
@@ -481,7 +481,7 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe" \
   <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
 
   <!-- Developer-only section -->
-  <div id="dev-only" class="hidden">
+  <div id="dev-only">
     <div class="toggle-buttons mb-3 inline-flex rounded-md shadow-sm border border-gray-300 overflow-hidden">
       <button 
         class="toggle-btn px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
@@ -540,7 +540,7 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-re
   <h3 class="text-2xl font-semibold mb-4 text-purple-700">🛒 Shop Order</h3>
 
   <!-- Developer-only section -->
-  <div id="dev-only" class="hidden">
+  <div id="dev-only">
     <div class="toggle-buttons mb-3 inline-flex rounded-md shadow-sm border border-gray-300 overflow-hidden">
       <button 
         class="toggle-btn px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
@@ -608,7 +608,7 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-shop-order
   <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧱 Raw HTML</h3>
 
   <!-- Developer-only section -->
-  <div id="dev-only" class="hidden">
+  <div id="dev-only">
     <div class="toggle-buttons mb-3 inline-flex rounded-md shadow-sm border border-gray-300 overflow-hidden">
       <button 
         class="toggle-btn px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200"
@@ -679,6 +679,9 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-pdf-from-h
     const userSection = document.getElementById('userSection');
     const devCodeSections = document.querySelectorAll('.dev-only');
     const devSubTabs = document.getElementById('devSubTabs');
+
+    document.querySelectorAll('.dev-only').forEach(el => el.classList.add('hidden'));
+
   
     userModeBtn.addEventListener('click', () => {
   userSection.classList.remove('hidden');
@@ -704,36 +707,35 @@ devModeBtn.addEventListener('click', () => {
   userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
 });
   
-    // Per-snippet toggle button logic
+
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
       toggleGroup.addEventListener('click', (event) => {
         const clickedBtn = event.target;
         if (!clickedBtn.classList.contains('toggle-btn')) return;
   
-        // Remove active class from all buttons in this toggle group
+  
         toggleGroup.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
   
-        // Add active class to clicked button
+
         clickedBtn.classList.add('active');
   
         const targetId = clickedBtn.getAttribute('data-target');
         if (!targetId) return;
   
-        // Get the snippet container (closest parent with 'mb-10')
+     
         const snippetContainer = toggleGroup.closest('.mb-10');
         if (!snippetContainer) return;
   
-        // Hide all <pre> elements inside this snippet container
+     
         snippetContainer.querySelectorAll('pre').forEach(pre => pre.style.display = 'none');
   
-        // Show the targeted snippet
+    
         const targetSnippet = snippetContainer.querySelector('#' + targetId);
         if (targetSnippet) targetSnippet.style.display = 'block';
       });
     });
   
-    // Initialize page showing "For Developers" or "For Everyone" mode as you want:
-    // Default: For Everyone
+  
     userModeBtn.click();
 
     const developerBtn = document.getElementById('developerBtn');
@@ -761,7 +763,7 @@ devModeBtn.addEventListener('click', () => {
       developerSection.classList.add('hidden');
     });
 
-    // Initialize with Developer Mode visible
+   
     developerSection.classList.remove('hidden');
     friendlySection.classList.add('hidden');
 
