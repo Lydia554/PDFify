@@ -481,23 +481,26 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
       jsGroups.forEach(el => el.classList.add("hidden"));
     }
 
-    // Sign Up & Login Buttons with Spinner
     ["signUpButton", "loginButton"].forEach(id => {
-      const btn = document.getElementById(id);
-      if (btn) {
-        btn.addEventListener("click", (event) => {
-          event.preventDefault();
-          const targetUrl = btn.href;
-          if (loadingOverlay) loadingOverlay.style.display = "flex";
-          console.log(`Spinner shown for ${id}`);
+  const btn = document.getElementById(id);
+  if (btn) {
+    btn.addEventListener("click", (event) => {
+      event.preventDefault();
+      const targetUrl = btn.getAttribute("href");
+      if (!targetUrl) return;
 
-          setTimeout(() => {
-            console.log("Navigating to:", targetUrl);
-            window.location.href = targetUrl;
-          }, 500);
-        });
-      }
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      if (loadingOverlay) loadingOverlay.style.display = "flex";
+
+      console.log(`Spinner shown for ${id}`);
+      setTimeout(() => {
+        console.log("Navigating to:", targetUrl);
+        window.location.href = targetUrl;
+      }, 500);
     });
+  }
+});
+
 
     // Hide spinner on load and back nav
     window.addEventListener("load", () => {
