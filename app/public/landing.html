@@ -61,12 +61,12 @@
   </div>
 </section>
 
-<section id="devCodeSection" class="py-16 bg-gray-100 max-w-none w-full space-y-16">
+<!-- DEVELOPER MODE SECTION -->
+<section id="devCodeSection" class="py-16 bg-gray-100 max-w-none w-full space-y-16 hidden">
 
   <!-- Packing Slip -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
-
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
@@ -121,7 +121,6 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-sli
   <!-- Invoice -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
-
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice", {
@@ -178,7 +177,6 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-invoice \
   <!-- Recipe -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
-
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
@@ -190,7 +188,7 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe", {
   body: JSON.stringify({
     data: {
       title: "Chocolate Cake",
-      author: "Lidija Jokić",
+      author: "Kate Brown",
       servings: 8,
       ingredients: [
         "200g flour",
@@ -226,7 +224,7 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe \
 -H "Content-Type: application/json" \
 -d '{
   "title": "Chocolate Cake",
-  "author": "Lidija Jokić",
+  "author": "Kate Brown",
   "servings": 8,
   "ingredients": [
     "200g flour",
@@ -245,7 +243,6 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-recipe \
   <!-- Therapy Report -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
-
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-report", {
@@ -294,7 +291,6 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-therapy-rep
   <!-- Raw HTML -->
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 Raw HTML</h3>
-
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html", {
@@ -333,8 +329,6 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
   </div>
 
 </section>
-
-
 
 
   <!-- Features -->
@@ -396,6 +390,37 @@ curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-raw-html \
 
 <script>
  
+ const userBtn = document.getElementById("userModeBtn");
+  const devBtn = document.getElementById("devModeBtn");
+  const devCodeSection = document.getElementById("devCodeSection");
+
+  function activateUserMode() {
+    userSection.classList.remove("hidden");
+    devCodeSection.classList.add("hidden");
+
+    userBtn.classList.add("bg-blue-600", "text-white");
+    userBtn.classList.remove("bg-gray-200", "text-gray-800");
+
+    devBtn.classList.remove("bg-blue-600", "text-white");
+    devBtn.classList.add("bg-gray-200", "text-gray-800");
+  }
+
+  function activateDevMode() {
+    userSection.classList.add("hidden");
+    devCodeSection.classList.remove("hidden");
+
+    devBtn.classList.add("bg-blue-600", "text-white");
+    devBtn.classList.remove("bg-gray-200", "text-gray-800");
+
+    userBtn.classList.remove("bg-blue-600", "text-white");
+    userBtn.classList.add("bg-gray-200", "text-gray-800");
+  }
+
+  userBtn.addEventListener("click", activateUserMode);
+  devBtn.addEventListener("click", activateDevMode);
+
+  // Default start in User Mode
+  activateUserMode();
 
 document.getElementById("signUpButton").addEventListener("click", (event) => {
   event.preventDefault();
@@ -455,29 +480,7 @@ devModeBtn.addEventListener("click", () => {
 });
 
 
-  // Toggle inner developer examples (JS vs curl)
-  const jsBtn = document.getElementById('jsExampleBtn');
-  const curlBtn = document.getElementById('curlExampleBtn');
-  const jsExample = document.getElementById('jsExample');
-  const curlExample = document.getElementById('curlExample');
 
-  jsBtn.addEventListener('click', () => {
-    jsExample.classList.remove('hidden');
-    curlExample.classList.add('hidden');
-    jsBtn.classList.add('bg-purple-600', 'text-white');
-    jsBtn.classList.remove('bg-gray-300', 'text-gray-800');
-    curlBtn.classList.remove('bg-purple-600', 'text-white');
-    curlBtn.classList.add('bg-gray-300', 'text-gray-800');
-  });
-
-  curlBtn.addEventListener('click', () => {
-    curlExample.classList.remove('hidden');
-    jsExample.classList.add('hidden');
-    curlBtn.classList.add('bg-purple-600', 'text-white');
-    curlBtn.classList.remove('bg-gray-300', 'text-gray-800');
-    jsBtn.classList.remove('bg-purple-600', 'text-white');
-    jsBtn.classList.add('bg-gray-300', 'text-gray-800');
-  });
 
 
 window.addEventListener("pageshow", () => {
