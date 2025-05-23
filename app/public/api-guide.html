@@ -289,7 +289,7 @@
     <!-- Packing Slip -->
     <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
-      <div id="devCodeSection" class="hidden">
+      <div id="dev-only hidden" >
       <div class="toggle-buttons mb-3">
         <button class="toggle-btn active" data-target="packing-slip-js">JavaScript</button>
         <button class="toggle-btn" data-target="packing-slip-curl">Terminal</button>
@@ -351,7 +351,7 @@
     <!-- Invoice -->
     <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
-      <div id="devCodeSection" class="hidden">
+      <div id="dev-only hidden" >
       <div class="toggle-buttons mb-3">
         <button class="toggle-btn active" data-target="invoice-js">JavaScript</button>
         <button class="toggle-btn" data-target="invoice-curl">Terminal</button>
@@ -407,7 +407,7 @@
     <!-- Recipe -->
     <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">🍳 Recipe</h3>
-      <div id="devCodeSection" class="hidden">
+      <div id="dev-only hidden">
       <div class="toggle-buttons mb-3">
         <button class="toggle-btn active" data-target="recipe-js">JavaScript</button>
         <button class="toggle-btn" data-target="recipe-curl">Terminal</button>
@@ -477,7 +477,7 @@
     <!-- Therapy Report -->
     <div class="mb-10">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">📝 Therapy Report</h3>
-      <div id="devCodeSection" class="hidden">
+      <div id="dev-only hidden">
       <div class="toggle-buttons mb-3">
         <button class="toggle-btn active" data-target="therapy-js">JavaScript</button>
         <button class="toggle-btn" data-target="therapy-curl">Terminal</button>
@@ -538,32 +538,32 @@
     const userModeBtn = document.getElementById('userModeBtn');
     const devModeBtn = document.getElementById('devModeBtn');
     const userSection = document.getElementById('userSection');
-    const devCodeSection = document.getElementById('devCodeSection');
+    const devCodeSections = document.querySelectorAll('.dev-only');
     const devSubTabs = document.getElementById('devSubTabs');
   
     userModeBtn.addEventListener('click', () => {
-      userSection.classList.remove('hidden');
-      devCodeSection.classList.add('hidden');
-      devSubTabs.classList.add('hidden');
-  
-      userModeBtn.classList.add('bg-blue-600', 'text-white');
-      userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  
-      devModeBtn.classList.remove('bg-blue-600', 'text-white');
-      devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-    });
-  
-    devModeBtn.addEventListener('click', () => {
-      userSection.classList.add('hidden');
-      devCodeSection.classList.remove('hidden');
-      devSubTabs.classList.remove('hidden');
-  
-      devModeBtn.classList.add('bg-blue-600', 'text-white');
-      devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  
-      userModeBtn.classList.remove('bg-blue-600', 'text-white');
-      userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-    });
+  userSection.classList.remove('hidden');
+  devCodeSections.forEach(el => el.classList.add('hidden'));
+  devSubTabs.classList.add('hidden');
+
+  userModeBtn.classList.add('bg-blue-600', 'text-white');
+  userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+
+  devModeBtn.classList.remove('bg-blue-600', 'text-white');
+  devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+});
+
+devModeBtn.addEventListener('click', () => {
+  userSection.classList.add('hidden');
+  devCodeSections.forEach(el => el.classList.remove('hidden'));
+  devSubTabs.classList.remove('hidden');
+
+  devModeBtn.classList.add('bg-blue-600', 'text-white');
+  devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+
+  userModeBtn.classList.remove('bg-blue-600', 'text-white');
+  userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+});
   
     // Per-snippet toggle button logic
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
