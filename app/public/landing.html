@@ -49,6 +49,12 @@
 <div class="flex justify-center mt-8">
   <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
   <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
+  <!-- Developer Sub-Tabs -->
+<div id="devSubTabs" class="flex justify-center mt-4 hidden">
+  <button id="jsModeBtn" class="px-4 py-1 bg-blue-100 text-blue-700 rounded-l shadow hover:bg-blue-200 transition-all">JavaScript</button>
+  <button id="terminalModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r shadow hover:bg-gray-300 transition-all">Terminal</button>
+</div>
+
 </div>
 
 <!-- FRIENDLY MODE SECTION -->
@@ -67,6 +73,7 @@
   <div>
     <h3 class="text-2xl font-semibold mb-4 text-purple-700">📦 Packing Slip</h3>
 
+<div class="js-group">
     <h4 class="text-lg font-semibold mb-2">JavaScript Example</h4>
     <pre class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
@@ -102,7 +109,9 @@ fetch("https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip", {
 })
 .catch(console.error);
     </pre>
+  </div>
 
+  <div class="terminal-group hidden">
     <h4 class="text-lg font-semibold mt-6 mb-2">curl Example</h4>
     <pre class="code-cl bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
 curl -X POST https://pdf-api.portfolio.lidija-jokic.com/api/generate-packing-slip \
