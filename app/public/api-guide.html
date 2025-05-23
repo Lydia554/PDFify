@@ -228,11 +228,7 @@
       <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
       <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
     </div>
-    <div id="devSubTabs" class="flex mt-4 hidden rounded-lg border border-gray-300 overflow-hidden">
-      <!-- Optional: You can remove these if you want only per-snippet toggles -->
-      <button id="jsModeBtn" class="px-4 py-1 bg-white text-sm text-gray-800 rounded-l hover:bg-gray-100 transition">JavaScript</button>
-      <button id="curlModeBtn" class="px-4 py-1 bg-gray-200 text-gray-800 rounded-r hover:bg-gray-300 transition">Terminal (curl)</button>
-    </div>
+    <
   </div>
 </div>
     
@@ -322,12 +318,12 @@
     </div>
   
     <!-- Invoice -->
-    <div class="mb-10">
+    <div class="toggle-buttons mb-3 inline-flex rounded-md shadow-sm border border-gray-300 overflow-hidden">
       <h3 class="text-2xl font-semibold mb-4 text-purple-700">🧾 Invoice</h3>
       <div id="dev-only hidden" >
       <div class="toggle-buttons mb-3">
-        <button class="toggle-btn active" data-target="invoice-js">JavaScript</button>
-        <button class="toggle-btn" data-target="invoice-curl">Terminal</button>
+        <button class="toggle-btn px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 active" data-target="invoice-js">JavaScript</button>
+        <button class="toggle-btn px-4 py-2 text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200 transition-colors duration-200" data-target="invoice-curl">Terminal</button>
       </div>
   
       <pre id="invoice-js" class="code-js bg-gray-900 text-green-400 p-4 rounded shadow overflow-x-auto">
