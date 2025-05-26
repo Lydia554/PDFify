@@ -45,8 +45,20 @@ function renderForm(template) {
       <label>Items (format: description,quantity,unitPrice per line):</label><br/>
       <textarea id="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
       <label>Tax Rate (%): <input type="number" id="taxRate" value="0" /></label><br/>
-      <label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>
     `;
+  
+    if (userAccessType === 'premium') {
+      html += `
+        <label>Company Logo (optional): <input type="file" id="logoUpload" accept="image/*" /></label><br/>
+        <label>Sender Address: <input id="senderAddress" /></label><br/>
+        <label>Recipient Address: <input id="recipientAddress" /></label><br/>
+        <label>Extra Notes: <textarea id="notes" rows="3" cols="30"></textarea></label><br/>
+      `;
+    }
+  
+    html += `<label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>`;
+  
+  
   } else if (template === 'recipe') {
     html = `
       <label>Recipe Name: <input id="recipeName" /></label><br/>
@@ -128,6 +140,19 @@ generatePdfBtn.addEventListener('click', async () => {
 
   try {
     if (template === 'invoice') {
+      const logoInput = document.getElementById('logoUpload');
+      let base64Logo = '';
+    
+      if (userAccessType === 'premium' && logoInput && logoInput.files.length > 0) {
+        const file = logoInput.files[0];
+        base64Logo = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = err => reject(err);
+          reader.readAsDataURL(file);
+        });
+      }
+    
       formData = {
         customerName: document.getElementById('customerName')?.value,
         date: document.getElementById('date')?.value,
@@ -145,7 +170,14 @@ generatePdfBtn.addEventListener('click', async () => {
             };
           })
           .filter(item => item.description && !isNaN(item.quantity) && !isNaN(item.unitPrice)),
+        logoBase64: base64Logo || undefined,
+        senderAddress: userAccessType === 'premium' ? document.getElementById('senderAddress')?.value : undefined,
+        recipientAddress: userAccessType === 'premium' ? document.getElementById('recipientAddress')?.value : undefined,
+        notes: userAccessType === 'premium' ? document.getElementById('notes')?.value : undefined,
       };
+    
+
+    
     } else if (template === 'recipe') {
       const includeTitle = document.getElementById('includeTitle');
 
