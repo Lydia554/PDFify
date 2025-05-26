@@ -1,6 +1,6 @@
 function generateInvoicePremiumHtml(data) {
     const {
-      logoUrl,
+        logoBase64,
       customerName = 'Valued Customer',
       recipientAddress = '',
       date = '',
@@ -134,7 +134,8 @@ function generateInvoicePremiumHtml(data) {
     <body>
       <div class="header">
         ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
-        ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" class="logo">` : ''}
+        ${logoBase64 ? `<img src="${logoBase64}" alt="Company Logo" class="logo">` : ''}
+
       </div>
   
       <div class="info-grid">
@@ -181,9 +182,18 @@ function generateInvoicePremiumHtml(data) {
   
       ${notes ? `<div class="notes"><strong>Notes:</strong> ${notes}</div>` : ''}
   
-      <div class="footer">
-        Thanks for using our service!
-      </div>
+           <div class="footer">
+             <p>Thanks for using our service!</p>
+            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+            <p>&copy; 2025 PDFify — All rights reserved.</p>
+            ${!data.isPremium ? `
+              <p class="terms">
+                Generated using <strong>PDFify API</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
+              </p>` : ''}
+            <p class="terms">
+              Terms & Conditions: Payment due within 14 days. Late payments may result in additional fees.
+            </p>
+          </div>
     </body>
     </html>
     `;

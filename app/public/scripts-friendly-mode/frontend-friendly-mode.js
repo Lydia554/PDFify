@@ -52,12 +52,17 @@ function renderForm(template) {
         <label>Company Name: <input id="companyName" /></label><br/>
         <label>Company Address: <input id="companyAddress" /></label><br/>
         <label>Company Email: <input id="companyEmail" type="email" /></label><br/>
+        <label>Sender Address: <input id="senderAddress" /></label><br/>
+<label>Recipient Address: <input id="recipientAddress" /></label><br/>
+
         <label>Upload Logo: <input type="file" id="logoUpload" accept="image/*" /></label><br/>
         <label>Extra Notes: <textarea id="notes" rows="3" cols="30"></textarea></label><br/>
       `;
     }
   
   document.getElementById('formContainer').innerHTML = html;
+  
+    html += `<label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>`;
   
   
   } else if (template === 'recipe') {
@@ -173,6 +178,9 @@ generatePdfBtn.addEventListener('click', async () => {
           .filter(item => item.description && !isNaN(item.quantity) && !isNaN(item.unitPrice)),
         logoBase64: base64Logo || undefined,
         senderAddress: userAccessType === 'premium' ? document.getElementById('senderAddress')?.value : undefined,
+        companyName: document.getElementById('companyName')?.value,
+        companyAddress: document.getElementById('companyAddress')?.value,
+        companyEmail: document.getElementById('companyEmail')?.value,
         recipientAddress: userAccessType === 'premium' ? document.getElementById('recipientAddress')?.value : undefined,
         notes: userAccessType === 'premium' ? document.getElementById('notes')?.value : undefined,
       };
