@@ -358,6 +358,11 @@ friendlyBtn.addEventListener('click', () => {
         window.location.href = "/login.html";
       }, 500);
     });
+
+    document.getElementById('generateDevBtn').addEventListener('click', () => {
+  renderPreview(); // This will use your textarea#json and select#endpoint values
+});
+
     
     async function sendRequest() {
       const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
