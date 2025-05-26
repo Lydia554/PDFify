@@ -1,5 +1,5 @@
 function renderPreview(jsonStrOverride = null, endpointOverride = null) {
-  const endpoint = endpointOverride || document.getElementById("endpointSelect").value;
+  const endpoint = endpointOverride || document.getElementById("endpoint").value;
   const jsonStr = jsonStrOverride || document.getElementById("json").value;
   const previewFrame = document.getElementById("previewFrame");
 
@@ -47,6 +47,10 @@ function renderPreview(jsonStrOverride = null, endpointOverride = null) {
   doc.write(html);
   doc.close();
 }
+
+window.renderPreview = renderPreview;
+window.previewFriendly = previewFriendly;
+
 
 
 // 🧾 Sample Invoice HTML generator
