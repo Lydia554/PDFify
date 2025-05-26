@@ -91,35 +91,34 @@
 <script src="js/preview.js"></script>
 
   <script >
-const devBtn = document.getElementById('developerModeBtn');
-const friendlyBtn = document.getElementById('friendlyModeBtn');
-const devSection = document.getElementById('developerMode');
-const friendlySection = document.getElementById('friendlyMode');
+    console.log('previewBtn:', previewBtn);
 
+document.addEventListener("DOMContentLoaded", () => {
+  // Button to switch modes
+  const devBtn = document.getElementById('developerModeBtn');
+  const friendlyBtn = document.getElementById('friendlyModeBtn');
+  const devSection = document.getElementById('developerMode');
+  const friendlySection = document.getElementById('friendlyMode');
 
+  devBtn.addEventListener('click', () => {
+    devBtn.classList.add('active');
+    friendlyBtn.classList.remove('active');
+    devSection.style.display = 'block';
+    friendlySection.style.display = 'none';
+  });
 
-devBtn.addEventListener('click', () => {
-  devBtn.classList.add('active');
-  friendlyBtn.classList.remove('active');
-  devSection.style.display = 'block';
-  friendlySection.style.display = 'none';
-});
+  friendlyBtn.addEventListener('click', () => {
+    friendlyBtn.classList.add('active');
+    devBtn.classList.remove('active');
+    devSection.style.display = 'none';
+    friendlySection.style.display = 'block';
+  });
 
-friendlyBtn.addEventListener('click', () => {
-  friendlyBtn.classList.add('active');
-  devBtn.classList.remove('active');
-  devSection.style.display = 'none';
-  friendlySection.style.display = 'block';
-
-
-  document.addEventListener("DOMContentLoaded", () => {
+  // Add event listener to previewFriendlyBtn if it exists
   const previewBtn = document.getElementById("previewFriendlyBtn");
   if (previewBtn) {
     previewBtn.addEventListener("click", previewFriendly);
   }
-});
-
-  
 });
 
     document.querySelectorAll("nav a").forEach((link) => {
