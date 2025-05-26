@@ -80,7 +80,7 @@ function generateInvoiceHTML(data) {
             .join("")}
         </tbody>
       </table>
-      <p class="footer">Thank you for your business!</p>
+      <p class="footer">Thanks for using our service!</p>
     </body>
     </html>
   `;
