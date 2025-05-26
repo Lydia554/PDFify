@@ -46,17 +46,18 @@ function renderForm(template) {
       <textarea id="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
       <label>Tax Rate (%): <input type="number" id="taxRate" value="0" /></label><br/>
     `;
-  
+
     if (userAccessType === 'premium') {
       html += `
-        <label>Company Logo (optional): <input type="file" id="logoUpload" accept="image/*" /></label><br/>
-        <label>Sender Address: <input id="senderAddress" /></label><br/>
-        <label>Recipient Address: <input id="recipientAddress" /></label><br/>
+        <label>Company Name: <input id="companyName" /></label><br/>
+        <label>Company Address: <input id="companyAddress" /></label><br/>
+        <label>Company Email: <input id="companyEmail" type="email" /></label><br/>
+        <label>Upload Logo: <input type="file" id="logoUpload" accept="image/*" /></label><br/>
         <label>Extra Notes: <textarea id="notes" rows="3" cols="30"></textarea></label><br/>
       `;
     }
   
-    html += `<label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>`;
+  document.getElementById('formContainer').innerHTML = html;
   
   
   } else if (template === 'recipe') {

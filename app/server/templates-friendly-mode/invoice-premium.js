@@ -179,7 +179,7 @@ function generateInvoicePremiumHtml(data) {
       ${notes ? `<div class="notes"><strong>Notes:</strong> ${notes}</div>` : ''}
   
       <div class="footer">
-        Thank you for your business!
+        Thanks for using our service!
       </div>
     </body>
     </html>
