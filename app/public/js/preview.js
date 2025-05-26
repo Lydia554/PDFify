@@ -13,12 +13,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const payload = JSON.parse(jsonData);
-      // Call your backend API for preview (maybe use the same endpoint as generate, or add "?preview=true")
       const response = await fetch(`/api/${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,   // <-- changed here
         },
         body: JSON.stringify(payload),
       });
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const blob = await response.blob();
       const pdfUrl = URL.createObjectURL(blob);
 
-      // Show preview in iframe or new tab
       if (iframe) {
         iframe.src = pdfUrl;
         iframe.style.display = 'block';
@@ -51,8 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const template = document.getElementById('templateSelect').value;
     const apiKey = document.getElementById('apiKey').value.trim();
 
-    // Collect form data from your friendly mode formContainer
-    // Assuming you have a function `getFriendlyFormData()` that returns JSON object for current form
     const payload = getFriendlyFormData();
 
     try {
@@ -60,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,  // <-- changed here
         },
         body: JSON.stringify(payload),
       });
@@ -90,9 +86,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // Dummy example of how to collect Friendly Mode form data
   function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
-    // Build JSON object from inputs inside formContainer
-    // This depends on how your friendly mode forms are structured
-    // Example:
     const inputs = formContainer.querySelectorAll('input, textarea, select');
     const data = {};
     inputs.forEach(input => {
