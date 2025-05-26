@@ -94,7 +94,45 @@
   <script >
 
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener('DOMContentLoaded', () => {
+  // Everything inside here will run only after the DOM is ready
+
+  document.getElementById('endpoint').addEventListener('change', (event) => {
+    updateJsonForEndpoint(event.target.value);
+  });
+
+  updateJsonForEndpoint(document.getElementById('endpoint').value);
+
+  const storedApiKey = localStorage.getItem('apiKey');
+  if (storedApiKey) {
+    document.getElementById('apiKey').value = storedApiKey;
+  } else {
+    alert('No API key found. Please log in.');
+    window.location.href = 'login.html'; 
+  }
+
+  const apiKey = localStorage.getItem("apiKey");
+  const userDashboardLink = document.getElementById("userDashboardLink");
+
+  if (apiKey) {
+    userDashboardLink.href = `/user-dashboard?apiKey=${apiKey}`;
+  } else {
+    userDashboardLink.href = "/login.html"; 
+  }
+
+  document.getElementById("logoutButton").addEventListener("click", () => {
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    loadingOverlay.style.display = "flex";
+    console.log("Spinner shown for Logout button");
+
+    setTimeout(() => {
+      localStorage.removeItem("apiKey");
+      console.log("Navigating to login page");
+      window.location.href = "/login.html";
+    }, 500);
+  });
+
+
   // Button to switch modes
   const devBtn = document.getElementById('developerModeBtn');
   const friendlyBtn = document.getElementById('friendlyModeBtn');
@@ -337,40 +375,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('json').value = jsonData;
     }
     
-    document.getElementById('endpoint').addEventListener('change', (event) => {
-      updateJsonForEndpoint(event.target.value);
-    });
-    
-    updateJsonForEndpoint(document.getElementById('endpoint').value);
-    
-    const storedApiKey = localStorage.getItem('apiKey');
-    if (storedApiKey) {
-      document.getElementById('apiKey').value = storedApiKey;
-    } else {
-      alert('No API key found. Please log in.');
-      window.location.href = 'login.html'; 
-    }
-    
-    const apiKey = localStorage.getItem("apiKey");
-    const userDashboardLink = document.getElementById("userDashboardLink");
-    
-    if (apiKey) {
-      userDashboardLink.href = `/user-dashboard?apiKey=${apiKey}`;
-    } else {
-      userDashboardLink.href = "/login.html"; 
-    }
-    
-    document.getElementById("logoutButton").addEventListener("click", () => {
-      const loadingOverlay = document.getElementById("loadingOverlay");
-      loadingOverlay.style.display = "flex";
-      console.log("Spinner shown for Logout button");
-    
-      setTimeout(() => {
-        localStorage.removeItem("apiKey");
-        console.log("Navigating to login page");
-        window.location.href = "/login.html";
-      }, 500);
-    });
+
     
     async function sendRequest() {
       const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
