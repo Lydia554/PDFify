@@ -48,24 +48,23 @@
     <textarea id="json" rows="15" required></textarea>
 
     <br />
-
+    <button id="previewDevBtn">Preview</button>
     <button id="generateDevBtn">Generate PDF</button>
     <p id="result"></p>
   </div>
 
-<!-- Friendly Mode Container -->
-<div id="friendlyMode" style="display:none; margin-top: 20px;">
-  <label for="friendly-endpoint-select">Select Template:</label>
-  <select id="friendly-endpoint-select">
-    <option value="invoice">Invoice</option>
-    <option value="recipe">Recipe</option>
-  </select>
-
-
-  <button id="previewFriendlyBtn">Preview</button>
-  <button id="generateFriendlyBtn">Generate PDF</button>
-  <p id="friendlyResult" style="color: green;"></p>
-</div>
+  <!-- Friendly Mode Container -->
+  <div id="friendlyMode" style="display:none;">
+    <select id="templateSelect">
+      <option value="invoice">Invoice</option>
+      <option value="recipe">Recipe</option>
+    </select>
+    <div id="formContainer"></div>
+    <button id="previewFriendlyBtn">Preview</button>
+    <button id="generateFriendlyBtn">Generate PDF</button>
+    <p id="friendlyResult"></p>
+  </div>
+  
  
 
   <h3>Upgrade to Premium (More PDF Generations)</h3>
@@ -321,15 +320,16 @@ friendlyBtn.addEventListener('click', () => {
       updateJsonForEndpoint(event.target.value);
     });
 
-    // Developer Mode Preview Button
-document.getElementById('previewDevBtn').addEventListener('click', () => {
-  renderPreview();
+    document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('previewDevBtn')?.addEventListener('click', () => {
+    renderPreview(); // your function to handle Developer Mode preview
+  });
+
+  document.getElementById('previewFriendlyBtn')?.addEventListener('click', () => {
+    previewFriendly(); // your function to handle Friendly Mode preview
+  });
 });
 
-// Friendly Mode Preview Button
-document.getElementById('previewFriendlyBtn').addEventListener('click', () => {
-  previewFriendly();
-});
 
     
     updateJsonForEndpoint(document.getElementById('endpoint').value);
