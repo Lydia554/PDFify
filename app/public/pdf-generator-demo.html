@@ -7,7 +7,8 @@
   <title>PDFify</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
-  <script src="js/preview.js"></script>
+  <script src="js/preview.js" defer></script>
+
 </head>
 <body style="font-family: sans-serif; max-width: 600px; margin: 40px auto;">
   
@@ -95,7 +96,7 @@
 
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Everything inside here will run only after the DOM is ready
+  
 
   document.getElementById('endpoint').addEventListener('change', (event) => {
     updateJsonForEndpoint(event.target.value);
