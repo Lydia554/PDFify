@@ -21,13 +21,12 @@
     <button id="logoutButton">Logout</button>
   </nav>
  
-  <div id="modeToggle" class="toggle-container" style="margin-top: 20px;">
+  <div id="modeToggle" class="toggle-container">
     <button id="developerModeBtn" class="active">Developer Mode</button>
     <button id="friendlyModeBtn">Friendly Mode</button>
   </div>
-
   <!-- Developer Mode Container -->
-  <div id="developerMode" style="margin-top: 20px;">
+  <div id="developerMode">
     <label for="endpoint">Endpoint:</label>
     <select id="endpoint">
       <option value="generate-invoice">Invoice</option>
@@ -38,49 +37,44 @@
       <option value="generate-packing-slip">Packing Slip</option>
     </select>
 
-    <br /><br />
+    <br />
 
     <label for="apiKey">Your API Key:</label>
-    <input type="text" id="apiKey" placeholder="Paste your API key here" required style="width: 100%;" />
-
-    <br /><br />
-
-    <label for="json">Data (JSON):</label>
-    <textarea id="json" rows="15" style="width: 100%;" required></textarea>
+    <input type="text" id="apiKey" placeholder="Paste your API key here" required />
 
     <br />
 
-    <button id="previewDevBtn">Preview</button>
+    <label for="json">Data (JSON):</label>
+    <textarea id="json" rows="15" required></textarea>
+
+    <br />
+
     <button id="generateDevBtn">Generate PDF</button>
-    <p id="result" style="color: green;"></p>
+    <p id="result"></p>
   </div>
 
-  <!-- Friendly Mode Container -->
-  <div id="friendlyMode" style="display:none; margin-top: 20px;">
-    <label for="friendly-endpoint-select">Select Template:</label>
-    <select id="friendly-endpoint-select">
-      <option value="invoice">Invoice</option>
-      <option value="recipe">Recipe</option>
-    </select>
+<!-- Friendly Mode Container -->
+<div id="friendlyMode" style="display:none; margin-top: 20px;">
+  <label for="friendly-endpoint-select">Select Template:</label>
+  <select id="friendly-endpoint-select">
+    <option value="invoice">Invoice</option>
+    <option value="recipe">Recipe</option>
+  </select>
 
-    <div id="formContainer" style="margin-top: 10px;">
-      <!-- Friendly form inputs will be inserted here by your JS -->
-    </div>
 
-    <button id="previewFriendlyBtn">Preview</button>
-    <button id="generateFriendlyBtn">Generate PDF</button>
-    <p id="friendlyResult" style="color: green;"></p>
-  </div>
+  <button id="previewFriendlyBtn">Preview</button>
+  <button id="generateFriendlyBtn">Generate PDF</button>
+  <p id="friendlyResult" style="color: green;"></p>
+</div>
+ 
 
   <h3>Upgrade to Premium (More PDF Generations)</h3>
   <button id="payment-button">Pay for Premium Access</button>
   <p id="payment-result"></p>
 
-  <!-- Preview iframe -->
-  <iframe id="previewFrame" title="PDF Preview"></iframe>
-
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
+ <script type="module" src="js/preview.js"></script>
 
 
   <script >
@@ -326,6 +320,17 @@ friendlyBtn.addEventListener('click', () => {
     document.getElementById('endpoint').addEventListener('change', (event) => {
       updateJsonForEndpoint(event.target.value);
     });
+
+    // Developer Mode Preview Button
+document.getElementById('previewDevBtn').addEventListener('click', () => {
+  renderPreview();
+});
+
+// Friendly Mode Preview Button
+document.getElementById('previewFriendlyBtn').addEventListener('click', () => {
+  previewFriendly();
+});
+
     
     updateJsonForEndpoint(document.getElementById('endpoint').value);
     
@@ -526,17 +531,6 @@ friendlyBtn.addEventListener('click', () => {
     resize: vertical;
     min-height: 150px;
   }
-
-  #previewFrame {
-      width: 100%;
-      height: 400px;
-      border: 1px solid #ccc;
-      margin-top: 20px;
-    }
-    #modeToggle button.active {
-      background-color: #2196f3;
-      color: white;
-    }
 
   #logoutButton {
     background-color: #ff4081;
