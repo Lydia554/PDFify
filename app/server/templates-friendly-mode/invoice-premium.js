@@ -2,11 +2,14 @@ function generateInvoicePremiumHtml(data) {
     const {
       logoUrl,
       customerName = 'Valued Customer',
+      recipientAddress = '',
       date = '',
       invoiceNumber = '',
       companyName = 'Your Company Name',
       companyAddress = '123 Business Rd, City',
       companyEmail = 'info@company.com',
+      senderAddress = '',
+      includeTitle = true,
       items = [],
       subtotal = 0,
       taxRate = 0,
@@ -31,7 +34,6 @@ function generateInvoicePremiumHtml(data) {
     <head>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-  
         body {
           font-family: 'Roboto', sans-serif;
           padding: 40px;
@@ -131,19 +133,20 @@ function generateInvoicePremiumHtml(data) {
     </head>
     <body>
       <div class="header">
-        <div class="invoice-title">Invoice</div>
+        ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
         ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" class="logo">` : ''}
       </div>
   
       <div class="info-grid">
         <div class="info-box">
           <p><strong>Customer:</strong> ${customerName}</p>
+          ${recipientAddress ? `<p><strong>Address:</strong> ${recipientAddress}</p>` : ''}
           <p><strong>Date:</strong> ${date}</p>
           <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
         </div>
         <div class="info-box">
           <p><strong>Company:</strong> ${companyName}</p>
-          <p><strong>Address:</strong> ${companyAddress}</p>
+          <p><strong>Address:</strong> ${senderAddress || companyAddress}</p>
           <p><strong>Email:</strong> ${companyEmail}</p>
         </div>
       </div>
