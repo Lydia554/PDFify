@@ -1,4 +1,31 @@
 function generateInvoicePremiumHtml(data) {
+    const {
+      logoUrl,
+      customerName = 'Valued Customer',
+      date = '',
+      invoiceNumber = '',
+      companyName = 'Your Company Name',
+      companyAddress = '123 Business Rd, City',
+      companyEmail = 'info@company.com',
+      items = [],
+      subtotal = 0,
+      taxRate = 0,
+      taxAmount = 0,
+      total = 0,
+      notes = ''
+    } = data;
+  
+    const renderItems = items.length
+      ? items.map(item => `
+        <tr>
+          <td>${item.description || ''}</td>
+          <td>${item.quantity || 0}</td>
+          <td>${typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : '0.00'}</td>
+          <td>${(Number(item.quantity) * Number(item.unitPrice) || 0).toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`;
+  
     return `
     <html>
     <head>
@@ -105,19 +132,19 @@ function generateInvoicePremiumHtml(data) {
     <body>
       <div class="header">
         <div class="invoice-title">Invoice</div>
-        ${data.logoUrl ? `<img src="${data.logoUrl}" alt="Company Logo" class="logo">` : ''}
+        ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" class="logo">` : ''}
       </div>
   
       <div class="info-grid">
         <div class="info-box">
-          <p><strong>Customer:</strong> ${data.customerName}</p>
-          <p><strong>Date:</strong> ${data.date}</p>
-          <p><strong>Invoice #:</strong> ${data.invoiceNumber || 'N/A'}</p>
+          <p><strong>Customer:</strong> ${customerName}</p>
+          <p><strong>Date:</strong> ${date}</p>
+          <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
         </div>
         <div class="info-box">
-          <p><strong>Company:</strong> ${data.companyName || 'Your Company Name'}</p>
-          <p><strong>Address:</strong> ${data.companyAddress || '123 Business Rd, City'}</p>
-          <p><strong>Email:</strong> ${data.companyEmail || 'info@company.com'}</p>
+          <p><strong>Company:</strong> ${companyName}</p>
+          <p><strong>Address:</strong> ${companyAddress}</p>
+          <p><strong>Email:</strong> ${companyEmail}</p>
         </div>
       </div>
   
@@ -131,36 +158,25 @@ function generateInvoicePremiumHtml(data) {
           </tr>
         </thead>
         <tbody>
-          ${
-            data.items && data.items.length > 0
-              ? data.items.map(item => `
-                <tr>
-                  <td>${item.description}</td>
-                  <td>${item.quantity}</td>
-                  <td>${typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : '0.00'}</td>
-                  <td>${(Number(item.quantity) * Number(item.unitPrice) || 0).toFixed(2)}</td>
-                </tr>
-              `).join('')
-              : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`
-          }
+          ${renderItems}
         </tbody>
         <tfoot>
           <tr>
             <td colspan="3" style="text-align:right;">Subtotal:</td>
-            <td>${(Number(data.subtotal) || 0).toFixed(2)}</td>
+            <td>${Number(subtotal).toFixed(2)}</td>
           </tr>
           <tr>
-            <td colspan="3" style="text-align:right;">Tax (${Number(data.taxRate) || 0} %):</td>
-            <td>${(Number(data.taxAmount) || 0).toFixed(2)}</td>
+            <td colspan="3" style="text-align:right;">Tax (${Number(taxRate).toFixed(2)} %):</td>
+            <td>${Number(taxAmount).toFixed(2)}</td>
           </tr>
           <tr>
             <td colspan="3" style="text-align:right;">Total:</td>
-            <td>${(Number(data.total) || 0).toFixed(2)}</td>
+            <td>${Number(total).toFixed(2)}</td>
           </tr>
         </tfoot>
       </table>
   
-      ${data.notes ? `<div class="notes"><strong>Notes:</strong> ${data.notes}</div>` : ''}
+      ${notes ? `<div class="notes"><strong>Notes:</strong> ${notes}</div>` : ''}
   
       <div class="footer">
         Thank you for your business!

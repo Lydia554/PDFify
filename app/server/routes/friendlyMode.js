@@ -8,14 +8,17 @@ const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
+const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
+
 const recipeTemplateBasic = require('../templates-friendly-mode/recipe');
 const recipeTemplatePremium = require('../templates-friendly-mode/recipe-premium');
 
 const templates = {
   invoice: {
-    fn: () => invoiceTemplate,
+    fn: (isPremium) => isPremium ? invoiceTemplatePremium : invoiceTemplate,
     premiumOnly: false,
   },
+  
   recipe: {
     fn: (isPremium) => isPremium ? recipeTemplatePremium : recipeTemplateBasic,
     premiumOnly: false,
