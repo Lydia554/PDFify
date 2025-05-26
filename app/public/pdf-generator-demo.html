@@ -21,15 +21,17 @@
     <button id="logoutButton">Logout</button>
   </nav>
  
+ 
+  <!-- Toggle Mode -->
   <div id="modeToggle" class="toggle-container">
     <button id="developerModeBtn" class="active">Developer Mode</button>
     <button id="friendlyModeBtn">Friendly Mode</button>
   </div>
-  <!-- Developer Mode Container -->
-   
+
+  <!-- Developer Mode -->
   <div id="developerMode">
     <label for="endpoint">Endpoint:</label>
-    <select id="endpoint" onchange="updateJsonForEndpoint(this.value)"></select>
+    <select id="endpoint" onchange="updateJsonForEndpoint(this.value)">
       <option value="generate-invoice">Invoice</option>
       <option value="generate-shop-order">Shop Order</option>
       <option value="generate-therapy-report">Therapy Report</option>
@@ -38,48 +40,51 @@
       <option value="generate-packing-slip">Packing Slip</option>
     </select>
 
-    <textarea id="json" rows="15" cols="80"></textarea>
-<button onclick="renderPreview()">Preview PDF</button>
-
-<div id="previewWrapper">
-  <iframe id="previewFrame" style="width:100%;height:1000px;border:1px solid #ccc;"></iframe>
-</div>
-
-    <br />
-
     <label for="apiKey">Your API Key:</label>
     <input type="text" id="apiKey" placeholder="Paste your API key here" required />
-
-    <br />
 
     <label for="json">Data (JSON):</label>
     <textarea id="json" rows="15" required></textarea>
 
-    <br />
+    <div style="margin-top: 10px;">
+      <button onclick="renderPreview()">Preview PDF</button>
+      <button id="generateDevBtn">Generate PDF</button>
+    </div>
 
-    <button id="generateDevBtn">Generate PDF</button>
     <p id="result"></p>
   </div>
 
-  <!-- Friendly Mode Container -->
-  <div id="friendlyMode" style="display:none;">
+  <!-- Friendly Mode -->
+  <div id="friendlyMode" style="display: none;">
+    <label for="friendly-endpoint-select">Choose Template:</label>
     <select id="friendly-endpoint-select">
       <option value="invoice">Invoice</option>
       <option value="recipe">Recipe</option>
     </select>
-    <div id="formContainer"></div>
-    <button id="generateFriendlyBtn">Generate PDF</button>
-    <p id="friendlyResult"></p>
-    <button onclick="previewFriendly()">Preview PDF</button>
-  </div>
-  
- 
 
+    <div id="formContainer" style="margin-top: 10px;"></div>
+
+    <div style="margin-top: 10px;">
+      <button onclick="previewFriendly()">Preview PDF</button>
+      <button id="generateFriendlyBtn">Generate PDF</button>
+    </div>
+
+    <p id="friendlyResult"></p>
+  </div>
+
+  <!-- PDF Preview -->
+  <div id="previewWrapper">
+    <h3>PDF Preview:</h3>
+    <iframe id="previewFrame"></iframe>
+  </div>
+
+  <!-- Payment -->
   <h3>Upgrade to Premium (More PDF Generations)</h3>
   <button id="payment-button">Pay for Premium Access</button>
   <p id="payment-result"></p>
-  <script src="preview.js"></script>
 
+  <!-- Scripts -->
+  <script src="preview.js"></script>
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
 
@@ -599,6 +604,28 @@ friendlyBtn.addEventListener('click', () => {
     background-color: #2415aa;
     color: white;
   }
+
+  .toggle-container button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    .active {
+      background-color: #2196f3;
+      color: white;
+    }
+
+    #previewWrapper {
+      margin-top: 20px;
+      display: none;
+    }
+
+    iframe {
+      width: 100%;
+      height: 1000px;
+      border: 1px solid #ccc;
+    }
 
    
     #friendlyForm {
