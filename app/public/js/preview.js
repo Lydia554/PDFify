@@ -1,11 +1,5 @@
-function renderPreview(jsonStrOverride = null, endpointOverride = null) {
-  const endpointSelect = document.getElementById("endpoint") || document.getElementById("friendly-endpoint-select");
-  const endpoint = endpointOverride || (endpointSelect && endpointSelect.value ? `generate-${endpointSelect.value}` : null);
-
-  const jsonInput = document.getElementById("json");
-  const jsonStr = jsonStrOverride || (jsonInput ? jsonInput.value : null);
-  const previewFrame = document.getElementById("previewFrame");
-
+// Render preview inside iframe
+function renderPreview(jsonStr, endpoint) {
   if (!endpoint || !jsonStr) {
     alert("Please select an endpoint and provide JSON.");
     return;
@@ -45,104 +39,82 @@ function renderPreview(jsonStrOverride = null, endpointOverride = null) {
     html = `<pre style="color:red">Invalid JSON or HTML</pre>`;
   }
 
+  const previewFrame = document.getElementById("previewFrame");
   const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
   doc.open();
   doc.write(html);
   doc.close();
 }
 
-window.renderPreview = renderPreview;
-window.previewFriendly = previewFriendly;
+// Developer Mode Preview button handler
+document.getElementById("previewDevBtn").addEventListener("click", () => {
+  const endpointSelect = document.getElementById("endpoint");
+  const endpoint = endpointSelect.value ? `generate-${endpointSelect.value}` : null;
 
+  const jsonInput = document.getElementById("json").value;
 
+  renderPreview(jsonInput, endpoint);
+});
 
-// 🧾 Sample Invoice HTML generator
-function generateInvoiceHTML(data) {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
-        h1 { color: #2c3e50; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        .footer { margin-top: 40px; font-size: 0.9em; color: #666; }
-      </style>
-    </head>
-    <body>
-      <h1>Invoice</h1>
-      <p><strong>Customer:</strong> ${data.customerName || "N/A"}</p>
-      <p><strong>Date:</strong> ${data.date || "N/A"}</p>
-      <table>
-        <thead>
-          <tr><th>Item</th><th>Qty</th><th>Price</th></tr>
-        </thead>
-        <tbody>
-          ${data.items
-            .map(
-              (item) =>
-                `<tr><td>${item.name}</td><td>${item.quantity}</td><td>$${item.price}</td></tr>`
-            )
-            .join("")}
-        </tbody>
-      </table>
-      <p class="footer">Thanks for using our service!</p>
-    </body>
-    </html>
-  `;
-}
-
-// Add placeholders for other generators
-function generateRecipeHTML(data) {
-  return `<html><body><h1>${data.title || "Recipe"}</h1><p>${data.description || ""}</p></body></html>`;
-}
-
-function generateTherapyReportHTML(data) {
-  return `<html><body><h1>Therapy Report for ${data.patient || "N/A"}</h1></body></html>`;
-}
-
-function generateShopOrderHTML(data) {
-  return `<html><body><h1>Order #${data.orderId || "N/A"}</h1></body></html>`;
-}
-
-function generatePackingSlipHTML(data) {
-  return `<html><body><h1>Packing Slip</h1><p>${data.contents || ""}</p></body></html>`;
-}
-
-
+// Friendly Mode Preview button handler
 function previewFriendly() {
-  const endpoint = document.getElementById("friendly-endpoint-select").value;
+  const endpointSelect = document.getElementById("friendly-endpoint-select");
+  const endpointKey = endpointSelect.value;
+  const endpoint = `generate-${endpointKey}`;
 
   let data = {};
 
-  if (endpoint === "generate-invoice") {
+  if (endpointKey === "invoice") {
     data = {
-      customerName: document.getElementById("invoice-customerName").value,
-      customerEmail: document.getElementById("invoice-customerEmail").value,
-      orderId: document.getElementById("invoice-orderId").value,
-      date: document.getElementById("invoice-date").value,
+      customerName: document.getElementById("invoice-customerName")?.value || "N/A",
+      customerEmail: document.getElementById("invoice-customerEmail")?.value || "",
+      orderId: document.getElementById("invoice-orderId")?.value || "",
+      date: document.getElementById("invoice-date")?.value || "",
       items: [
         {
-          name: document.getElementById("invoice-item1-name").value,
-          quantity: parseInt(document.getElementById("invoice-item1-qty").value),
-          price: document.getElementById("invoice-item1-price").value,
-          total: document.getElementById("invoice-item1-total").value,
-        },
-        // Add more items if needed
+          name: document.getElementById("invoice-item1-name")?.value || "Item 1",
+          quantity: parseInt(document.getElementById("invoice-item1-qty")?.value) || 1,
+          price: document.getElementById("invoice-item1-price")?.value || "0",
+        }
       ],
-      subtotal: document.getElementById("invoice-subtotal").value,
-      tax: document.getElementById("invoice-tax").value,
-      total: document.getElementById("invoice-total").value,
-      customLogoUrl: document.getElementById("invoice-logo").value,
-      showChart: document.getElementById("invoice-showChart").checked,
+      subtotal: document.getElementById("invoice-subtotal")?.value || "0",
+      tax: document.getElementById("invoice-tax")?.value || "0",
+      total: document.getElementById("invoice-total")?.value || "0",
+      customLogoUrl: document.getElementById("invoice-logo")?.value || "",
+      showChart: document.getElementById("invoice-showChart")?.checked || false,
       isPremium: true
     };
   }
 
-  // ... repeat for other endpoints like recipe, therapy report, etc.
+  // Add other cases for recipe, therapy report, etc.
 
   const jsonString = JSON.stringify({ data });
-  renderPreview(jsonString, `generate-${endpoint}`); 
 
+  renderPreview(jsonString, endpoint);
+}
+
+document.getElementById("previewFriendlyBtn").addEventListener("click", previewFriendly);
+
+
+// Example generators for invoice and recipe (simplified)
+function generateInvoiceHTML(data) {
+  return `
+    <html><body>
+      <h1>Invoice for ${data.customerName || "N/A"}</h1>
+      <p>Date: ${data.date || "N/A"}</p>
+      <ul>
+        ${data.items ? data.items.map(i => `<li>${i.name} - Qty: ${i.quantity} - Price: $${i.price}</li>`).join("") : ""}
+      </ul>
+      <p>Total: $${data.total || "0"}</p>
+    </body></html>
+  `;
+}
+
+function generateRecipeHTML(data) {
+  return `
+    <html><body>
+      <h1>${data.title || "Recipe"}</h1>
+      <p>${data.description || ""}</p>
+    </body></html>
+  `;
 }
