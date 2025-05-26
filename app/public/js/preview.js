@@ -1,9 +1,6 @@
-
-
-
-function renderPreview() {
-  const endpoint = document.getElementById("endpointSelect").value;
-  const jsonStr = document.getElementById("json").value;
+function renderPreview(jsonStrOverride = null, endpointOverride = null) {
+  const endpoint = endpointOverride || document.getElementById("endpointSelect").value;
+  const jsonStr = jsonStrOverride || document.getElementById("json").value;
   const previewFrame = document.getElementById("previewFrame");
 
   if (!endpoint || !jsonStr) {
@@ -50,6 +47,7 @@ function renderPreview() {
   doc.write(html);
   doc.close();
 }
+
 
 // 🧾 Sample Invoice HTML generator
 function generateInvoiceHTML(data) {
