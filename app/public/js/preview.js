@@ -1,4 +1,6 @@
-// Render preview inside iframe
+// preview.js
+
+// Render preview inside iframe based on JSON string and endpoint
 function renderPreview(jsonStr, endpoint) {
   if (!endpoint || !jsonStr) {
     alert("Please select an endpoint and provide JSON.");
@@ -46,17 +48,16 @@ function renderPreview(jsonStr, endpoint) {
   doc.close();
 }
 
-// Developer Mode Preview button handler
+// Developer Mode Preview button: use textarea JSON and selected endpoint
 document.getElementById("previewDevBtn").addEventListener("click", () => {
   const endpointSelect = document.getElementById("endpoint");
   const endpoint = endpointSelect.value ? `generate-${endpointSelect.value}` : null;
-
-  const jsonInput = document.getElementById("json").value;
+  const jsonInput = document.getElementById("json").value.trim();
 
   renderPreview(jsonInput, endpoint);
 });
 
-// Friendly Mode Preview button handler
+// Friendly Mode Preview button: build JSON from form inputs, then preview
 function previewFriendly() {
   const endpointSelect = document.getElementById("friendly-endpoint-select");
   const endpointKey = endpointSelect.value;
@@ -86,7 +87,16 @@ function previewFriendly() {
     };
   }
 
-  // Add other cases for recipe, therapy report, etc.
+  if (endpointKey === "recipe") {
+    data = {
+      title: document.getElementById("recipe-title")?.value || "Recipe Title",
+      description: document.getElementById("recipe-description")?.value || "",
+      ingredients: document.getElementById("recipe-ingredients")?.value || "",
+      instructions: document.getElementById("recipe-instructions")?.value || ""
+    };
+  }
+
+  // Add other templates similarly here if needed
 
   const jsonString = JSON.stringify({ data });
 
@@ -96,25 +106,71 @@ function previewFriendly() {
 document.getElementById("previewFriendlyBtn").addEventListener("click", previewFriendly);
 
 
-// Example generators for invoice and recipe (simplified)
+// ======= HTML Generators =======
+
+// Invoice HTML generator
 function generateInvoiceHTML(data) {
   return `
-    <html><body>
-      <h1>Invoice for ${data.customerName || "N/A"}</h1>
-      <p>Date: ${data.date || "N/A"}</p>
-      <ul>
-        ${data.items ? data.items.map(i => `<li>${i.name} - Qty: ${i.quantity} - Price: $${i.price}</li>`).join("") : ""}
-      </ul>
-      <p>Total: $${data.total || "0"}</p>
-    </body></html>
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 30px; color: #333; }
+        h1 { color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        .footer { margin-top: 40px; font-size: 0.9em; color: #666; }
+      </style>
+    </head>
+    <body>
+      <h1>Invoice</h1>
+      <p><strong>Customer:</strong> ${data.customerName || "N/A"}</p>
+      <p><strong>Date:</strong> ${data.date || "N/A"}</p>
+      <table>
+        <thead>
+          <tr><th>Item</th><th>Qty</th><th>Price</th></tr>
+        </thead>
+        <tbody>
+          ${Array.isArray(data.items) ? data.items.map(
+            item => `<tr><td>${item.name}</td><td>${item.quantity}</td><td>$${item.price}</td></tr>`
+          ).join("") : ""}
+        </tbody>
+      </table>
+      <p><strong>Total:</strong> $${data.total || "0"}</p>
+      <p class="footer">Thanks for using our service!</p>
+    </body>
+    </html>
   `;
 }
 
+// Recipe HTML generator
 function generateRecipeHTML(data) {
   return `
-    <html><body>
+    <!DOCTYPE html>
+    <html>
+    <body>
       <h1>${data.title || "Recipe"}</h1>
       <p>${data.description || ""}</p>
-    </body></html>
+      <h3>Ingredients:</h3>
+      <pre>${data.ingredients || ""}</pre>
+      <h3>Instructions:</h3>
+      <pre>${data.instructions || ""}</pre>
+    </body>
+    </html>
   `;
+}
+
+// Therapy Report HTML generator (simplified)
+function generateTherapyReportHTML(data) {
+  return `<html><body><h1>Therapy Report for ${data.patient || "N/A"}</h1></body></html>`;
+}
+
+// Shop Order HTML generator (simplified)
+function generateShopOrderHTML(data) {
+  return `<html><body><h1>Order #${data.orderId || "N/A"}</h1></body></html>`;
+}
+
+// Packing Slip HTML generator (simplified)
+function generatePackingSlipHTML(data) {
+  return `<html><body><h1>Packing Slip</h1><p>${data.contents || ""}</p></body></html>`;
 }
