@@ -1,4 +1,4 @@
-const templateSelect = document.getElementById('templateSelect');
+const templateSelect = document.getElementById('friendly-endpoint-select');
 const formContainer = document.getElementById('formContainer');
 const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
