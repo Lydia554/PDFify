@@ -65,7 +65,7 @@
     <div id="formContainer" style="margin-top: 10px;"></div>
 
     <div style="margin-top: 10px;">
-      <button onclick="previewFriendly()">Preview PDF</button>
+      <button id="previewFriendlyBtn">Preview</button>
       <button id="generateFriendlyBtn">Generate PDF</button>
     </div>
 
@@ -89,11 +89,14 @@
 
 
 <script src="js/preview.js"></script>
+
   <script >
 const devBtn = document.getElementById('developerModeBtn');
 const friendlyBtn = document.getElementById('friendlyModeBtn');
 const devSection = document.getElementById('developerMode');
 const friendlySection = document.getElementById('friendlyMode');
+
+
 
 devBtn.addEventListener('click', () => {
   devBtn.classList.add('active');
@@ -109,7 +112,9 @@ friendlyBtn.addEventListener('click', () => {
   friendlySection.style.display = 'block';
 
 
-
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("previewFriendlyBtn")?.addEventListener("click", previewFriendly);
+  });
 
   
 });
