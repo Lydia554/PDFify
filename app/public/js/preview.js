@@ -104,3 +104,39 @@ function generateShopOrderHTML(data) {
 function generatePackingSlipHTML(data) {
   return `<html><body><h1>Packing Slip</h1><p>${data.contents || ""}</p></body></html>`;
 }
+
+
+function previewFriendly() {
+  const endpoint = document.getElementById("friendly-endpoint-select").value;
+
+  let data = {};
+
+  if (endpoint === "generate-invoice") {
+    data = {
+      customerName: document.getElementById("invoice-customerName").value,
+      customerEmail: document.getElementById("invoice-customerEmail").value,
+      orderId: document.getElementById("invoice-orderId").value,
+      date: document.getElementById("invoice-date").value,
+      items: [
+        {
+          name: document.getElementById("invoice-item1-name").value,
+          quantity: parseInt(document.getElementById("invoice-item1-qty").value),
+          price: document.getElementById("invoice-item1-price").value,
+          total: document.getElementById("invoice-item1-total").value,
+        },
+        // Add more items if needed
+      ],
+      subtotal: document.getElementById("invoice-subtotal").value,
+      tax: document.getElementById("invoice-tax").value,
+      total: document.getElementById("invoice-total").value,
+      customLogoUrl: document.getElementById("invoice-logo").value,
+      showChart: document.getElementById("invoice-showChart").checked,
+      isPremium: true
+    };
+  }
+
+  // ... repeat for other endpoints like recipe, therapy report, etc.
+
+  const jsonString = JSON.stringify({ data });
+  renderPreview(jsonString, endpoint); // ✅ You already have this in `preview.js`
+}

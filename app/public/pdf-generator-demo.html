@@ -63,13 +63,14 @@
 
   <!-- Friendly Mode Container -->
   <div id="friendlyMode" style="display:none;">
-    <select id="templateSelect">
+    <select id="friendly-endpoint-select">
       <option value="invoice">Invoice</option>
       <option value="recipe">Recipe</option>
     </select>
     <div id="formContainer"></div>
     <button id="generateFriendlyBtn">Generate PDF</button>
     <p id="friendlyResult"></p>
+    <button onclick="previewFriendly()">Preview PDF</button>
   </div>
   
  
