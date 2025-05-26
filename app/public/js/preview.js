@@ -1,6 +1,9 @@
 function renderPreview(jsonStrOverride = null, endpointOverride = null) {
-  const endpoint = endpointOverride || document.getElementById("endpoint").value;
-  const jsonStr = jsonStrOverride || document.getElementById("json").value;
+  const endpointSelect = document.getElementById("endpoint") || document.getElementById("friendly-endpoint-select");
+  const endpoint = endpointOverride || (endpointSelect && endpointSelect.value ? `generate-${endpointSelect.value}` : null);
+
+  const jsonInput = document.getElementById("json");
+  const jsonStr = jsonStrOverride || (jsonInput ? jsonInput.value : null);
   const previewFrame = document.getElementById("previewFrame");
 
   if (!endpoint || !jsonStr) {
@@ -140,5 +143,6 @@ function previewFriendly() {
   // ... repeat for other endpoints like recipe, therapy report, etc.
 
   const jsonString = JSON.stringify({ data });
-  renderPreview(jsonString, endpoint); // ✅ You already have this in `preview.js`
+  renderPreview(jsonString, `generate-${endpoint}`); 
+
 }
