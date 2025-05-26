@@ -26,49 +26,50 @@
     <button id="friendlyModeBtn">Friendly Mode</button>
   </div>
 
-  <!-- Developer Mode Container -->
-  <div id="developerMode" style="margin-top: 20px;">
-    <label for="endpoint">Endpoint:</label>
-    <select id="endpoint">
-      <option value="generate-invoice">Invoice</option>
-      <option value="generate-shop-order">Shop Order</option>
-      <option value="generate-therapy-report">Therapy Report</option>
-      <option value="generate-recipe">Recipe</option>
-      <option value="generate-pdf-from-html">Raw HTML</option>
-      <option value="generate-packing-slip">Packing Slip</option>
-    </select>
+<!-- Developer Mode Container -->
+<div id="developerMode" style="margin-top: 20px;">
+  <label for="endpoint">Endpoint:</label>
+  <select id="endpoint">
+    <option value="invoice">Invoice</option>
+    <option value="shop-order">Shop Order</option>
+    <option value="therapy-report">Therapy Report</option>
+    <option value="recipe">Recipe</option>
+    <option value="pdf-from-html">Raw HTML</option>
+    <option value="packing-slip">Packing Slip</option>
+  </select>
 
-    <br /><br />
+  <br /><br />
 
-    <label for="apiKey">Your API Key:</label>
-    <input type="text" id="apiKey" placeholder="Paste your API key here" required style="width: 100%;" />
+  <label for="apiKey">Your API Key:</label>
+  <input type="text" id="apiKey" placeholder="Paste your API key here" required style="width: 100%;" />
 
-    <br /><br />
+  <br /><br />
 
-    <label for="json">Data (JSON):</label>
-    <textarea id="json" rows="15" style="width: 100%;" required></textarea>
+  <label for="json">Data (JSON):</label>
+  <textarea id="json" rows="15" style="width: 100%;" required></textarea>
 
-    <br />
+  <br />
 
-    <button id="previewDevBtn">Preview</button>
-    <button id="generateDevBtn">Generate PDF</button>
-    <p id="result" style="color: green;"></p>
-  </div>
+  <button id="previewDevBtn">Preview</button>
+  <button id="generateDevBtn">Generate PDF</button>
+  <p id="result" style="color: green;"></p>
+</div>
 
-  <!-- Friendly Mode Container -->
-  <div id="friendlyMode" style="display:none; margin-top: 20px;">
-    <label for="friendly-endpoint-select">Select Template:</label>
-    <select id="friendly-endpoint-select">
-      <option value="invoice">Invoice</option>
-      <option value="recipe">Recipe</option>
-    </select>
+<!-- Friendly Mode Container -->
+<div id="friendlyMode" style="display:none; margin-top: 20px;">
+  <label for="friendly-endpoint-select">Select Template:</label>
+  <select id="friendly-endpoint-select">
+    <option value="invoice">Invoice</option>
+    <option value="recipe">Recipe</option>
+  </select>
 
-    <div id="formContainer"></div>
-    
-    <button id="previewFriendlyBtn">Preview</button>
-    <button id="generateFriendlyBtn">Generate PDF</button>
-    <p id="friendlyResult" style="color: green;"></p>
-  </div>
+  <div id="formContainer"></div>
+
+  <button id="previewFriendlyBtn">Preview</button>
+  <button id="generateFriendlyBtn">Generate PDF</button>
+  <p id="friendlyResult" style="color: green;"></p>
+</div>
+
 
   <h3>Upgrade to Premium (More PDF Generations)</h3>
   <button id="payment-button">Pay for Premium Access</button>
@@ -100,9 +101,6 @@ friendlyBtn.addEventListener('click', () => {
   devBtn.classList.remove('active');
   devSection.style.display = 'none';
   friendlySection.style.display = 'block';
-
-
-
 
   
 });
@@ -357,8 +355,16 @@ friendlyBtn.addEventListener('click', () => {
       }, 500);
     });
 
-    document.getElementById('generateDevBtn').addEventListener('click', () => {
-  renderPreview(); // This will use your textarea#json and select#endpoint values
+
+
+    // Developer Mode Preview Button
+document.getElementById('previewDevBtn').addEventListener('click', () => {
+  renderPreview();
+});
+
+// Friendly Mode Preview Button
+document.getElementById('previewFriendlyBtn').addEventListener('click', () => {
+  previewFriendly();
 });
 
     

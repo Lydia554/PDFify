@@ -1,3 +1,6 @@
+// preview.js
+
+// Render preview from JSON string and endpoint
 function renderPreview(jsonStrOverride = null, endpointOverride = null) {
   const endpointSelect = document.getElementById("endpoint") || document.getElementById("friendly-endpoint-select");
   const endpoint = endpointOverride || (endpointSelect && endpointSelect.value ? `generate-${endpointSelect.value}` : null);
@@ -51,12 +54,7 @@ function renderPreview(jsonStrOverride = null, endpointOverride = null) {
   doc.close();
 }
 
-window.renderPreview = renderPreview;
-window.previewFriendly = previewFriendly;
-
-
-
-// 🧾 Sample Invoice HTML generator
+// Sample invoice HTML generator
 function generateInvoiceHTML(data) {
   return `
     <!DOCTYPE html>
@@ -79,12 +77,10 @@ function generateInvoiceHTML(data) {
           <tr><th>Item</th><th>Qty</th><th>Price</th></tr>
         </thead>
         <tbody>
-          ${data.items
-            .map(
-              (item) =>
-                `<tr><td>${item.name}</td><td>${item.quantity}</td><td>$${item.price}</td></tr>`
-            )
-            .join("")}
+          ${Array.isArray(data.items) ? data.items.map(
+            (item) =>
+              `<tr><td>${item.name}</td><td>${item.quantity}</td><td>$${item.price}</td></tr>`
+          ).join("") : ""}
         </tbody>
       </table>
       <p class="footer">Thanks for using our service!</p>
@@ -93,7 +89,6 @@ function generateInvoiceHTML(data) {
   `;
 }
 
-// Add placeholders for other generators
 function generateRecipeHTML(data) {
   return `<html><body><h1>${data.title || "Recipe"}</h1><p>${data.description || ""}</p></body></html>`;
 }
@@ -111,12 +106,62 @@ function generatePackingSlipHTML(data) {
 }
 
 
+// Friendly Mode form generation & preview
+
+const formContainer = document.getElementById('formContainer');
+const friendlyEndpointSelect = document.getElementById('friendly-endpoint-select');
+
+function generateInvoiceForm() {
+  formContainer.innerHTML = `
+    <label>Customer Name:<input id="invoice-customerName" type="text"></label><br>
+    <label>Customer Email:<input id="invoice-customerEmail" type="email"></label><br>
+    <label>Order ID:<input id="invoice-orderId" type="text"></label><br>
+    <label>Date:<input id="invoice-date" type="date"></label><br>
+    <label>Item 1 Name:<input id="invoice-item1-name" type="text"></label><br>
+    <label>Item 1 Quantity:<input id="invoice-item1-qty" type="number" min="1" value="1"></label><br>
+    <label>Item 1 Price:<input id="invoice-item1-price" type="text"></label><br>
+    <label>Subtotal:<input id="invoice-subtotal" type="text"></label><br>
+    <label>Tax:<input id="invoice-tax" type="text"></label><br>
+    <label>Total:<input id="invoice-total" type="text"></label><br>
+    <label>Logo URL:<input id="invoice-logo" type="text"></label><br>
+    <label>Show Chart:<input id="invoice-showChart" type="checkbox"></label><br>
+  `;
+}
+
+function generateRecipeForm() {
+  formContainer.innerHTML = `
+    <label>Title:<input id="recipe-title" type="text"></label><br>
+    <label>Description:<textarea id="recipe-description"></textarea></label><br>
+  `;
+}
+
+function generateFormForTemplate(template) {
+  switch(template) {
+    case 'invoice':
+      generateInvoiceForm();
+      break;
+    case 'recipe':
+      generateRecipeForm();
+      break;
+    default:
+      formContainer.innerHTML = '<p>No form available for this template.</p>';
+  }
+}
+
+// Initialize form for default Friendly Mode template
+if (friendlyEndpointSelect) {
+  generateFormForTemplate(friendlyEndpointSelect.value);
+  friendlyEndpointSelect.addEventListener('change', () => {
+    generateFormForTemplate(friendlyEndpointSelect.value);
+  });
+}
+
 function previewFriendly() {
-  const endpoint = document.getElementById("friendly-endpoint-select").value;
+  const endpoint = friendlyEndpointSelect.value;
 
   let data = {};
 
-  if (endpoint === "generate-invoice") {
+  if (endpoint === "invoice") {
     data = {
       customerName: document.getElementById("invoice-customerName").value,
       customerEmail: document.getElementById("invoice-customerEmail").value,
@@ -125,11 +170,9 @@ function previewFriendly() {
       items: [
         {
           name: document.getElementById("invoice-item1-name").value,
-          quantity: parseInt(document.getElementById("invoice-item1-qty").value),
+          quantity: parseInt(document.getElementById("invoice-item1-qty").value) || 0,
           price: document.getElementById("invoice-item1-price").value,
-          total: document.getElementById("invoice-item1-total").value,
         },
-        // Add more items if needed
       ],
       subtotal: document.getElementById("invoice-subtotal").value,
       tax: document.getElementById("invoice-tax").value,
@@ -138,11 +181,34 @@ function previewFriendly() {
       showChart: document.getElementById("invoice-showChart").checked,
       isPremium: true
     };
+  } else if (endpoint === "recipe") {
+    data = {
+      title: document.getElementById("recipe-title").value,
+      description: document.getElementById("recipe-description").value,
+    };
+  } else {
+    alert("No friendly form available for this template.");
+    return;
   }
 
-  // ... repeat for other endpoints like recipe, therapy report, etc.
-
   const jsonString = JSON.stringify({ data });
-  renderPreview(jsonString, `generate-${endpoint}`); 
-
+  renderPreview(jsonString, `generate-${endpoint}`);
 }
+
+// Button event listeners for preview buttons
+document.addEventListener('DOMContentLoaded', () => {
+  const previewDevBtn = document.getElementById('previewDevBtn');
+  if (previewDevBtn) {
+    previewDevBtn.addEventListener('click', () => renderPreview());
+  }
+
+  const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
+  if (previewFriendlyBtn) {
+    previewFriendlyBtn.addEventListener('click', () => previewFriendly());
+  }
+});
+
+
+// Expose functions globally if needed
+window.renderPreview = renderPreview;
+window.previewFriendly = previewFriendly;
