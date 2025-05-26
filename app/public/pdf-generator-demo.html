@@ -113,8 +113,11 @@ friendlyBtn.addEventListener('click', () => {
 
 
   document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("previewFriendlyBtn")?.addEventListener("click", previewFriendly);
-  });
+  const previewBtn = document.getElementById("previewFriendlyBtn");
+  if (previewBtn) {
+    previewBtn.addEventListener("click", previewFriendly);
+  }
+});
 
   
 });
