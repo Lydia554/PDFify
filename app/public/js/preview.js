@@ -45,11 +45,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
   previewFriendlyBtn?.addEventListener('click', async () => {
     const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
+    const formContainer = document.getElementById('formContainer');
+formContainer.innerHTML = ''; // Clear previous
+
+if (selectedTemplate === 'invoice') {
+  formContainer.innerHTML = `
+    <input name="customerName" value="Lidija Jokić" />
+    <input name="companyName" value="PDFify Inc." />
+    <input name="date" value="2025-05-27" />
+    <input name="invoiceNumber" value="INV-001" />
+    <input name="items[0].description" value="Development Services" />
+    <input name="items[0].quantity" value="1" />
+    <input name="items[0].unitPrice" value="500" />
+    <input name="subtotal" value="500" />
+    <input name="taxRate" value="19" />
+    <input name="taxAmount" value="95" />
+    <input name="total" value="595" />
+  `;
+}
+
     const apiKey = document.getElementById('apiKey').value.trim();
     const payload = await getFriendlyFormData();
 
     payload.template = selectedTemplate;
-    console.log('🟢 Payload sent to backend:', payload); 
+   
 
     try {
       const response = await fetch(`/api/friendly/generate`, {
