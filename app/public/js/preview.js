@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
   const formContainer = document.getElementById('formContainer');
-  const friendlySelect = document.getElementById('friendly-endpoint-select');
+  const friendlyTemplateSelect = document.getElementById('friendly-endpoint-select');
   
   function renderForm(template) {
     formContainer.innerHTML = ''; // Clear previous
