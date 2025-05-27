@@ -1,11 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   const previewDevBtn = document.getElementById('previewDevBtn');
-  const generateDevBtn = document.getElementById('generateDevBtn');
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
-  const generateFriendlyBtn = document.getElementById('generateFriendlyBtn');
-  const iframe = document.getElementById('previewFrame'); // Add this iframe in your HTML somewhere
+  const iframe = document.getElementById('previewFrame'); 
 
-  // Developer Mode Preview
+  
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -17,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,   // <-- changed here
+          'Authorization': `Bearer ${apiKey}`,  
         },
         body: JSON.stringify(payload),
       });
@@ -44,9 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Friendly Mode Preview
+
   previewFriendlyBtn?.addEventListener('click', async () => {
-    const template = document.getElementById('templateSelect').value;
+    const template = document.getElementById('friendly-endpoint-select').value;
+
     const apiKey = document.getElementById('apiKey').value.trim();
 
     const payload = getFriendlyFormData();
@@ -56,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,  // <-- changed here
+          'Authorization': `Bearer ${apiKey}`,  
         },
         body: JSON.stringify(payload),
       });
