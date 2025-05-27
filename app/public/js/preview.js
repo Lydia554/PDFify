@@ -1,22 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   const previewDevBtn = document.getElementById('previewDevBtn');
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
-  const iframe = document.getElementById('previewFrame');
+  const iframe = document.getElementById('previewFrame'); 
 
-  // Helper to open PDF (in iframe if exists, else new tab)
-  function openPdf(blob) {
-    const pdfUrl = URL.createObjectURL(blob);
-    if (iframe) {
-      iframe.src = pdfUrl;
-      iframe.style.display = 'block';
-      iframe.style.width = '100%';
-      iframe.style.height = '600px';
-    } else {
-      window.open(pdfUrl, '_blank');
-    }
-  }
-
-  // Developer mode: parse raw JSON and send to endpoint
+  
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -28,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,  
         },
         body: JSON.stringify(payload),
       });
@@ -40,26 +27,35 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const blob = await response.blob();
-      openPdf(blob);
+      const pdfUrl = URL.createObjectURL(blob);
+
+      if (iframe) {
+        iframe.src = pdfUrl;
+        iframe.style.display = 'block';
+        iframe.style.width = '100%';
+        iframe.style.height = '600px';
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
     } catch (err) {
       alert('Invalid JSON data: ' + err.message);
     }
   });
 
-  // Friendly mode: gather form data and send to friendly endpoint
-  previewFriendlyBtn?.addEventListener('click', async () => {
-    const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
-    const apiKey = document.getElementById('apiKey').value.trim();
-    const payload = await getFriendlyFormData();
 
-    payload.template = selectedTemplate;
+  previewFriendlyBtn?.addEventListener('click', async () => {
+    const template = document.getElementById('friendly-endpoint-select').value;
+
+    const apiKey = document.getElementById('apiKey').value.trim();
+
+    const payload = getFriendlyFormData();
 
     try {
-      const response = await fetch(`/api/friendly/generate`, {
+      const response = await fetch(`/api/generate-${template}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${apiKey}`,  
         },
         body: JSON.stringify(payload),
       });
@@ -71,47 +67,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const blob = await response.blob();
-      openPdf(blob);
+      const pdfUrl = URL.createObjectURL(blob);
+
+      if (iframe) {
+        iframe.src = pdfUrl;
+        iframe.style.display = 'block';
+        iframe.style.width = '100%';
+        iframe.style.height = '600px';
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
     } catch (err) {
       alert('Error generating preview: ' + err.message);
     }
   });
 
-  // Collect all friendly mode form data from #formContainer
-  async function getFriendlyFormData() {
+  // Dummy example of how to collect Friendly Mode form data
+  function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
+    const inputs = formContainer.querySelectorAll('input, textarea, select');
     const data = {};
-
-    // Gather flat inputs and textareas (excluding items)
-    const flatInputs = formContainer.querySelectorAll('input:not([name^="item"]), textarea:not([name^="item"])');
-    flatInputs.forEach(input => {
-      if (!input.name) return;
-
-      if (input.type === 'checkbox') {
-        data[input.name] = input.checked;
-      } else {
-        data[input.name] = input.value;
-      }
+    inputs.forEach(input => {
+      data[input.name] = input.value;
     });
-
-    // Build items array from .item-row elements
-    data.items = [];
-    const itemRows = formContainer.querySelectorAll('.item-row');
-    itemRows.forEach(row => {
-      const description = row.querySelector('[name="itemDescription"]')?.value || '';
-      const quantity = row.querySelector('[name="itemQuantity"]')?.value || 0;
-      const unitPrice = row.querySelector('[name="itemUnitPrice"]')?.value || 0;
-
-      // Only add if some data present
-      if (description || quantity || unitPrice) {
-        data.items.push({
-          description,
-          quantity: Number(quantity),
-          unitPrice: Number(unitPrice),
-        });
-      }
-    });
-
     return data;
   }
 });
