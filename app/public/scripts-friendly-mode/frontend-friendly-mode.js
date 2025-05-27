@@ -37,57 +37,76 @@ async function fetchAccessType() {
 
 function renderForm(template) {
   let html = '';
+  const formContainer = document.getElementById('formContainer');
+  if (!formContainer) {
+    console.warn('No form container found!');
+    return;
+  }
+
   if (template === 'invoice') {
     html = `
-      <label>Customer Name: <input id="customerName" /></label><br/>
-      <label>Date: <input type="date" id="date" /></label><br/>
-      <label>Invoice Number: <input id="invoiceNumber" /></label><br/>
+      <label>Customer Name: <input id="customerName" name="customerName" /></label><br/>
+      <label>Date: <input type="date" id="date" name="date" /></label><br/>
+      <label>Invoice Number: <input id="invoiceNumber" name="invoiceNumber" /></label><br/>
       <label>Items (format: description,quantity,unitPrice per line):</label><br/>
-      <textarea id="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
-      <label>Tax Rate (%): <input type="number" id="taxRate" value="0" /></label><br/>
+      <textarea id="items" name="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
+      <label>Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" /></label><br/>
     `;
 
     if (userAccessType === 'premium') {
       html += `
-        <label>Company Name: <input id="companyName" /></label><br/>
-        <label>Company Address: <input id="companyAddress" /></label><br/>
-        <label>Company Email: <input id="companyEmail" type="email" /></label><br/>
-        <label>Sender Address: <input id="senderAddress" /></label><br/>
-<label>Recipient Address: <input id="recipientAddress" /></label><br/>
-
-        <label>Upload Logo: <input type="file" id="logoUpload" accept="image/*" /></label><br/>
-        <label>Extra Notes: <textarea id="notes" rows="3" cols="30"></textarea></label><br/>
+        <label>Company Name: <input id="companyName" name="companyName" /></label><br/>
+        <label>Company Address: <input id="companyAddress" name="companyAddress" /></label><br/>
+        <label>Company Email: <input id="companyEmail" name="companyEmail" type="email" /></label><br/>
+        <label>Sender Address: <input id="senderAddress" name="senderAddress" /></label><br/>
+        <label>Recipient Address: <input id="recipientAddress" name="recipientAddress" /></label><br/>
+        <label>Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" /></label><br/>
+        <label>Extra Notes: <textarea id="notes" name="notes" rows="3" cols="30"></textarea></label><br/>
       `;
     }
-  
-  document.getElementById('formContainer').innerHTML = html;
-  
-    html += `<label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>`;
-  
-  
+
+    // Include checkbox inside form container as well
+    html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
+
   } else if (template === 'recipe') {
     html = `
-      <label>Recipe Name: <input id="recipeName" /></label><br/>
-      <label>Prep Time: <input id="prepTime" /></label><br/>
-      <label>Cook Time: <input id="cookTime" /></label><br/>
-      <label>Ingredients (comma separated): <input id="ingredients" /></label><br/>
-      <label>Instructions (semicolon separated): <input id="instructions" /></label><br/>
+      <label>Recipe Name: <input id="recipeName" name="recipeName" /></label><br/>
+      <label>Prep Time: <input id="prepTime" name="prepTime" /></label><br/>
+      <label>Cook Time: <input id="cookTime" name="cookTime" /></label><br/>
+      <label>Ingredients (comma separated): <input id="ingredients" name="ingredients" /></label><br/>
+      <label>Instructions (semicolon separated): <input id="instructions" name="instructions" /></label><br/>
     `;
 
     if (userAccessType === 'premium') {
       html += `
-        <label>Recipe Video URL (YouTube): <input id="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
+        <label>Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
         <fieldset>
           <legend>Nutrition Info (optional)</legend>
-          <label>Calories: <input id="calories" /></label><br/>
-          <label>Protein: <input id="protein" /></label><br/>
-          <label>Fat: <input id="fat" /></label><br/>
-          <label>Carbs: <input id="carbs" /></label><br/>
+          <label>Calories: <input id="calories" name="calories" /></label><br/>
+          <label>Protein: <input id="protein" name="protein" /></label><br/>
+          <label>Fat: <input id="fat" name="fat" /></label><br/>
+          <label>Carbs: <input id="carbs" name="carbs" /></label><br/>
         </fieldset>
-        <label>Upload Images: <input type="file" id="imageUpload" accept="image/*" multiple /></label><br/>
+        <label>Upload Images: <input type="file" id="imageUpload" name="imageUpload" accept="image/*" multiple /></label><br/>
         <div id="imagePreviewContainer" style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;"></div>
       `;
     }
+
+    html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
+  }
+
+  formContainer.innerHTML = html;
+
+  allSelectedFiles = [];
+  updateImagePreview();
+
+  if (template === 'recipe' && userAccessType === 'premium') {
+    const imageInput = document.getElementById('imageUpload');
+    if (imageInput) {
+      imageInput.addEventListener('change', onImagesSelected);
+    }
+  
+
 
     html += `<label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>`;
   }
