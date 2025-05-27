@@ -63,7 +63,7 @@ router.post('/generate', authenticate, async (req, res) => {
   console.log('Received body:', req.body);
   const { template, ...formData } = req.body;
 
-  const templateConfig = templates[template];A
+  const templateConfig = templates[template];
   if (!templateConfig) {
     return res.status(400).json({ error: 'Invalid template' });
   }
