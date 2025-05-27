@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
   const iframe = document.getElementById('previewFrame');
 
-  // Developer Mode preview
+
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Friendly Mode preview
+
   previewFriendlyBtn?.addEventListener('click', async () => {
     const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Collects all input data from Friendly Mode form
+  
   async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
     const inputs = formContainer.querySelectorAll('input, textarea, select');
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (input.type === 'file' && input.files.length > 0) {
         const file = input.files[0];
         const base64 = await fileToBase64(file);
-        data[input.name + 'Url'] = base64; // e.g. logoUrl, imageUrl
+        data[input.name + 'Url'] = base64; 
       } else {
         data[input.name] = input.value;
       }
@@ -104,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return data;
   }
 
-  // Converts file to base64
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
