@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const payload = await getFriendlyFormData();
 
     payload.template = selectedTemplate;
+    console.log('🟢 Payload sent to backend:', payload); 
 
     try {
       const response = await fetch(`/api/friendly/generate`, {

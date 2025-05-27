@@ -59,7 +59,8 @@ router.get('/check-access', authenticate, async (req, res) => {
 });
 
 
-router.post('/generate', authenticate, async (req, res) => {
+router.post('/api/friendly/generate', authenticate, async (req, res) => {
+  console.log('📦 Friendly generate received:', req.body);
   const { template, ...formData } = req.body;
 
   const templateConfig = templates[template];
@@ -127,6 +128,19 @@ router.post('/generate', authenticate, async (req, res) => {
 });
 
 
+document.getElementById('friendly-endpoint-select').addEventListener('change', async (e) => {
+  const selected = e.target.value;
+  const formContainer = document.getElementById('formContainer');
+
+  try {
+    const response = await fetch(`/forms/${selected}-form.html`);
+    if (!response.ok) throw new Error("Form not found");
+    const html = await response.text();
+    formContainer.innerHTML = html;
+  } catch (err) {
+    formContainer.innerHTML = `<p style="color:red;">Error loading form: ${err.message}</p>`;
+  }
+});
 
 
 module.exports = router;
