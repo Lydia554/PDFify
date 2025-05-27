@@ -320,17 +320,6 @@ friendlyBtn.addEventListener('click', () => {
       updateJsonForEndpoint(event.target.value);
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('previewDevBtn')?.addEventListener('click', () => {
-    renderPreview(); // your function to handle Developer Mode preview
-  });
-
-  document.getElementById('previewFriendlyBtn')?.addEventListener('click', () => {
-    previewFriendly(); // your function to handle Friendly Mode preview
-  });
-});
-
-
     
     updateJsonForEndpoint(document.getElementById('endpoint').value);
     
