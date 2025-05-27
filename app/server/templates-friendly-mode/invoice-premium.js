@@ -1,4 +1,5 @@
 function generateInvoicePremiumHtml(data) {
+  console.log('generateInvoicePremiumHtml data:', data);
     const {
         logoBase64,
       customerName = 'Valued Customer',
