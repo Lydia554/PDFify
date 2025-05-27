@@ -338,6 +338,7 @@ function extractYouTubeId(url) {
 
       <div class="footer">
         <p>Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com">food-trek.com</a></p>
+         <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
         <p>Need help? Contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
       </div>
     </div>

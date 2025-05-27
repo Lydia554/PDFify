@@ -126,6 +126,19 @@ function generateInvoiceHtml(data) {
     </div>
 
     ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ''}
+
+
+
+     <div class="footer">
+             <p>Thanks for using our service!</p>
+            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+            <p>&copy; 2025 🧾PDFify — All rights reserved.</p> <p Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.</p>
+            ${!data.isPremium ? `
+              <p class="terms">
+              
+              </p>` : ''}
+        
+          </div>
   </body>
   </html>
   `;
