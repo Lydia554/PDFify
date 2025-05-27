@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
   const iframe = document.getElementById('previewFrame'); 
 
+  
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -41,11 +42,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+
   previewFriendlyBtn?.addEventListener('click', async () => {
     const template = document.getElementById('friendly-endpoint-select').value;
+
     const apiKey = document.getElementById('apiKey').value.trim();
 
-    const payload = await getFriendlyFormData();
+    const payload = getFriendlyFormData();
 
     try {
       const response = await fetch(`/api/generate-${template}`, {
@@ -79,32 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  async function getFriendlyFormData() {
+  // Dummy example of how to collect Friendly Mode form data
+  function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
     const inputs = formContainer.querySelectorAll('input, textarea, select');
     const data = {};
-
-    for (const input of inputs) {
-      if (!input.name) continue;
-
-      if (input.type === 'file' && input.files.length > 0) {
-        const file = input.files[0];
-        const base64 = await fileToBase64(file);
-        data[input.name + 'Url'] = base64; 
-      } else {
-        data[input.name] = input.value;
-      }
-    }
-
-    return data;
-  }
-
-  function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+    inputs.forEach(input => {
+      data[input.name] = input.value;
     });
+    return data;
   }
 });
