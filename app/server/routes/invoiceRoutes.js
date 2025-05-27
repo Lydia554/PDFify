@@ -1,12 +1,14 @@
 const express = require("express");
-const puppeteer = require("puppeteer");
-const path = require("path");
 const router = express.Router();
 const fs = require("fs");
-const authenticate = require("../middleware/authenticate");
-const User = require("../models/User");
-const axios = require('axios');
+const path = require("path");
+const puppeteer = require("puppeteer");
 const pdfParse = require("pdf-parse");
+const axios = require("axios");
+
+const { authenticate } = require("../middleware/authMiddleware");
+const User = require("../models/User");
+const generateInvoiceHTML = require("../templates/invoiceTemplate");
 
 
 const log = (message, data = null) => {
@@ -236,7 +238,8 @@ function generateInvoiceHTML(data) {
 
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  const { data } = req.body;
+  // Support both { data: { ... } } and raw payload
+  const rawData = req.body.data || req.body;
 
   try {
     const user = await User.findById(req.user.userId);
@@ -244,34 +247,40 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    const isPremium = true; 
     //const isPremium = user.isPremium;
-    const isPremium = true;
 
     const cleanedData = {
-      ...data,
-      isPremium: isPremium,
-      customLogoUrl: isPremium ? data.customLogoUrl || null : null,
-      showChart: isPremium ? !!data.showChart : false,
+      ...rawData,
+      isPremium,
+      customLogoUrl: isPremium ? rawData.customLogoUrl || null : null,
+      showChart: isPremium ? !!rawData.showChart : false,
     };
 
-    let logoBase64 = '';
+    // Convert custom logo URL to base64 if provided
+    let logoBase64 = "";
     if (cleanedData.customLogoUrl) {
       try {
-        const response = await axios.get(cleanedData.customLogoUrl, { responseType: 'arraybuffer' });
-        const mimeType = response.headers['content-type'];
-        const base64 = Buffer.from(response.data).toString('base64');
+        const response = await axios.get(cleanedData.customLogoUrl, { responseType: "arraybuffer" });
+        const mimeType = response.headers["content-type"];
+        const base64 = Buffer.from(response.data).toString("base64");
         logoBase64 = `data:${mimeType};base64,${base64}`;
       } catch (err) {
         console.warn("Failed to fetch logo image:", err.message);
       }
     }
 
+    const finalData = {
+      ...cleanedData,
+      logoBase64
+    };
+
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
+    const pdfPath = path.join(pdfDir, `Invoice_${finalData.orderId || Date.now()}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -279,10 +288,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
-
-    // Pass logoBase64 into HTML generation
-    const html = generateInvoiceHTML({ ...cleanedData, logoBase64 });
-
+    const html = generateInvoiceHTML(finalData);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
