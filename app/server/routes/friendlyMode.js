@@ -1,129 +1,111 @@
-const express = require('express');
-const router = express.Router();
-const path = require('path');
-const fs = require('fs');
-const puppeteer = require('puppeteer');
-const pdfParse = require('pdf-parse');
-const User = require('../models/User');
-const authenticate = require('../middleware/authenticate');
+document.addEventListener('DOMContentLoaded', () => {
+  const previewDevBtn = document.getElementById('previewDevBtn');
+  const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
+  const iframe = document.getElementById('previewFrame');
 
-const invoiceTemplate = require('../templates-friendly-mode/invoice');
-const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
+  previewDevBtn?.addEventListener('click', async () => {
+    const endpoint = document.getElementById('endpoint').value;
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const jsonData = document.getElementById('json').value;
 
-const recipeTemplateBasic = require('../templates-friendly-mode/recipe');
-const recipeTemplatePremium = require('../templates-friendly-mode/recipe-premium');
-
-const templates = {
-  invoice: {
-    fn: (isPremium) => isPremium ? invoiceTemplatePremium : invoiceTemplate,
-    premiumOnly: false,
-  },
-  
-  recipe: {
-    fn: (isPremium) => isPremium ? recipeTemplatePremium : recipeTemplateBasic,
-    premiumOnly: false,
-  }
-};
-
-
-//router.get('/check-access', authenticate, async (req, res) => {
- // try {
-   // const user = await User.findById(req.user.userId);
-
-   // if (!user) {
-    //  return res.status(404).json({ error: 'User not found' });
-   // }
-
-    //const accessType = user.plan === 'premium' ? 'premium' : 'basic';
-   // res.json({ accessType });
-  //} catch (err) {
-  //  console.error(err);
-   // res.status(500).json({ error: 'Failed to determine access type' });
-  //}
-//});
-
-
-router.get('/check-access', authenticate, async (req, res) => {
-  try {
-    // TEMP: Force premium access during development
-    return res.json({ accessType: 'premium' });
-
-    // const user = await User.findById(req.user.userId);
-    // if (!user) return res.status(404).json({ error: 'User not found' });
-    // const accessType = user.plan === 'premium' ? 'premium' : 'basic';
-    // res.json({ accessType });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to determine access type' });
-  }
-});
-
-
-router.post('/generate', authenticate, async (req, res) => {
-  const { template, ...formData } = req.body;
-
-  const templateConfig = templates[template];
-  if (!templateConfig) {
-    return res.status(400).json({ error: 'Invalid template' });
-  }
-
-  try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const isDevMode = process.env.NODE_ENV !== 'production';
-    const isPremium = isDevMode ? true : user.plan === 'premium';
-    
-    
-
-
-    if (templateConfig.premiumOnly && !isPremium) {
-      return res.status(403).json({ error: 'This template is available for premium users only.' });
-    }
-
-   
-    const generateHtml = templateConfig.fn(isPremium);
-    const html = generateHtml(formData);
-
-    const pdfDir = path.join(__dirname, '../../pdfs');
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
-
-    const pdfPath = path.join(pdfDir, `pdf_${Date.now()}.pdf`);
-
-    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: 'A4' });
-    await browser.close();
-
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-
-    console.log(`User will use ${pageCount} pages`);
-
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({
-        error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
+    try {
+      const payload = JSON.parse(jsonData);
+      const response = await fetch(`/api/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        alert('Error generating preview: ' + errorText);
+        return;
+      }
+
+      const blob = await response.blob();
+      const pdfUrl = URL.createObjectURL(blob);
+
+      if (iframe) {
+        iframe.src = pdfUrl;
+        iframe.style.display = 'block';
+        iframe.style.width = '100%';
+        iframe.style.height = '600px';
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
+    } catch (err) {
+      alert('Invalid JSON data: ' + err.message);
+    }
+  });
+
+  previewFriendlyBtn?.addEventListener('click', async () => {
+    const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const payload = await getFriendlyFormData();
+
+    payload.template = selectedTemplate;
+
+    try {
+      const response = await fetch(`/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        alert('Error generating preview: ' + errorText);
+        return;
+      }
+
+      const blob = await response.blob();
+      const pdfUrl = URL.createObjectURL(blob);
+
+      if (iframe) {
+        iframe.src = pdfUrl;
+        iframe.style.display = 'block';
+        iframe.style.width = '100%';
+        iframe.style.height = '600px';
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
+    } catch (err) {
+      alert('Error generating preview: ' + err.message);
+    }
+  });
+
+  async function getFriendlyFormData() {
+    const formContainer = document.getElementById('formContainer');
+    const inputs = formContainer.querySelectorAll('input, textarea, select');
+    const data = {};
+
+    for (const input of inputs) {
+      if (!input.name) continue;
+
+      if (input.type === 'file' && input.files.length > 0) {
+        const file = input.files[0];
+        const base64 = await fileToBase64(file);
+        data[input.name + 'Url'] = base64; 
+      } else {
+        data[input.name] = input.value;
+      }
     }
 
-    user.usageCount += pageCount;
-    await user.save();
+    return data;
+  }
 
-    res.download(pdfPath, (err) => {
-      if (err) console.error('Error sending file:', err);
-      fs.unlinkSync(pdfPath);
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'PDF generation failed' });
   }
 });
-
-module.exports = router;
