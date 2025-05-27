@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   const previewDevBtn = document.getElementById('previewDevBtn');
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
-  const iframe = document.getElementById('previewFrame'); 
+  const iframe = document.getElementById('previewFrame');
 
-  
+  // Developer Mode preview
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,  
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
       });
@@ -44,18 +44,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   previewFriendlyBtn?.addEventListener('click', async () => {
-    const template = document.getElementById('friendly-endpoint-select').value;
-
+    const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
     const apiKey = document.getElementById('apiKey').value.trim();
+    const payload = await getFriendlyFormData();
 
-    const payload = getFriendlyFormData();
+    payload.template = selectedTemplate;
 
     try {
-      const response = await fetch(`/api/generate-${template}`, {
+      const response = await fetch(`/api/friendly/generate`, {
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,  
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
       });
@@ -82,14 +83,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Dummy example of how to collect Friendly Mode form data
-  function getFriendlyFormData() {
+  // Collects all input data from Friendly Mode form
+  async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
     const inputs = formContainer.querySelectorAll('input, textarea, select');
     const data = {};
-    inputs.forEach(input => {
-      data[input.name] = input.value;
-    });
+
+    for (const input of inputs) {
+      if (!input.name) continue;
+
+      if (input.type === 'file' && input.files.length > 0) {
+        const file = input.files[0];
+        const base64 = await fileToBase64(file);
+        data[input.name + 'Url'] = base64; // e.g. logoUrl, imageUrl
+      } else {
+        data[input.name] = input.value;
+      }
+    }
+
     return data;
+  }
+
+  // Converts file to base64
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   }
 });
