@@ -1,36 +1,53 @@
 function generateInvoicePremiumHtml(data) {
   console.log('generateInvoicePremiumHtml data:', data);
-    const {
-        logoBase64,
-      customerName = 'Valued Customer',
-      recipientAddress = '',
-      date = '',
-      invoiceNumber = '',
-      companyName = 'Your Company Name',
-      companyAddress = '123 Business Rd, City',
-      companyEmail = 'info@company.com',
-      senderAddress = '',
-      includeTitle = true,
-      items = [],
-      subtotal = 0,
-      taxRate = 0,
-      taxAmount = 0,
-      total = 0,
-      notes = ''
-    } = data;
-  
-    const renderItems = items.length
-      ? items.map(item => `
-        <tr>
-          <td>${item.description || ''}</td>
-          <td>${item.quantity || 0}</td>
-          <td>${typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : '0.00'}</td>
-          <td>${(Number(item.quantity) * Number(item.unitPrice) || 0).toFixed(2)}</td>
-        </tr>
-      `).join('')
-      : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`;
-  
-    return `
+  const {
+    logoBase64,
+    customerName = 'Valued Customer',
+    recipientAddress = '',
+    date = '',
+    invoiceNumber = '',
+    companyName = 'Your Company Name',
+    companyAddress = '123 Business Rd, City',
+    companyEmail = 'info@company.com',
+    senderAddress = '',
+    includeTitle = true,
+    items = [],
+    subtotal = 0,
+    taxRate = 0,
+    taxAmount = 0,
+    total = 0,
+    notes = ''
+  } = data;
+
+  // Parse items if it's a string
+  let itemsArray;
+  if (typeof items === 'string') {
+    itemsArray = items.split('\n').map(line => {
+      const [description, quantity, unitPrice] = line.split(',');
+      return {
+        description: description?.trim() || '',
+        quantity: Number(quantity) || 0,
+        unitPrice: Number(unitPrice) || 0
+      };
+    });
+  } else {
+    itemsArray = items;
+  }
+
+  const renderItems = itemsArray.length
+    ? itemsArray.map(item => `
+      <tr>
+        <td>${item.description || ''}</td>
+        <td>${item.quantity || 0}</td>
+        <td>${typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : '0.00'}</td>
+        <td>${(Number(item.quantity) * Number(item.unitPrice) || 0).toFixed(2)}</td>
+      </tr>
+    `).join('')
+    : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`;
+
+  return `
+ 
+
     <html>
     <head>
       <style>

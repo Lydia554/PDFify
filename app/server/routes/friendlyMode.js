@@ -60,7 +60,6 @@ router.get('/check-access', authenticate, async (req, res) => {
 
 
 router.post('/generate', authenticate, async (req, res) => {
-  console.log('Received body:', req.body);
   const { template, ...formData } = req.body;
 
   const templateConfig = templates[template];

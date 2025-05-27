@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
   const iframe = document.getElementById('previewFrame');
 
-  // Developer Mode preview
+
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
    
 
     try {
-      const response = await fetch(`/api/friendly/generate`, {
+      const response = await fetch(`/generate`, {
 
         method: 'POST',
         headers: {
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Collects all input data from Friendly Mode form
+  
   async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
     if (!formContainer) {
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   
-  // Converts file to base64
+  
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
