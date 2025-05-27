@@ -5,6 +5,7 @@ const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
+const axios = require('axios');
 const pdfParse = require("pdf-parse");
 
 
@@ -232,7 +233,7 @@ function generateInvoiceHTML(data) {
     </html>
   `;
 }
-const axios = require('axios'); // Make sure axios is required at the top if not already
+
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
   const { data } = req.body;
