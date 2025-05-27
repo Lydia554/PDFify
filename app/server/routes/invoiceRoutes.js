@@ -232,7 +232,7 @@ function generateInvoiceHTML(data) {
     </html>
   `;
 }
-
+const axios = require('axios'); // Make sure axios is required at the top if not already
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
   const { data } = req.body;
@@ -243,9 +243,8 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-
     //const isPremium = user.isPremium;
-const isPremium = true; 
+    const isPremium = true;
 
     const cleanedData = {
       ...data,
@@ -254,7 +253,18 @@ const isPremium = true;
       showChart: isPremium ? !!data.showChart : false,
     };
 
-    
+    let logoBase64 = '';
+    if (cleanedData.customLogoUrl) {
+      try {
+        const response = await axios.get(cleanedData.customLogoUrl, { responseType: 'arraybuffer' });
+        const mimeType = response.headers['content-type'];
+        const base64 = Buffer.from(response.data).toString('base64');
+        logoBase64 = `data:${mimeType};base64,${base64}`;
+      } catch (err) {
+        console.warn("Failed to fetch logo image:", err.message);
+      }
+    }
+
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -268,7 +278,10 @@ const isPremium = true;
     });
 
     const page = await browser.newPage();
-    const html = generateInvoiceHTML(cleanedData);
+
+    // Pass logoBase64 into HTML generation
+    const html = generateInvoiceHTML({ ...cleanedData, logoBase64 });
+
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
@@ -299,7 +312,5 @@ const isPremium = true;
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-
 
 module.exports = router;
