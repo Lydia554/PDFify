@@ -97,6 +97,27 @@ friendlyBtn.addEventListener('click', () => {
   friendlySection.style.display = 'block';
 
 
+  fetch('forms/invoice-form.html')
+  .then(response => response.text())
+  .then(html => {
+    document.getElementById('formContainer').innerHTML = html;
+
+    // Attach Add Item button event listener AFTER form is loaded
+    document.getElementById('addItemBtn').addEventListener('click', () => {
+      const itemsContainer = document.getElementById('itemsContainer');
+      const newItemRow = document.createElement('div');
+      newItemRow.classList.add('item-row');
+      newItemRow.innerHTML = `
+        <input type="text" name="itemDescription" placeholder="Item Description" />
+        <input type="number" name="itemQuantity" placeholder="Qty" />
+        <input type="number" name="itemUnitPrice" placeholder="Unit Price" />
+      `;
+      itemsContainer.appendChild(newItemRow);
+    });
+
+    // You can initialize other event listeners related to your form here if needed
+  });
+
 
 
   
