@@ -83,26 +83,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  
   async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
     const inputs = formContainer.querySelectorAll('input, textarea, select');
     const data = {};
-
+  
+    // Gather flat inputs as before
     for (const input of inputs) {
       if (!input.name) continue;
-
+  
       if (input.type === 'file' && input.files.length > 0) {
         const file = input.files[0];
         const base64 = await fileToBase64(file);
-        data[input.name + 'Url'] = base64; 
-      } else {
-        data[input.name] = input.value;
+        data[input.name + 'Url'] = base64;
+      } else if (!input.closest('.item-row')) {
+        // Exclude inputs inside item rows from flat inputs gathering
+        data[input.name] = input.type === 'checkbox' ? input.checked : input.value;
       }
     }
-
+  
+    // Build items array
+    data.items = [];
+    const itemRows = formContainer.querySelectorAll('.item-row');
+  
+    itemRows.forEach(row => {
+      const description = row.querySelector('[name="itemDescription"]')?.value || '';
+      const quantity = row.querySelector('[name="itemQuantity"]')?.value || 0;
+      const unitPrice = row.querySelector('[name="itemUnitPrice"]')?.value || 0;
+  
+      // Add only if at least one field is filled
+      if (description || quantity || unitPrice) {
+        data.items.push({
+          description,
+          quantity: Number(quantity),
+          unitPrice: Number(unitPrice),
+        });
+      }
+    });
+  
     return data;
   }
+  
 
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
