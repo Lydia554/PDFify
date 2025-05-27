@@ -165,6 +165,9 @@ function generateShopOrderHTML(data) {
             
           <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
          <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+          <p>
+                Generated using <strong>PDFify</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
+              </p>
         </div>
       </body>
     </html>

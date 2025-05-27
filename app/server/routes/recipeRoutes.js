@@ -221,6 +221,9 @@ function generateRecipeHTML(data) {
           <div class="footer">
             <p>Enjoy your recipe! For questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
             <p>&copy; 2025 Food Trek Recipes — All rights reserved.</p> 
+             <p>
+                Generated using <strong>PDFify</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
+              </p>
             <p class="terms">
               Terms & Conditions: This recipe is for personal use only. Reproduction or distribution without permission is prohibited.
             </p>
