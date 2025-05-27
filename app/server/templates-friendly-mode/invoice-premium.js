@@ -1,22 +1,23 @@
 function generateInvoicePremiumHtml(data) {
-    const {
-        logoBase64,
-      customerName = 'Valued Customer',
-      recipientAddress = '',
-      date = '',
-      invoiceNumber = '',
-      companyName = 'Your Company Name',
-      companyAddress = '123 Business Rd, City',
-      companyEmail = 'info@company.com',
-      senderAddress = '',
-      includeTitle = true,
-      items = [],
-      subtotal = 0,
-      taxRate = 0,
-      taxAmount = 0,
-      total = 0,
-      notes = ''
-    } = data;
+  const {
+    logoBase64, 
+    customerName = 'Valued Customer',
+    recipientAddress = '',
+    date = '',
+    invoiceNumber = '',
+    companyName = 'Your Company Name',
+    companyAddress = '123 Business Rd, City',
+    companyEmail = 'info@company.com',
+    senderAddress = '',
+    includeTitle = true,
+    items = [],
+    subtotal = 0,
+    taxRate = 0,
+    taxAmount = 0,
+    total = 0,
+    notes = ''
+  } = data;
+
   
     const renderItems = items.length
       ? items.map(item => `
