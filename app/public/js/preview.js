@@ -1,33 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
-  const friendlyTemplateSelect = document.getElementById('friendly-endpoint-select');
   const formContainer = document.getElementById('formContainer');
-
-  // Render form inputs for selected template
-  function renderFriendlyForm() {
-    const selectedTemplate = friendlyTemplateSelect.value;
+  const friendlySelect = document.getElementById('friendly-endpoint-select');
+  
+  function renderForm(template) {
     formContainer.innerHTML = ''; // Clear previous
-
-    if (selectedTemplate === 'invoice') {
+    if (template === 'invoice') {
       formContainer.innerHTML = `
-        <label>Customer Name: <input name="customerName" value="Lidija Jokić" /></label><br/>
-        <label>Company Name: <input name="companyName" value="PDFify Inc." /></label><br/>
-        <label>Date: <input name="date" value="2025-05-27" type="date" /></label><br/>
-        <label>Invoice Number: <input name="invoiceNumber" value="INV-001" /></label><br/>
-        <fieldset>
-          <legend>Items</legend>
-          <label>Description: <input name="items[0].description" value="Development Services" /></label><br/>
-          <label>Quantity: <input name="items[0].quantity" value="1" type="number" min="1" /></label><br/>
-          <label>Unit Price: <input name="items[0].unitPrice" value="500" type="number" step="0.01" /></label><br/>
-        </fieldset>
-        <label>Subtotal: <input name="subtotal" value="500" type="number" step="0.01" /></label><br/>
-        <label>Tax Rate (%): <input name="taxRate" value="19" type="number" step="0.01" /></label><br/>
-        <label>Tax Amount: <input name="taxAmount" value="95" type="number" step="0.01" /></label><br/>
-        <label>Total: <input name="total" value="595" type="number" step="0.01" /></label><br/>
+        <input name="customerName" value="Lidija Jokić" />
+        <input name="companyName" value="PDFify Inc." />
+        <input name="date" value="2025-05-27" />
+        <input name="invoiceNumber" value="INV-001" />
+        <input name="items[0].description" value="Development Services" />
+        <input name="items[0].quantity" value="1" />
+        <input name="items[0].unitPrice" value="500" />
+        <input name="subtotal" value="500" />
+        <input name="taxRate" value="19" />
+        <input name="taxAmount" value="95" />
+        <input name="total" value="595" />
       `;
     }
-    // Add more templates here if needed
+    else if (template === 'recipe') {
+      // Render recipe form here similarly...
+    }
   }
+  
+  // Initial render on page load
+  renderForm(friendlySelect.value);
+  
+  // Update form when template selection changes
+  friendlySelect.addEventListener('change', () => {
+    renderForm(friendlySelect.value);
+  });
+  
 
   // Collect form data from inputs
   async function getFriendlyFormData() {
