@@ -51,7 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
     payload.template = selectedTemplate;
 
     try {
-      const response = await fetch(`/api/generate`, {
+      const response = await fetch(`/api/friendly/generate`, {
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
