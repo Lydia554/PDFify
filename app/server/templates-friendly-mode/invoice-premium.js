@@ -134,7 +134,16 @@ function generateInvoicePremiumHtml(data) {
     <body>
       <div class="header">
         ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
-        ${logoBase64 ? `<img src="${logoBase64}" alt="Company Logo" class="logo">` : ''}
+    let logoBase64 = '';
+if (data.customLogoUrl) {
+  try {
+    logoBase64 = await fetchLogoAsBase64(data.customLogoUrl);
+  } catch (err) {
+    console.warn('Failed to fetch logo:', err.message);
+    logoBase64 = '';
+  }
+}
+
 
       </div>
   
