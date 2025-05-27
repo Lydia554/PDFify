@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     payload.template = selectedTemplate;
 
     try {
-      const response = await fetch(`/api/friendly/generate`, {
+      const response = await fetch(`/friendly/generate`, {
 
         method: 'POST',
         headers: {
