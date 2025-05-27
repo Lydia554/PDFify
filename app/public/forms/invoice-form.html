@@ -26,17 +26,3 @@
     <button type="button" id="addItemBtn">+ Add Item</button>
   </div>
   
-  <script>
-    document.getElementById('addItemBtn')?.addEventListener('click', () => {
-      const container = document.getElementById('itemsContainer');
-      const itemRow = document.createElement('div');
-      itemRow.className = 'item-row';
-      itemRow.innerHTML = `
-        <input type="text" name="itemDescription" placeholder="Item Description" />
-        <input type="number" name="itemQuantity" placeholder="Qty" />
-        <input type="number" name="itemUnitPrice" placeholder="Unit Price" />
-      `;
-      container.appendChild(itemRow);
-    });
-  </script>
-  

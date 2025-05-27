@@ -34,14 +34,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const blob = await response.blob();
         const pdfUrl = URL.createObjectURL(blob);
   
-        if (iframe) {
-          iframe.src = pdfUrl;
-          iframe.style.display = 'block';
-          iframe.style.width = '100%';
-          iframe.style.height = '600px';
-        } else {
-          window.open(pdfUrl, '_blank');
-        }
+        window.open(pdfUrl, '_blank');
+
       } catch (err) {
         alert('Invalid JSON data: ' + err.message);
       }

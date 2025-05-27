@@ -64,7 +64,7 @@
     <button id="generateFriendlyBtn">Generate PDF</button>
     <p id="friendlyResult"></p>
   </div>
-  <iframe id="previewFrame" style="display: none; border: none; width: 100%; height: 600px; margin-top: 20px;"></iframe>
+ 
  
 
   <h3>Upgrade to Premium (More PDF Generations)</h3>
@@ -323,6 +323,23 @@ friendlyBtn.addEventListener('click', () => {
 
     
     updateJsonForEndpoint(document.getElementById('endpoint').value);
+
+
+    document.addEventListener('click', (event) => {
+  if (event.target && event.target.id === 'addItemBtn') {
+    const container = document.getElementById('itemsContainer');
+    if (!container) return;
+    const itemRow = document.createElement('div');
+    itemRow.className = 'item-row';
+    itemRow.innerHTML = `
+      <input type="text" name="itemDescription" placeholder="Item Description" />
+      <input type="number" name="itemQuantity" placeholder="Qty" />
+      <input type="number" name="itemUnitPrice" placeholder="Unit Price" />
+    `;
+    container.appendChild(itemRow);
+  }
+});
+
     
     const storedApiKey = localStorage.getItem('apiKey');
     if (storedApiKey) {
