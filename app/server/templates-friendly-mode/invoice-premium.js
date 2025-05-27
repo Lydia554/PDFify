@@ -1,6 +1,6 @@
 function generateInvoicePremiumHtml(data) {
     const {
-        
+        logoBase64,
       customerName = 'Valued Customer',
       recipientAddress = '',
       date = '',
