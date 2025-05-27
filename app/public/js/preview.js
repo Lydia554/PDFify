@@ -88,18 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
   async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
     if (!formContainer) {
-      console.warn('No form container found!');
+
       return {};
     }
   
     const inputs = formContainer.querySelectorAll('input, textarea, select');
-    console.log('Inputs found:', inputs.length);
+
     const data = {};
     const items = [];
   
     for (const input of inputs) {
       if (!input.name) continue;
-      console.log(`Input name=${input.name}, value=${input.value}`);
+    
   
       if (input.type === 'file' && input.files.length > 0) {
         const file = input.files[0];
@@ -121,8 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   
     if (items.length > 0) data.items = items;
-  
-    console.log('Collected friendly form data:', data);
+
     return data;
   }
   
