@@ -126,4 +126,20 @@ router.post('/generate', authenticate, async (req, res) => {
   }
 });
 
+
+document.getElementById('friendly-endpoint-select').addEventListener('change', async (e) => {
+  const selected = e.target.value;
+  const formContainer = document.getElementById('formContainer');
+
+  try {
+    const response = await fetch(`/forms/${selected}-form.html`);
+    if (!response.ok) throw new Error("Form not found");
+    const html = await response.text();
+    formContainer.innerHTML = html;
+  } catch (err) {
+    formContainer.innerHTML = `<p style="color:red;">Error loading form: ${err.message}</p>`;
+  }
+});
+
+
 module.exports = router;

@@ -86,6 +86,8 @@ app.get("/pdf-generator-demo", (req, res) => res.sendFile(path.join(__dirname, "
 app.get("/api-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/api-guide.html")));
 app.get("/success.html", (req, res) => res.sendFile(path.join(__dirname, "public", "success.html")));
 app.get("/cancel.html", (req, res) => res.sendFile(path.join(__dirname, "public", "cancel.html")));
+app.use('/forms', express.static(path.join(__dirname, 'public/forms')));
+
 
 app.get("/get-stripe-key", (req, res) => {
   if (!process.env.STRIPE_PUBLISHABLE_KEY) {
