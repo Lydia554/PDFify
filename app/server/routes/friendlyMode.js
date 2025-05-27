@@ -85,8 +85,8 @@ router.post('/generate', authenticate, async (req, res) => {
     }
 
    
-    const generateHtml = templateConfig.fn(isPremium);
-    const html = generateHtml(formData);
+    const html = templateConfig.fn({ ...formData, isPremium });
+
 
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) {
