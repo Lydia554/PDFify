@@ -83,46 +83,53 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  async function getFriendlyFormData() {
-    const formContainer = document.getElementById('formContainer');
-    const data = {};
-  
-    // Gather flat inputs and textareas (excluding items)
-    const flatInputs = formContainer.querySelectorAll('input:not([name^="item"]), textarea:not([name^="item"])');
-    flatInputs.forEach(input => {
-      if (!input.name) return;
-  
-      if (input.type === 'file' && input.files.length > 0) {
-        // If you have file inputs, handle base64 here
-        // For now, skipping files
-      } else if (input.type === 'checkbox') {
-        data[input.name] = input.checked;
-      } else {
-        data[input.name] = input.value;
-      }
+async function getFriendlyFormData() {
+  const formContainer = document.getElementById('formContainer');
+  const data = {};
+
+  // Gather flat inputs and textareas (excluding items)
+  const flatInputs = formContainer.querySelectorAll('input:not([name^="item"]), textarea:not([name^="item"])');
+  flatInputs.forEach(input => {
+    if (!input.name) return;
+
+    if (input.type === 'file' && input.files.length > 0) {
+      // If you have file inputs, handle base64 here
+      // For now, skipping files
+    } else if (input.type === 'checkbox') {
+      data[input.name] = input.checked;
+    } else {
+      data[input.name] = input.value;
+    }
+  });
+
+  // Build items array
+  data.items = [];
+  const itemRows = formContainer.querySelectorAll('.item-row');
+
+  itemRows.forEach(row => {
+    const description = row.querySelector('[name="itemDescription"]')?.value || '';
+    const quantity = row.querySelector('[name="itemQuantity"]')?.value || 0;
+    const unitPrice = row.querySelector('[name="itemUnitPrice"]')?.value || 0;
+
+    if (description || quantity || unitPrice) {
+      data.items.push({
+        description,
+        quantity: Number(quantity),
+        unitPrice: Number(unitPrice),
+      });
+    }
+  });
+
+  return data;
+}
+
+
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
-  
-    // Build items array
-    data.items = [];
-    const itemRows = formContainer.querySelectorAll('.item-row');
-  
-    itemRows.forEach(row => {
-      const description = row.querySelector('[name="itemDescription"]')?.value || '';
-      const quantity = row.querySelector('[name="itemQuantity"]')?.value || 0;
-      const unitPrice = row.querySelector('[name="itemUnitPrice"]')?.value || 0;
-  
-      if (description || quantity || unitPrice) {
-        data.items.push({
-          description,
-          quantity: Number(quantity),
-          unitPrice: Number(unitPrice),
-        });
-      }
-    });
-  
-    return data;
   }
-  
-
-
 });
