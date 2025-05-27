@@ -8,7 +8,7 @@ const axios = require("axios");
 
 const { authenticate } = require("../middleware/authMiddleware");
 const User = require("../models/User");
-const generateInvoiceHTML = require("../templates/invoiceTemplate");
+
 
 
 const log = (message, data = null) => {
