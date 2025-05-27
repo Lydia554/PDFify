@@ -88,22 +88,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const formContainer = document.getElementById('formContainer');
     const inputs = formContainer.querySelectorAll('input, textarea, select');
     const data = {};
-
+    const items = [];
+  
     for (const input of inputs) {
       if (!input.name) continue;
-
+  
       if (input.type === 'file' && input.files.length > 0) {
         const file = input.files[0];
         const base64 = await fileToBase64(file);
-        data[input.name + 'Url'] = base64; // e.g. logoUrl, imageUrl
+        data[input.name + 'Url'] = base64;
       } else {
-        data[input.name] = input.value;
+        const name = input.name;
+  
+        // Check for item-style input like items[0].description
+        const itemMatch = name.match(/^items\[(\d+)\]\.(\w+)$/);
+        if (itemMatch) {
+          const index = parseInt(itemMatch[1], 10);
+          const key = itemMatch[2];
+  
+          if (!items[index]) items[index] = {};
+          items[index][key] = input.value;
+        } else {
+          data[name] = input.value;
+        }
       }
     }
-
+  
+    // Attach built items array to final data
+    if (items.length > 0) data.items = items;
+  
     return data;
   }
-
+  
   // Converts file to base64
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
