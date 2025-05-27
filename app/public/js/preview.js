@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
    
 
     try {
-      const response = await fetch(`/generate`, {
+      const response = await fetch(`/api/friendly/generate`, {
 
         method: 'POST',
         headers: {

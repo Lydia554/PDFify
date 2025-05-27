@@ -19,7 +19,7 @@ function generateInvoicePremiumHtml(data) {
     notes = ''
   } = data;
 
-  // Parse items if it's a string
+
   let itemsArray;
   if (typeof items === 'string') {
     itemsArray = items.split('\n').map(line => {
