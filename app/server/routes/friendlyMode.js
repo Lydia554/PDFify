@@ -59,7 +59,7 @@ router.get('/check-access', authenticate, async (req, res) => {
 });
 
 
-router.post('/api/friendly/generate', authenticate, async (req, res) => {
+router.post('/generate', authenticate, async (req, res) => {
   console.log('📦 Friendly generate received:', req.body);
   const { template, ...formData } = req.body;
 
