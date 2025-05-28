@@ -96,29 +96,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const data = {};
     const items = [];
-  
+    
     for (const input of inputs) {
       if (!input.name) continue;
     
-  
       if (input.type === 'file' && input.files.length > 0) {
         const file = input.files[0];
         const base64 = await fileToBase64(file);
-        data[input.name + 'Url'] = base64;
+        data[input.name] = base64;
       } else {
         const name = input.name;
-        const itemMatch = name.match(/^items\[(\d+)\]\.(\w+)$/);
-        if (itemMatch) {
-          const index = parseInt(itemMatch[1], 10);
-          const key = itemMatch[2];
-  
-          if (!items[index]) items[index] = {};
-          items[index][key] = input.value;
+    
+        
+        const arrayMatch = name.match(/^(\w+)\[(\d+)\]$/);
+        const nestedMatch = name.match(/^(\w+)\[(\d+)\]\.(\w+)$/);
+        const objectMatch = name.match(/^(\w+)\[(\w+)\]$/);
+    
+        if (nestedMatch) {
+          const [_, base, idx, key] = nestedMatch;
+          if (!data[base]) data[base] = [];
+          if (!data[base][idx]) data[base][idx] = {};
+          data[base][idx][key] = input.value;
+        } else if (arrayMatch) {
+          const [_, base, idx] = arrayMatch;
+          if (!data[base]) data[base] = [];
+          data[base][idx] = input.value;
+        } else if (objectMatch) {
+          const [_, objName, key] = objectMatch;
+          if (!data[objName]) data[objName] = {};
+          data[objName][key] = input.value;
         } else {
           data[name] = input.value;
         }
       }
     }
+    
   
     if (items.length > 0) data.items = items;
 
