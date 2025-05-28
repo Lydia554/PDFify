@@ -3,6 +3,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
   const iframe = document.getElementById('previewFrame');
 
+  // ✅ Inject dropdown options based on premium status
+  const isPremium = window.user?.isPremium || false;
+
+  const templateOptions = [
+    { value: 'recipe', label: 'Recipe', premium: false },
+    { value: 'therapy', label: 'Therapy Report', premium: false },
+    { value: 'invoice', label: 'Invoice', premium: false },
+    { value: 'packing-slip', label: 'Packing Slip', premium: true },
+    { value: 'premium-recipe', label: 'Premium Recipe 🍽️', premium: true },
+    { value: 'raw-html', label: 'Raw HTML', premium: true },
+  ];
+
+  const endpointSelect = document.getElementById('friendly-endpoint-select');
+  if (endpointSelect) {
+    endpointSelect.innerHTML = ''; // clear any existing <option>s
+
+    templateOptions.forEach(opt => {
+      if (!opt.premium || isPremium) {
+        const option = document.createElement('option');
+        option.value = opt.value;
+        option.textContent = opt.label + (opt.premium ? ' (Premium)' : '');
+        endpointSelect.appendChild(option);
+      }
+    });
+  }
 
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
@@ -42,18 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-
   previewFriendlyBtn?.addEventListener('click', async () => {
     const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
     const apiKey = document.getElementById('apiKey').value.trim();
     const payload = await getFriendlyFormData();
 
     payload.template = selectedTemplate;
-   
 
     try {
       const response = await fetch(`/api/friendly/generate`, {
-
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -84,34 +106,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  
   async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
-    if (!formContainer) {
+    if (!formContainer) return {};
 
-      return {};
-    }
-  
     const inputs = formContainer.querySelectorAll('input, textarea, select');
-
     const data = {};
     const items = [];
-    
+
     for (const input of inputs) {
       if (!input.name) continue;
-    
+
       if (input.type === 'file' && input.files.length > 0) {
         const file = input.files[0];
         const base64 = await fileToBase64(file);
         data[input.name] = base64;
       } else {
         const name = input.name;
-    
-        
+
         const arrayMatch = name.match(/^(\w+)\[(\d+)\]$/);
         const nestedMatch = name.match(/^(\w+)\[(\d+)\]\.(\w+)$/);
         const objectMatch = name.match(/^(\w+)\[(\w+)\]$/);
-    
+
         if (nestedMatch) {
           const [_, base, idx, key] = nestedMatch;
           if (!data[base]) data[base] = [];
@@ -130,15 +146,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
-    
-  
+
     if (items.length > 0) data.items = items;
 
     return data;
   }
-  
-  
-  
+
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();

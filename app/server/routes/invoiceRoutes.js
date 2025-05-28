@@ -243,7 +243,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log(`User ${user.email} premium status:`, user.isPremium);
+   
     const isPremium = !!user?.isPremium;
 
 //const isPremium = true; 
