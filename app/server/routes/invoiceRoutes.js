@@ -244,8 +244,9 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     }
 
 
-    //const isPremium = user.isPremium;
-const isPremium = true; 
+    const isPremium = !!user?.isPremium;
+
+//const isPremium = true; 
 
     const cleanedData = {
       ...data,
