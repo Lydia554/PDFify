@@ -1,24 +1,37 @@
 function extractYouTubeId(url) {
-    const regExp = /^.*(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]{11}).*/;
-    const match = url.match(regExp);
-    return match && match[1] ? match[1] : null;
-  }
-  
-  function generatePremiumRecipeHtml(data) {
-    const nutritionRows = data.nutrition
-      ? Object.entries(data.nutrition)
-          .map(
-            ([key, value]) => `
+  const regExp = /^.*(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]{11}).*/;
+  const match = url.match(regExp);
+  return match && match[1] ? match[1] : null;
+}
+
+function generatePremiumRecipeHtml(data) {
+  const {
+    recipeName,
+    prepTime,
+    cookTime,
+    servings,
+    imageUrls,
+    ingredients = [],
+    instructions = [],
+    nutrition,
+    videoUrl,
+    logoBase64 // ✔️ used for the logo at the top
+  } = data;
+
+  const videoId = videoUrl ? extractYouTubeId(videoUrl) : null;
+
+  const logoSrc = logoBase64 || 'https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png';
+
+  const nutritionRows = nutrition && typeof nutrition === 'object'
+    ? Object.entries(nutrition)
+        .map(([key, value]) => `
           <tr>
             <td>${key}</td>
             <td>${value}</td>
           </tr>
-        `
-          )
-          .join('')
-      : '';
-  
-    const videoId = data.videoUrl ? extractYouTubeId(data.videoUrl) : null;
+        `).join('')
+    : '';
+
   
   
     return `
