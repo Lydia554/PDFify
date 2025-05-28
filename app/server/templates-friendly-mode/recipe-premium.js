@@ -15,12 +15,10 @@ function generatePremiumRecipeHtml(data) {
     instructions = [],
     nutrition,
     videoUrl,
-    logoBase64 // ✔️ used for the logo at the top
+    logoBase64
   } = data;
 
   const videoId = videoUrl ? extractYouTubeId(videoUrl) : null;
-
-  const logoSrc = logoBase64 || 'https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png';
 
   const nutritionRows = nutrition && typeof nutrition === 'object'
     ? Object.entries(nutrition)
@@ -38,7 +36,7 @@ function generatePremiumRecipeHtml(data) {
     <html>
     <head>
       <meta charset="UTF-8" />
-      <title>${data.recipeName} - Premium Recipe</title>
+      <title>${recipeName} - Premium Recipe</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Playfair+Display:wght@700&display=swap');
   
@@ -281,21 +279,21 @@ function generatePremiumRecipeHtml(data) {
     <div class="container">
       <div class="header">
           <img src="${logoBase64 || 'https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png'}" alt="Logo" class="logo" />
-        <h1>${data.recipeName}</h1>
+        <h1>${recipeName}</h1>
         <div class="tags">
-          <div class="tag">⏰ Prep: ${data.prepTime || 'N/A'} min</div>
-          <div class="tag">🔥 Cook: ${data.cookTime || 'N/A'} min</div>
+          <div class="tag">⏰ Prep: ${prepTime || 'N/A'} min</div>
+          <div class="tag">🔥 Cook: ${cookTime || 'N/A'} min</div>
           ${
-            data.servings
-              ? `<div class="tag">🍽️ Serves: ${data.servings}</div>`
+            servings
+              ? `<div class="tag">🍽️ Serves: ${servings}</div>`
               : ''
           }
         </div>
       </div>
 
       ${
-        Array.isArray(data.imageUrls)
-          ? `<div class="images">${data.imageUrls
+        Array.isArray(imageUrls)
+          ? `<div class="images">${imageUrls
               .map(
                 (src) =>
                   `<img src="${src}" alt="Recipe Image" loading="lazy" />`
@@ -309,9 +307,9 @@ function generatePremiumRecipeHtml(data) {
           <h2>📝 Ingredients</h2>
          <ul>
   ${
-    Array.isArray(data.ingredients)
-      ? data.ingredients.map((i) => `<li>${i}</li>`).join('')
-      : `<li>${data.ingredients || 'No ingredients listed.'}</li>`
+    Array.isArray(ingredients)
+      ? ingredients.map((i) => `<li>${i}</li>`).join('')
+      : `<li>${ingredients || 'No ingredients listed.'}</li>`
   }
 </ul>
 
@@ -320,9 +318,9 @@ function generatePremiumRecipeHtml(data) {
           <h2>👨‍🍳 Instructions</h2>
        <ol>
   ${
-    Array.isArray(data.instructions)
-      ? data.instructions.map((i) => `<li>${i}</li>`).join('')
-      : `<li>${data.instructions || 'No instructions provided.'}</li>`
+    Array.isArray(instructions)
+      ? instructions.map((i) => `<li>${i}</li>`).join('')
+      : `<li>${instructions || 'No instructions provided.'}</li>`
   }
 </ol>
 
@@ -347,11 +345,11 @@ function generatePremiumRecipeHtml(data) {
 
       <div class="qr-box">
         ${
-          data.videoUrl && videoId
+          videoUrl && videoId
             ? `
           <div><strong>🎥 Watch the Recipe Video:</strong></div>
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-            data.videoUrl
+            videoUrl
           )}" alt="QR code" />
           <img class="thumb" src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" alt="Video thumbnail" />
         `
