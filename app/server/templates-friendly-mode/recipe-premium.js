@@ -280,7 +280,7 @@ function generatePremiumRecipeHtml(data) {
    <body>
     <div class="container">
       <div class="header">
-        <img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Logo" class="logo" />
+          <img src="${logoBase64 || 'https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png'}" alt="Logo" class="logo" />
         <h1>${data.recipeName}</h1>
         <div class="tags">
           <div class="tag">⏰ Prep: ${data.prepTime || 'N/A'} min</div>
@@ -307,15 +307,25 @@ function generatePremiumRecipeHtml(data) {
       <div class="section grid">
         <div>
           <h2>📝 Ingredients</h2>
-          <ul>
-            ${data.ingredients.map((i) => `<li>${i}</li>`).join('')}
-          </ul>
+         <ul>
+  ${
+    Array.isArray(data.ingredients)
+      ? data.ingredients.map((i) => `<li>${i}</li>`).join('')
+      : `<li>${data.ingredients || 'No ingredients listed.'}</li>`
+  }
+</ul>
+
         </div>
         <div>
           <h2>👨‍🍳 Instructions</h2>
-          <ol>
-            ${data.instructions.map((i) => `<li>${i}</li>`).join('')}
-          </ol>
+       <ol>
+  ${
+    Array.isArray(data.instructions)
+      ? data.instructions.map((i) => `<li>${i}</li>`).join('')
+      : `<li>${data.instructions || 'No instructions provided.'}</li>`
+  }
+</ol>
+
         </div>
       </div>
 
