@@ -14,6 +14,7 @@ const log = (message, data = null) => {
   }
 };
 
+
 function generateInvoiceHTML(data) {
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
@@ -23,31 +24,23 @@ function generateInvoiceHTML(data) {
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
 
-          html, body {
-            height: 100%;
-            margin: 0;
-            background: #f4f7fb;
+          body {
             font-family: 'Open Sans', sans-serif;
             color: #333;
-          }
-
-          body {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
           }
 
           .container {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
             max-width: 800px;
             margin: 50px auto;
             padding: 30px 40px;
+            padding-bottom: 80px; /* reserve space for footer */
             background-color: #fff;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
-            position: relative;
+            position: relative; /* for footer absolute */
           }
 
           .logo {
@@ -139,14 +132,19 @@ function generateInvoiceHTML(data) {
           }
 
           .footer {
-            margin-top: auto;
-            padding: 20px;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            padding: 10px 20px;
             font-size: 12px;
             background-color: #f9f9f9;
             color: #444;
             border-top: 1px solid #ccc;
             text-align: center;
             line-height: 1.6;
+            box-sizing: border-box;
           }
 
           .footer a {
@@ -166,7 +164,7 @@ function generateInvoiceHTML(data) {
           }
 
           @media (max-width: 768px) {
-            .container { margin: 20px auto; padding: 20px; }
+            .container { margin: 20px auto; padding: 20px; padding-bottom: 80px; }
             .invoice-header { flex-direction: column; text-align: left; }
             .invoice-header .right { text-align: left; }
             h1 { font-size: 22px; }
