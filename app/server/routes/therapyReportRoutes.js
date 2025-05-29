@@ -17,7 +17,6 @@ const log = (message, data = null) => {
   }
 };
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-
 function generateTherapyReportHTML(data) {
   const innerHtml = `
     <div class="watermark">Confidential</div>
@@ -82,25 +81,22 @@ function generateTherapyReportHTML(data) {
     <html>
       <head>
         <style>
-          /* Make body a flex container with column direction and full viewport height */
           html, body {
             margin: 0;
             padding: 0;
-            height: 100%;
             font-family: 'Arial', sans-serif;
             background-color: #f9f9f9;
             color: #333;
           }
 
-          body {
+          .page-wrapper {
             display: flex;
             flex-direction: column;
-            min-height: 100vh; /* full viewport height */
+            min-height: 100vh;
             padding: 40px;
             box-sizing: border-box;
           }
 
-          /* Content wrapper grows to fill available space pushing footer down */
           .content-wrapper {
             flex-grow: 1;
           }
@@ -186,7 +182,6 @@ function generateTherapyReportHTML(data) {
             color: white;
           }
 
-          /* Footer normal block, no fixed positioning */
           .footer {
             padding: 20px;
             font-size: 12px;
@@ -209,7 +204,7 @@ function generateTherapyReportHTML(data) {
 
           /* MOBILE STYLES */
           @media (max-width: 600px) {
-            body {
+            .page-wrapper {
               padding: 20px;
             }
 
@@ -260,22 +255,25 @@ function generateTherapyReportHTML(data) {
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       </head>
       <body>
-        <div class="content-wrapper">
-          ${innerHtml}
-        </div>
-        <div class="footer">
-          <p>Thanks for using our service!</p>
-          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-          <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-          <p>
-            Generated using <strong>PDFify</strong>. Visit 
-            <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-          </p>
+        <div class="page-wrapper">
+          <div class="content-wrapper">
+            ${innerHtml}
+          </div>
+          <div class="footer">
+            <p>Thanks for using our service!</p>
+            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+            <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+            <p>
+              Generated using <strong>PDFify</strong>. Visit 
+              <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+            </p>
+          </div>
         </div>
       </body>
     </html>
   `;
 }
+
 
 router.post("/generate-therapy-report", authenticate, async (req, res) => {
   const { data } = req.body;
