@@ -1,3 +1,19 @@
+const express = require("express");
+const puppeteer = require("puppeteer");
+const path = require("path");
+const router = express.Router();
+const fs = require("fs");
+const authenticate = require("../middleware/authenticate");
+const User = require("../models/User");
+const pdfParse = require("pdf-parse");
+
+
+const log = (message, data = null) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(message, data);
+  }
+};
+
 function generateInvoiceHTML(data) {
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
@@ -242,9 +258,8 @@ function generateInvoiceHTML(data) {
 }
 
 
-
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  const { data, isPreview } = req.body;  
+  const { data, isPreview } = req.body;  // <-- add isPreview flag
 
   try {
     const user = await User.findById(req.user.userId);
@@ -253,6 +268,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     }
 
     const isPremium = !!user?.isPremium;
+    //const isPremium = true; 
 
     const cleanedData = {
       ...data,
