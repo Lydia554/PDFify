@@ -67,8 +67,17 @@ router.post('/generate', authenticate, async (req, res) => {
     }
 
     const generateHtml = templateConfig.fn(isPremium);
+    console.log("📝 Form data before rendering recipe template:", formData);
+
+
+if (typeof formData.ingredients === 'string') {
+  formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+}
+if (typeof formData.instructions === 'string') {
+  formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+}
     const html = generateHtml(formData);
-    console.log("📝 Form data before rendering recipe template:", formData); 
+   
 
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) {
