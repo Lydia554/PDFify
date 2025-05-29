@@ -4,13 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const iframe = document.getElementById('previewFrame');
 
 
-  // These should match your backend route logic
-const basicTemplates = ['invoice', 'recipe']; 
+
 const premiumTemplates = ['invoice-premium', 'recipe-premium'];
 
-// Assume this is injected server-side or fetched earlier
+
 const userStatus = document.getElementById('userStatus')?.value || 'free'; 
-// Or use a global JS variable like `window.userStatus = 'free'`
 
 
 
@@ -60,7 +58,7 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
   
     payload.template = selectedTemplate;
   
-    // Block free users from previewing premium templates
+    
     if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
       alert('This is a premium template. Upgrade your plan to preview it.');
       return;

@@ -74,8 +74,12 @@ router.post('/generate', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const isDevMode = process.env.NODE_ENV !== 'production';
-    const isPremium = isDevMode ? true : user.plan === 'premium';
+  
+    const isPremium = user.plan === 'premium';
+
+    //const simulatePremium = process.env.SIMULATE_PREMIUM === 'true';
+    //const isPremium = simulatePremium ? true : user.plan === 'premium';
+
     
     
 
@@ -105,7 +109,7 @@ router.post('/generate', authenticate, async (req, res) => {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    console.log(`User will use ${pageCount} pages`);
+  
 
     if (user.usageCount + pageCount > user.maxUsage) {
       fs.unlinkSync(pdfPath);
