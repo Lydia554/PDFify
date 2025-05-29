@@ -243,6 +243,7 @@ function generateInvoiceHTML(data) {
     <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
   </p>
 </div>
+ </div>
       </body>
     </html>
   `;
