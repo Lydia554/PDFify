@@ -23,35 +23,31 @@ function generateInvoiceHTML(data) {
       <head>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-
           body {
             font-family: 'Open Sans', sans-serif;
             color: #333;
             background: #f4f7fb;
             margin: 0;
             padding: 0;
+            min-height: 100vh;
+            position: relative;
           }
-
           .container {
             max-width: 800px;
             margin: 50px auto;
             padding: 30px 40px;
-            padding-bottom: 80px; /* reserve space for footer */
+            padding-bottom: 80px; /* space for fixed footer */
             background-color: #fff;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
-            position: relative; /* for footer absolute */
           }
-
           .logo {
             width: 150px;
             margin-bottom: 20px;
           }
-
           .logo:empty {
             display: none;
           }
-
           h1 {
             font-size: 28px;
             color: #2a3d66;
@@ -59,7 +55,6 @@ function generateInvoiceHTML(data) {
             margin: 20px 0;
             letter-spacing: 1px;
           }
-
           .invoice-header {
             display: flex;
             justify-content: space-between;
@@ -68,50 +63,41 @@ function generateInvoiceHTML(data) {
             padding-bottom: 20px;
             margin-bottom: 30px;
           }
-
           .invoice-header .left,
           .invoice-header .right {
             font-size: 16px;
             line-height: 1.5;
           }
-
           .invoice-header .right {
             text-align: right;
             color: #777;
           }
-
           .table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
           }
-
           .table th,
           .table td {
             padding: 12px;
             border: 1px solid #ddd;
             text-align: left;
           }
-
           .table th {
             background-color: #eaf0fb;
             color: #2a3d66;
             font-weight: 600;
           }
-
           .table td {
             color: #444;
           }
-
           .table tr:nth-child(even) td {
             background-color: #f9fbff;
           }
-
           .table tfoot td {
             background-color: #eaf0fb;
             font-weight: bold;
           }
-
           .total {
             text-align: right;
             font-size: 18px;
@@ -119,57 +105,64 @@ function generateInvoiceHTML(data) {
             color: #2a3d66;
             margin-top: 10px;
           }
-
           .chart-container {
             text-align: center;
             margin: 40px 0 20px;
           }
-
           .chart-container h2 {
             font-size: 18px;
             color: #2a3d66;
             margin-bottom: 10px;
           }
-
+          @media (max-width: 768px) {
+            .container {
+              margin: 20px auto;
+              padding: 20px;
+              padding-bottom: 80px; /* keep footer space on mobile */
+            }
+            .invoice-header {
+              flex-direction: column;
+              text-align: left;
+            }
+            .invoice-header .right {
+              text-align: left;
+            }
+            h1 {
+              font-size: 22px;
+            }
+            .total {
+              font-size: 16px;
+            }
+            .chart-container h2 {
+              font-size: 16px;
+            }
+          }
           .footer {
-            position: absolute;
+            position: fixed;
             bottom: 0;
             left: 0;
-            right: 0;
+            width: 100%;
             height: 60px;
             padding: 10px 20px;
-            font-size: 12px;
             background-color: #f9f9f9;
             color: #444;
             border-top: 1px solid #ccc;
             text-align: center;
             line-height: 1.6;
             box-sizing: border-box;
+            z-index: 1000;
+            font-size: 11px;
           }
-
+          .footer p {
+            margin: 6px 0;
+          }
           .footer a {
             color: #0073e6;
             text-decoration: none;
             word-break: break-word;
           }
-
           .footer a:hover {
             text-decoration: underline;
-          }
-
-          .terms {
-            margin-top: 15px;
-            font-size: 12px;
-            color: #aaa;
-          }
-
-          @media (max-width: 768px) {
-            .container { margin: 20px auto; padding: 20px; padding-bottom: 80px; }
-            .invoice-header { flex-direction: column; text-align: left; }
-            .invoice-header .right { text-align: left; }
-            h1 { font-size: 22px; }
-            .total { font-size: 16px; }
-            .chart-container h2 { font-size: 16px; }
           }
         </style>
       </head>
@@ -239,16 +232,16 @@ function generateInvoiceHTML(data) {
               }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
             </div>
           ` : ''}
+        </div>
 
-          <div class="footer">
-            <p>Thanks for using our service!</p>
-            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-            <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-            <p>
-              Generated using <strong>PDFify</strong>. Visit
-              <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-            </p>
-          </div>
+        <div class="footer">
+          <p>Thanks for using our service!</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+          <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+          <p>
+            Generated using <strong>PDFify</strong>. Visit 
+            <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+          </p>
         </div>
       </body>
     </html>
