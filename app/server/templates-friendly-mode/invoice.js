@@ -46,6 +46,27 @@ function generateInvoiceHtml(data) {
         padding-bottom: 4px;
       }
 
+        .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    font-size: 12px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
  /* MOBILE STYLES */
   @media screen and (max-width: 600px) {
     body {
@@ -129,19 +150,15 @@ function generateInvoiceHtml(data) {
 
 
 
-     <div class="footer">
-             <p>Thanks for using our service!</p>
-            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-            <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
-             <p>
-                Generated using <strong>PDFify</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
-              </p>
-            ${!data.isPremium ? `
-              <p class="terms">
-              
-              </p>` : ''}
-        
-          </div>
+<div class="footer">
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+  <p>
+    Generated using <strong>PDFify</strong>. Visit 
+    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+  </p>
+</div>
   </body>
   </html>
   `;
