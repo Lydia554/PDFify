@@ -13,57 +13,40 @@ const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premi
 const recipeTemplateBasic = require('../templates-friendly-mode/recipe');
 const recipeTemplatePremium = require('../templates-friendly-mode/recipe-premium');
 
+// Template registry with premium logic
 const templates = {
   invoice: {
     fn: (isPremium) => isPremium ? invoiceTemplatePremium : invoiceTemplate,
     premiumOnly: false,
   },
-  
   recipe: {
     fn: (isPremium) => isPremium ? recipeTemplatePremium : recipeTemplateBasic,
     premiumOnly: false,
-  }
+  },
 };
 
-
-//router.get('/check-access', authenticate, async (req, res) => {
- // try {
-   // const user = await User.findById(req.user.userId);
-
-   // if (!user) {
-    //  return res.status(404).json({ error: 'User not found' });
-   // }
-
-    //const accessType = user.plan === 'premium' ? 'premium' : 'basic';
-   // res.json({ accessType });
-  //} catch (err) {
-  //  console.error(err);
-   // res.status(500).json({ error: 'Failed to determine access type' });
-  //}
-//});
-
-
+// Check user access level for frontend UI (basic vs premium)
 router.get('/check-access', authenticate, async (req, res) => {
   try {
-    // TEMP: Force premium access during development
-    return res.json({ accessType: 'premium' });
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // const user = await User.findById(req.user.userId);
-    // if (!user) return res.status(404).json({ error: 'User not found' });
-    // const accessType = user.plan === 'premium' ? 'premium' : 'basic';
-    // res.json({ accessType });
+    // Uncomment the next line to simulate premium access during development:
+    // return res.json({ accessType: 'premium' });
+
+    const accessType = user.plan === 'premium' ? 'premium' : 'basic';
+    res.json({ accessType });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to determine access type' });
   }
 });
 
-
+// PDF generation endpoint
 router.post('/generate', authenticate, async (req, res) => {
-
   const { template, ...formData } = req.body;
-
   const templateConfig = templates[template];
+
   if (!templateConfig) {
     return res.status(400).json({ error: 'Invalid template' });
   }
@@ -74,21 +57,16 @@ router.post('/generate', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-  
-    const isPremium = user.plan === 'premium';
+    // Determine if the user has premium access
+    let isPremium = user.plan === 'premium';
 
-    //const simulatePremium = process.env.SIMULATE_PREMIUM === 'true';
-    //const isPremium = simulatePremium ? true : user.plan === 'premium';
-
-    
-    
-
+    // Uncomment this line to simulate premium access during local development:
+    // isPremium = true;
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
-   
     const generateHtml = templateConfig.fn(isPremium);
     const html = generateHtml(formData);
 
@@ -108,8 +86,6 @@ router.post('/generate', authenticate, async (req, res) => {
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-
-  
 
     if (user.usageCount + pageCount > user.maxUsage) {
       fs.unlinkSync(pdfPath);
