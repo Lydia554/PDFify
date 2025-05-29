@@ -142,7 +142,7 @@ function generateInvoiceHTML(data) {
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 80px;
+            height: 100px;
             padding: 10px 20px;
             background-color: #f9f9f9;
             color: #444;
