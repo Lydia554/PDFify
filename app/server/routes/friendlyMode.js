@@ -67,7 +67,18 @@ router.post('/generate', authenticate, async (req, res) => {
     }
 
     const generateHtml = templateConfig.fn(isPremium);
-    console.log("📝 Form data before rendering recipe template:", formData);
+
+    if (typeof formData.items === 'string') {
+      const rows = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean);
+      formData.items = rows.map(row => {
+        const [description, quantity, unitPrice] = row.split(',').map(val => val.trim());
+        return {
+          description: description || 'Item',
+          quantity: Number(quantity) || 1,
+          unitPrice: Number(unitPrice) || 0
+        };
+      });
+    }
 
 
 if (typeof formData.ingredients === 'string') {
