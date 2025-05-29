@@ -23,36 +23,27 @@ function generateInvoiceHTML(data) {
       <head>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-          html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            background: #f4f7fb;
+          body {
             font-family: 'Open Sans', sans-serif;
             color: #333;
-            display: flex;
-            flex-direction: column;
-          }
-          body {
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
             min-height: 100vh;
-            box-sizing: border-box;
+            position: relative;
           }
-          .content-wrapper {
-            flex: 1 0 auto;
+          .container {
             max-width: 800px;
-            margin: 50px auto 0 auto;
+            margin: 50px auto;
             padding: 30px 40px;
+            padding-bottom: 80px; /* space for fixed footer */
             background-color: #fff;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
-            box-sizing: border-box;
           }
           .logo {
             width: 150px;
             margin-bottom: 20px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
           }
           .logo:empty {
             display: none;
@@ -124,9 +115,10 @@ function generateInvoiceHTML(data) {
             margin-bottom: 10px;
           }
           @media (max-width: 768px) {
-            .content-wrapper {
-              margin: 20px auto 0 auto;
+            .container {
+              margin: 20px auto;
               padding: 20px;
+              padding-bottom: 80px; /* keep footer space on mobile */
             }
             .invoice-header {
               flex-direction: column;
@@ -146,18 +138,20 @@ function generateInvoiceHTML(data) {
             }
           }
           .footer {
-            flex-shrink: 0;
-            padding: 20px 40px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 120px;
+            padding: 10px 20px;
             background-color: #f9f9f9;
             color: #444;
             border-top: 1px solid #ccc;
             text-align: center;
             line-height: 1.6;
-            font-size: 12px;
             box-sizing: border-box;
-            max-width: 800px;
-            margin: 20px auto 40px auto;
-            border-radius: 0 0 12px 12px;
+            z-index: 1000;
+            font-size: 11px;
           }
           .footer p {
             margin: 6px 0;
@@ -173,7 +167,7 @@ function generateInvoiceHTML(data) {
         </style>
       </head>
       <body>
-        <div class="content-wrapper">
+        <div class="container">
           ${(logoUrl && logoUrl !== "null") ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ""}
 
           <h1>Invoice for ${data.customerName}</h1>
