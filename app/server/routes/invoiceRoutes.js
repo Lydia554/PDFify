@@ -140,7 +140,7 @@ function generateInvoiceHTML(data) {
   .footer {
     position: static; /* flow naturally below content */
     max-width: 800px;
-    margin: 150px auto 40px auto; /* spacing above and below footer, centered */
+    margin: 120px auto 40px auto; /* spacing above and below footer, centered */
     padding: 10px 20px;
     background-color: #f9f9f9;
     color: #444;
