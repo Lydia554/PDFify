@@ -4,6 +4,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const iframe = document.getElementById('previewFrame');
 
 
+  // These should match your backend route logic
+const basicTemplates = ['invoice', 'recipe']; 
+const premiumTemplates = ['invoice-premium', 'recipe-premium'];
+
+// Assume this is injected server-side or fetched earlier
+const userStatus = document.getElementById('userStatus')?.value || 'free'; 
+// Or use a global JS variable like `window.userStatus = 'free'`
+
+
+
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -47,13 +57,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
     const apiKey = document.getElementById('apiKey').value.trim();
     const payload = await getFriendlyFormData();
-
+  
     payload.template = selectedTemplate;
-   
-
+  
+    // Block free users from previewing premium templates
+    if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
+      alert('This is a premium template. Upgrade your plan to preview it.');
+      return;
+    }
+  
     try {
       const response = await fetch(`/api/friendly/generate`, {
-
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,16 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         body: JSON.stringify(payload),
       });
-
+  
       if (!response.ok) {
         const errorText = await response.text();
         alert('Error generating preview: ' + errorText);
         return;
       }
-
+  
       const blob = await response.blob();
       const pdfUrl = URL.createObjectURL(blob);
-
+  
       if (iframe) {
         iframe.src = pdfUrl;
         iframe.style.display = 'block';
@@ -83,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Error generating preview: ' + err.message);
     }
   });
+  
 
   
   async function getFriendlyFormData() {
