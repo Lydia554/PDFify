@@ -83,12 +83,26 @@ function generatePackingSlipHTML(data) {
             background-color: #f9f9f9;
           }
 
-          .footer {
-            margin-top: 30px;
-            font-size: 14px;
-            text-align: center;
-            color: #777;
-          }
+       .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    font-size: 12px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
 
  /* MOBILE STYLES */
   @media (max-width: 600px) {
@@ -120,8 +134,18 @@ function generatePackingSlipHTML(data) {
       padding: 10px;
     }
 
-    .footer {
-      font-size: 13px;
+          .footer {
+      font-size: 11px;
+      padding: 15px 10px;
+      line-height: 1.4;
+    }
+
+    .footer p {
+      margin: 6px 0;
+    }
+
+    .footer a {
+      word-break: break-word;
     }
   }
 
@@ -161,15 +185,15 @@ function generatePackingSlipHTML(data) {
             </tbody>
           </table>
 
-          <div class="footer">
-            <p>Thanks for using our service!</p>
-             <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-              <p>
-                Generated using <strong>PDFify</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
-              </p>
-            <p>If you have any questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
-          </div>
-        </div>
+           <div class="footer">
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+  <p>
+    Generated using <strong>PDFify</strong>. Visit 
+    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+  </p>
+</div>
       </body>
     </html>
   `;

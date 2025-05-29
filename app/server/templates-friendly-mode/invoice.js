@@ -93,6 +93,20 @@ function generateInvoiceHtml(data) {
     table {
       min-width: 100%;
     }
+
+        .footer {
+      font-size: 11px;
+      padding: 15px 10px;
+      line-height: 1.4;
+    }
+
+    .footer p {
+      margin: 6px 0;
+    }
+
+    .footer a {
+      word-break: break-word;
+    }
   }
 
     </style>

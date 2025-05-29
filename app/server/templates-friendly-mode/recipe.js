@@ -103,23 +103,25 @@ body::before {
       }
 
       .footer {
-        text-align: center;
-        margin: 40px auto 20px auto;
-        font-size: 13px;
-        color: #888;
-        max-width: 600px;
-        border-top: 1px dashed #ccc;
-        padding-top: 20px;
-      }
-
-      .footer a {
-        color: #6d4c41;
-        text-decoration: none;
-      }
-
-      .footer a:hover {
-        text-decoration: underline;
-      }
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    font-size: 12px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
 
       @media screen and (max-width: 600px) {
         h1 {
@@ -148,9 +150,19 @@ body::before {
           margin-bottom: 20px;
         }
 
-        .footer {
-          font-size: 12px;
-        }
+           .footer {
+      font-size: 11px;
+      padding: 15px 10px;
+      line-height: 1.4;
+    }
+
+    .footer p {
+      margin: 6px 0;
+    }
+
+    .footer a {
+      word-break: break-word;
+    }
       }
     </style>
   </head>
@@ -184,11 +196,15 @@ body::before {
 </ol>
 
 
-    <div class="footer">
-      <p>Need help? Contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
-       <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-     Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
-    </div>
+ <div class="footer">
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+  <p>
+    Generated using <strong>PDFify</strong>. Visit 
+    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+  </p>
+</div>
 
   </body>
   </html>

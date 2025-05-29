@@ -244,23 +244,26 @@ function generatePremiumRecipeHtml(data) {
         font-size: 0.95rem;
       }
   
-        .footer {
-          text-align: center;
-          font-size: 0.85rem;
-          color: #999;
-          margin-top: 60px;
-          padding-top: 20px;
-          border-top: 1px solid #eee;
-        }
-  
-        .footer a {
-          color: #66bb6a;
-          text-decoration: none;
-        }
-  
-        .footer a:hover {
-          text-decoration: underline;
-        }
+  .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    font-size: 12px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
   
         /* Responsive */
         @media screen and (max-width: 768px) {
@@ -271,6 +274,20 @@ function generatePremiumRecipeHtml(data) {
             flex-direction: column;
             align-items: center;
           }
+
+           .footer {
+      font-size: 11px;
+      padding: 15px 10px;
+      line-height: 1.4;
+    }
+
+    .footer p {
+      margin: 6px 0;
+    }
+
+    .footer a {
+      word-break: break-word;
+    }
           
         }
       </style>
@@ -358,11 +375,14 @@ function generatePremiumRecipeHtml(data) {
       </div>
 
       <div class="footer">
-        <p>Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com">food-trek.com</a></p>
-         <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-        <p>Need help? Contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
-      </div>
-    </div>
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+  <p>
+    Generated using <strong>PDFify</strong>. Visit 
+    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+  </p>
+</div>
   </body>
   </html>
   `;
