@@ -36,7 +36,7 @@ function generateInvoiceHTML(data) {
             max-width: 800px;
             margin: 50px auto;
             padding: 30px 40px;
-            padding-bottom: 80px; /* space for fixed footer */
+            /* Removed padding-bottom: 80px; */
             background-color: #fff;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
@@ -118,7 +118,7 @@ function generateInvoiceHTML(data) {
             .container {
               margin: 20px auto;
               padding: 20px;
-              padding-bottom: 80px; /* keep footer space on mobile */
+              /* Removed padding-bottom: 80px; */
             }
             .invoice-header {
               flex-direction: column;
@@ -138,20 +138,19 @@ function generateInvoiceHTML(data) {
             }
           }
           .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 120px;
+            position: static; /* no fixed position */
+            max-width: 800px;
+            margin: 20px auto 40px auto; /* vertical spacing, centered */
             padding: 10px 20px;
             background-color: #f9f9f9;
             color: #444;
             border-top: 1px solid #ccc;
             text-align: center;
             line-height: 1.6;
-            box-sizing: border-box;
-            z-index: 1000;
             font-size: 11px;
+            border-radius: 0 0 12px 12px;
+            box-sizing: border-box;
+            z-index: auto;
           }
           .footer p {
             margin: 6px 0;
