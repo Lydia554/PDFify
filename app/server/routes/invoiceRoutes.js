@@ -141,7 +141,7 @@ function generateInvoiceHTML(data) {
             position: fixed;
             bottom: 0;
             left: 0;
-            width: 100%;
+            width: 120%;
             height: 100px;
             padding: 10px 20px;
             background-color: #f9f9f9;
