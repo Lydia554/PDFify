@@ -27,6 +27,11 @@
   </div>
   <!-- Developer Mode Container -->
   <div id="developerMode">
+    <label>
+      <input type="checkbox" id="previewInvoiceCheckbox" />
+      Preview Invoice (no usage count)
+    </label>
+    
     <label for="endpoint">Endpoint:</label>
     <select id="endpoint">
       <option value="generate-invoice">Invoice</option>
@@ -357,47 +362,76 @@ friendlyBtn.addEventListener('click', () => {
     });
     
     async function sendRequest() {
-      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
-      const endpoint = document.getElementById('endpoint').value;
-      const jsonInput = document.getElementById('json').value;
-      const result = document.getElementById('result');
-    
-      if (!apiKey || !jsonInput) {
-        result.innerText = 'Please enter both API key and valid JSON data.';
-        return;
-      }
-    
-      result.innerText = 'Generating PDF...';
-      try {
-        const response = await fetch(`/api/${endpoint}`, {
+  const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
+  const endpoint = document.getElementById('endpoint').value;
+  const jsonInput = document.getElementById('json').value;
+  const result = document.getElementById('result');
 
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`
-    },
-    body: jsonInput
-  });
+  if (!apiKey || !jsonInput) {
+    result.innerText = 'Please enter both API key and valid JSON data.';
+    return;
+  }
 
-    
-        if (!response.ok) {
-          const err = await response.json();
-          console.error("API Error:", err);
-          result.innerText = 'Error: ' + (err.error || response.statusText);
-          return;
-        }
-    
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'document.pdf';
-        a.click();
-        result.innerText = '✅ PDF downloaded!';
-      } catch (err) {
-        result.innerText = 'Error: ' + err.message;
-      }
+  let requestBody;
+
+  try {
+    requestBody = JSON.parse(jsonInput);
+  } catch (e) {
+    result.innerText = 'Invalid JSON input.';
+    return;
+  }
+
+  // Handle invoice route preview flag
+  if (endpoint === 'generate-invoice') {
+    // For example, you can have a checkbox in HTML with id 'previewInvoiceCheckbox'
+    const isPreview = document.getElementById('previewInvoiceCheckbox')?.checked || false;
+
+    // Add or override isPreview in the data sent to backend
+    requestBody.isPreview = isPreview;
+  }
+
+  result.innerText = 'Generating PDF...';
+
+  try {
+    const response = await fetch(`/api/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("API Error:", err);
+      result.innerText = 'Error: ' + (err.error || response.statusText);
+      return;
     }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    if (endpoint === 'generate-invoice' && requestBody.isPreview) {
+      // For preview, open PDF in new tab
+      window.open(url);
+      result.innerText = '✅ Preview opened in new tab';
+    } else {
+      // For download, trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'document.pdf';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      result.innerText = '✅ PDF downloaded!';
+    }
+
+  } catch (err) {
+    result.innerText = 'Error: ' + err.message;
+  }
+}
+
     document.getElementById('generateDevBtn').addEventListener('click', sendRequest);
  
     
