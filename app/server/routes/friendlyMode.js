@@ -68,6 +68,7 @@ router.post('/generate', authenticate, async (req, res) => {
 
     const generateHtml = templateConfig.fn(isPremium);
     const html = generateHtml(formData);
+    console.log("📝 Form data before rendering recipe template:", formData); 
 
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) {

@@ -196,6 +196,5 @@ body::before {
 }
 
 module.exports = (data) => {
-  console.log('🟩 BASIC template function is being used');
   return generateBasicRecipeHtml(data);
 };
