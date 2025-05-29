@@ -65,7 +65,7 @@ function renderForm(template) {
       `;
     }
 
-    // Include checkbox inside form container as well
+    
     html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
 
   } else if (template === 'recipe') {
@@ -207,7 +207,6 @@ generatePdfBtn.addEventListener('click', async () => {
 
     
     } else if (template === 'recipe') {
-      const includeTitle = document.getElementById('includeTitle');
 
       const videoUrl = userAccessType === 'premium' ? document.getElementById('videoUrl')?.value.trim() : '';
       if (videoUrl && !isValidYouTubeUrl(videoUrl)) {

@@ -13,7 +13,7 @@ const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premi
 const recipeTemplateBasic = require('../templates-friendly-mode/recipe');
 const recipeTemplatePremium = require('../templates-friendly-mode/recipe-premium');
 
-// Template registry with premium logic
+
 const templates = {
   invoice: {
     fn: (isPremium) => isPremium ? invoiceTemplatePremium : invoiceTemplate,
@@ -25,7 +25,7 @@ const templates = {
   },
 };
 
-// Check user access level for frontend UI (basic vs premium)
+
 router.get('/check-access', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
@@ -42,7 +42,7 @@ router.get('/check-access', authenticate, async (req, res) => {
   }
 });
 
-// PDF generation endpoint
+
 router.post('/generate', authenticate, async (req, res) => {
   const { template, ...formData } = req.body;
   const templateConfig = templates[template];
@@ -57,7 +57,6 @@ router.post('/generate', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Determine if the user has premium access
     let isPremium = user.plan === 'premium';
 
     // Uncomment this line to simulate premium access during local development:

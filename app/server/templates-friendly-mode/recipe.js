@@ -1,4 +1,5 @@
-function generateRecipeHtml(data) {
+function generateBasicRecipeHtml(data) { 
+
   return `
   <html>
   <head>
@@ -181,6 +182,7 @@ body::before {
        <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
      Created with 💙 by <strong>Food Trek</strong> — <a href="https://food-trek.com" style="color:#ff7043; text-decoration:none;">food-trek.com</a>
     </div>
+
   </body>
   </html>
   `;
