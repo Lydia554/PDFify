@@ -259,7 +259,7 @@ function generateInvoiceHTML(data) {
 
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  const { data, isPreview } = req.body;  // <-- add isPreview flag
+  const { data } = req.body;
 
   try {
     const user = await User.findById(req.user.userId);
@@ -267,8 +267,10 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+   
     const isPremium = !!user?.isPremium;
-    //const isPremium = true; 
+
+//const isPremium = true; 
 
     const cleanedData = {
       ...data,
@@ -277,6 +279,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       showChart: isPremium ? !!data.showChart : false,
     };
 
+    
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -301,18 +304,14 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     console.log(`User used ${pageCount} pages`);
 
-    // Only increment usage if this is NOT a preview
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-      }
-
-      user.usageCount += pageCount;
-      await user.save();
+    if (user.usageCount + pageCount > user.maxUsage) {
+      fs.unlinkSync(pdfPath);
+      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
     }
 
-    // Send PDF back for preview or download
+    user.usageCount += pageCount;
+    await user.save();
+
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
@@ -325,3 +324,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
+
+
+module.exports = router;
