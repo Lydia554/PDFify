@@ -168,14 +168,21 @@ body::before {
     <p><strong>⏰ Cook Time:</strong> ${data.cookTime ? `${data.cookTime} min` : 'N/A'}</p>
 
     <div class="section-title">Ingredients <span class="emoji">🔪🥩🍅</span></div>
-    <ul class="ingredients">
-      ${data.ingredients.map(i => `<li>${i}</li>`).join('')}
-    </ul>
+   <ul class="ingredients">
+  ${Array.isArray(data.ingredients)
+    ? data.ingredients.map(i => `<li>${i}</li>`).join('')
+    : '<li>No ingredients listed.</li>'
+  }
+</ul>
 
     <div class="section-title">Instructions <span class="emoji">👩‍🍳🍳</span></div>
-    <ol class="instructions">
-      ${data.instructions.map(i => `<li>${i}</li>`).join('')}
-    </ol>
+   <ol class="instructions">
+  ${Array.isArray(data.instructions)
+    ? data.instructions.map(i => `<li>${i}</li>`).join('')
+    : '<li>No instructions available.</li>'
+  }
+</ol>
+
 
     <div class="footer">
       <p>Need help? Contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a></p>
