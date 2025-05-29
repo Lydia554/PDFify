@@ -249,7 +249,7 @@ function generateInvoiceHTML(data) {
 }
 
 
-rrouter.post("/generate-invoice", authenticate, async (req, res) => {
+router.post("/generate-invoice", authenticate, async (req, res) => {
   const { data, isPreview } = req.body;
 
   try {

@@ -85,7 +85,6 @@ function generateTherapyReportHTML(data) {
           body {
             font-family: 'Arial', sans-serif;
             padding: 40px;
-            padding-bottom: 140px; /* space for footer */
             color: #333;
             background-color: #f9f9f9;
             position: relative;
@@ -159,94 +158,93 @@ function generateTherapyReportHTML(data) {
             background-color: #5e60ce;
             color: white;
           }
-          .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 120px;
-            padding: 20px;
-            font-size: 12px;
-            background-color: #f9f9f9;
-            color: #444;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            line-height: 1.6;
-            box-sizing: border-box;
-            z-index: 1000;
-          }
-          .footer a {
-            color: #0073e6;
-            text-decoration: none;
-          }
-          .footer a:hover {
-            text-decoration: underline;
-          }
+         .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    font-size: 12px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
 
-          /* MOBILE STYLES */
+
+        /* MOBILE STYLES */
           @media (max-width: 600px) {
             body {
               padding: 20px;
-              padding-bottom: 140px; /* maintain space for footer */
             }
-
+        
             h1 {
               font-size: 20px;
             }
-
+        
             .section-title {
               font-size: 16px;
             }
-
+        
             p {
               font-size: 14px;
             }
-
+        
             .multi-column {
               grid-template-columns: 1fr;
             }
-
+        
             .logo {
               width: 90px;
             }
-
+        
             .chart-container {
               height: 300px;
             }
-
+        
             .table th, .table td {
               padding: 8px;
               font-size: 13px;
             }
+        
+                  .footer {
+      font-size: 11px;
+      padding: 15px 10px;
+      line-height: 1.4;
+    }
 
-            .footer {
-              font-size: 11px;
-              padding: 15px 10px;
-              line-height: 1.4;
-            }
+    .footer p {
+      margin: 6px 0;
+    }
 
-            .footer p {
-              margin: 6px 0;
-            }
-
-            .footer a {
-              word-break: break-word;
-            }
+    .footer a {
+      word-break: break-word;
+    }
           }
+
+
         </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       </head>
       <body>
         ${innerHtml}
-        <div class="footer">
-          <p>Thanks for using our service!</p>
-          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-          <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-          <p>
-            Generated using <strong>PDFify</strong>. Visit 
-            <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-          </p>
-        </div>
+      <div class="footer">
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+  <p>
+    Generated using <strong>PDFify</strong>. Visit 
+    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+  </p>
+</div>
       </body>
     </html>
   `;
