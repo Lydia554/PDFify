@@ -166,9 +166,7 @@ function generateTherapyReportHTML(data) {
             background-color: #5e60ce;
             color: white;
           }
-      
-
-            .footer {
+     .footer {
     position: static; /* flow naturally below content */
     max-width: 800px;
     margin: 120px auto 40px auto; /* spacing above and below footer, centered */
@@ -183,17 +181,14 @@ function generateTherapyReportHTML(data) {
     box-sizing: border-box;
     z-index: auto;
   }
-  .footer p {
-    margin: 6px 0;
-  }
-  .footer a {
-    color: #0073e6;
-    text-decoration: none;
-    word-break: break-word;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
+
+          .footer a {
+            color: #0073e6;
+            text-decoration: none;
+          }
+          .footer a:hover {
+            text-decoration: underline;
+          }
           @media (max-width: 600px) {
             .page-wrapper {
               padding: 20px;
