@@ -15,7 +15,7 @@ const log = (message, data = null) => {
 
 function generateInvoiceHTML(data) {
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-const items = Array.isArray(data.items) ? data.items : [];
+
 
 
   return `
@@ -193,7 +193,7 @@ const items = Array.isArray(data.items) ? data.items : [];
               </tr>
             </thead>
             <tbody>
-              ${items.map(item => `
+              ${data.items.map(item => `
                 <tr>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
@@ -249,68 +249,68 @@ const items = Array.isArray(data.items) ? data.items : [];
 }
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  const { data, isPreview } = req.body;
+  const { data, isPreview } = req.body;
 
-  try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
-    // If you want to enforce premium features (like customLogoUrl or showChart),
-    // you can optionally override those here based on user status:
-    if (!user.isPremium) {
-      data.customLogoUrl = null;
-      data.showChart = false;
-    }
+    const isPremium = !!user.isPremium;
+    //const isPremium = true; 
 
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
+    const cleanedData = {
+      ...data,
+      isPremium: isPremium,
+      customLogoUrl: isPremium ? data.customLogoUrl || null : null,
+      showChart: isPremium ? !!data.showChart : false,
+    };
 
-    const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
 
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
 
-    const page = await browser.newPage();
-    const html = generateInvoiceHTML(data); // Use data directly here
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
-    await browser.close();
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
+    const page = await browser.newPage();
+    const html = generateInvoiceHTML(cleanedData);
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    await page.pdf({ path: pdfPath, format: "A4" });
+    await browser.close();
 
-    console.log(`User used ${pageCount} pages`);
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
 
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
+    console.log(`User used ${pageCount} pages`);
 
-      user.usageCount += pageCount;
-      await user.save();
-    }
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+      }
 
-    res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
-      }
-      fs.unlinkSync(pdfPath);
-    });
-  } catch (error) {
-    console.error("Error during PDF generation:", error);
-    res.status(500).json({ error: "PDF generation failed" });
-  }
+      user.usageCount += pageCount;
+      await user.save();
+    }
+
+    res.download(pdfPath, (err) => {
+      if (err) {
+        console.error("Error sending file:", err);
+      }
+      fs.unlinkSync(pdfPath);
+    });
+
+  } catch (error) {
+    console.error("Error during PDF generation:", error);
+    res.status(500).json({ error: "PDF generation failed" });
+  }
 });
-
-
 module.exports = router;
