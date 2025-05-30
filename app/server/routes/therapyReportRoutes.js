@@ -218,17 +218,32 @@ function generateTherapyReportHTML(data) {
               padding: 8px;
               font-size: 13px;
             }
-            .footer {
-              font-size: 11px;
-              padding: 15px 10px;
-              line-height: 1.4;
-            }
-            .footer p {
-              margin: 6px 0;
-            }
-            .footer a {
-              word-break: break-word;
-            }
+           .footer {
+    position: static; /* flow naturally below content */
+    max-width: 800px;
+    margin: 120px auto 40px auto; /* spacing above and below footer, centered */
+    padding: 10px 20px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    line-height: 1.6;
+    font-size: 11px;
+    border-radius: 0 0 12px 12px;
+    box-sizing: border-box;
+    z-index: auto;
+  }
+  .footer p {
+    margin: 6px 0;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+    word-break: break-word;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
           }
         </style>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
