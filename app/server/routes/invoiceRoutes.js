@@ -251,7 +251,8 @@ function generateInvoiceHTML(data) {
   //const isPremium = true; 
 router.post("/generate-invoice", authenticate, async (req, res) => {
   console.log("Received body:", req.body);
-  const { data, isPreview } = req.body;
+  const { data, isPreview = false } = req.body;
+
   console.log("Data:", data);
   console.log("Is preview:", isPreview);
 
