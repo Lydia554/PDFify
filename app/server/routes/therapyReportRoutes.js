@@ -174,7 +174,7 @@ function generateTherapyReportHTML(data) {
   text-align: center;
   line-height: 1.6;
   padding: 15px 10px;
-  margin-top: 120px;
+  margin-top: 60%;
 }
 
           .footer a {
