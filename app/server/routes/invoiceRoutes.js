@@ -259,6 +259,8 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
         return res.status(400).json({ error: "Invalid JSON data provided." });
       }
     }
+    console.log("Invoice data:", data);
+    
 
     const user = await User.findById(req.user.userId);
     if (!user) {
