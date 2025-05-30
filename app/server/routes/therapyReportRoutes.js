@@ -36,7 +36,11 @@ function generateTherapyReportHTML(data) {
       <div class="multi-column">
         <table class="table">
           <tr><th>Milestone</th><th>Progress</th></tr>
-          ${data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')}
+          ${data.milestones.length > 0
+            ? data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')
+            : `<tr><td colspan="2">No milestone data available.</td></tr>`
+          }
+          
         </table>
       </div>
     </div>
@@ -245,16 +249,23 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
   const { data, isPreview = false } = req.body;
 
   const cleanedData = {
-    childName: data?.childName || "John Doe",
-    therapistName: data?.therapistName || "Jane Smith",
-    sessionDate: data?.sessionDate || new Date().toLocaleDateString(),
-    goals: Array.isArray(data?.goals) ? data.goals : ["Improve motor skills", "Enhance communication"],
-    observations: data?.observations || "Patient was focused and followed instructions well.",
-    recommendations: data?.recommendations || "Continue with the current therapy plan.",
-    milestones: Array.isArray(data?.milestones) ? data.milestones : [],
-    milestonesData: Array.isArray(data?.milestonesData) ? data.milestonesData : [2, 3, 4, 4],
-    ...data
+    childName: data?.childName ?? "John Doe",
+    birthDate: data?.birthDate ?? "2017-08-16",
+    sessionDate: data?.sessionDate ?? new Date().toLocaleDateString(),
+    therapyType: data?.therapyType ?? "Occupational Therapy",
+    observations: data?.observations ?? "Patient showed engagement in all tasks.",
+    recommendations: data?.recommendations ?? "Continue weekly therapy sessions.",
+    milestones: Array.isArray(data?.milestones) && data.milestones.length > 0
+      ? data.milestones
+      : [
+          { name: "Fine Motor", progress: "Good" },
+          { name: "Verbal Communication", progress: "Needs Improvement" }
+        ],
+    milestonesData: Array.isArray(data?.milestonesData) && data.milestonesData.length > 0
+      ? data.milestonesData
+      : [2, 3, 4, 4]
   };
+  
 
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) {
