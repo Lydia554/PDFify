@@ -166,7 +166,7 @@ function generateTherapyReportHTML(data) {
             background-color: #5e60ce;
             color: white;
           }
-     .footer {
+      .footer {
     position: static; /* flow naturally below content */
     max-width: 800px;
     margin: 120px auto 40px auto; /* spacing above and below footer, centered */
@@ -181,14 +181,17 @@ function generateTherapyReportHTML(data) {
     box-sizing: border-box;
     z-index: auto;
   }
-
-          .footer a {
-            color: #0073e6;
-            text-decoration: none;
-          }
-          .footer a:hover {
-            text-decoration: underline;
-          }
+  .footer p {
+    margin: 6px 0;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+    word-break: break-word;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
           @media (max-width: 600px) {
             .page-wrapper {
               padding: 20px;
@@ -235,15 +238,15 @@ function generateTherapyReportHTML(data) {
           <div class="content-wrapper">
             ${innerHtml}
           </div>
-          <div class="footer">
-            <p>Thanks for using our service!</p>
-            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-            <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-            <p>
-              Generated using <strong>PDFify</strong>. Visit 
-              <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-            </p>
-          </div>
+              <div class="footer">
+          <p>Thanks for using our service!</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+          <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+          <p>
+            Generated using <strong>PDFify</strong>. Visit 
+            <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+          </p>
+        </div>
         </div>
       </body>
     </html>
