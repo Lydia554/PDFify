@@ -233,7 +233,7 @@ function generateInvoiceHTML(data, isPremium) {
   `;
 }
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  const { data, isPreview = false } = req.body;
+  const { data } = req.body;
 
   try {
     const user = await User.findById(req.user.userId);
@@ -241,7 +241,10 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     const isPremium = !!user.isPremium;
 
-    // Clean and normalize items
+    // Server controls preview flag: only premium users get inline preview
+    const isPreview = isPremium;
+
+    // Clean items array
     const cleanedItems = Array.isArray(data.items)
       ? data.items.map((item) => ({
           description: item.description || item.name || "Sample item",
@@ -251,7 +254,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
         }))
       : [];
 
-    // Determine logo URL: premium user can set custom, else default
+    // Use default logo for basic users; premium users can use custom logo
     const logoUrl = isPremium && data.customLogoUrl ? data.customLogoUrl : DEFAULT_LOGO_URL;
 
     const cleanedData = {
@@ -285,36 +288,25 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     const pdfInfo = await pdfParse(pdfData);
     const pageCount = pdfInfo.numpages || 1;
 
-    // Send preview inline PDF
     if (isPreview) {
+      // Inline preview response (e.g., embed in browser)
       res.set({
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=Invoice_${cleanedData.orderId}.pdf`,
+        "Content-Disposition": "inline; filename=Invoice_preview.pdf",
       });
-      res.send(pdfData);
-
-      // Clean up temp PDF file after response
-      res.on("finish", () => {
-        if (fs.existsSync(pdfPath)) {
-          fs.unlinkSync(pdfPath);
-        }
+      return res.send(pdfData);
+    } else {
+      // Force download response
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=Invoice_${cleanedData.orderId}.pdf`,
       });
-      return;
+      return res.send(pdfData);
     }
 
-    // Send PDF as file download
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice_${cleanedData.orderId}.pdf`,
-    });
-    res.send(pdfData);
+    // Optionally delete PDF after sending
+    // fs.unlinkSync(pdfPath);
 
-    // Clean up temp PDF file after response
-    res.on("finish", () => {
-      if (fs.existsSync(pdfPath)) {
-        fs.unlinkSync(pdfPath);
-      }
-    });
   } catch (error) {
     console.error("Invoice PDF generation error:", error);
     res.status(500).json({ error: "Failed to generate PDF invoice" });
