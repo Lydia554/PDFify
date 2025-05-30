@@ -16,6 +16,7 @@ const log = (message, data = null) => {
 
 
 function generateInvoiceHTML(data) {
+  const items = Array.isArray(data.items) ? data.items : [];
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
   return `
@@ -193,7 +194,7 @@ function generateInvoiceHTML(data) {
               </tr>
             </thead>
             <tbody>
-              ${data.items.map(item => `
+              ${items.map(item => `
                 <tr>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
@@ -260,10 +261,12 @@ function generateInvoiceHTML(data) {
   
       const cleanedData = {
         ...data,
+        items: Array.isArray(data.items) ? data.items : [], 
         isPremium,
         customLogoUrl: isPremium ? data.customLogoUrl || null : null,
         showChart: isPremium ? !!data.showChart : false,
       };
+      
   
       const pdfDir = path.join(__dirname, "../pdfs");
       if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
