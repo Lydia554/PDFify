@@ -364,12 +364,30 @@ document.getElementById("generateDevBtn").addEventListener("click", () => {
 });
 
 async function sendRequest(isPreview = false) {
-  const endpoint = document.getElementById("endpoint").value;
-  const apiKey = document.getElementById("apiKey").value;
+  const endpoint = document.getElementById("endpoint").value.trim();
+  const apiKey = document.getElementById("apiKey").value.trim();
   const jsonInput = document.getElementById("json").value;
   const result = document.getElementById("result");
 
+  // Basic validation before sending
+  if (!endpoint) {
+    result.innerText = "Please select an endpoint.";
+    return;
+  }
+  if (!apiKey) {
+    result.innerText = "API key is required.";
+    return;
+  }
+
   result.innerText = isPreview ? "Generating preview..." : "Generating PDF...";
+
+  let parsedData;
+  try {
+    parsedData = JSON.parse(jsonInput);
+  } catch (parseError) {
+    result.innerText = "Invalid JSON input: " + parseError.message;
+    return;
+  }
 
   try {
     const response = await fetch(`/api/${endpoint}`, {
@@ -379,14 +397,22 @@ async function sendRequest(isPreview = false) {
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        data: JSON.parse(jsonInput),
+        data: parsedData,
         isPreview: isPreview
       })
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "PDF request failed.");
+      // Try to extract JSON error, but fallback to text if fails
+      let errorMessage = "PDF request failed.";
+      try {
+        const errorJson = await response.json();
+        errorMessage = errorJson.error || errorMessage;
+      } catch {
+        const errorText = await response.text();
+        errorMessage = errorText || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     const blob = await response.blob();
@@ -411,6 +437,7 @@ async function sendRequest(isPreview = false) {
     result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`;
   }
 }
+
 
  
     
