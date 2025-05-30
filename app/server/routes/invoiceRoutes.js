@@ -14,8 +14,8 @@ const log = (message, data = null) => {
 };
 
 function generateInvoiceHTML(data) {
-  const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-  const defaultLogoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  
+  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 
   return `
@@ -193,14 +193,15 @@ function generateInvoiceHTML(data) {
               </tr>
             </thead>
             <tbody>
-              ${data.items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td>${item.quantity}</td>
-                  <td>${item.price}</td>
-                  <td>${item.total}</td>
-                </tr>
-              `).join('')}
+             ${Array.isArray(data.items) ? data.items.map(item => `
+    <tr>
+      <td>${item.name}</td>
+      <td>${item.quantity}</td>
+      <td>${item.price}</td>
+      <td>${item.total}</td>
+    </tr>
+  `).join('') : ''}
+  
             </tbody>
             <tfoot>
               <tr>
