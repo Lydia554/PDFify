@@ -255,9 +255,10 @@ function generateInvoiceHTML(data) {
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
   console.log("Received body:", req.body);
-  const { data, isPreview } = req.body;
-  console.log("Data:", data);
+  const { data, isPreview = false } = req.body;
   console.log("Is preview:", isPreview);
+  console.log("Data:", data);
+ 
 
   try {
     const user = await User.findById(req.user.userId);
