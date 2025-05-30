@@ -1,22 +1,18 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
-const router = express.Router();
 const fs = require("fs");
+const pdfParse = require("pdf-parse");
+const router = express.Router();
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
-const pdfParse = require("pdf-parse");
 
-
-
-function generateInvoiceHTML(data, isPremium) {
-  // Default logo URL served by your Express static middleware
-  const defaultLogoUrl = `${BASE_URL}/public/images/Logo.png`;
-
-  // Premium users can use custom logo if provided, else fallback to default
-  const logoUrl = isPremium
-    ? (data.customLogoUrl && data.customLogoUrl.trim() !== "" ? data.customLogoUrl : defaultLogoUrl)
-    : defaultLogoUrl;
+function generateInvoiceHTML(data) {
+  // Always use default logo for basic users
+  // Premium users use customLogoUrl if provided, else fallback to default logo
+  const logoUrl = data.isPremium 
+    ? (data.customLogoUrl && data.customLogoUrl !== "null" ? data.customLogoUrl : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png") 
+    : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
   const items = Array.isArray(data.items) ? data.items : [];
 
@@ -38,7 +34,7 @@ function generateInvoiceHTML(data, isPremium) {
             max-width: 800px;
             margin: 50px auto;
             padding: 30px 40px;
-            padding-bottom: 160px; /* extra space for footer */
+            padding-bottom: 160px;
             background-color: #fff;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
@@ -144,17 +140,15 @@ function generateInvoiceHTML(data, isPremium) {
       <body>
         <div class="container">
           <img src="${logoUrl}" alt="Company Logo" class="logo" />
-
-          <h1>Invoice for ${data.customerName || "Customer"}</h1>
-
+          <h1>Invoice for ${data.customerName}</h1>
           <div class="invoice-header">
             <div class="left">
-              <p><strong>Order ID:</strong> ${data.orderId || "N/A"}</p>
-              <p><strong>Date:</strong> ${data.date || new Date().toLocaleDateString()}</p>
+              <p><strong>Order ID:</strong> ${data.orderId}</p>
+              <p><strong>Date:</strong> ${data.date}</p>
             </div>
             <div class="right">
-              <p><strong>Customer:</strong><br>${data.customerName || "N/A"}</p>
-              <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || "N/A"}</a></p>
+              <p><strong>Customer:</strong><br>${data.customerName}</p>
+              <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
             </div>
           </div>
 
@@ -169,17 +163,17 @@ function generateInvoiceHTML(data, isPremium) {
             </thead>
             <tbody>
               ${
-                items.length > 0
+                items.length
                   ? items
                       .map(
                         (item) => `
-                <tr>
-                  <td>${item.description && item.description.trim() !== "" ? item.description : "Sample item"}</td>
-                  <td>${item.quantity || 1}</td>
-                  <td>${item.price || "9.99"}</td>
-                  <td>${item.total || (item.price || "9.99") * (item.quantity || 1)}</td>
-                </tr>
-              `
+                  <tr>
+                    <td>${item.description || item.name || "Sample item"}</td>
+                    <td>${item.quantity || 1}</td>
+                    <td>${item.price || "9.99"}</td>
+                    <td>${item.total || (item.price || 9.99) * (item.quantity || 1)}</td>
+                  </tr>
+                `
                       )
                       .join("")
                   : `<tr><td colspan="4" style="text-align:center;color:#999;">No items available</td></tr>`
@@ -188,43 +182,45 @@ function generateInvoiceHTML(data, isPremium) {
             <tfoot>
               <tr>
                 <td colspan="3">Subtotal</td>
-                <td>${data.subtotal || "0.00"}</td>
+                <td>${data.subtotal}</td>
               </tr>
               <tr>
                 <td colspan="3">Tax (21%)</td>
-                <td>${data.tax || "0.00"}</td>
+                <td>${data.tax}</td>
               </tr>
               <tr>
                 <td colspan="3">Total</td>
-                <td>${data.total || "0.00"}</td>
+                <td>${data.total}</td>
               </tr>
             </tfoot>
           </table>
 
           <div class="total">
-            <p>Total Amount Due: ${data.total || "0.00"}</p>
+            <p>Total Amount Due: ${data.total}</p>
           </div>
 
           ${
-            data.showChart
+            data.showChart && data.isPremium
               ? `<div class="chart-container">
-            <h2>Breakdown</h2>
-            <img src="https://quickchart.io/chart?c={
-              type:'pie',
-              data:{labels:['Subtotal','Tax'],datasets:[{data:[${(data.subtotal || "0").replace("€", "")},${(data.tax || "0").replace("€", "")}]}
-              ]}
-            }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
-          </div>`
+              <h2>Breakdown</h2>
+              <img src="https://quickchart.io/chart?c={
+                type:'pie',
+                data:{labels:['Subtotal','Tax'],datasets:[{data:[${parseFloat(
+                  data.subtotal.replace(/[^\d.]/g, "")
+                )},${parseFloat(data.tax.replace(/[^\d.]/g, ""))}]}
+                ]}
+              }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
+            </div>`
               : ""
           }
         </div>
 
-        <div class="footer" style="text-align:center; margin-top:50px; color:#777; font-size:12px;">
+        <div class="footer" style="text-align:center; font-size: 12px; color: #666; margin-top: 40px;">
           <p>Thanks for using our service!</p>
           <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-          <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+          <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
           <p>
-            Generated using <strong>PDFify</strong>. Visit 
+            Generated using <strong>PDFify</strong>. Visit
             <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
           </p>
         </div>
@@ -232,84 +228,88 @@ function generateInvoiceHTML(data, isPremium) {
     </html>
   `;
 }
-router.post("/generate-invoice", authenticate, async (req, res) => {
-  const { data } = req.body;
 
+router.post("/generate-invoice", authenticate, async (req, res) => {
   try {
+    const { data, isPreview = false } = req.body;
+
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const isPremium = !!user.isPremium;
 
-    // Server controls preview flag: only premium users get inline preview
-    const isPreview = isPremium;
-
-    // Clean items array
-    const cleanedItems = Array.isArray(data.items)
-      ? data.items.map((item) => ({
-          description: item.description || item.name || "Sample item",
-          quantity: item.quantity || 1,
-          price: (item.price || "0").toString().replace("€", ""),
-          total: item.total ? item.total.toString().replace("€", "") : null,
-        }))
-      : [];
-
-    // Use default logo for basic users; premium users can use custom logo
-    const logoUrl = isPremium && data.customLogoUrl ? data.customLogoUrl : DEFAULT_LOGO_URL;
-
+    // Normalize & sanitize input data with fallbacks
     const cleanedData = {
       ...data,
-      items: cleanedItems,
-      subtotal: data.subtotal ? data.subtotal.replace("€", "") : "0",
-      tax: data.tax ? data.tax.replace("€", "") : "0",
-      total: data.total ? data.total.replace("€", "") : "0",
-      customLogoUrl: logoUrl,
-      showChart: isPremium ? !!data.showChart : false,
+      items: Array.isArray(data.items) && data.items.length ? data.items : [{ description: "Sample item", quantity: 1, price: "9.99", total: "9.99" }],
+      isPremium,
+      customLogoUrl: isPremium ? data.customLogoUrl : null,
+      showChart: isPremium && !!data.showChart,
+      subtotal: data.subtotal && data.subtotal !== "0" ? data.subtotal : "9.99",
+      tax: data.tax && data.tax !== "0" ? data.tax : "0.99",
+      total: data.total && data.total !== "0" ? data.total : "10.98",
+      customerName: data.customerName && data.customerName.trim() !== "" ? data.customerName : "John Doe",
+      customerEmail: data.customerEmail && data.customerEmail.trim() !== "" ? data.customerEmail : "customer@example.com",
+      orderId: data.orderId && data.orderId.trim() !== "" ? data.orderId : `INV-${Date.now()}`,
+      date: data.date || new Date().toLocaleDateString(),
     };
 
+    // Prepare PDF storage directory
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
     const pdfPath = path.join(pdfDir, `Invoice_${cleanedData.orderId}.pdf`);
 
+    // Launch Puppeteer
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-
     const page = await browser.newPage();
-    const html = generateInvoiceHTML(cleanedData, isPremium);
+
+    // Generate HTML and set content
+    const html = generateInvoiceHTML(cleanedData);
     await page.setContent(html, { waitUntil: "networkidle0" });
+
+    // Generate PDF with background graphics
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
 
     await browser.close();
 
+    // Read and parse PDF to count pages for usage control
     const pdfData = fs.readFileSync(pdfPath);
     const pdfInfo = await pdfParse(pdfData);
-    const pageCount = pdfInfo.numpages || 1;
+    const pageCount = pdfInfo.numpages;
 
-    if (isPreview) {
-      // Inline preview response (e.g., embed in browser)
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "inline; filename=Invoice_preview.pdf",
-      });
-      return res.send(pdfData);
-    } else {
-      // Force download response
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=Invoice_${cleanedData.orderId}.pdf`,
-      });
-      return res.send(pdfData);
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+      }
+      user.usageCount += pageCount;
+      await user.save();
     }
 
-    // Optionally delete PDF after sending
-    // fs.unlinkSync(pdfPath);
+    // Set response headers
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `${isPreview ? "inline" : "attachment"}; filename=Invoice_${cleanedData.orderId}.pdf`
+    );
 
-  } catch (error) {
-    console.error("Invoice PDF generation error:", error);
-    res.status(500).json({ error: "Failed to generate PDF invoice" });
+    // Stream PDF file
+    const fileStream = fs.createReadStream(pdfPath);
+    fileStream.pipe(res);
+
+    fileStream.on("end", () => {
+      // Delete file after sending for real downloads only
+      if (!isPreview && fs.existsSync(pdfPath)) {
+        fs.unlinkSync(pdfPath);
+      }
+    });
+  } catch (err) {
+    console.error("Error during PDF generation:", err);
+    res.status(500).json({ error: "Failed to generate PDF invoice." });
   }
 });
 
