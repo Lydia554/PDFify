@@ -48,8 +48,9 @@
     <textarea id="json" rows="15" required></textarea>
 
     <br />
-    <button id="previewDevBtn">Preview</button>
-    <button id="generateDevBtn">Generate PDF</button>
+    <button onclick="sendRequest(true)">Preview</button>
+    <button onclick="sendRequest(false)">Download</button>
+    
     <p id="result"></p>
   </div>
 
