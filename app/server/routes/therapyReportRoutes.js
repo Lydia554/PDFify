@@ -166,22 +166,19 @@ function generateTherapyReportHTML(data) {
             background-color: #5e60ce;
             color: white;
           }
-        .footer p {
-    position: static; /* flow naturally below content */
-    max-width: 800px;
-    margin: 120px auto 40px auto; /* spacing above and below footer, centered */
-    padding: 10px 20px;
-    background-color: #f9f9f9;
-    color: #444;
-    border-top: 1px solid #ccc;
-    text-align: center;
-    line-height: 1.6;
-    font-size: 11px;
-    border-radius: 0 0 12px 12px;
-    box-sizing: border-box;
-    z-index: auto;
+        .footer {
+  
+  background-color: #f9f9f9;
+  color: #444;
+  border-top: 1px solid #ccc;
+  text-align: center;
+ padding: 10px 20px;
+  margin-top: auto;
 }
-
+ .footer p {
+    font-size: 11px;
+     line-height: 1.0;
+  }
 
           .footer a {
             color: #0073e6;
