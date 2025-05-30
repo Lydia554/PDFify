@@ -16,8 +16,7 @@ const log = (message, data = null) => {
 
 function generateInvoiceHTML(data) {
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-const items = invoiceData.items || [];
-
+const items = Array.isArray(data.items) ? data.items : [];
 
 
   return `
@@ -252,7 +251,7 @@ const items = invoiceData.items || [];
 router.post("/generate-invoice", authenticate, async (req, res) => {
   let { data, isPreview } = req.body;
 
- 
+
 
   try {
     // Parse data if it’s a JSON string
