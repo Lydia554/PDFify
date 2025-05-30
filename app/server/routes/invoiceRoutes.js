@@ -255,7 +255,7 @@ function generateInvoiceHTML(data) {
     </html>
   `;
 }
-rourouter.post("/generate-invoice", authenticate, async (req, res) => {
+router.post("/generate-invoice", authenticate, async (req, res) => {
   let { data, isPreview } = req.body;
   let invoiceData = data;
 
