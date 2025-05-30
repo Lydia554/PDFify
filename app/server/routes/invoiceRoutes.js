@@ -247,18 +247,25 @@ const items = Array.isArray(data.items) ? data.items : [];
     </html>
   `;
 }
-
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  const { data, isPreview } = req.body;
+  let { data, isPreview } = req.body;
 
   try {
+    // Parse data if it’s a JSON string
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch (parseErr) {
+        return res.status(400).json({ error: "Invalid JSON data provided." });
+      }
+    }
+
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // If you want to enforce premium features (like customLogoUrl or showChart),
-    // you can optionally override those here based on user status:
+    // Enforce premium features restrictions
     if (!user.isPremium) {
       data.customLogoUrl = null;
       data.showChart = false;
@@ -277,7 +284,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
-    const html = generateInvoiceHTML(data); // Use data directly here
+    const html = generateInvoiceHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();

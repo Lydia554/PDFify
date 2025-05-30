@@ -234,25 +234,24 @@ friendlyBtn.addEventListener('click', () => {
     }`;
 
   } else if (endpoint === "generate-invoice") {
-  jsonData = JSON.stringify({
-    data: {
-      customerName: "Anna Moore",
-      customerEmail: "anna@example.com",
-      orderId: "12345",
-      date: "2025-03-25",
-      items: [
-        { name: "PDF Template", quantity: 1, price: "10.00€", total: "10.00" },
-        { name: "Extra Support", quantity: 1, price: "5.00€", total: "5.00" }
+  jsonData = `{
+    "data": {
+      "customerName": "Anna Moore",
+      "customerEmail": "anna@example.com",
+      "orderId": "12345",
+      "date": "2025-03-25",
+      "items": [
+        { "name": "PDF Template", "quantity": 1, "price": "10.00€", "total": "10.00" },
+        { "name": "Extra Support", "quantity": 1, "price": "5.00€", "total": "5.00" }
       ],
-      subtotal: "15.00€",
-      tax: "3.15€",
-      total: "18.15€",
-      customLogoUrl: "https://example.com/custom-logo.png",
-      showChart: true,
-      isPremium: false
+      "subtotal": "15.00€",
+      "tax": "3.15€",
+      "total": "18.15€",
+      "customLogoUrl": "https://example.com/custom-logo.png", 
+      "showChart": true,
+      "isPremium": false
     }
-  });
-
+  }`;
     
   } else if (endpoint === "generate-packing-slip") {
       jsonData = `{
