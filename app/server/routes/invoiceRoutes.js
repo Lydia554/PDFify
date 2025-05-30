@@ -169,108 +169,165 @@ function generateInvoiceHTML(data) {
 </style>
 
       </head>
-        <body>
-      <h1>Invoice</h1>
-      <p><strong>Customer:</strong> ${data.customerName || "Customer"}</p>
-      <p><strong>Order ID:</strong> ${data.orderId || "N/A"}</p>
+       <body>
+        <div class="container">
+          ${(logoUrl && logoUrl !== "null") ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ""}
 
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th><th>Quantity</th><th>Price</th><th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${
-            Array.isArray(data.items) && data.items.length > 0
-              ? data.items.map(item => `
-                  <tr>
-                    <td>${item.name || ""}</td>
-                    <td>${item.quantity || ""}</td>
-                    <td>${item.price || ""}</td>
-                    <td>${item.total || ""}</td>
-                  </tr>
-                `).join("")
-              : `<tr><td colspan="4" class="center">No items available</td></tr>`
-          }
-        </tbody>
-      </table>
+          <h1>Invoice for ${data.customerName || "Customer"}</h1>
 
-      <p><strong>Subtotal:</strong> ${data.subtotal || "0"}</p>
-      <p><strong>Tax:</strong> ${data.tax || "0"}</p>
-      <p><strong>Total:</strong> ${data.total || "0"}</p>
-    </body>
+          <div class="invoice-header">
+            <div class="left">
+              <p><strong>Order ID:</strong> ${data.orderId || "N/A"}</p>
+              <p><strong>Date:</strong> ${data.date || new Date().toLocaleDateString()}</p>
+            </div>
+            <div class="right">
+              <p><strong>Customer:</strong><br>${data.customerName || "N/A"}</p>
+              <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || "N/A"}</a></p>
+            </div>
+          </div>
+
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.length > 0 ? items.map(item => `
+                <tr>
+                  <td>${item.name || "Unnamed item"}</td>
+                  <td>${item.quantity || 0}</td>
+                  <td>${item.price || "0.00"}</td>
+                  <td>${item.total || "0.00"}</td>
+                </tr>
+              `).join('') : `
+                <tr><td colspan="4" style="text-align:center;color:#999;">No items available</td></tr>
+              `}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">Subtotal</td>
+                <td>${data.subtotal || "0.00"}</td>
+              </tr>
+              <tr>
+                <td colspan="3">Tax (21%)</td>
+                <td>${data.tax || "0.00"}</td>
+              </tr>
+              <tr>
+                <td colspan="3">Total</td>
+                <td>${data.total || "0.00"}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          <div class="total">
+            <p>Total Amount Due: ${data.total || "0.00"}</p>
+          </div>
+
+          ${data.showChart ? `
+            <div class="chart-container">
+              <h2>Breakdown</h2>
+              <img src="https://quickchart.io/chart?c={
+                type:'pie',
+                data:{labels:['Subtotal','Tax'],datasets:[{data:[${(data.subtotal || "0").replace('€','')},${(data.tax || "0").replace('€','')}]}
+                ]}
+              }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
+            </div>
+          ` : ''}
+        </div>
+
+        <div class="footer">
+          <p>Thanks for using our service!</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+          <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+          <p>
+            Generated using <strong>PDFify</strong>. Visit 
+            <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+          </p>
+        </div>
+      </body>
     </html>
   `;
 }
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
+  console.log("Received body:", req.body);
+  const { data, isPreview = false } = req.body;
+  console.log("Is preview:", isPreview);
+  console.log("Data:", data);
+ 
+
   try {
-    const { data, isPreview = false } = req.body;
-
-    console.log("Received data:", JSON.stringify(data, null, 2));
-    console.log("Is preview:", isPreview);
-
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isPremium = !!user.isPremium;
+    const isPremium = !!user?.isPremium;
 
-    // Sanitize and set defaults for data
+    // Ensure data.items is an array to avoid .map() errors later
     const cleanedData = {
       ...data,
+      items: Array.isArray(data.items) ? data.items : [],
       isPremium,
       customLogoUrl: isPremium ? data.customLogoUrl || null : null,
       showChart: isPremium ? !!data.showChart : false,
-      items: Array.isArray(data.items) ? data.items : [],
+      subtotal: data.subtotal || "0.00",
+      tax: data.tax || "0.00",
+      total: data.total || "0.00",
       customerName: data.customerName || "Customer",
+      customerEmail: data.customerEmail || "",
       orderId: data.orderId || "N/A",
-      subtotal: data.subtotal || "0",
-      tax: data.tax || "0",
-      total: data.total || "0",
+      date: data.date || new Date().toLocaleDateString(),
     };
 
-    const html = generateInvoiceHTML(cleanedData);
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
+    const pdfPath = path.join(pdfDir, `Invoice_${cleanedData.orderId}.pdf`);
 
     const browser = await puppeteer.launch({
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    const page = await browser.newPage();
 
+    const page = await browser.newPage();
+    const html = generateInvoiceHTML(cleanedData);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20px", bottom: "20px", left: "20px", right: "20px" },
-    });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
 
     await browser.close();
 
-    const pageCount = 1; // You can adjust if you generate multipage PDFs
+    // Calculate PDF page count for usage count (approximation)
+    const pdfData = fs.readFileSync(pdfPath);
+    const pdfInfo = await pdfParse(pdfData);
+    const pageCount = pdfInfo.numpages;
 
-    // Usage counting only on real generation, NOT on preview
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages."
-        });
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
       user.usageCount += pageCount;
       await user.save();
     }
 
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Length": pdfBuffer.length,
-      "Content-Disposition": isPreview ? "inline" : 'attachment; filename="invoice.pdf"',
-    });
-    res.send(pdfBuffer);
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `${isPreview ? "inline" : "attachment"}; filename=Invoice_${cleanedData.orderId}.pdf`);
 
-  } catch (error) {
-    console.error("Error during PDF generation:", error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "PDF generation failed" });
-    }
+    const fileStream = fs.createReadStream(pdfPath);
+    fileStream.pipe(res);
+
+    fileStream.on("end", () => {
+      if (!isPreview && fs.existsSync(pdfPath)) {
+        fs.unlinkSync(pdfPath);
+      }
+    });
+
+  } catch (err) {
+    console.error("Error during PDF generation:", err);
+    res.status(500).json({ error: "Failed to generate PDF invoice." });
   }
 });
 
