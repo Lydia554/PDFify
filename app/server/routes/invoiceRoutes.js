@@ -261,12 +261,10 @@ function generateInvoiceHTML(data) {
   
       const cleanedData = {
         ...data,
-        items: Array.isArray(data.items) ? data.items : [], 
         isPremium,
         customLogoUrl: isPremium ? data.customLogoUrl || null : null,
         showChart: isPremium ? !!data.showChart : false,
       };
-      
   
       const pdfDir = path.join(__dirname, "../pdfs");
       if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
