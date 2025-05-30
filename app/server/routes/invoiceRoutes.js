@@ -13,6 +13,11 @@ const log = (message, data = null) => {
   }
 };
 
+if (!user.isPremium) {
+  invoiceData.customLogoUrl = null;
+  invoiceData.showChart = false;
+}
+
 function generateInvoiceHTML(data) {
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 const items = Array.isArray(data.items) ? data.items : [];
@@ -250,12 +255,15 @@ const items = Array.isArray(data.items) ? data.items : [];
 router.post("/generate-invoice", authenticate, async (req, res) => {
   let { data, isPreview } = req.body;
 
+  let invoiceData = data;
+
   try {
     // Parse data if it’s a JSON string
     if (typeof data === "string") {
       try {
-        data = JSON.parse(data);
+        invoiceData = JSON.parse(data);
       } catch (parseErr) {
+        console.error("Invalid JSON string for invoice data", err);
         return res.status(400).json({ error: "Invalid JSON data provided." });
       }
     }
