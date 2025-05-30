@@ -239,11 +239,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     const isPremium = !!user?.isPremium;
 
-    const cleanedItems = Array.isArray(data.items) ? data.items.map(item => ({
-      description: item.description || item.name || "Sample item",
-      quantity: item.quantity || 1,
-      price: (item.price || "0").toString().replace("€", ""),
-    })) : [];
+  
 
     const cleanedData = {
       ...data,
