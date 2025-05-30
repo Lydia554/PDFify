@@ -193,15 +193,7 @@ function generateInvoiceHTML(data) {
               </tr>
             </thead>
             <tbody>
-             ${Array.isArray(data.items) ? data.items.map(item => `
-    <tr>
-      <td>${item.name}</td>
-      <td>${item.quantity}</td>
-      <td>${item.price}</td>
-      <td>${item.total}</td>
-    </tr>
-  `).join('') : ''}
-  
+              ${itemRows}
             </tbody>
             <tfoot>
               <tr>
@@ -257,6 +249,18 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
+
+  const itemRows = Array.isArray(data.items)
+  ? data.items.map(item => `
+    <tr>
+      <td>${item.name}</td>
+      <td>${item.quantity}</td>
+      <td>${item.price}</td>
+      <td>${item.total}</td>
+    </tr>
+  `).join('')
+  : '';
+
   
       const isPremium = !!user.isPremium;
   
@@ -265,6 +269,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
         isPremium: isPremium,
         customLogoUrl: isPremium ? data.customLogoUrl || null : null,
         showChart: isPremium ? !!data.showChart : false,
+  itemRows
       };
   
       const pdfDir = path.join(__dirname, "../pdfs");
