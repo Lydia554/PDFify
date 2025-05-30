@@ -89,7 +89,7 @@ function generateTherapyReportHTML(data) {
             color: #333;
           }
           .page-wrapper {
-            
+            display: flex;
             flex-direction: column;
             min-height: 100vh;
             padding: 40px;
@@ -176,9 +176,9 @@ function generateTherapyReportHTML(data) {
  padding: 10px 20px;
   margin-top: auto;
 }
-.spacer {
-  flex-grow: 1;
-}
+ .footer p {
+    font-size: 10px;
+  }
 
           .footer a {
             color: #0073e6;
@@ -233,7 +233,7 @@ function generateTherapyReportHTML(data) {
           <div class="content-wrapper">
             ${innerHtml}
           </div>
-           <div class="spacer"></div>
+           
           <div class="footer">
             <p>Thanks for using our service!</p>
             <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
