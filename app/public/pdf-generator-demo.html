@@ -365,29 +365,15 @@ document.getElementById("generateDevBtn").addEventListener("click", () => {
 });
 
 
-let requestBody;
-try {
-  const parsedData = JSON.parse(jsonInput);
-
-  requestBody = parsedData.data
-    ? { ...parsedData, isPreview } // Already wrapped
-    : { data: parsedData, isPreview }; // Needs wrapping
-
-} catch (parseError) {
-  result.innerText = "Invalid JSON input: " + parseError.message;
-  return;
-}
-
-
-
 async function sendRequest(isPreview = false) {
-  console.log('Sending request, isPreview =', isPreview);
   const endpoint = document.getElementById("endpoint").value.trim();
   const apiKey = document.getElementById("apiKey").value.trim();
   const jsonInput = document.getElementById("json").value;
   const result = document.getElementById("result");
 
-  // Basic validation before sending
+  // Reset result text on each call
+  result.innerText = "";
+
   if (!endpoint) {
     result.innerText = "Please select an endpoint.";
     return;
@@ -421,7 +407,6 @@ async function sendRequest(isPreview = false) {
     });
 
     if (!response.ok) {
-      // Try to extract JSON error, but fallback to text if fails
       let errorMessage = "PDF request failed.";
       try {
         const errorJson = await response.json();
@@ -437,10 +422,8 @@ async function sendRequest(isPreview = false) {
     const blobUrl = window.URL.createObjectURL(blob);
 
     if (isPreview) {
-      // Preview in new tab
       window.open(blobUrl, "_blank");
     } else {
-      // Trigger download
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = "Generated.pdf";
@@ -449,7 +432,7 @@ async function sendRequest(isPreview = false) {
       document.body.removeChild(a);
     }
 
-    result.innerText = "";
+    result.innerText = ""; // Clear status on success
   } catch (err) {
     console.error("PDF request error:", err);
     result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`;
