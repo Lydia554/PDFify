@@ -260,7 +260,7 @@ function generateInvoiceHTML(data) {
   
       const cleanedData = {
         ...data,
-        isPremium: isPremium,
+        isPremium,
         customLogoUrl: isPremium ? data.customLogoUrl || null : null,
         showChart: isPremium ? !!data.showChart : false,
       };
@@ -285,28 +285,46 @@ function generateInvoiceHTML(data) {
       const parsed = await pdfParse(pdfBuffer);
       const pageCount = parsed.numpages;
   
-      // Track usage only if NOT preview
+      // ✅ Only track usage if NOT preview
       if (!isPreview) {
         if (user.usageCount + pageCount > user.maxUsage) {
           fs.unlinkSync(pdfPath);
           return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
         }
-  
         user.usageCount += pageCount;
         await user.save();
       }
   
+      // ✅ Send PDF properly — avoid double response errors
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", isPreview ? "inline" : "attachment; filename=document.pdf");
+      res.setHeader(
+        "Content-Disposition",
+        isPreview ? "inline" : "attachment; filename=Invoice.pdf"
+      );
   
       const stream = fs.createReadStream(pdfPath);
+  
+      // ✅ Handle success & clean up safely
       stream.pipe(res);
-      stream.on("end", () => fs.unlinkSync(pdfPath));
+      res.on("close", () => {
+        fs.existsSync(pdfPath) && fs.unlinkSync(pdfPath);
+      });
+  
+      // ✅ Handle errors in streaming
+      stream.on("error", (err) => {
+        console.error("Error streaming PDF:", err);
+        if (!res.headersSent) {
+          res.status(500).json({ error: "Failed to stream PDF" });
+        }
+      });
   
     } catch (error) {
       console.error("Error during PDF generation:", error);
-      res.status(500).json({ error: "PDF generation failed" });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "PDF generation failed" });
+      }
     }
   });
+  
   
 module.exports = router;

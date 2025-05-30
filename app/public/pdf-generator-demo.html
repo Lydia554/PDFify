@@ -356,24 +356,21 @@ friendlyBtn.addEventListener('click', () => {
     });
     
     document.getElementById("previewDevBtn").addEventListener("click", () => {
-  sendRequest(true);
-});
-document.getElementById("generateDevBtn").addEventListener("click", () => {
-  sendRequest(false);
+  sendRequest(true); // Preview mode
 });
 
-async function sendRequest(isPreview) {
-  const apiKey = document.getElementById("apiKey").value || localStorage.getItem("apiKey");
+document.getElementById("generateDevBtn").addEventListener("click", () => {
+  sendRequest(false); // Generate & download
+});
+
+async function sendRequest(isPreview = false) {
   const endpoint = document.getElementById("endpoint").value;
+  const apiKey = document.getElementById("apiKey").value;
   const jsonInput = document.getElementById("json").value;
   const result = document.getElementById("result");
 
-  if (!apiKey || !jsonInput) {
-    result.innerText = "Please enter both API key and valid JSON data.";
-    return;
-  }
+  result.innerText = isPreview ? "Generating preview..." : "Generating PDF...";
 
-  result.innerText = "Generating PDF...";
   try {
     const response = await fetch(`/api/${endpoint}`, {
       method: "POST",
@@ -388,30 +385,33 @@ async function sendRequest(isPreview) {
     });
 
     if (!response.ok) {
-      const err = await response.json();
-      result.innerText = "Error: " + (err.error || response.statusText);
-      return;
+      const error = await response.json();
+      throw new Error(error.error || "PDF request failed.");
     }
 
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
+    const blobUrl = window.URL.createObjectURL(blob);
+
     if (isPreview) {
-      window.open(url, "_blank");
-      result.innerText = "✅ Preview opened!";
+      // Preview in new tab
+      window.open(blobUrl, "_blank");
     } else {
+      // Trigger download
       const a = document.createElement("a");
-      a.href = url;
-      a.download = "document.pdf";
+      a.href = blobUrl;
+      a.download = "Generated.pdf";
+      document.body.appendChild(a);
       a.click();
-      result.innerText = "✅ PDF downloaded!";
+      document.body.removeChild(a);
     }
 
+    result.innerText = "";
   } catch (err) {
-    result.innerText = "Error: " + err.message;
+    console.error("PDF request error:", err);
+    result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`;
   }
 }
 
-    document.getElementById('generateDevBtn').addEventListener('click', sendRequest);
  
     
     fetch('/get-stripe-key')
