@@ -12,10 +12,11 @@ if (typeof ReadableStream === "undefined") {
 }
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
 function generateTherapyReportHTML(data) {
   const innerHtml = `
     <div class="watermark">Confidential</div>
-    <img src="${data.logoUrl}" alt="Logo" class="logo" />
+    <img src="${logoUrl}" alt="Logo" class="logo" />
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -37,7 +38,9 @@ function generateTherapyReportHTML(data) {
           <tr><th>Milestone</th><th>Progress</th></tr>
           ${data.milestones.length > 0
             ? data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')
-            : `<tr><td colspan="2">No milestone data available.</td></tr>`}
+            : `<tr><td colspan="2">No milestone data available.</td></tr>`
+          }
+          
         </table>
       </div>
     </div>
@@ -66,7 +69,6 @@ function generateTherapyReportHTML(data) {
           }]
         },
         options: {
-          responsive: true,
           scales: {
             y: { beginAtZero: true }
           }
@@ -78,7 +80,6 @@ function generateTherapyReportHTML(data) {
   return `
     <html>
       <head>
-        <meta charset="UTF-8" />
         <style>
           html, body {
             margin: 0;
@@ -87,64 +88,53 @@ function generateTherapyReportHTML(data) {
             background-color: #f9f9f9;
             color: #333;
           }
-
           .page-wrapper {
-            display: flex;
+            
             flex-direction: column;
             min-height: 100vh;
             padding: 40px;
             box-sizing: border-box;
           }
-
           .content-wrapper {
             flex-grow: 1;
           }
-
           h1 {
             text-align: center;
             color: #5e60ce;
             font-size: 24px;
             margin-bottom: 30px;
           }
-
           p {
             line-height: 1.8;
             font-size: 16px;
           }
-
           .section {
             margin-bottom: 25px;
           }
-
           .label {
             font-weight: bold;
             color: #444;
           }
-
           .content {
             margin-top: 10px;
             color: #555;
           }
-
           .section-title {
             margin-top: 20px;
             font-size: 18px;
             font-weight: bold;
             color: #5e60ce;
           }
-
           .chart-container {
             width: 100%;
             height: 400px;
             margin: 30px 0;
           }
-
           .logo {
             width: 120px;
             display: block;
             margin: 0 auto 30px;
           }
-
           .watermark {
             position: absolute;
             top: 50%;
@@ -157,94 +147,80 @@ function generateTherapyReportHTML(data) {
             pointer-events: none;
             z-index: 0;
           }
-
           .multi-column {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
           }
-
           .table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
           }
-
           .table th, .table td {
             padding: 10px;
             border: 1px solid #ddd;
             text-align: left;
           }
-
           .table th {
             background-color: #5e60ce;
             color: white;
           }
-
-          .footer {
-            font-size: 10px;
-            background-color: #f9f9f9;
-            color: #444;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            padding: 15px 20px;
-            margin-top: auto;
-            line-height: 1.4;
-          }
+        .footer {
+  font-size: 7px;
+  background-color: #f9f9f9;
+  color: #444;
+  border-top: 1px solid #ccc;
+  text-align: center;
+  line-height: 0.8;
+ padding: 10px 20px;
+  margin-top: auto;
+}
+.spacer {
+  flex-grow: 1;
+}
 
           .footer a {
             color: #0073e6;
             text-decoration: none;
           }
-
           .footer a:hover {
             text-decoration: underline;
           }
-
           @media (max-width: 600px) {
             .page-wrapper {
               padding: 20px;
             }
-
             h1 {
               font-size: 20px;
             }
-
             .section-title {
               font-size: 16px;
             }
-
             p {
               font-size: 14px;
             }
-
             .multi-column {
               grid-template-columns: 1fr;
             }
-
             .logo {
               width: 90px;
             }
-
             .chart-container {
               height: 300px;
             }
-
             .table th, .table td {
               padding: 8px;
               font-size: 13px;
             }
-
             .footer {
               font-size: 11px;
               padding: 15px 10px;
               line-height: 1.4;
             }
-
             .footer p {
               margin: 6px 0;
             }
-
             .footer a {
               word-break: break-word;
             }
@@ -257,6 +233,7 @@ function generateTherapyReportHTML(data) {
           <div class="content-wrapper">
             ${innerHtml}
           </div>
+           <div class="spacer"></div>
           <div class="footer">
             <p>Thanks for using our service!</p>
             <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
