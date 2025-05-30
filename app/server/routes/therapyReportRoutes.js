@@ -178,6 +178,7 @@ function generateTherapyReportHTML(data) {
  .footer p {
     font-size: 11px;
      line-height: 1.0;
+      margin-top: 120px;
   }
 
           .footer a {
