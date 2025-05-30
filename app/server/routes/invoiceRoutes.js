@@ -8,7 +8,7 @@ const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
 // Your site base URL (adjust this to your actual domain or localhost for dev)
-const BASE_URL = process.env.BASE_URL || "https://pdf-api.portfolio.lidija-jokic.com;
+const BASE_URL = process.env.BASE_URL || "https://pdf-api.portfolio.lidija-jokic.com";
 
 function generateInvoiceHTML(data, isPremium) {
   // Default logo URL served by your Express static middleware
