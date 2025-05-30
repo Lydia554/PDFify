@@ -198,11 +198,10 @@ function generateInvoiceHTML(data) {
             <tbody>
               ${items.length > 0 ? items.map(item => `
                 <tr>
-                  <td>${item.name || "Unnamed item"}</td>
-                  <td>${item.quantity || 0}</td>
-                  <td>${item.price || "0.00"}</td>
-                  <td>${item.total || "0.00"}</td>
-                </tr>
+    <td>${item.description && item.description.trim() !== "" ? item.description : "Sample item"}</td>
+    <td>${item.quantity || 1}</td>
+    <td>${item.price || "9.99"}</td>
+  </tr>
               `).join('') : `
                 <tr><td colspan="4" style="text-align:center;color:#999;">No items available</td></tr>
               `}
@@ -254,11 +253,7 @@ function generateInvoiceHTML(data) {
 }
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  console.log("Received body:", req.body);
   const { data, isPreview = false } = req.body;
-  console.log("Is preview:", isPreview);
-  console.log("Data:", data);
- 
 
   try {
     const user = await User.findById(req.user.userId);
