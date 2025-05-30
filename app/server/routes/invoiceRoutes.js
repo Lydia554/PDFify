@@ -15,8 +15,10 @@ const log = (message, data = null) => {
 
 
 function generateInvoiceHTML(data) {
+  const items = Array.isArray(data.items) ? data.items : [];
+
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-const itemsArray = Array.isArray(items) ? items : [];
+
 
 
   return `
