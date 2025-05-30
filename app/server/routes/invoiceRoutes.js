@@ -266,22 +266,23 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     const isPremium = !!user?.isPremium;
 
-    // Ensure data.items is an array to avoid .map() errors later
     const cleanedData = {
       ...data,
-      items: Array.isArray(data.items) ? data.items : [],
+      items: Array.isArray(data.items) && data.items.length > 0 ? data.items : [
+        { description: "Sample item", quantity: 1, price: "9.99" }
+      ],
       isPremium,
-      customLogoUrl: isPremium ? data.customLogoUrl || null : null,
+      customLogoUrl: isPremium ? (data.customLogoUrl || "https://example.com/default-logo.png") : null,
       showChart: isPremium ? !!data.showChart : false,
-      subtotal: data.subtotal || "0.00",
-      tax: data.tax || "0.00",
-      total: data.total || "0.00",
-      customerName: data.customerName || "Customer",
-      customerEmail: data.customerEmail || "",
-      orderId: data.orderId || `INV-${Date.now()}`,
+      subtotal: data.subtotal && data.subtotal !== "0" ? data.subtotal : "9.99",
+      tax: data.tax && data.tax !== "0" ? data.tax : "0.99",
+      total: data.total && data.total !== "0" ? data.total : "10.98",
+      customerName: data.customerName && data.customerName.trim() !== "" ? data.customerName : "John Doe",
+      customerEmail: data.customerEmail && data.customerEmail.trim() !== "" ? data.customerEmail : "customer@example.com",
+      orderId: data.orderId && data.orderId.trim() !== "" ? data.orderId : `INV-${Date.now()}`,
       date: data.date || new Date().toLocaleDateString(),
     };
-
+    
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
@@ -299,7 +300,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     await browser.close();
 
-    // Calculate PDF page count for usage count (approximation)
+    
     const pdfData = fs.readFileSync(pdfPath);
     const pdfInfo = await pdfParse(pdfData);
     const pageCount = pdfInfo.numpages;
