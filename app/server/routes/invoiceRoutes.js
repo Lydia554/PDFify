@@ -278,7 +278,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       total: data.total || "0.00",
       customerName: data.customerName || "Customer",
       customerEmail: data.customerEmail || "",
-      orderId: data.orderId || "N/A",
+      orderId: data.orderId || `INV-${Date.now()}`,
       date: data.date || new Date().toLocaleDateString(),
     };
 
