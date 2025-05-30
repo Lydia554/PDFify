@@ -255,13 +255,12 @@ function generateInvoiceHTML(data) {
     </html>
   `;
 }
-router.post("/generate-invoice", authenticate, async (req, res) => {
+rourouter.post("/generate-invoice", authenticate, async (req, res) => {
   let { data, isPreview } = req.body;
-
-
+  let invoiceData = data;
 
   try {
-    // Parse data if it’s a JSON string
+    // Make sure items is an array, parse if it's a JSON string
     if (typeof invoiceData.items === 'string') {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
@@ -272,18 +271,13 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
     }
-    
-    
 
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Enforce premium features restrictions
     if (!user.isPremium) {
-      data.customLogoUrl = null;
-      data.showChart = false;
+      invoiceData.customLogoUrl = null;
+      invoiceData.showChart = false;
     }
 
     const pdfDir = path.join(__dirname, "../pdfs");
@@ -291,7 +285,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
+    const pdfPath = path.join(pdfDir, `Invoice_${invoiceData.orderId}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -299,7 +293,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
-    const html = generateInvoiceHTML(data);
+    const html = generateInvoiceHTML(invoiceData);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
@@ -323,9 +317,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     }
 
     res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
-      }
+      if (err) console.error("Error sending file:", err);
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
