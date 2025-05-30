@@ -399,7 +399,7 @@ async function sendRequest(isPreview = false) {
       },
       body: JSON.stringify({
         data: parsedData,
-        isPreview: true,
+        isPreview: isPreview,
       })
     });
 
