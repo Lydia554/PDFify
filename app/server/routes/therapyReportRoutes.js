@@ -11,12 +11,8 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-const log = (message, data = null) => {
-  if (process.env.NODE_ENV !== "production") {
-    console.log(message, data);
-  }
-};
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
 function generateTherapyReportHTML(data) {
   const innerHtml = `
     <div class="watermark">Confidential</div>
@@ -88,7 +84,6 @@ function generateTherapyReportHTML(data) {
             background-color: #f9f9f9;
             color: #333;
           }
-
           .page-wrapper {
             display: flex;
             flex-direction: column;
@@ -96,56 +91,46 @@ function generateTherapyReportHTML(data) {
             padding: 40px;
             box-sizing: border-box;
           }
-
           .content-wrapper {
             flex-grow: 1;
           }
-
           h1 {
             text-align: center;
             color: #5e60ce;
             font-size: 24px;
             margin-bottom: 30px;
           }
-
           p {
             line-height: 1.8;
             font-size: 16px;
           }
-
           .section {
             margin-bottom: 25px;
           }
-
           .label {
             font-weight: bold;
             color: #444;
           }
-
           .content {
             margin-top: 10px;
             color: #555;
           }
-
           .section-title {
             margin-top: 20px;
             font-size: 18px;
             font-weight: bold;
             color: #5e60ce;
           }
-
           .chart-container {
             width: 100%;
             height: 400px;
             margin: 30px 0;
           }
-
           .logo {
             width: 120px;
             display: block;
             margin: 0 auto 30px;
           }
-
           .watermark {
             position: absolute;
             top: 50%;
@@ -158,30 +143,25 @@ function generateTherapyReportHTML(data) {
             pointer-events: none;
             z-index: 0;
           }
-
           .multi-column {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 20px;
           }
-
           .table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
           }
-
           .table th, .table td {
             padding: 10px;
             border: 1px solid #ddd;
             text-align: left;
           }
-
           .table th {
             background-color: #5e60ce;
             color: white;
           }
-
           .footer {
             padding: 20px;
             font-size: 12px;
@@ -192,61 +172,47 @@ function generateTherapyReportHTML(data) {
             line-height: 1.6;
             box-sizing: border-box;
           }
-
           .footer a {
             color: #0073e6;
             text-decoration: none;
           }
-
           .footer a:hover {
             text-decoration: underline;
           }
-
-          /* MOBILE STYLES */
           @media (max-width: 600px) {
             .page-wrapper {
               padding: 20px;
             }
-
             h1 {
               font-size: 20px;
             }
-
             .section-title {
               font-size: 16px;
             }
-
             p {
               font-size: 14px;
             }
-
             .multi-column {
               grid-template-columns: 1fr;
             }
-
             .logo {
               width: 90px;
             }
-
             .chart-container {
               height: 300px;
             }
-
             .table th, .table td {
               padding: 8px;
               font-size: 13px;
             }
-
             .footer {
               font-size: 11px;
               padding: 15px 10px;
               line-height: 1.4;
             }
-
             .footer p {
               margin: 6px 0;
             }
-
             .footer a {
               word-break: break-word;
             }
@@ -275,10 +241,8 @@ function generateTherapyReportHTML(data) {
 }
 
 
-
 router.post("/generate-therapy-report", authenticate, async (req, res) => {
   const { data, isPreview = false } = req.body;
-
 
   const cleanedData = {
     childName: data?.childName || "John Doe",
@@ -287,6 +251,8 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
     goals: Array.isArray(data?.goals) ? data.goals : ["Improve motor skills", "Enhance communication"],
     observations: data?.observations || "Patient was focused and followed instructions well.",
     recommendations: data?.recommendations || "Continue with the current therapy plan.",
+    milestones: Array.isArray(data?.milestones) ? data.milestones : [],
+    milestonesData: Array.isArray(data?.milestonesData) ? data.milestonesData : [2, 3, 4, 4],
     ...data
   };
 
