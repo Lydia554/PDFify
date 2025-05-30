@@ -173,12 +173,12 @@ function generateTherapyReportHTML(data) {
   border-top: 1px solid #ccc;
   text-align: center;
  padding: 10px 20px;
-  margin-top: auto;
+  margin-top: 100px;
 }
  .footer p {
     font-size: 11px;
      line-height: 1.0;
-      margin-top: 120px;
+    
   }
 
           .footer a {
