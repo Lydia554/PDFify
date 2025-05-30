@@ -16,7 +16,7 @@ const log = (message, data = null) => {
 
 function generateInvoiceHTML(data) {
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-const items = Array.isArray(data.items) ? data.items : [];
+const itemsArray = Array.isArray(items) ? items : [];
 
 
   return `
@@ -193,16 +193,21 @@ const items = Array.isArray(data.items) ? data.items : [];
                 <th>Total</th>
               </tr>
             </thead>
-            <tbody>
-              ${items.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td>${item.quantity}</td>
-                  <td>${item.price}</td>
-                  <td>${item.total}</td>
-                </tr>
-              `).join('')}
-            </tbody>
+         <tbody>
+  ${
+    Array.isArray(items) 
+      ? items.map(item => `
+          <tr>
+            <td>${item.name || ''}</td>
+            <td>${item.quantity || ''}</td>
+            <td>${item.price || ''}</td>
+            <td>${item.total || ''}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="4">No items available</td></tr>`
+  }
+</tbody>
+
             <tfoot>
               <tr>
                 <td colspan="3">Subtotal</td>
@@ -255,15 +260,17 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
   try {
     // Parse data if it’s a JSON string
-    if (typeof data === "string") {
+    if (typeof invoiceData.items === 'string') {
       try {
-        data = JSON.parse(data);
-      } catch (parseErr) {
-        console.error("Invalid JSON string for invoice data", err);
-        return res.status(400).json({ error: "Invalid JSON data provided." });
+        invoiceData.items = JSON.parse(invoiceData.items);
+      } catch {
+        invoiceData.items = [];
       }
     }
-    console.log("Invoice data:", data);
+    if (!Array.isArray(invoiceData.items)) {
+      invoiceData.items = [];
+    }
+    
     
 
     const user = await User.findById(req.user.userId);
