@@ -275,19 +275,28 @@ function generateTherapyReportHTML(data) {
 }
 
 
-router.post("/generate-therapy-report", authenticate, async (req, res) => {
-  const { data } = req.body;
 
-  if (!data || !data.childName) {
-    return res.status(400).json({ error: "Missing report data" });
-  }
+router.post("/generate-therapy-report", authenticate, async (req, res) => {
+  const { data, isPreview = false } = req.body;
+
+
+  const cleanedData = {
+    childName: data?.childName || "John Doe",
+    therapistName: data?.therapistName || "Jane Smith",
+    sessionDate: data?.sessionDate || new Date().toLocaleDateString(),
+    goals: Array.isArray(data?.goals) ? data.goals : ["Improve motor skills", "Enhance communication"],
+    observations: data?.observations || "Patient was focused and followed instructions well.",
+    recommendations: data?.recommendations || "Continue with the current therapy plan.",
+    ...data
+  };
 
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) {
     fs.mkdirSync(pdfDir, { recursive: true });
   }
 
-  const pdfPath = path.join(pdfDir, `therapy_report_${Date.now()}.pdf`);
+  const fileName = `therapy_report_${Date.now()}.pdf`;
+  const pdfPath = path.join(pdfDir, fileName);
 
   try {
     const browser = await puppeteer.launch({
@@ -296,7 +305,7 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
-    const html = generateTherapyReportHTML(data);
+    const html = generateTherapyReportHTML(cleanedData);
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     await page.pdf({
@@ -318,7 +327,6 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
 
     await browser.close();
 
-
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
@@ -329,19 +337,26 @@ router.post("/generate-therapy-report", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
     }
 
-    user.usageCount += pageCount;
-    await user.save();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `${isPreview ? "inline" : "attachment"}; filename=${fileName}`);
 
-    res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
+    const fileStream = fs.createReadStream(pdfPath);
+    fileStream.pipe(res);
+
+    fileStream.on("end", () => {
+      if (!isPreview && fs.existsSync(pdfPath)) {
+        fs.unlinkSync(pdfPath);
       }
-      fs.unlinkSync(pdfPath);
     });
 
   } catch (error) {
