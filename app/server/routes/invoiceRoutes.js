@@ -255,15 +255,12 @@ const items = Array.isArray(data.items) ? data.items : [];
 router.post("/generate-invoice", authenticate, async (req, res) => {
   let { data, isPreview } = req.body;
 
-  let invoiceData = data;
-
   try {
     // Parse data if it’s a JSON string
     if (typeof data === "string") {
       try {
-        invoiceData = JSON.parse(data);
+        data = JSON.parse(data);
       } catch (parseErr) {
-        console.error("Invalid JSON string for invoice data", err);
         return res.status(400).json({ error: "Invalid JSON data provided." });
       }
     }
