@@ -167,13 +167,13 @@ function generateTherapyReportHTML(data) {
             color: white;
           }
         .footer {
-  font-size: 11px;
+  font-size: 7px;
   background-color: #f9f9f9;
   color: #444;
   border-top: 1px solid #ccc;
   text-align: center;
-  line-height: 1;
-  padding: 15px 10px;
+  line-height: 0.8;
+ padding: 10px 20px;
   margin-top: auto;
 }
 
