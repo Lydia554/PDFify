@@ -258,7 +258,6 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     }
 
     const isPremium = !!user.isPremium;
-    //const isPremium = true; 
 
     const cleanedData = {
       ...data,
@@ -291,10 +290,13 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     console.log(`User used ${pageCount} pages`);
 
+    // ✅ Usage check goes here, now that you know pageCount and pdfPath
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
       }
 
       user.usageCount += pageCount;
@@ -313,4 +315,5 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 module.exports = router;
