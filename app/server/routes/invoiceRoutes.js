@@ -17,7 +17,10 @@ const log = (message, data = null) => {
 
 function generateInvoiceHTML(data) {
  
-  const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  const logoUrl = isPremium
+  ? (data.customLogoUrl || "https://example.com/default-logo.png")
+  : "https://example.com/default-logo.png";
+
 
   const items = Array.isArray(data.items) ? data.items : [];
 
@@ -140,32 +143,7 @@ function generateInvoiceHTML(data) {
       font-size: 16px;
     }
   }
-  .footer {
-    position: static; /* flow naturally below content */
-    max-width: 800px;
-    margin: 120px auto 40px auto; /* spacing above and below footer, centered */
-    padding: 10px 20px;
-    background-color: #f9f9f9;
-    color: #444;
-    border-top: 1px solid #ccc;
-    text-align: center;
-    line-height: 1.6;
-    font-size: 11px;
-    border-radius: 0 0 12px 12px;
-    box-sizing: border-box;
-    z-index: auto;
-  }
-  .footer p {
-    margin: 6px 0;
-  }
-  .footer a {
-    color: #0073e6;
-    text-decoration: none;
-    word-break: break-word;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
+
 </style>
 
       </head>
@@ -261,21 +239,22 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     const isPremium = !!user?.isPremium;
 
+    const cleanedItems = Array.isArray(data.items) ? data.items.map(item => ({
+      description: item.description || item.name || "Sample item",
+      quantity: item.quantity || 1,
+      price: (item.price || "0").toString().replace("€", ""),
+    })) : [];
+
     const cleanedData = {
       ...data,
-      items: Array.isArray(data.items) && data.items.length > 0 ? data.items : [
-        { description: "Sample item", quantity: 1, price: "9.99" }
-      ],
-      isPremium,
-      customLogoUrl: isPremium ? (data.customLogoUrl || "https://example.com/default-logo.png") : null,
+      items: cleanedItems,
+      subtotal: data.subtotal ? data.subtotal.replace("€", "") : "0",
+      tax: data.tax ? data.tax.replace("€", "") : "0",
+      total: data.total ? data.total.replace("€", "") : "0",
+      customLogoUrl: isPremium
+        ? (data.customLogoUrl || "https://example.com/default-logo.png")
+        : "https://example.com/default-logo.png",
       showChart: isPremium ? !!data.showChart : false,
-      subtotal: data.subtotal && data.subtotal !== "0" ? data.subtotal : "9.99",
-      tax: data.tax && data.tax !== "0" ? data.tax : "0.99",
-      total: data.total && data.total !== "0" ? data.total : "10.98",
-      customerName: data.customerName && data.customerName.trim() !== "" ? data.customerName : "John Doe",
-      customerEmail: data.customerEmail && data.customerEmail.trim() !== "" ? data.customerEmail : "customer@example.com",
-      orderId: data.orderId && data.orderId.trim() !== "" ? data.orderId : `INV-${Date.now()}`,
-      date: data.date || new Date().toLocaleDateString(),
     };
     
     const pdfDir = path.join(__dirname, "../pdfs");
