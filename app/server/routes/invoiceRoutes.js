@@ -15,7 +15,7 @@ const log = (message, data = null) => {
 
 function generateInvoiceHTML(data) {
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-
+const items = Array.isArray(data.items) ? data.items : [];
 
 
   return `
@@ -193,7 +193,7 @@ function generateInvoiceHTML(data) {
               </tr>
             </thead>
             <tbody>
-              ${data.items.map(item => `
+              ${items.map(item => `
                 <tr>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
