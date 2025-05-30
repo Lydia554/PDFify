@@ -16,7 +16,10 @@ const log = (message, data = null) => {
 
 
 function generateInvoiceHTML(data) {
+ 
   const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
+  const items = Array.isArray(data.items) ? data.items : [];
 
   return `
     <html>
@@ -166,20 +169,20 @@ function generateInvoiceHTML(data) {
 </style>
 
       </head>
-      <body>
+       <body>
         <div class="container">
           ${(logoUrl && logoUrl !== "null") ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ""}
 
-          <h1>Invoice for ${data.customerName}</h1>
+          <h1>Invoice for ${data.customerName || "Customer"}</h1>
 
           <div class="invoice-header">
             <div class="left">
-              <p><strong>Order ID:</strong> ${data.orderId}</p>
-              <p><strong>Date:</strong> ${data.date}</p>
+              <p><strong>Order ID:</strong> ${data.orderId || "N/A"}</p>
+              <p><strong>Date:</strong> ${data.date || new Date().toLocaleDateString()}</p>
             </div>
             <div class="right">
-              <p><strong>Customer:</strong><br>${data.customerName}</p>
-              <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
+              <p><strong>Customer:</strong><br>${data.customerName || "N/A"}</p>
+              <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || "N/A"}</a></p>
             </div>
           </div>
 
@@ -193,33 +196,35 @@ function generateInvoiceHTML(data) {
               </tr>
             </thead>
             <tbody>
-              ${data.items.map(item => `
+              ${items.length > 0 ? items.map(item => `
                 <tr>
-                  <td>${item.name}</td>
-                  <td>${item.quantity}</td>
-                  <td>${item.price}</td>
-                  <td>${item.total}</td>
+                  <td>${item.name || "Unnamed item"}</td>
+                  <td>${item.quantity || 0}</td>
+                  <td>${item.price || "0.00"}</td>
+                  <td>${item.total || "0.00"}</td>
                 </tr>
-              `).join('')}
+              `).join('') : `
+                <tr><td colspan="4" style="text-align:center;color:#999;">No items available</td></tr>
+              `}
             </tbody>
             <tfoot>
               <tr>
                 <td colspan="3">Subtotal</td>
-                <td>${data.subtotal}</td>
+                <td>${data.subtotal || "0.00"}</td>
               </tr>
               <tr>
                 <td colspan="3">Tax (21%)</td>
-                <td>${data.tax}</td>
+                <td>${data.tax || "0.00"}</td>
               </tr>
               <tr>
                 <td colspan="3">Total</td>
-                <td>${data.total}</td>
+                <td>${data.total || "0.00"}</td>
               </tr>
             </tfoot>
           </table>
 
           <div class="total">
-            <p>Total Amount Due: ${data.total}</p>
+            <p>Total Amount Due: ${data.total || "0.00"}</p>
           </div>
 
           ${data.showChart ? `
@@ -227,7 +232,7 @@ function generateInvoiceHTML(data) {
               <h2>Breakdown</h2>
               <img src="https://quickchart.io/chart?c={
                 type:'pie',
-                data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
+                data:{labels:['Subtotal','Tax'],datasets:[{data:[${(data.subtotal || "0").replace('€','')},${(data.tax || "0").replace('€','')}]}
                 ]}
               }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
             </div>
@@ -248,11 +253,9 @@ function generateInvoiceHTML(data) {
   `;
 }
 
-  //const isPremium = true; 
 router.post("/generate-invoice", authenticate, async (req, res) => {
   console.log("Received body:", req.body);
-  const { data, isPreview = false } = req.body;
-
+  const { data, isPreview } = req.body;
   console.log("Data:", data);
   console.log("Is preview:", isPreview);
 
@@ -262,17 +265,26 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     const isPremium = !!user?.isPremium;
 
+    // Ensure data.items is an array to avoid .map() errors later
     const cleanedData = {
       ...data,
+      items: Array.isArray(data.items) ? data.items : [],
       isPremium,
       customLogoUrl: isPremium ? data.customLogoUrl || null : null,
       showChart: isPremium ? !!data.showChart : false,
+      subtotal: data.subtotal || "0.00",
+      tax: data.tax || "0.00",
+      total: data.total || "0.00",
+      customerName: data.customerName || "Customer",
+      customerEmail: data.customerEmail || "",
+      orderId: data.orderId || "N/A",
+      date: data.date || new Date().toLocaleDateString(),
     };
 
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-    const pdfPath = path.join(pdfDir, `Invoice_${data.orderId}.pdf`);
+    const pdfPath = path.join(pdfDir, `Invoice_${cleanedData.orderId}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -282,14 +294,15 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     const page = await browser.newPage();
     const html = generateInvoiceHTML(cleanedData);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+
     await browser.close();
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
+    // Calculate PDF page count for usage count (approximation)
+    const pdfData = fs.readFileSync(pdfPath);
+    const pdfInfo = await pdfParse(pdfData);
+    const pageCount = pdfInfo.numpages;
 
-    // ✅ Only track usage if NOT preview
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
@@ -299,36 +312,22 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       await user.save();
     }
 
-    // ✅ Send PDF properly — avoid double response errors
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      isPreview ? "inline" : "attachment; filename=Invoice.pdf"
-    );
+    res.setHeader("Content-Disposition", `${isPreview ? "inline" : "attachment"}; filename=Invoice_${cleanedData.orderId}.pdf`);
 
-    const stream = fs.createReadStream(pdfPath);
+    const fileStream = fs.createReadStream(pdfPath);
+    fileStream.pipe(res);
 
-    // ✅ Handle success & clean up safely
-    stream.pipe(res);
-    res.on("close", () => {
-      fs.existsSync(pdfPath) && fs.unlinkSync(pdfPath);
-    });
-
-    // ✅ Handle errors in streaming
-    stream.on("error", (err) => {
-      console.error("Error streaming PDF:", err);
-      if (!res.headersSent) {
-        res.status(500).json({ error: "Failed to stream PDF" });
+    fileStream.on("end", () => {
+      if (!isPreview && fs.existsSync(pdfPath)) {
+        fs.unlinkSync(pdfPath);
       }
     });
 
-  } catch (error) {
-    console.error("Error during PDF generation:", error);
-    if (!res.headersSent) {
-      res.status(500).json({ error: "PDF generation failed" });
-    }
+  } catch (err) {
+    console.error("Error during PDF generation:", err);
+    res.status(500).json({ error: "Failed to generate PDF invoice." });
   }
 });
 
-  
 module.exports = router;
