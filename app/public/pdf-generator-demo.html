@@ -364,6 +364,22 @@ document.getElementById("generateDevBtn").addEventListener("click", () => {
   sendRequest(false); // Generate & download
 });
 
+
+let requestBody;
+try {
+  const parsedData = JSON.parse(jsonInput);
+
+  requestBody = parsedData.data
+    ? { ...parsedData, isPreview } // Already wrapped
+    : { data: parsedData, isPreview }; // Needs wrapping
+
+} catch (parseError) {
+  result.innerText = "Invalid JSON input: " + parseError.message;
+  return;
+}
+
+
+
 async function sendRequest(isPreview = false) {
   console.log('Sending request, isPreview =', isPreview);
   const endpoint = document.getElementById("endpoint").value.trim();
