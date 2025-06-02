@@ -256,36 +256,47 @@ function generateInvoiceHTML(data) {
   `;
 }
 router.post("/generate-invoice", authenticate, async (req, res) => {
-  let { data, isPreview } = req.body;
-  let invoiceData = data;
-
   try {
-    // Make sure items is an array, parse if it's a JSON string
-    if (typeof invoiceData.items === 'string') {
+    // Step 1: Extract and validate
+    let { data, isPreview } = req.body;
+    if (!data || typeof data !== "object") {
+      return res.status(400).json({ error: "Invalid or missing data" });
+    }
+
+    let invoiceData = { ...data }; // clone to avoid mutation
+
+    // Step 2: Parse items safely
+    if (typeof invoiceData.items === "string") {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
       } catch {
         invoiceData.items = [];
       }
     }
+
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
     }
 
+    // Step 3: Get the user
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // Step 4: Enforce feature restrictions even in preview
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
     }
+
+    // Step 5: Ensure invoice has an orderId
+    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
 
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `Invoice_${invoiceData.orderId}.pdf`);
+    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -293,7 +304,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
-    const html = generateInvoiceHTML(invoiceData);
+    const html = generateInvoiceHTML(invoiceData); // assumes this uses invoiceData properly
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
@@ -304,6 +315,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     console.log(`User used ${pageCount} pages`);
 
+    // Step 6: Only track usage if NOT preview
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
@@ -316,6 +328,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       await user.save();
     }
 
+    // Step 7: Send the file
     res.download(pdfPath, (err) => {
       if (err) console.error("Error sending file:", err);
       fs.unlinkSync(pdfPath);
