@@ -186,7 +186,6 @@ return `
         font-size: 11px;
         border-radius: 0 0 16px 16px;
         box-sizing: border-box;
-        margin-top: 20px;
       }
 
       .footer p {
