@@ -176,7 +176,7 @@ return `
       .footer {
         position: static;
         max-width: 800px;
-        margin: 110px auto;
+        margin: 100px auto 40px auto;
         padding: 10px 20px;
         background-color: #f0f2f7;
         color: #555;
@@ -186,6 +186,7 @@ return `
         font-size: 11px;
         border-radius: 0 0 16px 16px;
         box-sizing: border-box;
+       
       }
 
       .footer p {
