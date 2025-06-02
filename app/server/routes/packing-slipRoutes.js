@@ -200,7 +200,7 @@ function generatePackingSlipHTML(data) {
 }
 
 router.post("/generate-packing-slip", authenticate, async (req, res) => {
-  const { data } = req.body;
+  const { data, preview } = req.body;
 
   try {
     const user = await User.findById(req.user.userId);
@@ -214,7 +214,7 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `PackingSlip_${data.orderId}.pdf`);
+    const pdfPath = path.join(pdfDir, `PackingSlip_${data.orderId}_${Date.now()}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -222,26 +222,38 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
-    const html = generatePackingSlipHTML(data);
+
+    // Apply premium branding logic
+    const html = generatePackingSlipHTML(data, {
+      removePremium: !user.isPremium,
+    });
 
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
-    
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({
-        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-      });
+    if (!preview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
     }
 
-    user.usageCount += pageCount;
-    await user.save();
+    if (preview) {
+      const base64Data = pdfBuffer.toString("base64");
+      fs.unlinkSync(pdfPath);
+      return res.json({ preview: base64Data });
+    }
 
     res.download(pdfPath, (err) => {
       if (err) {
