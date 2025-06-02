@@ -365,7 +365,6 @@ document.getElementById("generateDevBtn").addEventListener("click", () => {
 });
 
 
-
 async function sendRequest(isPreview = false) {
   console.log('Sending request, isPreview =', isPreview);
   const endpoint = document.getElementById("endpoint").value.trim();
@@ -393,6 +392,14 @@ async function sendRequest(isPreview = false) {
     return;
   }
 
+  // Wrap only if parsedData doesn't already have 'data' property
+  const payload = (parsedData && typeof parsedData === 'object' && 'data' in parsedData)
+    ? parsedData
+    : {
+        data: parsedData,
+        isPreview: isPreview,
+      };
+
   try {
     const response = await fetch(`/api/${endpoint}`, {
       method: "POST",
@@ -400,10 +407,7 @@ async function sendRequest(isPreview = false) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({
-        data: parsedData,
-        isPreview: isPreview,
-      })
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -442,8 +446,6 @@ async function sendRequest(isPreview = false) {
   }
 }
 
-
- 
     
     fetch('/get-stripe-key')
       .then(response => response.json())

@@ -280,6 +280,7 @@ function generateInvoiceHTML(data) {
         invoiceData.items = [];
       }
     }
+    
 
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
