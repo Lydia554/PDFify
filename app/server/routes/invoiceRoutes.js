@@ -206,7 +206,8 @@ return `
   </head>
   <body>
     <div class="container">
-      ${(logoUrl && logoUrl !== "null") ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ""}
+      <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
+
       <h1>Invoice for ${data.customerName}</h1>
 
       <div class="invoice-header">
