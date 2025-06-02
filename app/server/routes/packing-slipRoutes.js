@@ -208,7 +208,7 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Apply user restrictions for non-premium users
+
     if (!user.isPremium) {
       data.customLogoUrl = null;
       data.showExtras = false;
@@ -240,7 +240,7 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     const pageCount = parsed.numpages;
 
     if (!isPreview) {
-      // Check usage limit for non-preview requests
+    
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -252,7 +252,7 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
       await user.save();
     }
 
-    // Send PDF for both preview and normal download
+   
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);

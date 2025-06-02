@@ -114,9 +114,8 @@ function wrapHtmlWithBranding(htmlContent) {
   `;
 }
 
-
 router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
-  const { html } = req.body;
+  const { html, isPreview } = req.body;
 
   if (!html) {
     return res.status(400).json({ error: 'No HTML content provided' });
@@ -125,52 +124,42 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
-      log('User not found for ID:', req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
 
-    log('User found:', user.email);
-
     const wrappedHtml = wrapHtmlWithBranding(html);
-    log('HTML wrapped with branding');
-
-    const pdfDir = './pdfs';
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-      log('PDF directory created:', pdfDir);
-    }
-
-    const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
-    log('PDF path determined:', pdfPath);
 
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-    log('Puppeteer browser launched');
-
     const page = await browser.newPage();
     await page.setContent(wrappedHtml, { waitUntil: 'networkidle0' });
-    log('HTML content set on Puppeteer page');
 
-    await page.pdf({
-      path: pdfPath,
-      format: 'A4',
-      printBackground: true,
-    });
-    log('PDF successfully generated');
+    if (isPreview) {
+      const buffer = await page.pdf({ format: 'A4', printBackground: true });
+      await browser.close();
 
+      const base64 = buffer.toString('base64');
+      return res.json({ preview: base64 });
+    }
+
+    // Not preview mode - generate and save PDF file
+    const pdfDir = './pdfs';
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
+    const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
+    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
     await browser.close();
-    log('Puppeteer browser closed');
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-    log('PDF parsed for page count:', pageCount);
 
     if (user.usageCount + pageCount > user.maxUsage) {
       fs.unlinkSync(pdfPath);
-      log('Usage limit exceeded, PDF deleted');
       return res.status(403).json({
         error: "Monthly usage limit reached. Upgrade to premium for more pages.",
       });
@@ -178,21 +167,19 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
 
     user.usageCount += pageCount;
     await user.save();
-    log('User usage count updated:', user.usageCount);
 
     res.download(pdfPath, (err) => {
       if (err) {
-        log('Error during PDF download:', err);
-      } else {
-        fs.unlinkSync(pdfPath);
-        log('PDF sent and deleted from server');
+        console.error("Error sending file:", err);
       }
+      fs.unlinkSync(pdfPath);
     });
 
   } catch (error) {
-    log('Unhandled error in PDF generation route:', error);
+    console.error('PDF generation failed:', error);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
 
 module.exports = router;
