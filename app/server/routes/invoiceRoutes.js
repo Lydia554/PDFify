@@ -41,7 +41,7 @@ return `
 
       .container {
         max-width: 800px;
-        margin: 50px auto;
+        margin: 40px auto;
         padding: 30px 40px 160px;
         background: linear-gradient(to bottom right, #ffffff, #f8fbff);
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
