@@ -185,11 +185,11 @@ return `
         font-size: 11px;
         border-radius: 0 0 16px 16px;
         box-sizing: border-box;
+        margin-top: 20px;
       }
 
       .footer p {
         margin: 6px 0;
-        margin-top: 60px;
       }
 
       .footer a {
@@ -292,27 +292,24 @@ return `
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
   try {
-    console.log("✅ Received request to /generate-invoice");
-
-    // Step 1: Extract and validate
+    
     let { data, isPreview } = req.body;
-    console.log("📦 Raw request body:", req.body);
-
+  
     if (!data || typeof data !== "object") {
-      console.warn("⚠️ Invalid or missing data");
+     
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
-    let invoiceData = { ...data }; // clone to avoid mutation
-    console.log("🔧 Parsed invoice data:", invoiceData);
+    let invoiceData = { ...data }; 
+   
 
-    // Step 2: Parse items safely
+   
     if (typeof invoiceData.items === "string") {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
-        console.log("🧾 Parsed items array:", invoiceData.items);
+       
       } catch (err) {
-        console.warn("⚠️ Failed to parse items string as JSON:", err);
+       
         invoiceData.items = [];
       }
     }
@@ -320,39 +317,31 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
-      console.warn("⚠️ items is not an array, defaulting to empty array");
+     
     }
-
-    // Step 3: Get the user
+ 
     const user = await User.findById(req.user.userId);
     if (!user) {
-      console.error("❌ User not found");
+      
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log("👤 Authenticated user:", user.email, "| Premium:", user.isPremium);
-
-    // Step 4: Enforce feature restrictions even in preview
     if (!user.isPremium) {
-      console.log("🚫 Free user - disabling customLogoUrl and showChart");
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
     }
 
-    // Step 5: Ensure invoice has an orderId
+   
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
-    console.log("🆔 Safe Order ID:", safeOrderId);
 
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
-      console.log("📁 Creating pdf directory at:", pdfDir);
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-    console.log("🛠️ PDF will be saved to:", pdfPath);
-
-    // Launch Puppeteer
+   
+ 
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -360,25 +349,21 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
     const page = await browser.newPage();
 
     const html = generateInvoiceHTML(invoiceData);
-    console.log("🧩 Generated HTML length:", html.length);
 
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-    console.log("📄 PDF generated successfully at:", pdfPath);
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-    console.log(`📈 PDF has ${pageCount} pages`);
-
-    // Step 6: Only track usage if NOT preview
+  
     if (!isPreview) {
-      console.log("📊 Not a preview — updating usage...");
+  
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        console.warn("📉 Usage limit reached");
+        
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
@@ -386,22 +371,20 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
       user.usageCount += pageCount;
       await user.save();
-      console.log(`✅ Updated user usage to ${user.usageCount}`);
     } else {
-      console.log("👁️ Preview mode — not counting usage");
+      
     }
 
-    // Step 7: Send the file
+
     res.download(pdfPath, (err) => {
       if (err) {
-        console.error("❌ Error sending file:", err);
+      
       } else {
-        console.log("✅ PDF file sent successfully");
+      
       }
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
-    console.error("💥 Error during PDF generation:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
