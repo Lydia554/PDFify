@@ -330,7 +330,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
 
     // Force premium for test
-//user.isPremium = true;
+user.isPremium = true;
 
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
