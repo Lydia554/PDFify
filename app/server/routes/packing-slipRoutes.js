@@ -200,21 +200,28 @@ function generatePackingSlipHTML(data) {
 }
 
 router.post("/generate-packing-slip", authenticate, async (req, res) => {
-  const { data, preview } = req.body;
+  const { data, isPreview } = req.body;
 
   try {
     const user = await User.findById(req.user.userId);
-
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
+   
+    if (!user.isPremium) {
+      data.customLogoUrl = null;
+      data.showExtras = false;
+    }
+
+    const safeOrderId = data.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
+
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `PackingSlip_${data.orderId}_${Date.now()}.pdf`);
+    const pdfPath = path.join(pdfDir, `PackingSlip_${safeOrderId}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -223,12 +230,15 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
 
     const page = await browser.newPage();
 
-    // Apply premium branding logic
-    const html = generatePackingSlipHTML(data, {
-      removePremium: !user.isPremium,
-    });
-
+    const html = generatePackingSlipHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
+
+    if (isPreview) {
+      const buffer = await page.pdf({ format: "A4", printBackground: true });
+      await browser.close();
+      const base64 = buffer.toString("base64");
+      return res.json({ preview: base64 });
+    }
 
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
@@ -237,28 +247,18 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (!preview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-
-      user.usageCount += pageCount;
-      await user.save();
-    }
-
-    if (preview) {
-      const base64Data = pdfBuffer.toString("base64");
+    if (user.usageCount + pageCount > user.maxUsage) {
       fs.unlinkSync(pdfPath);
-      return res.json({ preview: base64Data });
+      return res.status(403).json({
+        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+      });
     }
+
+    user.usageCount += pageCount;
+    await user.save();
 
     res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
-      }
+      if (err) console.error("Error sending file:", err);
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
