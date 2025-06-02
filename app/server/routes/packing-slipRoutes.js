@@ -236,8 +236,10 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     if (isPreview) {
       const buffer = await page.pdf({ format: "A4", printBackground: true });
       await browser.close();
-      const base64 = buffer.toString("base64");
-      return res.json({ preview: base64 });
+      res.setHeader('Content-Type', 'application/pdf');
+res.setHeader('Content-Disposition', 'inline; filename=preview.pdf');
+return res.send(buffer);
+
     }
 
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });

@@ -357,11 +357,11 @@ friendlyBtn.addEventListener('click', () => {
     });
     
     document.getElementById("previewDevBtn").addEventListener("click", () => {
-  sendRequest(true); // Preview mode
+  sendRequest(true);
 });
 
 document.getElementById("generateDevBtn").addEventListener("click", () => {
-  sendRequest(false); // Generate & download
+  sendRequest(false); 
 });
 
 
@@ -372,7 +372,7 @@ async function sendRequest(isPreview = false) {
   const jsonInput = document.getElementById("json").value;
   const result = document.getElementById("result");
 
-  // Basic validation before sending
+ 
   if (!endpoint) {
     result.innerText = "Please select an endpoint.";
     return;
@@ -392,11 +392,11 @@ async function sendRequest(isPreview = false) {
     return;
   }
 
-  // Wrap only if parsedData doesn't already have 'data' property
+ 
   let payload;
 if (parsedData && typeof parsedData === 'object') {
   if ('data' in parsedData) {
-    // Inject or override isPreview at root level
+    
     payload = { ...parsedData, isPreview };
   } else {
     payload = {
@@ -421,7 +421,7 @@ if (parsedData && typeof parsedData === 'object') {
     });
 
     if (!response.ok) {
-      // Try to extract JSON error, but fallback to text if fails
+
       let errorMessage = "PDF request failed.";
       try {
         const errorJson = await response.json();
@@ -437,10 +437,10 @@ if (parsedData && typeof parsedData === 'object') {
     const blobUrl = window.URL.createObjectURL(blob);
 
     if (isPreview) {
-      // Preview in new tab
+      
       window.open(blobUrl, "_blank");
     } else {
-      // Trigger download
+      
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = "Generated.pdf";
