@@ -41,7 +41,7 @@ return `
 
       .container {
         max-width: 800px;
-        margin: 40px auto;
+        margin: 20px auto;
         padding: 30px 40px 160px;
         background: linear-gradient(to bottom right, #ffffff, #f8fbff);
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
@@ -176,7 +176,7 @@ return `
       .footer {
         position: static;
         max-width: 800px;
-        margin: 5px auto 5px auto;
+        margin: 100px auto 40px auto;
         padding: 10px 20px;
         background-color: #f0f2f7;
         color: #555;
