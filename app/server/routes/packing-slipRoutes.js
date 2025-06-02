@@ -200,28 +200,21 @@ function generatePackingSlipHTML(data) {
 }
 
 router.post("/generate-packing-slip", authenticate, async (req, res) => {
-  const { data, isPreview } = req.body;
+  const { data } = req.body;
 
   try {
     const user = await User.findById(req.user.userId);
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-   
-    if (!user.isPremium) {
-      data.customLogoUrl = null;
-      data.showExtras = false;
-    }
-
-    const safeOrderId = data.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
-
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `PackingSlip_${safeOrderId}.pdf`);
+    const pdfPath = path.join(pdfDir, `PackingSlip_${data.orderId}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -229,22 +222,13 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
-
     const html = generatePackingSlipHTML(data);
+
     await page.setContent(html, { waitUntil: "networkidle0" });
-
-    if (isPreview) {
-      const buffer = await page.pdf({ format: "A4", printBackground: true });
-      await browser.close();
-      res.setHeader('Content-Type', 'application/pdf');
-res.setHeader('Content-Disposition', 'inline; filename=preview.pdf');
-return res.send(buffer);
-
-    }
-
-    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+    await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
+    
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
@@ -260,7 +244,9 @@ return res.send(buffer);
     await user.save();
 
     res.download(pdfPath, (err) => {
-      if (err) console.error("Error sending file:", err);
+      if (err) {
+        console.error("Error sending file:", err);
+      }
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
