@@ -364,7 +364,6 @@ document.getElementById("generateDevBtn").addEventListener("click", () => {
   sendRequest(false); 
 });
 
-
 async function sendRequest(isPreview = false) {
   console.log('Sending request, isPreview =', isPreview);
   const endpoint = document.getElementById("endpoint").value.trim();
@@ -372,7 +371,6 @@ async function sendRequest(isPreview = false) {
   const jsonInput = document.getElementById("json").value;
   const result = document.getElementById("result");
 
- 
   if (!endpoint) {
     result.innerText = "Please select an endpoint.";
     return;
@@ -392,23 +390,33 @@ async function sendRequest(isPreview = false) {
     return;
   }
 
- 
   let payload;
-if (parsedData && typeof parsedData === 'object') {
-  if ('data' in parsedData) {
-    
-    payload = { ...parsedData, isPreview };
-  } else {
-    payload = {
-      data: parsedData,
-      isPreview
-    };
-  }
-} else {
-  result.innerText = "Invalid input format.";
-  return;
-}
 
+  // Check if parsedData has html property to decide payload structure
+  if (parsedData && typeof parsedData === 'object') {
+    if ('html' in parsedData) {
+      // When HTML content is provided
+      payload = {
+        html: parsedData.html,
+        isPreview
+      };
+    } else if ('data' in parsedData) {
+      // When there is a data property
+      payload = {
+        ...parsedData,
+        isPreview
+      };
+    } else {
+      // Otherwise wrap parsedData as data
+      payload = {
+        data: parsedData,
+        isPreview
+      };
+    }
+  } else {
+    result.innerText = "Invalid input format.";
+    return;
+  }
 
   try {
     const response = await fetch(`/api/${endpoint}`, {
@@ -421,7 +429,6 @@ if (parsedData && typeof parsedData === 'object') {
     });
 
     if (!response.ok) {
-
       let errorMessage = "PDF request failed.";
       try {
         const errorJson = await response.json();
@@ -437,10 +444,8 @@ if (parsedData && typeof parsedData === 'object') {
     const blobUrl = window.URL.createObjectURL(blob);
 
     if (isPreview) {
-      
       window.open(blobUrl, "_blank");
     } else {
-      
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = "Generated.pdf";
@@ -455,6 +460,7 @@ if (parsedData && typeof parsedData === 'object') {
     result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`;
   }
 }
+
 
     
     fetch('/get-stripe-key')
