@@ -114,95 +114,79 @@ function wrapHtmlWithBranding(htmlContent) {
   `;
 }
 
-router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
-  console.log('[Route] /generate-pdf-from-html called');
-  console.log('[Route] req.body:', req.body);
-
-  const { html, isPreview } = req.body;
-
-  if (!html) {
-    console.log('[Error] No HTML content provided');
-    return res.status(400).json({ error: 'No HTML content provided' });
-  }
-
+router.post("/generate-pdf-from-html", authenticate, async (req, res) => {
   try {
+    const { html, isPreview } = req.body;
+
+    if (!html || typeof html !== "string") {
+      return res.status(400).json({ error: "No HTML content provided" });
+    }
+
     const user = await User.findById(req.user.userId);
     if (!user) {
-      console.log('[Error] User not found for ID:', req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log('[Info] User found:', user.email);
-    console.log('[Info] isPreview:', isPreview);
-
+    // Wrap HTML with branding or any wrapper function you have
     const wrappedHtml = wrapHtmlWithBranding(html);
-    console.log('[Info] HTML wrapped with branding');
+
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
+    // Use a safe file name; for preview we can use a temp file or still save with preview prefix
+    const fileName = isPreview
+      ? `preview_${Date.now()}.pdf`
+      : `generated_pdf_${Date.now()}.pdf`;
+    const pdfPath = path.join(pdfDir, fileName);
 
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    console.log('[Info] Puppeteer browser launched');
 
     const page = await browser.newPage();
-    await page.setContent(wrappedHtml, { waitUntil: 'networkidle0' });
-    console.log('[Info] HTML content set on Puppeteer page');
-
-    if (isPreview) {
-      const buffer = await page.pdf({ format: 'A4', printBackground: true });
-      await browser.close();
-      console.log('[Info] PDF buffer generated for preview');
-
-      const base64 = buffer.toString('base64');
-      console.log('[Info] Sending PDF preview response');
-      return res.json({ preview: base64 });
-    }
-
-    // Normal full PDF generation logic
-    const pdfDir = './pdfs';
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-      console.log('[Info] PDF directory created:', pdfDir);
-    }
-
-    const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
-    console.log('[Info] PDF path:', pdfPath);
-
-    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+    await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
-    console.log('[Info] PDF file saved and browser closed');
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-    console.log('[Info] PDF parsed for page count:', pageCount);
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      console.log('[Error] Usage limit exceeded, PDF deleted');
-      return res.status(403).json({
-        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-      });
+    if (!isPreview) {
+      // Only count usage on full downloads
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
     }
 
-    user.usageCount += pageCount;
-    await user.save();
-    console.log('[Info] User usage count updated:', user.usageCount);
+    // For preview, you can return base64 or send the file (here we send base64)
+    if (isPreview) {
+      const base64 = pdfBuffer.toString("base64");
+      fs.unlinkSync(pdfPath);
+      return res.json({ preview: base64 });
+    }
 
+    // For full generation: send the file for download
     res.download(pdfPath, (err) => {
       if (err) {
-        console.log('[Error] Error during PDF download:', err);
-      } else {
-        fs.unlinkSync(pdfPath);
-        console.log('[Info] PDF sent and deleted from server');
+        console.error("Error sending PDF:", err);
+        // Optionally handle error
       }
+      fs.unlinkSync(pdfPath);
     });
-
   } catch (error) {
-    console.log('[Error] Unhandled error in PDF generation route:', error);
-    res.status(500).json({ error: 'PDF generation failed' });
+    console.error("Error in /generate-pdf-from-html:", error);
+    res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 module.exports = router;
