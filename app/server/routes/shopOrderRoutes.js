@@ -188,52 +188,28 @@ function generateShopOrderHTML(data) {
     </html>
   `;
 }
-
-
 router.post("/generate-shop-order", authenticate, async (req, res) => {
-  const { data } = req.body;
-  log("Received data for shop order generation:", data);
-
+  const { data, isPreview } = req.body;
   if (!data || !data.shopName) {
-    log("Invalid shop order data:", data);
     return res.status(400).json({ error: "Missing shop order data" });
   }
 
   const pdfDir = path.join(__dirname, "../pdfs");
-  if (!fs.existsSync(pdfDir)) {
-    fs.mkdirSync(pdfDir, { recursive: true });
-  }
+  if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
   const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
 
   try {
-    log("Launching Puppeteer...");
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-    log("Puppeteer launched successfully.");
-
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
-    log("New page created.");
-
     const html = generateShopOrderHTML(data);
-    log("Generated HTML for shop order:", html);
-
     await page.setContent(html, { waitUntil: "networkidle0" });
-    log("HTML content set on the page.");
-
     await page.pdf({ path: pdfPath, format: "A4" });
-    log("PDF generated successfully at:", pdfPath);
-
     await browser.close();
-    log("Browser closed.");
 
-   
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-    log(`Generated PDF has ${pageCount} pages.`);
 
     const user = await User.findById(req.user.userId);
     if (!user) {
@@ -241,23 +217,17 @@ router.post("/generate-shop-order", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+      }
+      user.usageCount += pageCount;
+      await user.save();
     }
 
-    user.usageCount += pageCount;
-    await user.save();
-    log("User usage count updated:", user.usageCount);
-
-    res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
-      }
-      fs.unlinkSync(pdfPath);
-    });
+    res.download(pdfPath, (err) => fs.unlinkSync(pdfPath));
   } catch (error) {
-    console.error("Shop order PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
