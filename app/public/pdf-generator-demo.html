@@ -393,12 +393,22 @@ async function sendRequest(isPreview = false) {
   }
 
   // Wrap only if parsedData doesn't already have 'data' property
-  const payload = (parsedData && typeof parsedData === 'object' && 'data' in parsedData)
-    ? parsedData
-    : {
-        data: parsedData,
-        isPreview: isPreview,
-      };
+  let payload;
+if (parsedData && typeof parsedData === 'object') {
+  if ('data' in parsedData) {
+    // Inject or override isPreview at root level
+    payload = { ...parsedData, isPreview };
+  } else {
+    payload = {
+      data: parsedData,
+      isPreview
+    };
+  }
+} else {
+  result.innerText = "Invalid input format.";
+  return;
+}
+
 
   try {
     const response = await fetch(`/api/${endpoint}`, {
