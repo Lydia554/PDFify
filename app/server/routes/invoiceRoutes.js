@@ -17,10 +17,11 @@ const log = (message, data = null) => {
 function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
-   const logoUrl =
-  (typeof data.customLogoUrl === "string" && data.customLogoUrl.trim())
-    ? data.customLogoUrl
+  const logoUrl =
+  typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
+    ? data.customLogoUrl.trim()
     : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
 
 return `
 <html>
@@ -330,7 +331,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
 
     // Force premium for test
-user.isPremium = true;
+//user.isPremium = true;
 
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
