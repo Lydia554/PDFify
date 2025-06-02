@@ -17,9 +17,10 @@ const log = (message, data = null) => {
 function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
-  const logoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-
-
+   const logoUrl =
+  (typeof data.customLogoUrl === "string" && data.customLogoUrl.trim())
+    ? data.customLogoUrl
+    : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 return `
 <html>
@@ -325,6 +326,10 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       
       return res.status(404).json({ error: "User not found" });
     }
+
+
+    // Force premium for test
+//user.isPremium = true;
 
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
