@@ -116,7 +116,7 @@ function wrapHtmlWithBranding(htmlContent) {
 
 
 router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
-  const { html } = req.body;
+  const { html, isPreview } = req.body;
 
   if (!html) {
     return res.status(400).json({ error: 'No HTML content provided' });
@@ -131,7 +131,8 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
 
     log('User found:', user.email);
 
-    const wrappedHtml = wrapHtmlWithBranding(html);
+    // Optional: strip branding if not premium
+    const wrappedHtml = user.isPremium ? wrapHtmlWithBranding(html) : wrapHtmlWithBranding(html, { removePremium: true });
     log('HTML wrapped with branding');
 
     const pdfDir = './pdfs';
@@ -168,17 +169,20 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
     const pageCount = parsed.numpages;
     log('PDF parsed for page count:', pageCount);
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      log('Usage limit exceeded, PDF deleted');
-      return res.status(403).json({
-        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-      });
-    }
+    // Only count usage if not a preview
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        log('Usage limit exceeded, PDF deleted');
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
 
-    user.usageCount += pageCount;
-    await user.save();
-    log('User usage count updated:', user.usageCount);
+      user.usageCount += pageCount;
+      await user.save();
+      log('User usage count updated:', user.usageCount);
+    }
 
     res.download(pdfPath, (err) => {
       if (err) {
@@ -194,5 +198,6 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
 
 module.exports = router;
