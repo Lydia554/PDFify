@@ -114,72 +114,63 @@ function wrapHtmlWithBranding(htmlContent) {
   `;
 }
 
-router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
-  console.log('[Route] /generate-pdf-from-html called');
-  console.log('[Route] req.body:', req.body);
 
-  const { html, isPreview } = req.body;
+router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
+  const { html } = req.body;
 
   if (!html) {
-    console.log('[Error] No HTML content provided');
     return res.status(400).json({ error: 'No HTML content provided' });
   }
 
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
-      console.log('[Error] User not found for ID:', req.user.userId);
+      log('User not found for ID:', req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
 
-    console.log('[Info] User found:', user.email);
-    console.log('[Info] isPreview:', isPreview);
+    log('User found:', user.email);
 
     const wrappedHtml = wrapHtmlWithBranding(html);
-    console.log('[Info] HTML wrapped with branding');
+    log('HTML wrapped with branding');
+
+    const pdfDir = './pdfs';
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+      log('PDF directory created:', pdfDir);
+    }
+
+    const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
+    log('PDF path determined:', pdfPath);
 
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
-    console.log('[Info] Puppeteer browser launched');
+    log('Puppeteer browser launched');
 
     const page = await browser.newPage();
     await page.setContent(wrappedHtml, { waitUntil: 'networkidle0' });
-    console.log('[Info] HTML content set on Puppeteer page');
+    log('HTML content set on Puppeteer page');
 
-    if (isPreview) {
-      const buffer = await page.pdf({ format: 'A4', printBackground: true });
-      await browser.close();
-      console.log('[Info] PDF buffer generated for preview');
+    await page.pdf({
+      path: pdfPath,
+      format: 'A4',
+      printBackground: true,
+    });
+    log('PDF successfully generated');
 
-      const base64 = buffer.toString('base64');
-      console.log('[Info] Sending PDF preview response');
-      return res.json({ preview: base64 });
-    }
-
-    // Normal full PDF generation logic
-    const pdfDir = './pdfs';
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-      console.log('[Info] PDF directory created:', pdfDir);
-    }
-
-    const pdfPath = path.join(pdfDir, `generated_pdf_${Date.now()}.pdf`);
-    console.log('[Info] PDF path:', pdfPath);
-
-    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
     await browser.close();
-    console.log('[Info] PDF file saved and browser closed');
+    log('Puppeteer browser closed');
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-    console.log('[Info] PDF parsed for page count:', pageCount);
+    log('PDF parsed for page count:', pageCount);
 
     if (user.usageCount + pageCount > user.maxUsage) {
       fs.unlinkSync(pdfPath);
-      console.log('[Error] Usage limit exceeded, PDF deleted');
+      log('Usage limit exceeded, PDF deleted');
       return res.status(403).json({
         error: "Monthly usage limit reached. Upgrade to premium for more pages.",
       });
@@ -187,22 +178,21 @@ router.post('/generate-pdf-from-html', authenticate, async (req, res) => {
 
     user.usageCount += pageCount;
     await user.save();
-    console.log('[Info] User usage count updated:', user.usageCount);
+    log('User usage count updated:', user.usageCount);
 
     res.download(pdfPath, (err) => {
       if (err) {
-        console.log('[Error] Error during PDF download:', err);
+        log('Error during PDF download:', err);
       } else {
         fs.unlinkSync(pdfPath);
-        console.log('[Info] PDF sent and deleted from server');
+        log('PDF sent and deleted from server');
       }
     });
 
   } catch (error) {
-    console.log('[Error] Unhandled error in PDF generation route:', error);
+    log('Unhandled error in PDF generation route:', error);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
-
 
 module.exports = router;

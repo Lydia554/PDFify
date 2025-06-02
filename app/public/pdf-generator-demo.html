@@ -392,7 +392,6 @@ async function sendRequest(isPreview = false) {
 
   let payload;
 
-  // Check if parsedData has html property to decide payload structure
   if (parsedData && typeof parsedData === 'object') {
     if ('html' in parsedData) {
       // When HTML content is provided
@@ -401,13 +400,13 @@ async function sendRequest(isPreview = false) {
         isPreview
       };
     } else if ('data' in parsedData) {
-      // When there is a data property
+     
       payload = {
         ...parsedData,
         isPreview
       };
     } else {
-      // Otherwise wrap parsedData as data
+      
       payload = {
         data: parsedData,
         isPreview
