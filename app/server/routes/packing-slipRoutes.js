@@ -208,6 +208,7 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Apply user restrictions for non-premium users
     if (!user.isPremium) {
       data.customLogoUrl = null;
       data.showExtras = false;
@@ -215,6 +216,7 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
 
     const safeOrderId = data.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
+
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
@@ -225,22 +227,11 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    const page = await browser.newPage();
 
+    const page = await browser.newPage();
     const html = generatePackingSlipHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
-
-    if (isPreview) {
-      // Generate PDF buffer in memory (no file saved)
-      const buffer = await page.pdf({ format: "A4", printBackground: true });
-      await browser.close();
-
-      // Return base64 preview (you can also send directly with PDF headers if preferred)
-      const base64 = buffer.toString("base64");
-      return res.json({ preview: base64 });
-    }
-
-    // Not preview: save file, count usage, then download
+    
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
@@ -248,16 +239,20 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({
-        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-      });
+    if (!isPreview) {
+      // Check usage limit for non-preview requests
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
     }
 
-    user.usageCount += pageCount;
-    await user.save();
-
+    // Send PDF for both preview and normal download
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
@@ -269,6 +264,7 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 
 module.exports = router;
