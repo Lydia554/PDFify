@@ -162,12 +162,12 @@ router.post("/generate-pdf-from-html", authenticate, async (req, res) => {
       await user.save();
     }
 
-    // Send PDF file for both preview and full generation
+  
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
       }
-      // Clean up PDF file after sending
+     
       if (fs.existsSync(pdfPath)) {
         fs.unlinkSync(pdfPath);
       }

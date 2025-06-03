@@ -42,9 +42,8 @@ router.get('/check-access', authenticate, async (req, res) => {
   }
 });
 
-
 router.post('/generate', authenticate, async (req, res) => {
-  const { template, ...formData } = req.body;
+  const { template, isPreview, ...formData } = req.body;
   const templateConfig = templates[template];
 
   if (!templateConfig) {
@@ -59,15 +58,13 @@ router.post('/generate', authenticate, async (req, res) => {
 
     let isPremium = user.plan === 'premium';
 
-    // Uncomment this line to simulate premium access during local development:
-    // isPremium = true;
-
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
     const generateHtml = templateConfig.fn(isPremium);
 
+    // Parse invoice items if present
     if (typeof formData.items === 'string') {
       const rows = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean);
       formData.items = rows.map(row => {
@@ -80,15 +77,15 @@ router.post('/generate', authenticate, async (req, res) => {
       });
     }
 
+    // Parse ingredients and instructions
+    if (typeof formData.ingredients === 'string') {
+      formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+    }
+    if (typeof formData.instructions === 'string') {
+      formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+    }
 
-if (typeof formData.ingredients === 'string') {
-  formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
-}
-if (typeof formData.instructions === 'string') {
-  formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
-}
     const html = generateHtml(formData);
-   
 
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) {
@@ -107,24 +104,30 @@ if (typeof formData.instructions === 'string') {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({
-        error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
-      });
+    if (!isPreview) {
+      // Only check and increment usage if not a preview
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
     }
 
-    user.usageCount += pageCount;
-    await user.save();
-
+    // Send the file for both preview and real downloads
     res.download(pdfPath, (err) => {
       if (err) console.error('Error sending file:', err);
-      fs.unlinkSync(pdfPath);
+      fs.unlinkSync(pdfPath); // always clean up
     });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
 
 module.exports = router;
