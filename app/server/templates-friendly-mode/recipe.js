@@ -124,6 +124,8 @@ function generateBasicRecipeHtml(data) {
       .footer a {
         color: #0073e6;
         text-decoration: none;
+        font-size: 11px;
+
       }
 
       .footer a:hover {
