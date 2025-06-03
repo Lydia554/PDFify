@@ -44,29 +44,22 @@ router.get('/check-access', authenticate, async (req, res) => {
 
 router.post('/generate', authenticate, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
-  console.log("🚀 PDF generation started");
-  console.log("📋 Template:", template);
-  console.log("👀 isPreview:", isPreview);
 
   const templateConfig = templates[template];
 
   if (!templateConfig) {
-    console.log("❌ Invalid template");
     return res.status(400).json({ error: 'Invalid template' });
   }
 
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
-      console.log("❌ User not found");
       return res.status(404).json({ error: 'User not found' });
     }
 
     let isPremium = user.plan === 'premium';
-    console.log("⭐ User isPremium:", isPremium);
 
     if (templateConfig.premiumOnly && !isPremium) {
-      console.log("❌ Access denied: premium-only template");
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
@@ -110,13 +103,8 @@ router.post('/generate', authenticate, async (req, res) => {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    console.log("📄 PDF page count:", pageCount);
-    console.log("📊 Current usage:", user.usageCount);
-    console.log("📈 Max usage:", user.maxUsage);
-
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
-        console.log("❌ Usage limit exceeded");
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
           error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
@@ -125,21 +113,16 @@ router.post('/generate', authenticate, async (req, res) => {
 
       user.usageCount += pageCount;
       await user.save();
-      console.log("✅ Usage updated. New usage count:", user.usageCount);
     } else {
-      console.log("👻 Preview mode – usage not incremented");
     }
 
     res.download(pdfPath, (err) => {
       if (err) {
-        console.error('❗ Error sending file:', err);
       }
       fs.unlinkSync(pdfPath);
-      console.log("🧹 Temp file cleaned up");
     });
 
   } catch (err) {
-    console.error('💥 Error during PDF generation:', err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });

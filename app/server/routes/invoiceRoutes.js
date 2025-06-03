@@ -295,24 +295,17 @@ return `
 
 router.post("/generate-invoice", authenticate, async (req, res) => {
   try {
-    
     let { data, isPreview } = req.body;
-  
     if (!data || typeof data !== "object") {
-     
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
     let invoiceData = { ...data }; 
    
-
-   
     if (typeof invoiceData.items === "string") {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
-       
-      } catch (err) {
-       
+      } catch (err) { 
         invoiceData.items = [];
       }
     }
@@ -320,12 +313,10 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
 
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
-     
     }
  
     const user = await User.findById(req.user.userId);
     if (!user) {
-      
       return res.status(404).json({ error: "User not found" });
     }
 
@@ -380,14 +371,12 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       await user.save();
     } else {
       
-    }
+     }
 
 
     res.download(pdfPath, (err) => {
       if (err) {
-      
       } else {
-      
       }
       fs.unlinkSync(pdfPath);
     });
