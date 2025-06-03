@@ -1,5 +1,4 @@
-function generateBasicRecipeHtml(data) { 
-
+function generateBasicRecipeHtml(data) {
   return `
   <html>
   <head>
@@ -7,31 +6,39 @@ function generateBasicRecipeHtml(data) {
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;700&family=Open+Sans&display=swap');
 
-      body, html {
+      html, body {
         margin: 0;
         padding: 0;
+        height: 100%;
         background: #fff;
         font-family: 'Open Sans', 'Merriweather', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         color: #333;
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
       }
 
       /* Watermark */
-body::before {
-  content: "Food Trek";
-  position: fixed;
-  top: 40%;
-  left: 50%;
-  font-size: 6rem;
-  font-weight: 700;
-  color: #eee;
-  opacity: 0.05;
-  transform: translate(-50%, -50%) rotate(-30deg);
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
-  font-family: 'Playfair Display', serif;
-}
+      body::before {
+        content: "Food Trek";
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        font-size: 6rem;
+        font-weight: 700;
+        color: #eee;
+        opacity: 0.05;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        pointer-events: none;
+        user-select: none;
+        z-index: 0;
+        font-family: 'Playfair Display', serif;
+      }
 
+      .content {
+        flex: 1;
+        padding-bottom: 20px;
+      }
 
       .logo {
         display: block;
@@ -44,7 +51,7 @@ body::before {
         font-weight: 700;
         font-size: 2.8rem;
         color: #e65100;
-        margin: 20px auto 20px auto;
+        margin: 20px auto;
         border-bottom: 3px solid #ff7043;
         padding-bottom: 8px;
         max-width: 600px;
@@ -103,25 +110,26 @@ body::before {
       }
 
       .footer {
-  font-size: 11px !important;  /* FORCE font-size in PDF render */
-  background-color: #f9f9f9;
-  color: #444;
-  border-top: 1px solid #ccc;
-  text-align: center;
-  line-height: 1.6;
-  padding: 20px 10px;
-  margin-top: 50%; /* push it away from content */
-  page-break-inside: avoid;
-}
+        font-size: 11px !important;
+        background-color: #f9f9f9;
+        color: #444;
+        border-top: 1px solid #ccc;
+        text-align: center;
+        line-height: 1.6;
+        padding: 20px 10px;
+        margin-top: auto;
+        page-break-inside: avoid;
+      }
 
-.footer a {
-  color: #0073e6;
-  text-decoration: none;
-}
+      .footer a {
+        color: #0073e6;
+        text-decoration: none;
+      }
 
-.footer a:hover {
-  text-decoration: underline;
-}
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
       @media screen and (max-width: 600px) {
         h1 {
           font-size: 1.8rem;
@@ -149,62 +157,60 @@ body::before {
           margin-bottom: 20px;
         }
 
-           .footer {
-      font-size: 11px;
-      padding: 15px 10px;
-      line-height: 1.4;
-    }
+        .footer {
+          font-size: 11px !important;
+          padding: 15px 10px;
+          line-height: 1.4;
+        }
 
-    .footer p {
-      margin: 6px 0;
-    }
+        .footer p {
+          margin: 6px 0;
+        }
 
-    .footer a {
-      word-break: break-word;
-    }
+        .footer a {
+          word-break: break-word;
+        }
       }
     </style>
   </head>
   <body>
-    <img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Food Trek Logo" class="logo" />
-    <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
+    <div class="content">
+      <img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Food Trek Logo" class="logo" />
+      <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
 
-    ${
-      Array.isArray(data.imageUrls)
-        ? data.imageUrls.map(src => `<img src="${src}" alt="Recipe Image" class="recipe-img" />`).join('')
-        : ''
-    }
+      ${
+        Array.isArray(data.imageUrls)
+          ? data.imageUrls.map(src => `<img src="${src}" alt="Recipe Image" class="recipe-img" />`).join('')
+          : ''
+      }
 
-    <p><strong>⏰ Prep Time:</strong> ${data.prepTime ? `${data.prepTime} min` : 'N/A'}</p>
-    <p><strong>⏰ Cook Time:</strong> ${data.cookTime ? `${data.cookTime} min` : 'N/A'}</p>
+      <p><strong>⏰ Prep Time:</strong> ${data.prepTime ? `${data.prepTime} min` : 'N/A'}</p>
+      <p><strong>⏰ Cook Time:</strong> ${data.cookTime ? `${data.cookTime} min` : 'N/A'}</p>
 
-    <div class="section-title">Ingredients <span class="emoji">🔪🥩🍅</span></div>
-   <ul class="ingredients">
-  ${Array.isArray(data.ingredients)
-    ? data.ingredients.map(i => `<li>${i}</li>`).join('')
-    : '<li>No ingredients listed.</li>'
-  }
-</ul>
+      <div class="section-title">Ingredients <span class="emoji">🔪🥩🍅</span></div>
+      <ul class="ingredients">
+        ${Array.isArray(data.ingredients)
+          ? data.ingredients.map(i => `<li>${i}</li>`).join('')
+          : '<li>No ingredients listed.</li>'}
+      </ul>
 
-    <div class="section-title">Instructions <span class="emoji">👩‍🍳🍳</span></div>
-   <ol class="instructions">
-  ${Array.isArray(data.instructions)
-    ? data.instructions.map(i => `<li>${i}</li>`).join('')
-    : '<li>No instructions available.</li>'
-  }
-</ol>
+      <div class="section-title">Instructions <span class="emoji">👩‍🍳🍳</span></div>
+      <ol class="instructions">
+        ${Array.isArray(data.instructions)
+          ? data.instructions.map(i => `<li>${i}</li>`).join('')
+          : '<li>No instructions available.</li>'}
+      </ol>
+    </div>
 
-
- <div class="footer">
-  <p>Thanks for using our service!</p>
-  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
-  <p>
-    Generated using <strong>PDFify</strong>. Visit 
-    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-  </p>
-</div>
-
+    <div class="footer">
+      <p>Thanks for using our service!</p>
+      <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+      <p>
+        Generated using <strong>PDFify</strong>. Visit
+        <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+      </p>
+    </div>
   </body>
   </html>
   `;

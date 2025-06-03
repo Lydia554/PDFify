@@ -53,7 +53,7 @@ function generateInvoiceHtml(data) {
   text-align: center;
   line-height: 1.6;
   padding: 20px 10px;
-  margin-top: 50%; /* push it away from content */
+  margin-top: auto; /* push it away from content */
   page-break-inside: avoid;
 }
 
