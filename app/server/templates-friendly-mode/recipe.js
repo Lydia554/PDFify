@@ -103,7 +103,7 @@ body::before {
       }
 
       .footer {
-    position: static;
+    position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
