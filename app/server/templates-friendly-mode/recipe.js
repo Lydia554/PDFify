@@ -103,21 +103,22 @@ body::before {
       }
 
       .footer {
+    position: static;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
     font-size: 11px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
     text-align: center;
-    color: #555;
-    padding: 20px 10px;
-    border-top: 1px solid #ddd;
-    margin-top: 40px;
-    line-height: 1.5;
-    word-wrap: break-word;
+    line-height: 1.6;
   }
-
   .footer a {
-    color: #0077cc;
+    color: #0073e6;
     text-decoration: none;
   }
-
   .footer a:hover {
     text-decoration: underline;
   }
