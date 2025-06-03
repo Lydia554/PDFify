@@ -95,14 +95,13 @@ function generateInvoiceHtml(data) {
     }
 
         .footer {
-      font-size: 11px;
+      font-size: 9px;
       padding: 15px 10px;
       line-height: 1.4;
     }
 
     .footer p {
       margin: 6px 0;
-      font-size: 11px;
     }
 
     .footer a {
