@@ -103,26 +103,25 @@ body::before {
       }
 
       .footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 20px;
-    font-size: 11px;
-    background-color: #f9f9f9;
-    color: #444;
-    border-top: 1px solid #ccc;
-    text-align: center;
-    line-height: 1.6;
-  }
-  .footer a {
-    color: #0073e6;
-    text-decoration: none;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
+  font-size: 11px !important;  /* FORCE font-size in PDF render */
+  background-color: #f9f9f9;
+  color: #444;
+  border-top: 1px solid #ccc;
+  text-align: center;
+  line-height: 1.6;
+  padding: 20px 10px;
+  margin-top: 50%; /* push it away from content */
+  page-break-inside: avoid;
+}
 
+.footer a {
+  color: #0073e6;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
       @media screen and (max-width: 600px) {
         h1 {
           font-size: 1.8rem;
