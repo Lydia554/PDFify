@@ -115,8 +115,8 @@ body::before {
 }
 
 
-footer p {
-  font-size: 10px 
+.footer p {
+  font-size: 11px 
 }
 
 .footer a {
