@@ -42,27 +42,31 @@ router.get('/check-access', authenticate, async (req, res) => {
   }
 });
 
-
 router.post('/generate', authenticate, async (req, res) => {
-  const { template, ...formData } = req.body;
+  const { template, isPreview, ...formData } = req.body;
+  console.log("🚀 PDF generation started");
+  console.log("📋 Template:", template);
+  console.log("👀 isPreview:", isPreview);
+
   const templateConfig = templates[template];
 
   if (!templateConfig) {
+    console.log("❌ Invalid template");
     return res.status(400).json({ error: 'Invalid template' });
   }
 
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
+      console.log("❌ User not found");
       return res.status(404).json({ error: 'User not found' });
     }
 
     let isPremium = user.plan === 'premium';
-
-    // Uncomment this line to simulate premium access during local development:
-    // isPremium = true;
+    console.log("⭐ User isPremium:", isPremium);
 
     if (templateConfig.premiumOnly && !isPremium) {
+      console.log("❌ Access denied: premium-only template");
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
@@ -80,15 +84,14 @@ router.post('/generate', authenticate, async (req, res) => {
       });
     }
 
+    if (typeof formData.ingredients === 'string') {
+      formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+    }
+    if (typeof formData.instructions === 'string') {
+      formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+    }
 
-if (typeof formData.ingredients === 'string') {
-  formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
-}
-if (typeof formData.instructions === 'string') {
-  formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
-}
     const html = generateHtml(formData);
-   
 
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) {
@@ -107,24 +110,39 @@ if (typeof formData.instructions === 'string') {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({
-        error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
-      });
+    console.log("📄 PDF page count:", pageCount);
+    console.log("📊 Current usage:", user.usageCount);
+    console.log("📈 Max usage:", user.maxUsage);
+
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        console.log("❌ Usage limit exceeded");
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
+      console.log("✅ Usage updated. New usage count:", user.usageCount);
+    } else {
+      console.log("👻 Preview mode – usage not incremented");
     }
 
-    user.usageCount += pageCount;
-    await user.save();
-
     res.download(pdfPath, (err) => {
-      if (err) console.error('Error sending file:', err);
+      if (err) {
+        console.error('❗ Error sending file:', err);
+      }
       fs.unlinkSync(pdfPath);
+      console.log("🧹 Temp file cleaned up");
     });
+
   } catch (err) {
-    console.error(err);
+    console.error('💥 Error during PDF generation:', err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
 
 module.exports = router;
