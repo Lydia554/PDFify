@@ -175,7 +175,7 @@ return `
       }
 
       .footer {
-        position: absolute;
+        position: static;
         max-width: 800px;
         margin: 40px auto 10px auto;
         padding: 10px 20px;
@@ -370,7 +370,7 @@ router.post("/generate-invoice", authenticate, async (req, res) => {
       user.usageCount += pageCount;
       await user.save();
     } else {
-
+      
      }
 
 

@@ -45,27 +45,32 @@ function generateInvoiceHtml(data) {
         border-bottom: 2px solid #42a5f5;
         padding-bottom: 4px;
       }
+.footer {
+  font-size: 11px !important;  /* FORCE font-size in PDF render */
+  background-color: #f9f9f9;
+  color: #444;
+  border-top: 1px solid #ccc;
+  text-align: center;
+  line-height: 1.6;
+  padding: 20px 10px;
+  margin-top: 60px; /* push it away from content */
+  page-break-inside: avoid;
+}
 
-        .footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 20px;
-    font-size: 11px;
-    background-color: #f9f9f9;
-    color: #444;
-    border-top: 1px solid #ccc;
-    text-align: center;
-    line-height: 1.6;
-  }
-  .footer a {
-    color: #0073e6;
-    text-decoration: none;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
+.footer a {
+  color: #0073e6;
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
+.footer p {
+  margin: 6px 0;
+  font-size: 11px !important;
+  line-height: 1.5;
+}
 
  /* MOBILE STYLES */
   @media screen and (max-width: 600px) {
