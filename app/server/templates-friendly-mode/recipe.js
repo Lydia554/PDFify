@@ -108,7 +108,7 @@ body::before {
     left: 0;
     right: 0;
     padding: 20px;
-    font-size: 12px;
+    font-size: 11px;
     background-color: #f9f9f9;
     color: #444;
     border-top: 1px solid #ccc;
