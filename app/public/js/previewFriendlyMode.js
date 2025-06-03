@@ -57,6 +57,7 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
     const payload = await getFriendlyFormData();
   
     payload.template = selectedTemplate;
+    payload.isPreview = true;
   
     
     if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
