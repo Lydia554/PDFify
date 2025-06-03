@@ -116,11 +116,9 @@ body::before {
 
 
 footer p {
-  margin: 6px 0;
-  font-size: 11px !important;
-  line-height: 1.5;
+  font-size: 10px 
 }
-  
+
 .footer a {
   color: #0073e6;
   text-decoration: none;
