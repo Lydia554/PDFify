@@ -22,19 +22,19 @@
       </nav>
     </div>
   </header>
-  
+
   <main class="max-w-6xl mx-auto px-6 py-12">
     <div class="flex justify-center mb-8">
       <button id="developerBtn" class="px-4 py-2 rounded-l-md bg-purple-700 text-white hover:bg-purple-800">Developer Mode</button>
       <button id="friendlyBtn" class="px-4 py-2 rounded-r-md bg-purple-200 text-gray-800 hover:bg-purple-500">Friendly Mode</button>
     </div>
-  
+
     <div id="developerSection">
       <h2 class="text-3xl font-bold mb-4">API Integration Guide (Developer Mode)</h2>
       <p class="text-lg mb-6">
         Learn how to use our PDF Generator API. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs from your data.
       </p>
-  
+
       <section class="mb-10">
         <h3 class="text-2xl font-semibold mb-2 text-purple-700">🛍️ What Can You Do With It?</h3>
         <ul class="list-disc pl-6 text-base space-y-1">
@@ -44,7 +44,6 @@
           <li>Design custom PDFs for gift cards or marketing inserts</li>
         </ul>
       </section>
-      
       <section class="mb-10">
         <h3 class="text-2xl font-semibold mb-2 text-purple-700">⚙️ How It Works</h3>
         <ol class="list-decimal pl-6 text-base space-y-4">
@@ -68,24 +67,28 @@
             <strong>Each successful POST that returns a PDF counts toward your usage.</strong>
           </li>
         </ol> 
+          <div class="mt-10 bg-white p-6 rounded-lg shadow border border-gray-300">
+        <h3 class="text-xl font-semibold mb-3">📢 Note for Developers: Handling the PDF Response</h3>
+        <p class="mb-2 text-gray-700">
+          Our API returns the full PDF file data immediately in the response. Your application is responsible for processing this data to download or save the PDF file.
+        </p>
+        <p class="mb-2 text-gray-700">
+          <strong>In Postman:</strong> After making the POST request, switch to the <code>Body</code> tab of the response, click <em>Save Response</em> (floppy disk icon), and save the file with a <code>.pdf</code> extension.
+        </p>
+        <p class="mb-2 text-gray-700">
+          <strong>In your code:</strong> Handle the API response as a binary <code>Blob</code> (JavaScript) or save the raw response stream to disk (server-side), then trigger a file download or store the PDF as needed.
+        </p>
+        <p class="text-gray-600 text-sm">
+          This approach gives you full control over how and when the PDF is saved or shown to your users.
+        </p>
+      </div>
   
-        <div class="mt-10 bg-white p-6 rounded-lg shadow border border-gray-300">
-          <h3 class="text-xl font-semibold mb-3">📢 Note for Developers: Handling the PDF Response</h3>
-          <p class="mb-2 text-gray-700">
-            Our API returns the full PDF file data immediately in the response. Your application is responsible for processing this data to download or save the PDF file.
-          </p>
-          <p class="mb-2 text-gray-700">
-            <strong>In Postman:</strong> After making the POST request, switch to the <code>Body</code> tab of the response, click <em>Save Response</em> (floppy disk icon), and save the file with a <code>.pdf</code> extension.
-          </p>
-          <p class="mb-2 text-gray-700">
-            <strong>In your code:</strong> Handle the API response as a binary <code>Blob</code> (JavaScript) or save the raw response stream to disk (server-side), then trigger a file download or store the PDF as needed.
-          </p>
-          <p class="text-gray-600 text-sm">
-            This approach gives you full control over how and when the PDF is saved or shown to your users.
-          </p>
-        </div>
       </section>
+
   
+     
+   
+     
       <section class="mb-10">
         <h3 class="text-2xl font-semibold mb-2 text-purple-700">🔐 Developer Premium Benefits</h3>
         <ul class="list-disc pl-6 text-base space-y-1">
@@ -95,144 +98,161 @@
         </ul>
       </section>
   
-      <!-- Developer Mode Previews -->
-      <section>
-        <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Developer Mode)</h3>
-        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-  
-          <!-- Shop Order -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-            <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Shop-Order.jpg" class="rounded zoomable" alt="Shop Order" />
-            <a href="/demo/Shop Order.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Shop Order</h4>
-          </div>
-  
-          <!-- Therapy Report -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-            <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-  
-            <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
-              <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded zoomable" alt="Therapy Report" />
-              <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded zoomable hidden" alt="Therapy Report" />
-            </div>
-  
-            <a href="/demo/Therapy Report.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-  
-            <h4 class="font-semibold mt-2">Therapy Report</h4>
-          </div>
-  
-          <!-- Packing Slip -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-            <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Packing Slip.jpg" class="rounded zoomable" alt="Packing Slip" />
-            <a href="/demo/Packing Slip.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Packing Slip</h4>
-          </div>
-  
-          <!-- Invoice -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-            <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-  
-            <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
-              <img src="/demo/Invoice-Basic.jpg" class="rounded zoomable" alt="Invoice" />
-            </div>
-  
-            <a href="/preview/invoice.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-  
-            <h4 class="font-semibold mt-2">Invoice</h4>
-          </div>
-  
-          <!-- Recipe -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
-            <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Recipe-Preview.png" class="rounded zoomable" alt="Recipe" />
-            <a href="/preview/premium-recipe.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Recipe (Premium)</h4>
-          </div>
-  
-          <!-- Raw HTML -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
-            <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-            <img src="/demo/Raw-HTML.png" class="rounded zoomable" alt="Raw HTML" />
-            <a href="/demo/Raw HTML.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Raw HTML (Premium)</h4>
-          </div>
-  
+
+     <!-- Developer Mode Previews -->
+     <section>
+    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Developer Mode)</h3>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+
+      <!-- Shop Order (single image) -->
+      <div class="relative border p-4 rounded-lg shadow bg-white">
+        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+        <img src="/demo/Shop-Order.jpg" class="rounded zoomable" alt="Shop Order" />
+        <a href="/demo/Shop Order.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+          📄 Preview PDF
+        </a>
+        <h4 class="font-semibold mt-2">Shop Order</h4>
+      </div>
+
+      <!-- Therapy Report (two images with toggle) -->
+      <div class="relative border p-4 rounded-lg shadow bg-white">
+        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+
+        <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
+          <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded zoomable" alt="Therapy Report" />
+          <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded zoomable hidden" alt="Therapy Report" />
         </div>
-      </section>
+
+        <a href="/demo/Therapy Report.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+          📄 Preview PDF
+        </a>
+
+        <h4 class="font-semibold mt-2">Therapy Report</h4>
+      </div>
+
+      <!-- Packing Slip (single image) -->
+      <div class="relative border p-4 rounded-lg shadow bg-white">
+        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+        <img src="/demo/Packing Slip.jpg" class="rounded zoomable" alt="Packing Slip" />
+        <a href="/demo/Packing Slip.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+          📄 Preview PDF
+        </a>
+        <h4 class="font-semibold mt-2">Packing Slip</h4>
+      </div>
+
+      <!-- Invoice (two images with toggle) -->
+      <div class="relative border p-4 rounded-lg shadow bg-white">
+        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+
+        <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
+          <img src="/demo/Invoice-Basic.jpg" class="rounded zoomable" alt="Invoice" />
+        </div>
+
+        <a href="/preview/invoice.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+          📄 Preview PDF
+        </a>
+
+        <h4 class="font-semibold mt-2">Invoice</h4>
+      </div>
+
+      <!-- Recipe (single image, Premium badge) -->
+      <div class="relative border p-4 rounded-lg shadow bg-white">
+        <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
+        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+        <img src="/demo/Recipe-Large.jpg" class="rounded zoomable" alt="Recipe" />
+        <a href="/demo/Recipe.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+          📄 Preview PDF
+        </a>
+        <h4 class="font-semibold mt-2">Recipe</h4>
+      </div>
+
+      <!-- Raw HTML (single image) -->
+      <div class="relative border p-4 rounded-lg shadow bg-white">
+        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+        <img src="/demo/RawHTML-Large-1.jpg" class="rounded zoomable" alt="Raw HTML" />
+        <a href="/demo/Raw HTML.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+          📄 Preview PDF
+        </a>
+        <h4 class="font-semibold mt-2">Raw HTML</h4>
+      </div>
+
     </div>
-  
+
+    <p class="mt-4 text-sm text-gray-600 italic">
+      Note: In Developer Mode, all templates are accessible with the ability to customize or remove logos and charts as you want.
+    </p>
+  </section>
+    </div>
+    
+
+
+
+    <!-- Friendly Mode Section -->
     <div id="friendlySection" class="hidden">
-      <h2 class="text-3xl font-bold mb-4">Friendly Mode — User-Friendly Templates</h2>
-      <p class="mb-6">Use easy forms and visual previews to generate PDFs without writing JSON or HTML.</p>
-  
-      <!-- Friendly Mode previews, simpler and with basic/premium tags -->
-  
-      <section>
-        <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Friendly Mode)</h3>
-        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-  
-          <!-- Invoice -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-            <img src="/demo/Invoice-Basic.jpg" class="rounded zoomable" alt="Invoice" />
-            <a href="/preview/invoice.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Invoice</h4>
-          </div>
-  
-          <!-- Shop Order -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-            <img src="/demo/Shop-Order.jpg" class="rounded zoomable" alt="Shop Order" />
-            <a href="/demo/Shop Order.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Shop Order</h4>
-          </div>
-  
-          <!-- Packing Slip -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-            <img src="/demo/Packing Slip.jpg" class="rounded zoomable" alt="Packing Slip" />
-            <a href="/demo/Packing Slip.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Packing Slip</h4>
-          </div>
-  
-          <!-- Recipe -->
-          <div class="relative border p-4 rounded-lg shadow bg-white">
-            <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
-            <img src="/demo/Recipe-Preview.png" class="rounded zoomable" alt="Recipe" />
-            <a href="/preview/premium-recipe.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-              📄 Preview PDF
-            </a>
-            <h4 class="font-semibold mt-2">Recipe (Premium)</h4>
-          </div>
-  
+      <h2 class="text-3xl font-bold mb-4">PDF Templates (Friendly Mode)</h2>
+      <p class="text-lg mb-6">Choose a PDF layout that fits your needs. Visual previews help you pick your favorite. Premium templates require an upgrade.</p>
+
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <img src="/demo/Shop-Order.jpg" class="rounded" alt="Shop Order" />
+          <h4 class="font-semibold mt-2">Shop Order</h4>
         </div>
-      </section>
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-purple-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Premium</span>
+          <img src="/demo/Recipe-Large.jpg" class="rounded" alt="Recipe" />
+          <h4 class="font-semibold mt-2">Recipe</h4>
+        </div>
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <img src="/demo/Packing Slip.jpg" class="rounded" alt="Packing Slip" />
+          <h4 class="font-semibold mt-2">Packing Slip</h4>
+        </div>
+      </div>
+
+      <div class="mt-10 text-sm text-gray-600">
+        <p><strong>Note:</strong> Basic templates are available to all users. Premium templates are available to upgraded accounts and offer advanced styles, layout enhancements, and branding options.</p>
+        
+      </div>
+    </div>
+
+
+<!-- Mode Toggle Buttons -->
+<div id="modeToggleContainer" class="my-8">
+  <div class="flex flex-col items-center">
+    <div class="flex rounded-lg overflow-hidden border border-gray-300">
+      <button id="userModeBtn" class="px-6 py-2 bg-blue-600 text-white rounded-l-lg shadow hover:bg-blue-700 transition-all duration-300">🧑 For Everyone</button>
+      <button id="devModeBtn" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-r-lg shadow hover:bg-gray-300 transition-all duration-300">💻 For Developers</button>
+    </div>
+    
+  </div>
+</div>
+    
+
+  <!-- Friendly Mode Section -->
+  <section id="userSection" class="py-16 max-w-4xl mx-auto text-center px-4">
+    <h2 class="text-2xl font-bold mb-4">Generate Beautiful PDFs Without Writing a Single Line of Code</h2>
+    <p class="text-lg mb-6">
+      Select a template, fill out a simple form, and download a polished PDF in seconds. Whether it's a recipe, invoice, or report—no coding or formatting required.
+    </p>
+
+    <div class="grid gap-10 sm:grid-cols-2">
+
+    
+      <div class="bg-white p-6 rounded-lg shadow hover:shadow-lg transition">
+        <h3 class="text-xl font-semibold mb-2">🧾 Invoice</h3>
+        <p class="mb-4">Create professional invoices suitable for printing and emailing.</p>
+        <img src="/demo/invoice-thumbnail.jpg" alt="Invoice Preview" class="rounded shadow mb-3" />
+        <a href="/demo/Invoice-Basic.pdf" class="text-blue-600 hover:underline">Download PDF</a>
+      </div>
+
+    </div>
+  </section>
 
     
   <section>
@@ -654,189 +674,151 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-pdf-from-h
   </footer>
 
   <script>
-    // Elements for user/dev mode toggle
+ 
     const userModeBtn = document.getElementById('userModeBtn');
     const devModeBtn = document.getElementById('devModeBtn');
     const userSection = document.getElementById('userSection');
     const devCodeSections = document.querySelectorAll('.dev-only');
     const devSubTabs = document.getElementById('devSubTabs');
-    const devModeOnlyEls = document.querySelectorAll('.dev-mode-only');
-  
-    // Elements for developer/friendly mode toggle
-    const developerBtn = document.getElementById('developerBtn');
-    const friendlyBtn = document.getElementById('friendlyBtn');
-    const developerSection = document.getElementById('developerSection');
-    const friendlySection = document.getElementById('friendlySection');
-  
-    // User mode button click handler
+
     userModeBtn.addEventListener('click', () => {
-      userSection.classList.remove('hidden');
+  userSection.classList.remove('hidden');
+
+  devCodeSections.forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.dev-mode-only').forEach(el => el.classList.add('hidden'));
+
+  devSubTabs.classList.add('hidden');
+
+  userModeBtn.classList.add('bg-blue-600', 'text-white');
+  userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+
+  devModeBtn.classList.remove('bg-blue-600', 'text-white');
+  devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+});
+
+devModeBtn.addEventListener('click', () => {
+  userSection.classList.add('hidden');
+
+  devCodeSections.forEach(el => el.classList.remove('hidden'));
+  document.querySelectorAll('.dev-mode-only').forEach(el => el.classList.remove('hidden'));
+
+  devSubTabs.classList.remove('hidden');
+
+  devModeBtn.classList.add('bg-blue-600', 'text-white');
+  devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+
+  userModeBtn.classList.remove('bg-blue-600', 'text-white');
+  userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+});
+
   
-      devCodeSections.forEach(el => el.classList.add('hidden'));
-      devModeOnlyEls.forEach(el => el.classList.add('hidden'));
-  
-      devSubTabs.classList.add('hidden');
-  
-      userModeBtn.classList.add('bg-blue-600', 'text-white');
-      userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  
-      devModeBtn.classList.remove('bg-blue-600', 'text-white');
-      devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-    });
-  
-    // Developer mode button click handler
-    devModeBtn.addEventListener('click', () => {
-      userSection.classList.add('hidden');
-  
-      devCodeSections.forEach(el => el.classList.remove('hidden'));
-      devModeOnlyEls.forEach(el => el.classList.remove('hidden'));
-  
-      devSubTabs.classList.remove('hidden');
-  
-      devModeBtn.classList.add('bg-blue-600', 'text-white');
-      devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  
-      userModeBtn.classList.remove('bg-blue-600', 'text-white');
-      userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-    });
-  
-    // Developer / Friendly toggle handlers
-    developerBtn.addEventListener('click', () => {
-      developerSection.classList.remove('hidden');
-      friendlySection.classList.add('hidden');
-  
-      developerBtn.classList.add('bg-purple-700', 'text-white');
-      developerBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  
-      friendlyBtn.classList.add('bg-gray-200', 'text-gray-800');
-      friendlyBtn.classList.remove('bg-purple-700', 'text-white');
-    });
-  
-    friendlyBtn.addEventListener('click', () => {
-      friendlySection.classList.remove('hidden');
-      developerSection.classList.add('hidden');
-  
-      friendlyBtn.classList.add('bg-purple-700', 'text-white');
-      friendlyBtn.classList.remove('bg-gray-200', 'text-gray-800');
-  
-      developerBtn.classList.add('bg-gray-200', 'text-gray-800');
-      developerBtn.classList.remove('bg-purple-700', 'text-white');
-    });
-  
-    // Initialize state
-    userModeBtn.click();
-    developerBtn.click();
-  
-    // Snippet toggle buttons inside each code snippet container
+
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
-      toggleGroup.addEventListener('click', event => {
+      toggleGroup.addEventListener('click', (event) => {
         const clickedBtn = event.target;
         if (!clickedBtn.classList.contains('toggle-btn')) return;
   
-        // Remove active class from all buttons in group
+  
         toggleGroup.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
   
-        // Add active class to clicked button
+
         clickedBtn.classList.add('active');
   
         const targetId = clickedBtn.getAttribute('data-target');
         if (!targetId) return;
   
+     
         const snippetContainer = toggleGroup.closest('.mb-10');
         if (!snippetContainer) return;
   
-        // Hide all code snippets
-        snippetContainer.querySelectorAll('pre').forEach(pre => (pre.style.display = 'none'));
+     
+        snippetContainer.querySelectorAll('pre').forEach(pre => pre.style.display = 'none');
   
-        // Show selected snippet
+    
         const targetSnippet = snippetContainer.querySelector('#' + targetId);
         if (targetSnippet) targetSnippet.style.display = 'block';
       });
     });
   
-    // Image toggle function used for developer mode image previews (if needed)
-    function toggleImage(container) {
-      const images = container.querySelectorAll('img');
-      images.forEach(img => img.classList.toggle('hidden'));
-    }
-  </script>
   
+    userModeBtn.click();
+
+    const developerBtn = document.getElementById('developerBtn');
+    const friendlyBtn = document.getElementById('friendlyBtn');
+    const developerSection = document.getElementById('developerSection');
+    const friendlySection = document.getElementById('friendlySection');
+
+    developerBtn.addEventListener('click', () => {
+      developerBtn.classList.add('bg-purple-700', 'text-white');
+      developerBtn.classList.remove('bg-gray-200', 'text-gray-800');
+      friendlyBtn.classList.add('bg-gray-200', 'text-gray-800');
+      friendlyBtn.classList.remove('bg-purple-700', 'text-white');
+
+      developerSection.classList.remove('hidden');
+      friendlySection.classList.add('hidden');
+    });
+
+    friendlyBtn.addEventListener('click', () => {
+      friendlyBtn.classList.add('bg-purple-700', 'text-white');
+      friendlyBtn.classList.remove('bg-gray-200', 'text-gray-800');
+      developerBtn.classList.add('bg-gray-200', 'text-gray-800');
+      developerBtn.classList.remove('bg-purple-700', 'text-white');
+
+      friendlySection.classList.remove('hidden');
+      developerSection.classList.add('hidden');
+    });
+
+   
+    developerSection.classList.remove('hidden');
+    friendlySection.classList.add('hidden');
+
+  
+  function toggleImage(container) {
+    const images = container.querySelectorAll('img');
+    images.forEach(img => img.classList.toggle('hidden'));
+  }
+
+
+  </script>
 </body>
 </html>
 
 
 
-<style>
-  /* Buttons common styles */
-  button {
+
+
+  <style>
+
+
+
+  /* Hover zoom effect */
+  img.zoomable {
+    transition: transform 0.3s ease;
     cursor: pointer;
-    transition: background-color 0.3s ease, color 0.3s ease;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
-    font-weight: 600;
   }
-
-  /* User / Dev mode buttons */
-  #userModeBtn, #devModeBtn {
-    margin-right: 0.5rem;
+  img.zoomable:hover {
+    transform: scale(1.30);
   }
-
-  /* Developer / Friendly buttons */
-  #developerBtn, #friendlyBtn {
-    margin-right: 0.5rem;
-  }
-
-  /* Active states with smooth color transitions */
-  .bg-blue-600 {
-    background-color: #2563eb; /* blue-600 */
-  }
-  .bg-purple-700 {
-    background-color: #6b21a8; /* purple-700 */
-  }
-  .bg-gray-200 {
-    background-color: #e5e7eb; /* gray-200 */
-  }
-  .text-white {
-    color: #fff;
-  }
-  .text-gray-800 {
-    color: #1f2937; /* gray-800 */
-  }
-
-  /* Hide with fade out */
   .hidden {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-    height: 0;
-    overflow: hidden;
+    display: none;
+  }
+  /* Ensure image container doesn't stretch */
+  .image-toggle-container img {
+    width: 100%;
+    height: auto;
   }
 
-  /* Show with fade in */
-  .fade-in {
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    height: auto !important;
-    transition: opacity 0.4s ease;
-  }
 
-  /* For code snippet toggling */
-  pre {
-    transition: opacity 0.3s ease;
-  }
 
-  /* Toggle buttons container */
-  .toggle-buttons {
-    margin-bottom: 1rem;
-  }
 
-  /* Toggle button active */
-  .toggle-btn.active {
-    font-weight: 700;
-    border-bottom: 2px solid currentColor;
-  }
-</style>
+
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
 </body>
 </html>
 
