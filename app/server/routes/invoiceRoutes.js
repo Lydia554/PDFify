@@ -142,7 +142,7 @@ return `
       .chart-container h2 {
         font-size: 20px;
         color: #2a3d66;
-        margin-bottom: 10px;
+        margin-bottom: 105x;
       }
 
       @media (max-width: 768px) {
