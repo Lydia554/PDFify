@@ -137,6 +137,8 @@ return `
         border: 1px solid #e0e4ec;
         border-radius: 12px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        break-inside: avoid;
+  page-break-inside: avoid;
       }
 
       .chart-container h2 {
@@ -268,8 +270,11 @@ return `
       ${data.showChart ? `
         <div class="chart-container">
           <h2>Breakdown</h2>
-        <img src="https://quickchart.io/chart?c={type:'pie',data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}]}}" alt="Invoice Breakdown" style="max-width:200px;display:block;margin:auto;" />
-
+          <img src="https://quickchart.io/chart?c={
+            type:'pie',
+            data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
+            ]}
+          }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
         </div>
       ` : ''}
     </div>
