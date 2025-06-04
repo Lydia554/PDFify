@@ -654,112 +654,112 @@ curl -X POST "https://pdf-api.portfolio.lidija-jokic.com/api/generate-pdf-from-h
   </footer>
 
   <script>
-     const userModeBtn = document.getElementById('userModeBtn');
-  const devModeBtn = document.getElementById('devModeBtn');
-  const userSection = document.getElementById('userSection');
-  const devCodeSections = document.querySelectorAll('.dev-only');
-  const devSubTabs = document.getElementById('devSubTabs');
-  const devModeOnlyEls = document.querySelectorAll('.dev-mode-only');
-
-  const developerBtn = document.getElementById('developerBtn');
-  const friendlyBtn = document.getElementById('friendlyBtn');
-  const developerSection = document.getElementById('developerSection');
-  const friendlySection = document.getElementById('friendlySection');
-
-  // Helper to toggle visibility with fade animation
-  function showWithFade(el) {
-    el.classList.remove('hidden');
-    // Force reflow for transition to trigger
-    void el.offsetWidth;
-    el.classList.add('fade-in');
-  }
-  function hideWithFade(el) {
-    el.classList.remove('fade-in');
-    el.classList.add('hidden');
-  }
-
-  userModeBtn.addEventListener('click', () => {
-    showWithFade(userSection);
-
-    devCodeSections.forEach(el => hideWithFade(el));
-    devModeOnlyEls.forEach(el => hideWithFade(el));
-
-    hideWithFade(devSubTabs);
-
-    userModeBtn.classList.add('bg-blue-600', 'text-white');
-    userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
-
-    devModeBtn.classList.remove('bg-blue-600', 'text-white');
-    devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-  });
-
-  devModeBtn.addEventListener('click', () => {
-    hideWithFade(userSection);
-
-    devCodeSections.forEach(el => showWithFade(el));
-    devModeOnlyEls.forEach(el => showWithFade(el));
-
-    showWithFade(devSubTabs);
-
-    devModeBtn.classList.add('bg-blue-600', 'text-white');
-    devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
-
-    userModeBtn.classList.remove('bg-blue-600', 'text-white');
-    userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
-  });
-
-  developerBtn.addEventListener('click', () => {
-    showWithFade(developerSection);
-    hideWithFade(friendlySection);
-
-    developerBtn.classList.add('bg-purple-700', 'text-white');
-    developerBtn.classList.remove('bg-gray-200', 'text-gray-800');
-
-    friendlyBtn.classList.add('bg-gray-200', 'text-gray-800');
-    friendlyBtn.classList.remove('bg-purple-700', 'text-white');
-  });
-
-  friendlyBtn.addEventListener('click', () => {
-    showWithFade(friendlySection);
-    hideWithFade(developerSection);
-
-    friendlyBtn.classList.add('bg-purple-700', 'text-white');
-    friendlyBtn.classList.remove('bg-gray-200', 'text-gray-800');
-
-    developerBtn.classList.add('bg-gray-200', 'text-gray-800');
-    developerBtn.classList.remove('bg-purple-700', 'text-white');
-  });
-
-  // Initialize with user mode and developer section active
-  userModeBtn.click();
-  developerBtn.click();
-
-  document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
-    toggleGroup.addEventListener('click', event => {
-      const clickedBtn = event.target;
-      if (!clickedBtn.classList.contains('toggle-btn')) return;
-
-      toggleGroup.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
-      clickedBtn.classList.add('active');
-
-      const targetId = clickedBtn.getAttribute('data-target');
-      if (!targetId) return;
-
-      const snippetContainer = toggleGroup.closest('.mb-10');
-      if (!snippetContainer) return;
-
-      snippetContainer.querySelectorAll('pre').forEach(pre => (pre.style.display = 'none'));
-
-      const targetSnippet = snippetContainer.querySelector('#' + targetId);
-      if (targetSnippet) targetSnippet.style.display = 'block';
+    // Elements for user/dev mode toggle
+    const userModeBtn = document.getElementById('userModeBtn');
+    const devModeBtn = document.getElementById('devModeBtn');
+    const userSection = document.getElementById('userSection');
+    const devCodeSections = document.querySelectorAll('.dev-only');
+    const devSubTabs = document.getElementById('devSubTabs');
+    const devModeOnlyEls = document.querySelectorAll('.dev-mode-only');
+  
+    // Elements for developer/friendly mode toggle
+    const developerBtn = document.getElementById('developerBtn');
+    const friendlyBtn = document.getElementById('friendlyBtn');
+    const developerSection = document.getElementById('developerSection');
+    const friendlySection = document.getElementById('friendlySection');
+  
+    // User mode button click handler
+    userModeBtn.addEventListener('click', () => {
+      userSection.classList.remove('hidden');
+  
+      devCodeSections.forEach(el => el.classList.add('hidden'));
+      devModeOnlyEls.forEach(el => el.classList.add('hidden'));
+  
+      devSubTabs.classList.add('hidden');
+  
+      userModeBtn.classList.add('bg-blue-600', 'text-white');
+      userModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+      devModeBtn.classList.remove('bg-blue-600', 'text-white');
+      devModeBtn.classList.add('bg-gray-200', 'text-gray-800');
     });
-  });
-
-  // Optional helper if you want to toggle images (e.g., for previews)
-  function toggleImage(container) {
-    container.querySelectorAll('img').forEach(img => img.classList.toggle('hidden'));
-  }
-</script>
+  
+    // Developer mode button click handler
+    devModeBtn.addEventListener('click', () => {
+      userSection.classList.add('hidden');
+  
+      devCodeSections.forEach(el => el.classList.remove('hidden'));
+      devModeOnlyEls.forEach(el => el.classList.remove('hidden'));
+  
+      devSubTabs.classList.remove('hidden');
+  
+      devModeBtn.classList.add('bg-blue-600', 'text-white');
+      devModeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+      userModeBtn.classList.remove('bg-blue-600', 'text-white');
+      userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
+    });
+  
+    // Developer / Friendly toggle handlers
+    developerBtn.addEventListener('click', () => {
+      developerSection.classList.remove('hidden');
+      friendlySection.classList.add('hidden');
+  
+      developerBtn.classList.add('bg-purple-700', 'text-white');
+      developerBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+      friendlyBtn.classList.add('bg-gray-200', 'text-gray-800');
+      friendlyBtn.classList.remove('bg-purple-700', 'text-white');
+    });
+  
+    friendlyBtn.addEventListener('click', () => {
+      friendlySection.classList.remove('hidden');
+      developerSection.classList.add('hidden');
+  
+      friendlyBtn.classList.add('bg-purple-700', 'text-white');
+      friendlyBtn.classList.remove('bg-gray-200', 'text-gray-800');
+  
+      developerBtn.classList.add('bg-gray-200', 'text-gray-800');
+      developerBtn.classList.remove('bg-purple-700', 'text-white');
+    });
+  
+    // Initialize state
+    userModeBtn.click();
+    developerBtn.click();
+  
+    // Snippet toggle buttons inside each code snippet container
+    document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
+      toggleGroup.addEventListener('click', event => {
+        const clickedBtn = event.target;
+        if (!clickedBtn.classList.contains('toggle-btn')) return;
+  
+        // Remove active class from all buttons in group
+        toggleGroup.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+  
+        // Add active class to clicked button
+        clickedBtn.classList.add('active');
+  
+        const targetId = clickedBtn.getAttribute('data-target');
+        if (!targetId) return;
+  
+        const snippetContainer = toggleGroup.closest('.mb-10');
+        if (!snippetContainer) return;
+  
+        // Hide all code snippets
+        snippetContainer.querySelectorAll('pre').forEach(pre => (pre.style.display = 'none'));
+  
+        // Show selected snippet
+        const targetSnippet = snippetContainer.querySelector('#' + targetId);
+        if (targetSnippet) targetSnippet.style.display = 'block';
+      });
+    });
+  
+    // Image toggle function used for developer mode image previews (if needed)
+    function toggleImage(container) {
+      const images = container.querySelectorAll('img');
+      images.forEach(img => img.classList.toggle('hidden'));
+    }
+  </script>
   
 </body>
 </html>
