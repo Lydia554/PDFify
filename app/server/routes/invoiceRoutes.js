@@ -274,7 +274,7 @@ return `
             type:'pie',
             data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
             ]}
-          }" alt="Invoice Breakdown" style="max-width:300px;display:block;margin:auto;" />
+          }" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
         </div>
       ` : ''}
     </div>
