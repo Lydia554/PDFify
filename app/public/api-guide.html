@@ -181,6 +181,99 @@
         <h4 class="font-semibold mt-2">Raw HTML</h4>
       </div>
 
+      
+
+
+
+
+
+      <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Premium-Developer Mode)</h3>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+  
+        <!-- Shop Order (single image) -->
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+          <img src="/demo/Shop-Order.jpg" class="rounded zoomable" alt="Shop Order" />
+          <a href="/demo/Shop Order.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+            📄 Preview PDF
+          </a>
+          <h4 class="font-semibold mt-2">Shop Order</h4>
+        </div>
+  
+        <!-- Therapy Report (two images with toggle) -->
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+  
+          <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
+            <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded zoomable" alt="Therapy Report" />
+            <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded zoomable hidden" alt="Therapy Report" />
+          </div>
+  
+          <a href="/demo/Therapy Report.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+            📄 Preview PDF
+          </a>
+  
+          <h4 class="font-semibold mt-2">Therapy Report</h4>
+        </div>
+  
+        <!-- Packing Slip (single image) -->
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+          <img src="/demo/Packing Slip.jpg" class="rounded zoomable" alt="Packing Slip" />
+          <a href="/demo/Packing Slip.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+            📄 Preview PDF
+          </a>
+          <h4 class="font-semibold mt-2">Packing Slip</h4>
+        </div>
+  
+        <!-- Invoice (two images with toggle) -->
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+  
+          <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
+            <img src="/demo/Invoice-Basic.jpg" class="rounded zoomable" alt="Invoice" />
+          </div>
+  
+          <a href="/preview/invoice.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
+            📄 Preview PDF
+          </a>
+  
+          <h4 class="font-semibold mt-2">Invoice</h4>
+        </div>
+  
+        <!-- Recipe (single image, Basic badge) -->
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+          <img src="/demo/Recipe-Large.jpg" class="rounded zoomable" alt="Recipe" />
+          <a href="/demo/Recipe.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+            📄 Preview PDF
+          </a>
+          <h4 class="font-semibold mt-2">Recipe</h4>
+        </div>
+  
+        <!-- Raw HTML (single image) -->
+        <div class="relative border p-4 rounded-lg shadow bg-white">
+          <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
+          <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
+          <img src="/demo/RawHTML-Large-1.jpg" class="rounded zoomable" alt="Raw HTML" />
+          <a href="/demo/Raw HTML.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
+            📄 Preview PDF
+          </a>
+          <h4 class="font-semibold mt-2">Raw HTML</h4>
+        </div>
+
+
+
+
+
+
+
+
     </div>
 
     <p class="mt-4 text-sm text-gray-600 italic">
@@ -188,175 +281,6 @@
     </p>
   </section>
     </div>
-
-     <section>
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Basic-Developer Mode)</h3>
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
-      <!-- Shop Order (single image) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/Shop-Order.jpg" class="rounded zoomable" alt="Shop Order" />
-        <a href="/demo/Shop Order.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Shop Order</h4>
-      </div>
-
-      <!-- Therapy Report (two images with toggle) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-
-        <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
-          <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded zoomable" alt="Therapy Report" />
-          <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded zoomable hidden" alt="Therapy Report" />
-        </div>
-
-        <a href="/demo/Therapy Report.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-
-        <h4 class="font-semibold mt-2">Therapy Report</h4>
-      </div>
-
-      <!-- Packing Slip (single image) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/Packing Slip.jpg" class="rounded zoomable" alt="Packing Slip" />
-        <a href="/demo/Packing Slip.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Packing Slip</h4>
-      </div>
-
-      <!-- Invoice (two images with toggle) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-
-        <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
-          <img src="/demo/Invoice-Basic.jpg" class="rounded zoomable" alt="Invoice" />
-        </div>
-
-        <a href="/preview/invoice.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-
-        <h4 class="font-semibold mt-2">Invoice</h4>
-      </div>
-
-      <!-- Recipe (single image, Basic badge) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/Recipe-Large.jpg" class="rounded zoomable" alt="Recipe" />
-        <a href="/demo/Recipe.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Recipe</h4>
-      </div>
-
-      <!-- Raw HTML (single image) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/RawHTML-Large-1.jpg" class="rounded zoomable" alt="Raw HTML" />
-        <a href="/demo/Raw HTML.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Raw HTML</h4>
-      </div>
-
-    </div>
-
-
-    <h3 class="text-2xl font-semibold mb-4 text-purple-700">📄 PDF Templates (Premium-Developer Mode)</h3>
-    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-
-      <!-- Shop Order (single image) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/Shop-Order.jpg" class="rounded zoomable" alt="Shop Order" />
-        <a href="/demo/Shop Order.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Shop Order</h4>
-      </div>
-
-      <!-- Therapy Report (two images with toggle) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-
-        <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
-          <img src="/demo/Therapy-Report-Large-1.jpg" class="rounded zoomable" alt="Therapy Report" />
-          <img src="/demo/Therapy-Report-Large-2.jpg" class="rounded zoomable hidden" alt="Therapy Report" />
-        </div>
-
-        <a href="/demo/Therapy Report.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-
-        <h4 class="font-semibold mt-2">Therapy Report</h4>
-      </div>
-
-      <!-- Packing Slip (single image) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/Packing Slip.jpg" class="rounded zoomable" alt="Packing Slip" />
-        <a href="/demo/Packing Slip.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Packing Slip</h4>
-      </div>
-
-      <!-- Invoice (two images with toggle) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-
-        <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
-          <img src="/demo/Invoice-Basic.jpg" class="rounded zoomable" alt="Invoice" />
-        </div>
-
-        <a href="/preview/invoice.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-
-        <h4 class="font-semibold mt-2">Invoice</h4>
-      </div>
-
-      <!-- Recipe (single image, Basic badge) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/Recipe-Large.jpg" class="rounded zoomable" alt="Recipe" />
-        <a href="/demo/Recipe.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Recipe</h4>
-      </div>
-
-      <!-- Raw HTML (single image) -->
-      <div class="relative border p-4 rounded-lg shadow bg-white">
-        <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
-        <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
-        <img src="/demo/RawHTML-Large-1.jpg" class="rounded zoomable" alt="Raw HTML" />
-        <a href="/demo/Raw HTML.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mt-2 text-purple-700 hover:underline font-semibold text-sm">
-          📄 Preview PDF
-        </a>
-        <h4 class="font-semibold mt-2">Raw HTML</h4>
-      </div>
-
-    <p class="mt-4 text-sm text-gray-600 italic">
-      Note: In Developer Mode, all templates are accessible with the ability to customize or remove logos and charts as you want.
-    </p>
-  </section>
     
 
 
