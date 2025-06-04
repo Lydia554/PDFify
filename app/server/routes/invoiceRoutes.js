@@ -131,7 +131,7 @@ return `
 
       .chart-container {
         text-align: center;
-        margin: 20px 0 10px;
+        margin: 40px 0 20px;
         padding: 20px;
         background-color: #fdfdff;
         border: 1px solid #e0e4ec;
