@@ -2,11 +2,12 @@ const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
-
-const router = express.Router();
-
 const ShopConfig = require("../models/ShopConfig");
-const { generateInvoiceHTML } = require("./invoiceRoutes"); 
+const { generateInvoiceHTML } = require("./routes/invoiceRoutes");
+
+
+ 
+const router = express.Router();
 router.post("/shopify-invoice", async (req, res) => {
     try {
       let { shopDomain, orderData, isPreview } = req.body;
