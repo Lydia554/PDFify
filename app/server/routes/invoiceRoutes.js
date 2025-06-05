@@ -7,7 +7,6 @@ const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
-
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
@@ -385,59 +384,6 @@ user.isPremium = true;
     });
   } catch (error) {
     res.status(500).json({ error: "PDF generation failed" });
-  }
-});
-
-router.post('/shopify-invoice', async (req, res) => {
-  try {
-    const shopifyOrder = req.body;
-
-    // Map Shopify order data to your existing template variables
-    const data = {
-      customerName: shopifyOrder.customer ? `${shopifyOrder.customer.first_name} ${shopifyOrder.customer.last_name}` : 'Customer',
-      orderId: shopifyOrder.id || 'N/A',
-      date: new Date(shopifyOrder.created_at).toLocaleDateString() || 'N/A',
-      customerEmail: shopifyOrder.email || (shopifyOrder.customer && shopifyOrder.customer.email) || 'N/A',
-      subtotal: (shopifyOrder.current_subtotal_price || '0.00') + ' €',
-      tax: (shopifyOrder.total_tax || '0.00') + ' €',
-      total: (shopifyOrder.current_total_price || '0.00') + ' €',
-      showChart: true
-    };
-
-    // Convert Shopify line items to your invoice items
-    const items = (shopifyOrder.line_items || []).map(item => ({
-      name: item.name,
-      quantity: item.quantity,
-      price: item.price + ' €',
-      total: (item.quantity * parseFloat(item.price)).toFixed(2) + ' €'
-    }));
-
-
-    const html = generateInvoiceHTML(data, items); 
-
-    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-    const page = await browser.newPage();
-
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
-    });
-
-    await browser.close();
-
-    res.set({
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename=invoice-${data.orderId}.pdf`,
-      'Content-Length': pdfBuffer.length
-    });
-    res.send(pdfBuffer);
-
-  } catch (error) {
-    console.error('Error generating Shopify invoice PDF:', error);
-    res.status(500).json({ error: 'Failed to generate PDF' });
   }
 });
 
