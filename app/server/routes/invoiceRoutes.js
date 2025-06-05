@@ -389,62 +389,15 @@ user.isPremium = true;
 });
 
 
-
 router.post("/shopify/invoice", async (req, res) => {
   console.log("➡️ /shopify/invoice route hit");
+
+  // Send a valid PDF buffer (even minimal one)
+  const dummyPdf = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\nxref\n0 1\n0000000000 65535 f \ntrailer\n<<>>\nstartxref\n0\n%%EOF");
+
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "inline; filename=invoice.pdf");
-  try {
-    const { shop, order } = req.body;
-
-    if (!shop || !order) {
-      return res.status(400).json({ error: "Missing shop or order data" });
-    }
-
-    // Look up shop-specific configuration
-    const config = await ShopConfig.findOne({ shopDomain: shop });
-
-    const invoiceData = {
-      orderId: order.id,
-      customerName: order.customer?.first_name + " " + order.customer?.last_name,
-      customerEmail: order.email,
-      date: new Date(order.created_at).toLocaleDateString(),
-      items: order.line_items.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        price: `${item.price}€`,
-        total: `${(item.quantity * item.price).toFixed(2)}€`
-      })),
-      subtotal: `${order.subtotal_price}€`,
-      tax: `${order.total_tax}€`,
-      total: `${order.total_price}€`,
-      // Inject per-shop config (if exists)
-      ...(config?.toObject() || {})
-    };
-
-    // Generate HTML and PDF
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-    const page = await browser.newPage();
-
-    const html = generateInvoiceHTML(invoiceData);
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    const pdfBuffer = await page.pdf({ format: "A4" });
-    await browser.close();
-
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": "attachment; filename=invoice.pdf"
-    });
-    res.send(pdfBuffer);
-  } catch (error) {
-    console.error("Shopify invoice error:", error);
-    res.status(500).json({ error: "PDF generation failed" });
-  }
+  res.setHeader("Content-Disposition", "inline; filename=test.pdf");
+  res.send(dummyPdf);
 });
-
 
 module.exports = router;
