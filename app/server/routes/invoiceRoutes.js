@@ -436,7 +436,7 @@ router.post("/shopify/invoice", async (req, res) => {
       "Content-Type": "application/pdf",
       "Content-Disposition": "attachment; filename=invoice.pdf"
     });
-    res.send(pdfBuffer);
+    res.send("Test route works");
   } catch (error) {
     console.error("Shopify invoice error:", error);
     res.status(500).json({ error: "PDF generation failed" });
