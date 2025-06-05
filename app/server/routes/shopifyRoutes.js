@@ -263,6 +263,15 @@ router.post('/invoice', async (req, res) => {
     console.error(err.stack);
     res.status(500).send('Failed to generate invoice');
   }
+
+  page.on('pageerror', error => {
+    console.error('Page error:', error.message);
+  });
+  page.on('requestfailed', request => {
+    console.error('Request failed:', request.url(), request.failure().errorText);
+  });
+
+
 });
 
 module.exports = router;
