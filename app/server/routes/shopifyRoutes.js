@@ -8,12 +8,11 @@ router.post('/invoice', async (req, res) => {
     const data = req.body;
 
     const shopDomain = data.shopDomain || ''; // Required for shop-specific config
-
-    const shopConfig = await ShopConfig.findOne({ shopDomain });
-
+    const shopConfig = await ShopConfig.findOne({ shopDomain: data.shopDomain });
     if (!shopConfig) {
-      return res.status(404).send('Shop config not found');
+      return res.status(400).send("Invalid shop domain");
     }
+    
     const html = `
     <!DOCTYPE html>
     <html>
@@ -247,6 +246,9 @@ router.post('/invoice', async (req, res) => {
     </body>
     </html>
     `;
+
+    console.log("HTML length:", html.length);
+console.log("HTML preview:", html.substring(0, 300));
 
     const browser = await puppeteer.launch({
         args: ['--no-sandbox', '--disable-setuid-sandbox']
