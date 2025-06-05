@@ -388,94 +388,58 @@ user.isPremium = true;
   }
 });
 
-router.post("/generate-invoice", authenticate, async (req, res) => {
+router.post('/shopify-invoice', async (req, res) => {
   try {
-    let { data, isPreview } = req.body;
+    const shopifyOrder = req.body;
 
-    if (!data || typeof data !== "object") {
-      return res.status(400).json({ error: "Invalid or missing data" });
-    }
+    // Map Shopify order data to your existing template variables
+    const data = {
+      customerName: shopifyOrder.customer ? `${shopifyOrder.customer.first_name} ${shopifyOrder.customer.last_name}` : 'Customer',
+      orderId: shopifyOrder.id || 'N/A',
+      date: new Date(shopifyOrder.created_at).toLocaleDateString() || 'N/A',
+      customerEmail: shopifyOrder.email || (shopifyOrder.customer && shopifyOrder.customer.email) || 'N/A',
+      subtotal: (shopifyOrder.current_subtotal_price || '0.00') + ' €',
+      tax: (shopifyOrder.total_tax || '0.00') + ' €',
+      total: (shopifyOrder.current_total_price || '0.00') + ' €',
+      showChart: true
+    };
 
-    // Normalize items array if passed as JSON string
-    if (typeof data.items === "string") {
-      try {
-        data.items = JSON.parse(data.items);
-      } catch {
-        data.items = [];
-      }
-    }
+    // Convert Shopify line items to your invoice items
+    const items = (shopifyOrder.line_items || []).map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price + ' €',
+      total: (item.quantity * parseFloat(item.price)).toFixed(2) + ' €'
+    }));
 
-    if (!Array.isArray(data.items)) {
-      data.items = [];
-    }
 
-    // Find user and check premium status & usage limits
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    const html = generateInvoiceHTML(data, items); 
 
-    // For testing force premium (remove in production)
-    user.isPremium = true;
-
-    if (!user.isPremium) {
-      data.customLogoUrl = null;
-      data.showChart = false;
-    }
-
-    const safeOrderId = data.orderId || `preview-${Date.now()}`;
-
-    // Prepare PDF storage directory
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
-
-    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-
-    // Launch Puppeteer, render HTML and save PDF
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
 
-    const html = generateInvoiceHTML(data);
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
-    await browser.close();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
-    // Parse PDF to get page count for usage tracking
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-
-      user.usageCount += pageCount;
-      await user.save();
-    }
-
-    // Send PDF file to client and delete after sending
-    res.download(pdfPath, (err) => {
-      if (err) {
-        log("Error sending PDF:", err);
-      }
-      fs.unlinkSync(pdfPath);
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20px', bottom: '20px', left: '20px', right: '20px' }
     });
 
+    await browser.close();
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=invoice-${data.orderId}.pdf`,
+      'Content-Length': pdfBuffer.length
+    });
+    res.send(pdfBuffer);
+
   } catch (error) {
-    log("PDF generation error:", error);
-    res.status(500).json({ error: "PDF generation failed" });
+    console.error('Error generating Shopify invoice PDF:', error);
+    res.status(500).json({ error: 'Failed to generate PDF' });
   }
 });
-
 
 
 
