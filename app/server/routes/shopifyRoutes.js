@@ -239,6 +239,9 @@ router.post('/invoice', async (req, res) => {
     </html>
     `;
 
+    console.log(html);
+
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
