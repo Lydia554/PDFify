@@ -392,12 +392,20 @@ user.isPremium = true;
 router.post("/shopify/invoice", async (req, res) => {
   console.log("➡️ /shopify/invoice route hit");
 
-  // Send a valid PDF buffer (even minimal one)
-  const dummyPdf = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\nxref\n0 1\n0000000000 65535 f \ntrailer\n<<>>\nstartxref\n0\n%%EOF");
+  // Working valid minimal PDF
+  const dummyPdf = Buffer.from(
+    "JVBERi0xLjQKJcfsj6IKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFsgMyAwIFIgXSAKL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA2MDAgODAwXSAKL0NvbnRlbnRzIDQgMCBSIC9SZXNvdXJjZXMgPDwgPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAzMSA+PgpzdHJlYW0KQlQKL0YxIDI0IFRmCjEwMCA3MDAgVGQKKChIZWxsbyBQRkQpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDEwIDAwMDAwIG4gCjAwMDAwMDAwNzYgMDAwMDAgbiAKMDAwMDAwMDE1MSAwMDAwMCBuIAowMDAwMDAwMjYyIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1Jvb3QgMSAwIFIgL1NpemUgNSA+PgpzdGFydHhyZWYKMzEwCiUlRU9G",
+    "base64"
+  );
 
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "inline; filename=test.pdf");
-  res.send(dummyPdf);
+  res.writeHead(200, {
+    "Content-Type": "application/pdf",
+    "Content-Disposition": "inline; filename=test.pdf",
+    "Content-Length": dummyPdf.length,
+  });
+
+  res.end(dummyPdf);
 });
 
+// ✅ Closing the route function before exporting
 module.exports = router;
