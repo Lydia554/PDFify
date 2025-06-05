@@ -391,6 +391,9 @@ user.isPremium = true;
 
 
 router.post("/shopify/invoice", async (req, res) => {
+  console.log("➡️ /shopify/invoice route hit");
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", "inline; filename=invoice.pdf");
   try {
     const { shop, order } = req.body;
 
@@ -436,7 +439,7 @@ router.post("/shopify/invoice", async (req, res) => {
       "Content-Type": "application/pdf",
       "Content-Disposition": "attachment; filename=invoice.pdf"
     });
-    res.send("Test route works");
+    res.send(pdfBuffer);
   } catch (error) {
     console.error("Shopify invoice error:", error);
     res.status(500).json({ error: "PDF generation failed" });
