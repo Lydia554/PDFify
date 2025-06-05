@@ -247,13 +247,13 @@ router.post('/invoice', async (req, res) => {
     </html>
     `;
 
-    console.log("HTML length:", html.length);
-console.log("HTML preview:", html.substring(0, 300));
+  
 
-const browser = await puppeteer.launch({
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    headless: 'new',
-  });
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
   
       
     const page = await browser.newPage();
