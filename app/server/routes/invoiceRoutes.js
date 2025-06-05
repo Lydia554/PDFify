@@ -6,7 +6,7 @@ const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
-const ShopConfig = require("../models/ShopConfig");
+
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
