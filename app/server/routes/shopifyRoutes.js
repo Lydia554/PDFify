@@ -6,23 +6,39 @@ const ShopConfig = require('../models/ShopConfig');
 router.post('/invoice', async (req, res) => {
   try {
     const data = req.body;
-
-    const shopDomain = data.shopDomain || ''; // Required for shop-specific config
+    const shopDomain = data.shopDomain || '';
 
     const shopConfig = await ShopConfig.findOne({ shopDomain });
-
     if (!shopConfig) {
       return res.status(404).send('Shop config not found');
     }
+
+    // Build safe chart URL
+    const chartData = {
+      type: 'pie',
+      data: {
+        labels: ['Subtotal', 'Tax'],
+        datasets: [
+          {
+            data: [
+              parseFloat(data.subtotal.replace(/[^\d.]/g, '')) || 0,
+              parseFloat(data.tax.replace(/[^\d.]/g, '')) || 0
+            ]
+          }
+        ]
+      }
+    };
+    const chartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartData))}`;
+
+    // HTML template
     const html = `
     <!DOCTYPE html>
     <html>
     <head>
       <meta charset="UTF-8">
       <title>Invoice</title>
+      <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Playfair+Display&display=swap" rel="stylesheet">
       <style>
-       
-
         body {
           font-family: 'Open Sans', sans-serif;
           color: #333;
@@ -30,7 +46,6 @@ router.post('/invoice', async (req, res) => {
           margin: 0;
           padding: 0;
         }
-
         .container {
           max-width: 800px;
           margin: 20px auto;
@@ -40,16 +55,13 @@ router.post('/invoice', async (req, res) => {
           border-radius: 16px;
           border: 1px solid #e0e4ec;
         }
-
         .logo {
           width: 150px;
           margin-bottom: 20px;
         }
-
         .logo:empty {
           display: none;
         }
-
         h1 {
           font-family: 'Playfair Display', serif;
           font-size: 32px;
@@ -57,7 +69,6 @@ router.post('/invoice', async (req, res) => {
           text-align: center;
           margin: 20px 0;
         }
-
         .invoice-header {
           display: flex;
           justify-content: space-between;
@@ -66,51 +77,42 @@ router.post('/invoice', async (req, res) => {
           padding-bottom: 20px;
           margin-bottom: 30px;
         }
-
         .invoice-header .left,
         .invoice-header .right {
           font-size: 16px;
           line-height: 1.6;
         }
-
         .invoice-header .right {
           text-align: right;
           color: #777;
         }
-
         .table {
           width: 100%;
           border-collapse: collapse;
           margin-bottom: 20px;
         }
-
         .table th,
         .table td {
           padding: 14px;
           border: 1px solid #dee2ef;
           text-align: left;
         }
-
         .table th {
           background-color: #dbe7ff;
           color: #2a3d66;
           font-weight: 600;
         }
-
         .table td {
           color: #444;
           background-color: #fdfdff;
         }
-
         .table tr:nth-child(even) td {
           background-color: #f6f9fe;
         }
-
         .table tfoot td {
           background-color: #dbe7ff;
           font-weight: bold;
         }
-
         .total {
           text-align: right;
           font-size: 20px;
@@ -118,7 +120,6 @@ router.post('/invoice', async (req, res) => {
           color: #2a3d66;
           margin-top: 10px;
         }
-
         .chart-container {
           text-align: center;
           margin-top: 40px;
@@ -130,13 +131,11 @@ router.post('/invoice', async (req, res) => {
           break-inside: avoid;
           page-break-inside: avoid;
         }
-
         .chart-container h2 {
           font-size: 20px;
           color: #2a3d66;
           margin-bottom: 20px;
         }
-
         .footer {
           max-width: 800px;
           margin: 40px auto 10px auto;
@@ -148,17 +147,14 @@ router.post('/invoice', async (req, res) => {
           font-size: 11px;
           border-radius: 0 0 16px 16px;
         }
-
         .footer a {
           color: #4a69bd;
           text-decoration: none;
           word-break: break-word;
         }
-
         .footer a:hover {
           text-decoration: underline;
         }
-
         @media (max-width: 768px) {
           .container {
             padding: 20px;
@@ -226,11 +222,7 @@ router.post('/invoice', async (req, res) => {
         ${shopConfig?.showChart ? `
           <div class="chart-container">
             <h2>Invoice Breakdown</h2>
-            <img src="https://quickchart.io/chart?c={
-              type:'pie',
-              data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
-              ]}
-            }" style="max-width:500px;margin:auto;" />
+            <img src="${chartUrl}" style="max-width:500px;margin:auto;" />
           </div>
         ` : ''}
       </div>
@@ -247,15 +239,11 @@ router.post('/invoice', async (req, res) => {
     </html>
     `;
 
-  
-
-
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-  
-      
+
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
@@ -268,7 +256,8 @@ router.post('/invoice', async (req, res) => {
     });
     res.send(pdfBuffer);
   } catch (err) {
-    console.error('Invoice generation error:', err);
+    console.error('Invoice generation error:', err.message);
+    console.error(err.stack);
     res.status(500).send('Failed to generate invoice');
   }
 });
