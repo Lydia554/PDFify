@@ -8,11 +8,12 @@ router.post('/invoice', async (req, res) => {
     const data = req.body;
 
     const shopDomain = data.shopDomain || ''; // Required for shop-specific config
-    const shopConfig = await ShopConfig.findOne({ shopDomain: data.shopDomain });
+
+    const shopConfig = await ShopConfig.findOne({ shopDomain });
+
     if (!shopConfig) {
-      return res.status(400).send("Invalid shop domain");
+      return res.status(404).send('Shop config not found');
     }
-    
     const html = `
     <!DOCTYPE html>
     <html>
@@ -255,7 +256,10 @@ console.log("HTML preview:", html.substring(0, 300));
       });
       
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    await page.goto(`data:text/html;charset=UTF-8,${encodeURIComponent(html)}`, {
+        waitUntil: 'networkidle0',
+      });
+      
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
     await browser.close();
 
