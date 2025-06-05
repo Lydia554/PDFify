@@ -57,7 +57,17 @@ router.post("/shopify-invoice", async (req, res) => {
       if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
   
       const pdfPath = path.join(pdfDir, `Shopify_Invoice_${safeOrderId}.pdf`);
-      const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--single-process",
+          "--disable-gpu"
+        ],
+      });
+      
       const page = await browser.newPage();
   
       await page.setContent(html, { waitUntil: "networkidle0" });
