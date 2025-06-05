@@ -21,8 +21,7 @@ router.post('/invoice', async (req, res) => {
       <meta charset="UTF-8">
       <title>Invoice</title>
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
+       
 
         body {
           font-family: 'Open Sans', sans-serif;
@@ -256,10 +255,7 @@ console.log("HTML preview:", html.substring(0, 300));
       });
       
     const page = await browser.newPage();
-    await page.goto(`data:text/html;charset=UTF-8,${encodeURIComponent(html)}`, {
-        waitUntil: 'networkidle0',
-      });
-      
+    await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
     await browser.close();
 
