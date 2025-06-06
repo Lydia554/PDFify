@@ -97,7 +97,7 @@ function generateInvoiceHTML(invoiceData, isPremium) {
   }
 }
 
-
+ //const isPremium = user.isPremium && shopConfig?.isPremium;
 
  router.post("/shopify/invoice", authenticate, async (req, res) => {
   try {
@@ -118,10 +118,10 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
     const shopConfig = await ShopConfig.findOne({ shopDomain });
 
-
-     //const isPremium = user.isPremium && shopConfig?.isPremium;
     // 🔒 Force premium always
-    const isPremium = true;
+    const FORCE_PREMIUM = true;
+    const isPreview = req.query.preview === 'true';
+    const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
 
     const invoiceData = {
       shopName: shopConfig?.shopName || shopDomain || 'Unnamed Shop',
@@ -132,8 +132,8 @@ function generateInvoiceHTML(invoiceData, isPremium) {
         price: Number(item.price) || 0,
       })),
       total: Number(order.total_price) || 0,
-      showChart: shopConfig?.showChart,
-      customLogoUrl: shopConfig?.customLogoUrl || null,
+      showChart: isPremium && shopConfig?.showChart,
+      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
     };
 
     const safeOrderId = `shopify-${order.id}`;
@@ -156,8 +156,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-
-    const isPreview = req.query.preview === 'true';
 
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
@@ -189,5 +187,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
