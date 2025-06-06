@@ -1,4 +1,5 @@
-// save this as generateHmac.js
+// generateHmac.js
+require('dotenv').config(); // load .env
 
 const crypto = require('crypto');
 
@@ -11,6 +12,7 @@ const body = `{
     { "name": "Sample Product", "quantity": 1, "price": "19.99" }
   ]
 }`;
+
 const hmac = crypto.createHmac('sha256', secret).update(body, 'utf8').digest('base64');
 
 console.log('X-Shopify-Hmac-Sha256:', hmac);
