@@ -175,158 +175,158 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
  //const isPremium = user.isPremium && shopConfig?.isPremium;
 
- 
  router.post("/shopify/invoice", authenticate, async (req, res) => {
-   try {
-     const shopDomain = req.headers["x-shopify-shop-domain"];
-     console.log("Received shop domain:", shopDomain);
- 
-     if (!shopDomain) {
-       console.log("Error: Missing shop domain header");
-       return res.status(400).json({ error: "Missing shop domain" });
-     }
- 
-     const { orderId, shop, token } = req.body;
-     console.log("Request body:", req.body);
- 
-     if (!orderId || !shop || !token) {
-       console.log("Error: Missing orderId, shop, or token in request body");
-       return res.status(400).json({ error: "Invalid order payload" });
-     }
- 
-     // Check that shop in header matches shop in body
-     if (shopDomain !== shop) {
-       console.log(`Error: shopDomain header (${shopDomain}) does not match shop in body (${shop})`);
-       return res.status(400).json({ error: "Shop domain mismatch" });
-     }
- 
-     // Fetch order data from Shopify API
-     const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
-     console.log("Fetching order from Shopify:", shopifyOrderUrl);
-     console.log("Using Shopify token:", token);
- 
-     let orderResponse;
-     try {
-       orderResponse = await axios.get(shopifyOrderUrl, {
-         headers: {
-           "X-Shopify-Access-Token": token,
-           "Content-Type": "application/json",
-         },
-       });
-       console.log("Shopify order response status:", orderResponse.status);
-     } catch (err) {
-       console.error("Error fetching order from Shopify:", err.response?.data || err.message);
-       return res.status(500).json({ error: "Failed to fetch order from Shopify" });
-     }
- 
-     const order = orderResponse.data.order;
-     if (!order || !order.line_items) {
-       console.log("Error: Invalid order data received from Shopify");
-       return res.status(400).json({ error: "Invalid order data from Shopify" });
-     }
- 
-     // Find user from auth middleware
-     const user = await User.findById(req.user.userId);
-     if (!user) {
-       console.log("User not found with ID:", req.user.userId);
-       return res.status(404).json({ error: "User not found" });
-     }
-     console.log("Authenticated user:", user.email);
- 
-     // Find shop config for this shop
-     const shopConfig = await ShopConfig.findOne({ shopDomain });
-     console.log("Shop config found:", !!shopConfig);
- 
-     // Premium check
-     const FORCE_PREMIUM = true;
-     const isPreview = req.query.preview === 'true';
-     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
-     console.log("isPremium:", isPremium, "isPreview:", isPreview);
- 
-     // Prepare invoice data
-     const invoiceData = {
-       shopName: shopConfig?.shopName || shopDomain || 'Unnamed Shop',
-       date: new Date(order.created_at).toISOString().slice(0, 10),
-       items: order.line_items.map(item => ({
-         name: item.name,
-         quantity: item.quantity,
-         price: Number(item.price) || 0,
-       })),
-       total: Number(order.total_price) || 0,
-       showChart: isPremium && shopConfig?.showChart,
-       customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-     };
-     console.log("Invoice data prepared:", invoiceData);
- 
-     // PDF paths & filenames
-     const safeOrderId = `shopify-${order.id}`;
-     const pdfDir = path.join(__dirname, "../pdfs");
-     if (!fs.existsSync(pdfDir)) {
-       fs.mkdirSync(pdfDir);
-       console.log("Created PDF directory:", pdfDir);
-     }
- 
-     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-     console.log("PDF will be saved to:", pdfPath);
- 
-     // Launch puppeteer and generate PDF
-     const browser = await puppeteer.launch({
-       headless: true,
-       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-     });
-     const page = await browser.newPage();
- 
-     const html = generateInvoiceHTML(invoiceData, isPremium);
-     console.log("Generated invoice HTML");
- 
-     await page.setContent(html, { waitUntil: "networkidle0" });
-     await page.pdf({ path: pdfPath, format: "A4" });
-     console.log("PDF generated");
- 
-     await browser.close();
- 
-     // Read PDF file buffer
-     const pdfBuffer = fs.readFileSync(pdfPath);
-     const parsed = await pdfParse(pdfBuffer);
-     const pageCount = parsed.numpages;
-     console.log("PDF page count:", pageCount);
- 
-     if (!isPreview) {
-       if (user.usageCount + pageCount > user.maxUsage) {
-         fs.unlinkSync(pdfPath);
-         console.log("Usage limit reached. PDF deleted.");
-         return res.status(403).json({
-           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-         });
-       }
- 
-       user.usageCount += pageCount;
-       await user.save();
-       console.log("User usage count updated:", user.usageCount);
- 
-       res.set({
-         "Content-Type": "application/pdf",
-         "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}.pdf`,
-       });
-     } else {
-       res.set({
-         "Content-Type": "application/pdf",
-         "Content-Disposition": "inline",
-       });
-       console.log("Sending PDF inline preview");
-     }
- 
-     res.send(pdfBuffer);
- 
-     // Clean up - delete PDF file
-     fs.unlinkSync(pdfPath);
-     console.log("Temporary PDF file deleted");
- 
-   } catch (error) {
-     console.error("Shopify invoice generation error:", error);
-     res.status(500).json({ error: "PDF generation failed" });
-   }
- });
- 
- module.exports = router;
- 
+  try {
+    // Read shop domain and token from headers (not from body)
+    const shopDomain = req.headers["x-shopify-shop-domain"];
+    const token = req.headers["x-shopify-access-token"];
+    console.log("Received shop domain:", shopDomain);
+    console.log("Received Shopify access token:", token ? '***' : 'missing');
+
+    if (!shopDomain) {
+      console.log("Error: Missing shop domain header");
+      return res.status(400).json({ error: "Missing shop domain" });
+    }
+    if (!token) {
+      console.log("Error: Missing Shopify access token header");
+      return res.status(400).json({ error: "Missing Shopify access token" });
+    }
+
+    // Read orderId only from body
+    const { orderId } = req.body;
+    if (!orderId) {
+      console.log("Error: Missing orderId in request body");
+      return res.status(400).json({ error: "Missing orderId" });
+    }
+
+    // No more shop or token in body, so skip that validation here
+
+    // Fetch order data from Shopify API using headers for auth
+    const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
+    console.log("Fetching order from Shopify:", shopifyOrderUrl);
+
+    let orderResponse;
+    try {
+      orderResponse = await axios.get(shopifyOrderUrl, {
+        headers: {
+          "X-Shopify-Access-Token": token,
+          "Content-Type": "application/json",
+          // No Authorization Bearer needed here
+        },
+      });
+      console.log("Shopify order response status:", orderResponse.status);
+    } catch (err) {
+      console.error("Error fetching order from Shopify:", err.response?.data || err.message);
+      return res.status(500).json({ error: "Failed to fetch order from Shopify" });
+    }
+
+    const order = orderResponse.data.order;
+    if (!order || !order.line_items) {
+      console.log("Error: Invalid order data received from Shopify");
+      return res.status(400).json({ error: "Invalid order data from Shopify" });
+    }
+
+    // Find user from auth middleware
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      console.log("User not found with ID:", req.user.userId);
+      return res.status(404).json({ error: "User not found" });
+    }
+    console.log("Authenticated user:", user.email);
+
+    // Find shop config for this shop
+    const shopConfig = await ShopConfig.findOne({ shopDomain });
+    console.log("Shop config found:", !!shopConfig);
+
+    // Premium check
+    const FORCE_PREMIUM = true;
+    const isPreview = req.query.preview === 'true';
+    const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
+    console.log("isPremium:", isPremium, "isPreview:", isPreview);
+
+    // Prepare invoice data
+    const invoiceData = {
+      shopName: shopConfig?.shopName || shopDomain || 'Unnamed Shop',
+      date: new Date(order.created_at).toISOString().slice(0, 10),
+      items: order.line_items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: Number(item.price) || 0,
+      })),
+      total: Number(order.total_price) || 0,
+      showChart: isPremium && shopConfig?.showChart,
+      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+    };
+    console.log("Invoice data prepared:", invoiceData);
+
+    // PDF paths & filenames
+    const safeOrderId = `shopify-${order.id}`;
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir);
+      console.log("Created PDF directory:", pdfDir);
+    }
+
+    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
+    console.log("PDF will be saved to:", pdfPath);
+
+    // Launch puppeteer and generate PDF
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+    const page = await browser.newPage();
+
+    const html = generateInvoiceHTML(invoiceData, isPremium);
+    console.log("Generated invoice HTML");
+
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    await page.pdf({ path: pdfPath, format: "A4" });
+    console.log("PDF generated");
+
+    await browser.close();
+
+    // Read PDF file buffer
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
+    console.log("PDF page count:", pageCount);
+
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        console.log("Usage limit reached. PDF deleted.");
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
+      console.log("User usage count updated:", user.usageCount);
+
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}.pdf`,
+      });
+    } else {
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "inline",
+      });
+      console.log("Sending PDF inline preview");
+    }
+
+    res.send(pdfBuffer);
+
+    // Clean up - delete PDF file
+    fs.unlinkSync(pdfPath);
+    console.log("Temporary PDF file deleted");
+
+  } catch (error) {
+    console.error("Shopify invoice generation error:", error);
+    res.status(500).json({ error: "PDF generation failed" });
+  }
+});
+
+module.exports = router;
