@@ -30,9 +30,16 @@ const shopifyRoutes = require('./routes/shopifyRoutes');
 const app = express();
 
 
+app.use((req, res, next) => {
+  if (req.originalUrl.startsWith('/webhook')) {
+    next();
+  } else {
+    express.json()(req, res, next);
+  }
+})
 
+app.use('/webhook', shopifyRoutes);
 app.use(express.json({ limit: "10mb" }));
-app.use('/webhook/order-created', bodyParser.raw({ type: 'application/json' }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 
@@ -79,7 +86,7 @@ app.use("/api", foodTrekRoutes);
 app.use("/api", shopifyRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
-app.use('/webhook', shopifyRoutes);
+
 
 
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
