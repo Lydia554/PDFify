@@ -15,6 +15,7 @@ function generateInvoiceHTML(data) {
 }
 
 router.post("/shopify/invoice", async (req, res) => {
+  console.log("Request headers:", req.headers);
   try {
     const shopDomain = req.headers["x-shopify-shop-domain"];
     if (!shopDomain) {
