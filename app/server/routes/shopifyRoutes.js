@@ -9,6 +9,7 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate"); 
 const router = express.Router();
 const crypto = require('crypto');
+const bodyParser = require('body-parser');
 
 
 function verifyShopifyWebhook(req, res, buf) {
@@ -345,7 +346,7 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
-router.post('/webhook/order-created', async (req, res) => {
+router.post('/webhook/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   try {
     const rawBody = req.body;
     verifyShopifyWebhook(req, res, rawBody);
