@@ -11,18 +11,20 @@ const router = express.Router();
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
 
-function verifyShopifyWebhook(req, res, rawBody) {
-  const hmacHeader = req.headers['x-shopify-hmac-sha256'];
-  const generatedHmac = crypto
-    .createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET)
-    .update(rawBody, 'utf8')
+
+function verifyShopifyWebhook(req, res, buf) {
+  const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
+  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
+
+  const hash = crypto
+    .createHmac('sha256', secret)
+    .update(buf)
     .digest('base64');
 
-  if (!crypto.timingSafeEqual(Buffer.from(hmacHeader, 'utf8'), Buffer.from(generatedHmac, 'utf8'))) {
-    throw new Error('HMAC validation failed');
+  if (hash !== hmacHeader) {
+    throw new Error('Webhook HMAC validation failed');
   }
 }
-
 
 
 function generateInvoiceHTML(invoiceData, isPremium) {
@@ -343,32 +345,19 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
-
-
-
-
-
 router.post('/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   try {
     console.log('Webhook received');
 
-    const rawBody = req.body; // Buffer from raw parser
+    const rawBody = req.body;
+    console.log('Raw body length:', rawBody.length);
 
-    // Verify HMAC
-    try {
-      verifyShopifyWebhook(req, res, rawBody);
-      console.log('Shopify webhook verified successfully');
-    } catch (verifyError) {
-      console.error('HMAC verification failed:', verifyError.message);
-      return res.status(401).send('Unauthorized: HMAC verification failed');
-    }
+    verifyShopifyWebhook(req, res, rawBody);
+    console.log('Shopify webhook verified successfully');
 
-    // Parse the JSON payload safely
-    const order = JSON.parse(rawBody.toString('utf8'));
+    const order = JSON.parse(rawBody.toString());
     console.log('Parsed order:', { id: order.id, email: order.email || 'N/A' });
 
-
-    // Get shop domain from headers
     const shopDomain = req.headers['x-shopify-shop-domain'];
     console.log('Shop domain from headers:', shopDomain);
 
@@ -377,53 +366,37 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
       return res.status(400).send('Missing shop domain header');
     }
 
-    // Get token for shop from DB or store
+    // Optional: Get store token from DB (if you store tokens per shop)
     const token = await getTokenForShop(shopDomain);
-    console.log('Retrieved token for shop:', token ? '***token found***' : 'No token found');
+    console.log('Retrieved token for shop:', token ? '***' : 'No token found');
 
     if (!token) {
       console.error('No token found for shop:', shopDomain);
       return res.status(401).send('Unauthorized: missing token');
     }
 
-    // Call invoice generator API with orderId, shop domain and token headers
-    try {
-      const invoiceRes = await axios.post(
-        'https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',
-        { orderId: order.id }, // only sending orderId in body
-        {
-          headers: {
-            "x-shopify-shop-domain": shopDomain,
-            "x-shopify-access-token": token,
-          }
+    // Call your existing invoice generator (same as `/shopify/invoice`)
+    const invoiceRes = await axios.post(
+      'https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',
+      { orderId: order.id }, // only orderId in body
+      {
+        headers: {
+          "x-shopify-shop-domain": shopDomain,
+          "x-shopify-access-token": token,
         }
-      );
-
-      console.log('Invoice generator response status:', invoiceRes.status);
-      console.log('Invoice generator response data:', invoiceRes.data);
-      const pdfUrl = invoiceRes.data?.pdfUrl;
-      console.log('PDF Generated at:', pdfUrl);
-
-      return res.status(200).send('OK');
-    } catch (invoiceErr) {
-      console.error('Invoice generator call failed:', invoiceErr.message);
-      if (invoiceErr.response) {
-        console.error('Invoice generator error response data:', invoiceErr.response.data);
-        console.error('Invoice generator error response status:', invoiceErr.response.status);
-        console.error('Invoice generator error response headers:', invoiceErr.response.headers);
       }
-      return res.status(500).send('Invoice generation failed');
-    }
+    );
 
+    console.log('Invoice generator response status:', invoiceRes.status);
+    const pdfUrl = invoiceRes.data?.pdfUrl;
+    console.log('PDF Generated at:', pdfUrl);
+
+    res.status(200).send('OK');
   } catch (err) {
-    console.error('Webhook handler failed:', err.message);
-    if (err.response) {
-      console.error('Error response data:', err.response.data);
-      console.error('Error response status:', err.response.status);
-      console.error('Error response headers:', err.response.headers);
-    }
-    return res.status(500).send('Internal server error');
+    console.error('Webhook failed:', err.message);
+    res.status(401).send('Unauthorized or Error');
   }
 });
+
 
 module.exports = router;
