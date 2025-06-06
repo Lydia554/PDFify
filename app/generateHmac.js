@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const secret = 'a514125f3e4f3cbaac61103f1a05aed423b8c079b11d8d18f8faac1430589fd5'; // your actual secret
+const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
 const body = `{
   "id": 123456789,
   "email": "customer@example.com",
