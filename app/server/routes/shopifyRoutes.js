@@ -345,6 +345,10 @@ function generateInvoiceHTML(invoiceData, isPremium) {
   }
 });
 
+
+
+
+
 router.post(
   '/order-created',
   bodyParser.raw({ type: 'application/json' }),
@@ -362,7 +366,7 @@ router.post(
 
       // Compute HMAC on raw body with your secret key
       const computedHmac = crypto
-        .createHmac('sha256', SHOPIFY_SECRET)
+        .createHmac('sha256', SHOPIFY_WEBHOOK_SECRET)
         .update(rawBody, 'utf8') // Use raw bytes, 'utf8' works here with Buffer
         .digest('base64');
 
