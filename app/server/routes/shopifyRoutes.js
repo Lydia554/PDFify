@@ -16,7 +16,7 @@ const bodyParser = require('body-parser');
 function verifyShopifyWebhook(req, res, rawBody) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
 
-  const secret = process.env.SHOPIFY_SECRET; 
+  const secret = process.env.SHOPIFY_WEBHOOK_SECRET; 
 
   const hash = crypto
     .createHmac('sha256', secret)
