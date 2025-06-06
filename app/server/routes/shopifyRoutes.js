@@ -109,13 +109,16 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Invalid order payload" });
     }
 
+    
+
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
     const shopConfig = await ShopConfig.findOne({ shopDomain });
-    const isPremium = user.isPremium && shopConfig?.isPremium;
+    //const isPremium = user.isPremium && shopConfig?.isPremium;
+    const isPremium = true;
 
     const invoiceData = {
       shopName: shopConfig?.shopName || shopDomain || 'Unnamed Shop',
@@ -140,10 +143,9 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
+
     const page = await browser.newPage();
-
     const html = generateInvoiceHTML(invoiceData, isPremium);
-
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
@@ -152,23 +154,31 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // Usage and quota check
-    if (user.usageCount + pageCount > user.maxUsage) {
-      fs.unlinkSync(pdfPath);
-      return res.status(403).json({
-        error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+    const isPreview = req.query.preview === 'true';
+
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
+
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}.pdf`,
+      });
+    } else {
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "inline", // Preview in Postman/browser
       });
     }
 
-    user.usageCount += pageCount;
-    await user.save();
-
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}.pdf`,
-    });
     res.send(pdfBuffer);
-
     fs.unlinkSync(pdfPath);
 
   } catch (error) {
