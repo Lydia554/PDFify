@@ -12,13 +12,15 @@ const crypto = require('crypto');
 const bodyParser = require('body-parser');
 
 
-function verifyShopifyWebhook(req, res, buf) {
+
+function verifyShopifyWebhook(req, res, rawBody) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
+
+  const secret = process.env.SHOPIFY_SECRET; 
 
   const hash = crypto
     .createHmac('sha256', secret)
-    .update(buf)
+    .update(rawBody)
     .digest('base64');
 
   if (hash !== hmacHeader) {
