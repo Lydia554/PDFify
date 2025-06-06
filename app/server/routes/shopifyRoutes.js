@@ -351,6 +351,11 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
 
     const rawBody = req.body;
     console.log('Raw body length:', rawBody.length);
+    console.log('Raw body (utf8):', rawBody.toString('utf8'));
+    console.log('Raw body (hex):', rawBody.toString('hex'));
+
+    console.log('Headers:', req.headers);
+    console.log('X-Shopify-Hmac-Sha256 header:', req.get('X-Shopify-Hmac-Sha256'));
 
     verifyShopifyWebhook(req, res, rawBody);
     console.log('Shopify webhook verified successfully');
@@ -388,12 +393,18 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
     );
 
     console.log('Invoice generator response status:', invoiceRes.status);
+    console.log('Invoice generator response data:', invoiceRes.data);
     const pdfUrl = invoiceRes.data?.pdfUrl;
     console.log('PDF Generated at:', pdfUrl);
 
     res.status(200).send('OK');
   } catch (err) {
     console.error('Webhook failed:', err.message);
+    if (err.response) {
+      console.error('Error response data:', err.response.data);
+      console.error('Error response status:', err.response.status);
+      console.error('Error response headers:', err.response.headers);
+    }
     res.status(401).send('Unauthorized or Error');
   }
 });
