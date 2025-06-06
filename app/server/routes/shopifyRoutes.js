@@ -4,97 +4,57 @@ const path = require("path");
 const fs = require("fs");
 const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
-const User = require("../models/User"); 
-const authenticate = require("../middleware/authenticate"); 
+const User = require("../models/User");
+const authenticate = require("../middleware/authenticate");
 
 const router = express.Router();
+
 function generateInvoiceHTML(invoiceData, isPremium) {
-  const { shopName, date, items = [], total, customLogoUrl, showChart } = invoiceData;
+  let logoHtml = '';
+  let chartHtml = '';
 
-  const itemsHtml = items.length
-    ? items.map(item => `
-      <tr>
-        <td>${item.name}</td>
-        <td>${item.quantity}</td>
-        <td>€${item.price.toFixed(2)}</td>
-      </tr>
-    `).join('')
-    : `<tr><td colspan="3">No items</td></tr>`;
-
-  if (isPremium) {
-    // --- PREMIUM STYLE ---
-    return `
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Helvetica Neue', sans-serif; padding: 50px; background: #f9f9fb; color: #333; }
-          .logo img { max-height: 80px; margin-bottom: 25px; }
-          h1 { color: #1e88e5; border-bottom: 2px solid #1e88e5; padding-bottom: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-          th, td { border: 1px solid #ddd; padding: 12px; font-size: 15px; }
-          th { background-color: #e3f2fd; color: #0d47a1; }
-          .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 30px; }
-          .chart { margin-top: 40px; font-style: italic; color: #666; }
-          footer { margin-top: 50px; font-size: 13px; text-align: center; color: #888; }
-        </style>
-      </head>
-      <body>
-        <div class="logo">
-          ${customLogoUrl ? `<img src="${customLogoUrl}" alt="Shop Logo" />` : ''}
-        </div>
-        <h1>Premium Invoice</h1>
-        <p><strong>Shop:</strong> ${shopName}</p>
-        <p><strong>Date:</strong> ${date}</p>
-
-        <table>
-          <thead>
-            <tr><th>Item</th><th>Quantity</th><th>Price (€)</th></tr>
-          </thead>
-          <tbody>${itemsHtml}</tbody>
-        </table>
-
-        <p class="total">Total: €${total.toFixed(2)}</p>
-
-        ${showChart ? `<div class="chart">📊 Premium sales chart will appear here</div>` : ''}
-
-        <footer>Thank you for shopping with ${shopName}</footer>
-      </body>
-    </html>
-    `;
-  } else {
-    // --- BASIC STYLE ---
-    return `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #000; background: #fff; }
-          h1 { font-size: 22px; margin-bottom: 10px; border-bottom: 1px solid #000; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-          th, td { border: 1px solid #000; padding: 8px; }
-          th { background-color: #eee; }
-          .total { text-align: right; font-weight: bold; margin-top: 20px; }
-          footer { margin-top: 40px; font-size: 11px; text-align: center; color: #555; }
-        </style>
-      </head>
-      <body>
-        <h1>Invoice</h1>
-        <p><strong>Shop:</strong> ${shopName}</p>
-        <p><strong>Date:</strong> ${date}</p>
-
-        <table>
-          <thead>
-            <tr><th>Item</th><th>Quantity</th><th>Price (€)</th></tr>
-          </thead>
-          <tbody>${itemsHtml}</tbody>
-        </table>
-
-        <p class="total">Total: €${total.toFixed(2)}</p>
-
-        <footer>This is a basic invoice. Upgrade for more features!</footer>
-      </body>
-    </html>
-    `;
+  if (isPremium && invoiceData.customLogoUrl) {
+    logoHtml = `<img src="${invoiceData.customLogoUrl}" alt="Logo" style="max-height:60px; margin-bottom: 20px;" />`;
   }
+
+  if (isPremium && invoiceData.showChart) {
+    chartHtml = `<div style="margin-top: 30px;"><i>[Premium Sales Chart Placeholder]</i></div>`;
+  }
+
+  const itemsHtml = (invoiceData.items || []).map(item => `
+    <tr>
+      <td>${item.name || 'Item'}</td>
+      <td>${item.quantity || 1}</td>
+      <td>€${item.price?.toFixed(2) || '0.00'}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="3">No items</td></tr>';
+
+  return `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; }
+          h1 { margin-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          .total { text-align: right; font-weight: bold; margin-top: 20px; }
+          .logo { margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="logo">${logoHtml}</div>
+        <h1>Invoice</h1>
+        <p><strong>Shop:</strong> ${invoiceData.shopName || 'Unnamed Shop'}</p>
+        <p><strong>Date:</strong> ${invoiceData.date || new Date().toISOString().slice(0, 10)}</p>
+        <table>
+          <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>
+        <p class="total">Total: €${(invoiceData.total || 0).toFixed(2)}</p>
+        ${chartHtml}
+      </body>
+    </html>
+  `;
 }
 
 router.post("/shopify/invoice", authenticate, async (req, res) => {
@@ -109,15 +69,16 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Invalid order payload" });
     }
 
-    
-
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
     const shopConfig = await ShopConfig.findOne({ shopDomain });
-    //const isPremium = user.isPremium && shopConfig?.isPremium;
+
+
+     //const isPremium = user.isPremium && shopConfig?.isPremium;
+    // 🔒 Force premium always
     const isPremium = true;
 
     const invoiceData = {
@@ -129,8 +90,8 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
         price: Number(item.price) || 0,
       })),
       total: Number(order.total_price) || 0,
-      showChart: isPremium && shopConfig?.showChart,
-      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+      showChart: shopConfig?.showChart,
+      customLogoUrl: shopConfig?.customLogoUrl || null,
     };
 
     const safeOrderId = `shopify-${order.id}`;
@@ -174,7 +135,7 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
     } else {
       res.set({
         "Content-Type": "application/pdf",
-        "Content-Disposition": "inline", // Preview in Postman/browser
+        "Content-Disposition": "inline",
       });
     }
 
