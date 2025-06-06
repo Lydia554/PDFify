@@ -8,9 +8,22 @@ const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
 const router = express.Router();
+const crypto = require('crypto');
 
 
+function verifyShopifyWebhook(req, res, buf) {
+  const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
+  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
 
+  const hash = crypto
+    .createHmac('sha256', secret)
+    .update(buf, 'utf8')
+    .digest('base64');
+
+  if (hash !== hmacHeader) {
+    throw new Error('Webhook HMAC validation failed');
+  }
+}
 
 
 function generateInvoiceHTML(invoiceData, isPremium) {
@@ -332,7 +345,36 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
+router.post('/webhook/order-created', async (req, res) => {
+  try {
+    const rawBody = req.body;
+    verifyShopifyWebhook(req, res, rawBody);
 
+    const order = JSON.parse(rawBody.toString());
+    const shopDomain = req.headers['x-shopify-shop-domain'];
+
+    // Optional: Get store token from DB (if you store tokens per shop)
+    const token = await getTokenForShop(shopDomain);
+
+    // Call your existing invoice generator (same as `/shopify/invoice`)
+    const invoiceRes = await axios.post('https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',   { orderId: order.id }, // only orderId in body
+      {
+        headers: {
+          "x-shopify-shop-domain": shopDomain,
+          "x-shopify-access-token": token,
+        }
+      }
+    );
+    // Optionally: Send PDF URL to order note (if you're doing that)
+    const pdfUrl = invoiceRes.data?.pdfUrl;
+
+    console.log('PDF Generated at:', pdfUrl);
+    res.status(200).send('OK');
+  } catch (err) {
+    console.error('Webhook failed:', err.message);
+    res.status(401).send('Unauthorized or Error');
+  }
+});
 
 
 module.exports = router;
