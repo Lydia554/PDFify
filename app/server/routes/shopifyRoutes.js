@@ -173,49 +173,47 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 }
 
  //const isPremium = user.isPremium && shopConfig?.isPremium;
-
  router.post("/shopify/invoice", authenticate, async (req, res) => {
   try {
-    const shopDomain = req.headers["x-shopify-shop-domain"] || req.body.shop;
-    const accessToken = req.body.token;
-    const orderId = req.body.orderId;
-    
-    if (!shopDomain || !accessToken || !orderId) {
-      return res.status(400).json({ error: "Missing required fields" });
+    const { orderId, shop, token } = req.body;
+
+    if (!orderId || !shop || !token) {
+      return res.status(400).json({ error: "Missing orderId, shop, or token" });
     }
-    
-    const shopifyRes = await fetch(`https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`, {
+
+    // 🛒 Fetch order from Shopify
+    const shopifyRes = await fetch(`https://${shop}/admin/api/2023-10/orders/${orderId}.json`, {
       headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json'
-      }
+        'X-Shopify-Access-Token': token,
+        'Content-Type': 'application/json',
+      },
     });
-    
+
     if (!shopifyRes.ok) {
+      console.error("Shopify fetch failed:", await shopifyRes.text());
       return res.status(500).json({ error: "Failed to fetch order from Shopify" });
     }
-    
-    const { order } = await shopifyRes.json();
-    
+
+    const orderData = await shopifyRes.json();
+    const order = orderData.order;
+
     if (!order || !order.id || !order.line_items) {
-      return res.status(400).json({ error: "Invalid order payload" });
+      return res.status(400).json({ error: "Invalid order payload from Shopify" });
     }
-    
 
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const shopConfig = await ShopConfig.findOne({ shopDomain });
+    const shopConfig = await ShopConfig.findOne({ shopDomain: shop });
 
-    // 🔒 Force premium always
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === 'true';
     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
 
     const invoiceData = {
-      shopName: shopConfig?.shopName || shopDomain || 'Unnamed Shop',
+      shopName: shopConfig?.shopName || shop || 'Unnamed Shop',
       date: new Date(order.created_at).toISOString().slice(0, 10),
       items: order.line_items.map(item => ({
         name: item.name,
