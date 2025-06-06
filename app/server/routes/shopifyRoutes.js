@@ -14,11 +14,9 @@ require('dotenv').config();
 
 
 
-
 function verifyShopifyWebhook(req, res, rawBody) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET; 
+  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
 
   const hash = crypto
     .createHmac('sha256', secret)
@@ -29,7 +27,6 @@ function verifyShopifyWebhook(req, res, rawBody) {
     throw new Error('Webhook HMAC validation failed');
   }
 }
-
 
 function generateInvoiceHTML(invoiceData, isPremium) {
   const { shopName, date, items, total, showChart, customLogoUrl } = invoiceData;
