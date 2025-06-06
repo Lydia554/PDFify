@@ -18,7 +18,7 @@ function verifyShopifyWebhook(req, res, buf) {
 
   const hash = crypto
     .createHmac('sha256', secret)
-    .update(buf, 'utf8')
+    .update(buf)
     .digest('base64');
 
   if (hash !== hmacHeader) {
@@ -345,20 +345,40 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
-
 router.post('/webhook/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   try {
+    console.log('Webhook received');
+
     const rawBody = req.body;
+    console.log('Raw body length:', rawBody.length);
+
     verifyShopifyWebhook(req, res, rawBody);
+    console.log('Shopify webhook verified successfully');
 
     const order = JSON.parse(rawBody.toString());
+    console.log('Parsed order:', { id: order.id, email: order.email || 'N/A' });
+
     const shopDomain = req.headers['x-shopify-shop-domain'];
+    console.log('Shop domain from headers:', shopDomain);
+
+    if (!shopDomain) {
+      console.error('Missing X-Shopify-Shop-Domain header');
+      return res.status(400).send('Missing shop domain header');
+    }
 
     // Optional: Get store token from DB (if you store tokens per shop)
     const token = await getTokenForShop(shopDomain);
+    console.log('Retrieved token for shop:', token ? '***' : 'No token found');
+
+    if (!token) {
+      console.error('No token found for shop:', shopDomain);
+      return res.status(401).send('Unauthorized: missing token');
+    }
 
     // Call your existing invoice generator (same as `/shopify/invoice`)
-    const invoiceRes = await axios.post('https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',   { orderId: order.id }, // only orderId in body
+    const invoiceRes = await axios.post(
+      'https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',
+      { orderId: order.id }, // only orderId in body
       {
         headers: {
           "x-shopify-shop-domain": shopDomain,
@@ -366,10 +386,11 @@ router.post('/webhook/order-created', bodyParser.raw({ type: 'application/json' 
         }
       }
     );
-    // Optionally: Send PDF URL to order note (if you're doing that)
-    const pdfUrl = invoiceRes.data?.pdfUrl;
 
+    console.log('Invoice generator response status:', invoiceRes.status);
+    const pdfUrl = invoiceRes.data?.pdfUrl;
     console.log('PDF Generated at:', pdfUrl);
+
     res.status(200).send('OK');
   } catch (err) {
     console.error('Webhook failed:', err.message);
