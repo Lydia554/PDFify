@@ -79,6 +79,7 @@ app.use("/api", foodTrekRoutes);
 app.use("/api", shopifyRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
+app.use('/webhook', shopifyRoutes);
 
 
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
