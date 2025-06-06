@@ -6,95 +6,170 @@ const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
-
 const router = express.Router();
+
+
+
+
+
 function generateInvoiceHTML(invoiceData, isPremium) {
-  const { shopName, date, items = [], total, customLogoUrl, showChart } = invoiceData;
+  const { shopName, date, items, total, showChart, customLogoUrl } = invoiceData;
 
-  const itemsHtml = items.length
-    ? items.map(item => `
-      <tr>
-        <td>${item.name}</td>
-        <td>${item.quantity}</td>
-        <td>€${item.price.toFixed(2)}</td>
-      </tr>
-    `).join('')
-    : `<tr><td colspan="3">No items</td></tr>`;
-
-  if (isPremium) {
-    // --- PREMIUM STYLE ---
-    return `
+  return `
     <html>
       <head>
+        <meta charset="UTF-8" />
+        <title>Invoice</title>
         <style>
-          body { font-family: 'Helvetica Neue', sans-serif; padding: 50px; background: #f9f9fb; color: #333; }
-          .logo img { max-height: 80px; margin-bottom: 25px; }
-          h1 { color: #1e88e5; border-bottom: 2px solid #1e88e5; padding-bottom: 10px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-          th, td { border: 1px solid #ddd; padding: 12px; font-size: 15px; }
-          th { background-color: #e3f2fd; color: #0d47a1; }
-          .total { text-align: right; font-size: 18px; font-weight: bold; margin-top: 30px; }
-          .chart { margin-top: 40px; font-style: italic; color: #666; }
-          footer { margin-top: 50px; font-size: 13px; text-align: center; color: #888; }
+          @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
+          body {
+            font-family: 'Open Sans', sans-serif;
+            color: #333;
+            background: #f4f7fb;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            position: relative;
+          }
+          .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 30px 40px 160px;
+            background: linear-gradient(to bottom right, #ffffff, #f8fbff);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            border-radius: 16px;
+            border: 1px solid #e0e4ec;
+          }
+          .logo {
+            width: 150px;
+            margin-bottom: 20px;
+          }
+          .logo:empty {
+            display: none;
+          }
+          h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 32px;
+            color: #2a3d66;
+            text-align: center;
+            margin: 20px 0;
+            letter-spacing: 1px;
+          }
+          .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #4a69bd;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .invoice-header .left,
+          .invoice-header .right {
+            font-size: 16px;
+            line-height: 1.6;
+          }
+          .invoice-header .right {
+            text-align: right;
+            color: #777;
+          }
+          .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          .table th,
+          .table td {
+            padding: 14px;
+            border: 1px solid #dee2ef;
+            text-align: left;
+          }
+          .table th {
+            background-color: #dbe7ff;
+            color: #2a3d66;
+            font-weight: 600;
+          }
+          .table td {
+            color: #444;
+            background-color: #fdfdff;
+          }
+          .table tr:nth-child(even) td {
+            background-color: #f6f9fe;
+          }
+          .total {
+            text-align: right;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2a3d66;
+            margin-top: 10px;
+          }
+          .chart-container {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #fdfdff;
+            border: 1px solid #e0e4ec;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .footer {
+            max-width: 800px;
+            margin: 40px auto 10px auto;
+            padding: 10px 20px;
+            background-color: #f0f2f7;
+            color: #555;
+            border-top: 2px solid #cbd2e1;
+            text-align: center;
+            line-height: 1.6;
+            font-size: 11px;
+            border-radius: 0 0 16px 16px;
+            box-sizing: border-box;
+          }
         </style>
       </head>
       <body>
-        <div class="logo">
-          ${customLogoUrl ? `<img src="${customLogoUrl}" alt="Shop Logo" />` : ''}
+        <div class="container">
+          ${customLogoUrl ? `<img src="${customLogoUrl}" class="logo" />` : ""}
+          <h1>Invoice</h1>
+          <div class="invoice-header">
+            <div class="left">
+              <strong>From:</strong><br/>
+              ${shopName}
+            </div>
+            <div class="right">
+              <strong>Date:</strong><br/>
+              ${date}
+            </div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item</th><th>Qty</th><th>Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td>${item.quantity}</td>
+                  <td>$${item.price.toFixed(2)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+          <div class="total">Total: $${total.toFixed(2)}</div>
+
+          ${showChart ? `<div class="chart-container"><h2>Spending Overview</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>` : ""}
         </div>
-        <h1>Premium Invoice</h1>
-        <p><strong>Shop:</strong> ${shopName}</p>
-        <p><strong>Date:</strong> ${date}</p>
-
-        <table>
-          <thead>
-            <tr><th>Item</th><th>Quantity</th><th>Price (€)</th></tr>
-          </thead>
-          <tbody>${itemsHtml}</tbody>
-        </table>
-
-        <p class="total">Total: €${total.toFixed(2)}</p>
-
-        ${showChart ? `<div class="chart">📊 Premium sales chart will appear here</div>` : ''}
-
-        <footer>Thank you for shopping with ${shopName}</footer>
+        <div class="footer">
+          <p>This invoice was automatically generated by PDFify for Shopify</p>
+          <p><a href="https://lidija-jokic.com">Visit your dashboard</a></p>
+        </div>
       </body>
     </html>
-    `;
-  } else {
-    // --- BASIC STYLE ---
-    return `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #000; background: #fff; }
-          h1 { font-size: 22px; margin-bottom: 10px; border-bottom: 1px solid #000; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
-          th, td { border: 1px solid #000; padding: 8px; }
-          th { background-color: #eee; }
-          .total { text-align: right; font-weight: bold; margin-top: 20px; }
-          footer { margin-top: 40px; font-size: 11px; text-align: center; color: #555; }
-        </style>
-      </head>
-      <body>
-        <h1>Invoice</h1>
-        <p><strong>Shop:</strong> ${shopName}</p>
-        <p><strong>Date:</strong> ${date}</p>
-
-        <table>
-          <thead>
-            <tr><th>Item</th><th>Quantity</th><th>Price (€)</th></tr>
-          </thead>
-          <tbody>${itemsHtml}</tbody>
-        </table>
-
-        <p class="total">Total: €${total.toFixed(2)}</p>
-
-        <footer>This is a basic invoice. Upgrade for more features!</footer>
-      </body>
-    </html>
-    `;
-  }
+  `;
 }
 
  //const isPremium = user.isPremium && shopConfig?.isPremium;
