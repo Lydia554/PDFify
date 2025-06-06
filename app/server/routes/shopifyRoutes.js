@@ -2,6 +2,7 @@ const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
+const axios = require("axios");
 const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
