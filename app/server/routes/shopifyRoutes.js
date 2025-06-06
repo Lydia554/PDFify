@@ -7,11 +7,49 @@ const ShopConfig = require("../models/ShopConfig");
 
 const router = express.Router();
 
-function generateInvoiceHTML(data) {
-  // You can reuse or import your invoice HTML generator here
-  // To avoid duplication, consider exporting it from a shared file
-  // e.g., move the function into utils/invoiceTemplate.js
-  // For now, let's assume you’ll import or paste it here
+function generateInvoiceHTML({ shopDomain, invoice }) {
+  const shopName = invoice?.shopName || shopDomain || 'Unnamed Shop';
+  const date = invoice?.date || new Date().toISOString().slice(0, 10);
+  const items = invoice?.items || [];
+  const total = invoice?.total ?? 0;
+
+  const itemRows = items.map(item => `
+    <tr>
+      <td>${item.name || 'Item'}</td>
+      <td>${item.quantity || 1}</td>
+      <td>€${item.price?.toFixed(2) || '0.00'}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; }
+          h1 { margin-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          .total { text-align: right; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <h1>Invoice</h1>
+        <p><strong>Shop:</strong> ${shopName}</p>
+        <p><strong>Date:</strong> ${date}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th><th>Qty</th><th>Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows || '<tr><td colspan="3">No items</td></tr>'}
+          </tbody>
+        </table>
+        <p class="total">Total: €${total.toFixed(2)}</p>
+      </body>
+    </html>
+  `;
 }
 
 router.post("/shopify/invoice", async (req, res) => {
