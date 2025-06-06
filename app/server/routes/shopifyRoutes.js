@@ -69,22 +69,16 @@ router.post("/shopify/invoice", async (req, res) => {
     const isPremium = shopConfig?.isPremium || false;
 
     const invoiceData = {
-      orderId: order.id,
-      date: new Date(order.created_at).toLocaleDateString(),
-      customerName: `${order.customer.first_name} ${order.customer.last_name}`,
-      customerEmail: order.contact_email || order.email,
-      subtotal: `${(order.subtotal_price || 0)}€`,
-      tax: `${(order.total_tax || 0)}€`,
-      total: `${(order.total_price || 0)}€`,
+      shopName: shopConfig?.shopName || shopDomain || 'Unnamed Shop',
+      date: new Date(order.created_at).toISOString().slice(0, 10),
       items: order.line_items.map(item => ({
         name: item.name,
         quantity: item.quantity,
-        price: `${item.price}€`,
-        total: `${item.price * item.quantity}€`
+        price: Number(item.price) || 0,
       })),
-      showChart: isPremium && shopConfig?.showChart,
-      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+      total: Number(order.total_price) || 0,
     };
+    
 
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
@@ -98,7 +92,8 @@ router.post("/shopify/invoice", async (req, res) => {
     });
     const page = await browser.newPage();
 
-    const html = generateInvoiceHTML(invoiceData);
+    const html = generateInvoiceHTML({ shopDomain, invoice: invoiceData });
+
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
