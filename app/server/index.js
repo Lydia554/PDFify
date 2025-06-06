@@ -28,9 +28,10 @@ const shopifyRoutes = require('./routes/shopifyRoutes');
 
 const app = express();
 
-app.use('/webhook/order-created', bodyParser.raw({ type: 'application/json' }));
+
 
 app.use(express.json({ limit: "10mb" }));
+app.use('/webhook/order-created', bodyParser.raw({ type: 'application/json' }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 
