@@ -345,7 +345,7 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
-router.post('/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   try {
     console.log('Webhook received');
 
