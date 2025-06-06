@@ -345,71 +345,81 @@ function generateInvoiceHTML(invoiceData, isPremium) {
   }
 });
 
+router.post(
+  '/order-created',
+  bodyParser.raw({ type: 'application/json' }),
+  async (req, res) => {
+    try {
+      console.log('Webhook received');
 
+      const rawBody = req.body; // Buffer of raw bytes
+      const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
 
-router.post('/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
-  try {
-    console.log('Webhook received');
-
-    const rawBody = req.body;
-    console.log('Raw body length:', rawBody.length);
-    console.log('Raw body (utf8):', rawBody.toString('utf8'));
-    console.log('Raw body (hex):', rawBody.toString('hex'));
-
-    console.log('Headers:', req.headers);
-    console.log('X-Shopify-Hmac-Sha256 header:', req.get('X-Shopify-Hmac-Sha256'));
-
-    verifyShopifyWebhook(req, res, rawBody);
-    console.log('Shopify webhook verified successfully');
-
-    const order = JSON.parse(rawBody.toString());
-    console.log('Parsed order:', { id: order.id, email: order.email || 'N/A' });
-
-    const shopDomain = req.headers['x-shopify-shop-domain'];
-    console.log('Shop domain from headers:', shopDomain);
-
-    if (!shopDomain) {
-      console.error('Missing X-Shopify-Shop-Domain header');
-      return res.status(400).send('Missing shop domain header');
-    }
-
-    // Optional: Get store token from DB (if you store tokens per shop)
-    const token = await getTokenForShop(shopDomain);
-    console.log('Retrieved token for shop:', token ? '***' : 'No token found');
-
-    if (!token) {
-      console.error('No token found for shop:', shopDomain);
-      return res.status(401).send('Unauthorized: missing token');
-    }
-
-    // Call your existing invoice generator (same as `/shopify/invoice`)
-    const invoiceRes = await axios.post(
-      'https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',
-      { orderId: order.id }, // only orderId in body
-      {
-        headers: {
-          "x-shopify-shop-domain": shopDomain,
-          "x-shopify-access-token": token,
-        }
+      if (!hmacHeader) {
+        console.error('Missing HMAC header');
+        return res.status(401).send('Unauthorized: Missing HMAC header');
       }
-    );
 
-    console.log('Invoice generator response status:', invoiceRes.status);
-    console.log('Invoice generator response data:', invoiceRes.data);
-    const pdfUrl = invoiceRes.data?.pdfUrl;
-    console.log('PDF Generated at:', pdfUrl);
+      // Compute HMAC on raw body with your secret key
+      const computedHmac = crypto
+        .createHmac('sha256', SHOPIFY_SECRET)
+        .update(rawBody, 'utf8') // Use raw bytes, 'utf8' works here with Buffer
+        .digest('base64');
 
-    res.status(200).send('OK');
-  } catch (err) {
-    console.error('Webhook failed:', err.message);
-    if (err.response) {
-      console.error('Error response data:', err.response.data);
-      console.error('Error response status:', err.response.status);
-      console.error('Error response headers:', err.response.headers);
+      // Timing-safe comparison to avoid timing attacks
+      const validHmac = crypto.timingSafeEqual(
+        Buffer.from(computedHmac, 'base64'),
+        Buffer.from(hmacHeader, 'base64')
+      );
+
+      if (!validHmac) {
+        console.error('Webhook HMAC validation failed');
+        return res.status(401).send('Unauthorized: Invalid HMAC');
+      }
+
+      console.log('Shopify webhook verified successfully');
+
+      // Now parse the JSON safely
+      const order = JSON.parse(rawBody.toString('utf8'));
+      console.log('Parsed order:', { id: order.id, email: order.email || 'N/A' });
+
+      const shopDomain = req.headers['x-shopify-shop-domain'];
+      if (!shopDomain) {
+        console.error('Missing X-Shopify-Shop-Domain header');
+        return res.status(400).send('Missing shop domain header');
+      }
+
+      // Lookup your stored access token for the shop
+      const token = await getTokenForShop(shopDomain);
+      if (!token) {
+        console.error('No token found for shop:', shopDomain);
+        return res.status(401).send('Unauthorized: missing token');
+      }
+      console.log('Token found for shop:', shopDomain);
+
+      // Call your invoice generator API
+      const invoiceRes = await axios.post(
+        'https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',
+        { orderId: order.id },
+        {
+          headers: {
+            'x-shopify-shop-domain': shopDomain,
+            'x-shopify-access-token': token,
+          },
+        }
+      );
+
+      console.log('Invoice generator response status:', invoiceRes.status);
+      console.log('PDF Generated at:', invoiceRes.data?.pdfUrl);
+
+      res.status(200).send('OK');
+    } catch (err) {
+      console.error('Webhook handler failed:', err);
+      res.status(500).send('Internal Server Error');
     }
-    res.status(401).send('Unauthorized or Error');
   }
-});
+);
+
 
 
 module.exports = router;
