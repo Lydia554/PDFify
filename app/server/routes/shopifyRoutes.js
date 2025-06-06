@@ -7,140 +7,58 @@ const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
 
-function generateInvoiceHTML({ shopDomain, invoice }) {
-  const {
-    shopName = shopDomain || 'Unnamed Shop',
-    date = new Date().toISOString().slice(0, 10),
-    items = [],
-    total = 0,
-    customLogoUrl = null,
-    showChart = false,
-  } = invoice;
+const router = express.Router();
 
-  const itemRows = items.length > 0 ? items.map(item => `
+function generateInvoiceHTML(invoiceData, isPremium) {
+  // Basic styling
+  let logoHtml = '';
+  let chartHtml = '';
+
+  if (isPremium && invoiceData.customLogoUrl) {
+    logoHtml = `<img src="${invoiceData.customLogoUrl}" alt="Logo" style="max-height:60px; margin-bottom: 20px;" />`;
+  }
+
+  if (isPremium && invoiceData.showChart) {
+    // Here you could insert a base64 chart image or SVG etc.
+    chartHtml = `<p><i>[Premium sales chart placeholder]</i></p>`;
+  }
+
+  const itemsHtml = (invoiceData.items || []).map(item => `
     <tr>
       <td>${item.name || 'Item'}</td>
-      <td style="text-align:center;">${item.quantity || 1}</td>
-      <td style="text-align:right;">€${Number(item.price).toFixed(2)}</td>
+      <td>${item.quantity || 1}</td>
+      <td>€${item.price?.toFixed(2) || '0.00'}</td>
     </tr>
-  `).join('') : `<tr><td colspan="3" style="text-align:center;">No items</td></tr>`;
+  `).join('') || '<tr><td colspan="3">No items</td></tr>';
 
   return `
     <html>
       <head>
         <style>
-          @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
-          body {
-            font-family: 'Montserrat', Arial, sans-serif;
-            margin: 40px;
-            color: #333;
-          }
-          header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #4a90e2;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-          }
-          .logo {
-            max-height: 60px;
-          }
-          h1 {
-            font-weight: 700;
-            color: #4a90e2;
-            margin: 0;
-          }
-          .shop-info {
-            font-size: 0.9rem;
-            color: #555;
-          }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            box-shadow: 0 0 10px #ddd;
-          }
-          th, td {
-            padding: 12px 15px;
-          }
-          th {
-            background-color: #4a90e2;
-            color: white;
-            text-align: left;
-          }
-          tbody tr:nth-child(odd) {
-            background-color: #f9f9f9;
-          }
-          tbody tr:hover {
-            background-color: #e6f0fa;
-          }
-          .total-row td {
-            border-top: 2px solid #4a90e2;
-            font-weight: 700;
-            font-size: 1.1rem;
-            text-align: right;
-            padding-top: 15px;
-          }
-          footer {
-            margin-top: 40px;
-            font-size: 0.8rem;
-            color: #777;
-            text-align: center;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-          }
-          /* Premium styling */
-          ${showChart ? `
-            .premium-badge {
-              background-color: #f5a623;
-              color: white;
-              font-weight: 700;
-              padding: 5px 10px;
-              border-radius: 5px;
-              font-size: 0.85rem;
-              position: absolute;
-              top: 20px;
-              right: 40px;
-            }
-          ` : ''}
+          body { font-family: Arial, sans-serif; padding: 40px; }
+          h1 { margin-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          .total { text-align: right; font-weight: bold; margin-top: 20px; }
+          .logo { margin-bottom: 20px; }
+          .chart { margin-top: 30px; }
         </style>
       </head>
       <body>
-        <header>
-          <div>
-            <h1>Invoice</h1>
-            <p class="shop-info">${shopName}</p>
-            <p class="shop-info">Date: ${date}</p>
-          </div>
-          ${customLogoUrl ? `<img class="logo" src="${customLogoUrl}" alt="Shop Logo" />` : ''}
-        </header>
-
-        ${showChart ? `<div class="premium-badge">Premium</div>` : ''}
-
+        <div class="logo">${logoHtml}</div>
+        <h1>Invoice</h1>
+        <p><strong>Shop:</strong> ${invoiceData.shopName || 'Unnamed Shop'}</p>
+        <p><strong>Date:</strong> ${invoiceData.date || new Date().toISOString().slice(0, 10)}</p>
         <table>
-          <thead>
-            <tr>
-              <th>Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemRows}
-            <tr class="total-row">
-              <td colspan="2">Total</td>
-              <td>€${Number(total).toFixed(2)}</td>
-            </tr>
-          </tbody>
+          <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
+          <tbody>${itemsHtml}</tbody>
         </table>
-
-        <footer>
-          &copy; ${new Date().getFullYear()} ${shopName} • Powered by Your API
-        </footer>
+        <p class="total">Total: €${(invoiceData.total || 0).toFixed(2)}</p>
+        <div class="chart">${chartHtml}</div>
       </body>
     </html>
   `;
 }
-
 
 router.post("/shopify/invoice", authenticate, async (req, res) => {
   try {
