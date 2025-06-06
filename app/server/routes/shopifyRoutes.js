@@ -11,19 +11,18 @@ const router = express.Router();
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
 
-function verifyShopifyWebhook(req, res, buf) {
-  const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
-
-  const hash = crypto
-    .createHmac('sha256', secret)
-    .update(buf)
+function verifyShopifyWebhook(req, res, rawBody) {
+  const hmacHeader = req.headers['x-shopify-hmac-sha256'];
+  const generatedHmac = crypto
+    .createHmac('sha256', process.env.SHOPIFY_WEBHOOK_SECRET)
+    .update(rawBody, 'utf8')
     .digest('base64');
 
-  if (hash !== hmacHeader) {
-    throw new Error('Webhook HMAC validation failed');
+  if (!crypto.timingSafeEqual(Buffer.from(hmacHeader, 'utf8'), Buffer.from(generatedHmac, 'utf8'))) {
+    throw new Error('HMAC validation failed');
   }
 }
+
 
 
 function generateInvoiceHTML(invoiceData, isPremium) {
@@ -415,7 +414,7 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
       }
       return res.status(500).send('Invoice generation failed');
     }
-    return res.status(200).send('OK');
+
   } catch (err) {
     console.error('Webhook handler failed:', err.message);
     if (err.response) {

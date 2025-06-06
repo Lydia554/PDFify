@@ -1,9 +1,9 @@
-// generateHmac.js
-require('dotenv').config(); // load .env
-
+require('dotenv').config();
 const crypto = require('crypto');
 
+
 const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
+
 const body = `{
   "id": 123456789,
   "email": "customer@example.com",
@@ -11,7 +11,8 @@ const body = `{
   "line_items": [
     { "name": "Sample Product", "quantity": 1, "price": "19.99" }
   ]
-}`;
+}
+`; // Make sure this matches the exact raw body you send in Postman
 
 const hmac = crypto.createHmac('sha256', secret).update(body, 'utf8').digest('base64');
 
