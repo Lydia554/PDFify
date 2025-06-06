@@ -346,8 +346,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 router.post('/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
-  console.log('Raw body is Buffer?', Buffer.isBuffer(rawBody));
-
   try {
     console.log('Webhook received');
 
