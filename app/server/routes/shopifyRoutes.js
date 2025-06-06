@@ -11,7 +11,6 @@ const router = express.Router();
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
 
-
 function verifyShopifyWebhook(req, res, buf) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
   const secret = process.env.SHOPIFY_WEBHOOK_SECRET;
@@ -354,26 +353,21 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
   try {
     console.log('Webhook received');
 
-    const rawBody = req.body;
-    console.log('Raw body length:', rawBody.length);
-    console.log('Raw body (utf8):', rawBody.toString('utf8'));
-    console.log('Raw body (hex):', rawBody.toString('hex'));
+    const rawBody = req.body; // Buffer from raw parser
 
-    console.log('Headers:', req.headers);
-    console.log('X-Shopify-Hmac-Sha256 header:', req.get('X-Shopify-Hmac-Sha256'));
-
-    // Verify Shopify HMAC webhook signature
+    // Verify HMAC
     try {
-      await verifyShopifyWebhook(req, res, rawBody);
+      verifyShopifyWebhook(req, res, rawBody);
       console.log('Shopify webhook verified successfully');
     } catch (verifyError) {
-      console.error('HMAC verification failed:', verifyError.message || verifyError);
+      console.error('HMAC verification failed:', verifyError.message);
       return res.status(401).send('Unauthorized: HMAC verification failed');
     }
 
-    // Parse order JSON
-    const order = JSON.parse(rawBody.toString());
+    // Parse the JSON payload safely
+    const order = JSON.parse(rawBody.toString('utf8'));
     console.log('Parsed order:', { id: order.id, email: order.email || 'N/A' });
+
 
     // Get shop domain from headers
     const shopDomain = req.headers['x-shopify-shop-domain'];
@@ -421,7 +415,7 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
       }
       return res.status(500).send('Invoice generation failed');
     }
-
+    return res.status(200).send('OK');
   } catch (err) {
     console.error('Webhook handler failed:', err.message);
     if (err.response) {
