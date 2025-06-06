@@ -10,18 +10,18 @@ const authenticate = require("../middleware/authenticate");
 const router = express.Router();
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
+require('dotenv').config();
 
 
-const SHOPIFY_WEBHOOK_SECRET = process.env.SHOPIFY_WEBHOOK_SECRET;
-if (!SHOPIFY_WEBHOOK_SECRET) {
-  throw new Error('SHOPIFY_WEBHOOK_SECRET environment variable is not set');
-}
 
-// Your verify function:
+
 function verifyShopifyWebhook(req, res, rawBody) {
   const hmacHeader = req.get('X-Shopify-Hmac-Sha256');
+
+  const secret = process.env.SHOPIFY_WEBHOOK_SECRET; 
+
   const hash = crypto
-    .createHmac('sha256', SHOPIFY_WEBHOOK_SECRET)
+    .createHmac('sha256', secret)
     .update(rawBody)
     .digest('base64');
 
@@ -29,7 +29,6 @@ function verifyShopifyWebhook(req, res, rawBody) {
     throw new Error('Webhook HMAC validation failed');
   }
 }
-
 
 
 function generateInvoiceHTML(invoiceData, isPremium) {
@@ -348,6 +347,8 @@ function generateInvoiceHTML(invoiceData, isPremium) {
   }
 });
 
+
+
 router.post('/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   try {
     console.log('Webhook received');
@@ -355,53 +356,54 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
     const rawBody = req.body;
     console.log('Raw body length:', rawBody.length);
     console.log('Raw body (utf8):', rawBody.toString('utf8'));
+    console.log('Raw body (hex):', rawBody.toString('hex'));
+
     console.log('Headers:', req.headers);
     console.log('X-Shopify-Hmac-Sha256 header:', req.get('X-Shopify-Hmac-Sha256'));
 
-    // Verify webhook signature with raw body
     verifyShopifyWebhook(req, res, rawBody);
     console.log('Shopify webhook verified successfully');
 
-    // Parse JSON from rawBody buffer
-    const order = JSON.parse(rawBody.toString('utf8'));
+    const order = JSON.parse(rawBody.toString());
     console.log('Parsed order:', { id: order.id, email: order.email || 'N/A' });
 
     const shopDomain = req.headers['x-shopify-shop-domain'];
+    console.log('Shop domain from headers:', shopDomain);
+
     if (!shopDomain) {
       console.error('Missing X-Shopify-Shop-Domain header');
       return res.status(400).send('Missing shop domain header');
     }
-    console.log('Shop domain from headers:', shopDomain);
 
-    // Retrieve your token for shop domain, e.g. from DB
+    // Optional: Get store token from DB (if you store tokens per shop)
     const token = await getTokenForShop(shopDomain);
+    console.log('Retrieved token for shop:', token ? '***' : 'No token found');
+
     if (!token) {
       console.error('No token found for shop:', shopDomain);
       return res.status(401).send('Unauthorized: missing token');
     }
-    console.log('Retrieved token for shop:', '***');
 
-    // Call your invoice generation API
+    // Call your existing invoice generator (same as `/shopify/invoice`)
     const invoiceRes = await axios.post(
       'https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',
-      { orderId: order.id },
+      { orderId: order.id }, // only orderId in body
       {
         headers: {
-          'x-shopify-shop-domain': shopDomain,
-          'x-shopify-access-token': token,
-        },
+          "x-shopify-shop-domain": shopDomain,
+          "x-shopify-access-token": token,
+        }
       }
     );
 
     console.log('Invoice generator response status:', invoiceRes.status);
     console.log('Invoice generator response data:', invoiceRes.data);
-
     const pdfUrl = invoiceRes.data?.pdfUrl;
     console.log('PDF Generated at:', pdfUrl);
 
     res.status(200).send('OK');
   } catch (err) {
-    console.error('Webhook handler failed:', err.message);
+    console.error('Webhook failed:', err.message);
     if (err.response) {
       console.error('Error response data:', err.response.data);
       console.error('Error response status:', err.response.status);
@@ -410,5 +412,6 @@ router.post('/order-created', bodyParser.raw({ type: 'application/json' }), asyn
     res.status(401).send('Unauthorized or Error');
   }
 });
+
 
 module.exports = router;
