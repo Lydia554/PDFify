@@ -73,6 +73,32 @@ router.post("/user-creation", async (req, res) => {
 });
 
 
+
+router.post('/api/user/connect-shop', authenticate, async (req, res) => {
+  try {
+    const user = req.fullUser;
+    const { connectedShopDomain } = req.body;
+
+    if (!connectedShopDomain) {
+      return res.status(400).json({ error: "Missing connectedShopDomain in request body" });
+    }
+
+    if (!connectedShopDomain.endsWith('.myshopify.com')) {
+      return res.status(400).json({ error: "Invalid Shopify domain format" });
+    }
+
+    user.connectedShopDomain = connectedShopDomain;
+    await user.save();
+
+    res.json({ message: "Shop domain connected successfully", connectedShopDomain });
+  } catch (error) {
+    console.error("Error connecting shop domain:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
 router.get("/usage", authenticate, (req, res) => {
   const user = req.user;
 

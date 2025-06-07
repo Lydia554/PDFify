@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Login</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
@@ -14,11 +14,11 @@
     <!-- User login form -->
     <form id="loginForm">
       <label for="email">Email</label>
-      <input type="email" id="email" placeholder="Enter your email" required>
+      <input type="email" id="email" placeholder="Enter your email" required />
 
       <label for="password">Password</label>
       <div class="password-container">
-        <input type="password" id="password" placeholder="Enter your password" required>
+        <input type="password" id="password" placeholder="Enter your password" required />
         <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
       </div>
 
@@ -32,65 +32,79 @@
       <a href="/user-creation.html">Create User</a>
     </div>
 
-    
     <div class="extra-links">
-      <a href="/forgot-password.html">Forgot Password?</a> 
-     
+      <a href="/forgot-password.html">Forgot Password?</a>
     </div>
 
-
+    <!-- New connect-shop section, hidden by default -->
+    <div id="connectShopSection" style="display:none; margin-top: 40px; text-align: left;">
+      <h2>Connect Your Shopify Store</h2>
+      <p>Enter your Shopify store domain (e.g. <code>your-shop.myshopify.com</code>):</p>
+      <input type="text" id="shopDomain" placeholder="your-shop.myshopify.com" style="width: 100%; padding: 10px; margin-bottom: 10px;" />
+      <button id="connectShopBtn" style="width: 100%; padding: 12px; background-color: #5e60ce; color: white; border: none; border-radius: 8px; cursor: pointer;">Connect Store</button>
+      <div id="connectShopResult" style="margin-top: 10px; font-size: 14px;"></div>
+    </div>
   </div>
 
   <script>
+    // Toggle password visibility
     document.getElementById("togglePassword").addEventListener("click", () => {
       const passwordField = document.getElementById("password");
       const toggleButton = document.getElementById("togglePassword");
       if (passwordField.type === "password") {
         passwordField.type = "text";
-        toggleButton.textContent = "🙈"; 
+        toggleButton.textContent = "🙈";
       } else {
         passwordField.type = "password";
-        toggleButton.textContent = "👁️"; 
+        toggleButton.textContent = "👁️";
       }
     });
-  
+
+    // Login form submit handler
     document.getElementById("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const result = document.getElementById("result");
-  
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-     
       const passwordRegex = /^(?=.*[0-9]).{8,}$/;
-  
+
       if (!email || !password) {
         result.innerText = "Please enter both email and password.";
         result.className = "result error";
         result.style.display = "block";
         return;
       }
-  
+
       if (!emailRegex.test(email)) {
         result.innerText = "Invalid email format.";
         result.className = "result error";
         result.style.display = "block";
         return;
       }
-  
+
       if (!passwordRegex.test(password)) {
         result.innerText = "Password must be at least 8 characters long and include at least one number.";
         result.className = "result error";
         result.style.display = "block";
         return;
       }
-  
+
       try {
         const response = await axios.post(`/api/auth/login`, { email, password });
-  
+
         if (response.data.apiKey) {
           localStorage.setItem("apiKey", response.data.apiKey);
-          window.location.href = "/pdf-generator-demo";
+          result.innerText = "Login successful!";
+          result.className = "result success";
+          result.style.display = "block";
+
+          // Show connect shop section now that user is logged in
+          document.getElementById("connectShopSection").style.display = "block";
+
+          // Optionally clear login form or disable it
+          document.getElementById("loginForm").style.display = "none";
         } else {
           result.innerText = `Error: ${response.data.error}`;
           result.className = "result error";
@@ -102,8 +116,54 @@
         result.style.display = "block";
       }
     });
+
+    // Connect shop button click handler
+    document.getElementById("connectShopBtn").addEventListener("click", async () => {
+      const apiKey = localStorage.getItem("apiKey");
+      const shopDomainInput = document.getElementById("shopDomain");
+      const domain = shopDomainInput.value.trim();
+      const resultDiv = document.getElementById("connectShopResult");
+
+      if (!domain) {
+        resultDiv.innerText = "Please enter your Shopify store domain.";
+        resultDiv.style.color = "red";
+        return;
+      }
+
+      if (!domain.endsWith(".myshopify.com")) {
+        resultDiv.innerText = "Invalid domain format. It should end with '.myshopify.com'";
+        resultDiv.style.color = "red";
+        return;
+      }
+
+      if (!apiKey) {
+        resultDiv.innerText = "You must be logged in to connect a store.";
+        resultDiv.style.color = "red";
+        return;
+      }
+
+      try {
+        const response = await axios.post(
+          '/api/user/connect-shop',
+          { connectedShopDomain: domain },
+          { headers: { Authorization: `Bearer ${apiKey}` } }
+        );
+
+        if (response.data.message) {
+          resultDiv.innerText = response.data.message;
+          resultDiv.style.color = "green";
+          shopDomainInput.value = "";
+        } else if (response.data.error) {
+          resultDiv.innerText = response.data.error;
+          resultDiv.style.color = "red";
+        }
+      } catch (error) {
+        console.error(error);
+        resultDiv.innerText = "Error connecting the store. Try again later.";
+        resultDiv.style.color = "red";
+      }
+    });
   </script>
-  
 
   <style>
     body {
@@ -164,40 +224,34 @@
       background-color: #4b4dbf;
     }
     .password-container {
-  position: relative;
-}
-
-.toggle-btn {
-  position: absolute;
-  right: 10px; 
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  color: #5e60ce;
-  padding: 0; 
-  line-height: 1; 
-}
-
-.extra-links {
-    margin-top: 12px;
-    font-size: 14px;
-    color: #5e60ce;
-  }
-
-  .extra-links a {
-    color: #5e60ce;
-    text-decoration: underline;
-    margin: 0 4px;
-  }
-
-  .extra-links a:hover {
-    color: #4b4dbf;
-  }
-
-
+      position: relative;
+    }
+    .toggle-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #5e60ce;
+      padding: 0;
+      line-height: 1;
+    }
+    .extra-links {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #5e60ce;
+    }
+    .extra-links a {
+      color: #5e60ce;
+      text-decoration: underline;
+      margin: 0 4px;
+    }
+    .extra-links a:hover {
+      color: #4b4dbf;
+    }
     .result {
       margin-top: 20px;
       font-size: 16px;
@@ -216,7 +270,6 @@
     .register-link a:hover {
       color: #4b4dbf;
     }
-    
     @media (max-width: 480px) {
       .container {
         padding: 30px;
@@ -227,12 +280,12 @@
       label {
         font-size: 14px;
       }
-      input, button {
+      input,
+      button {
         padding: 14px;
         font-size: 14px;
       }
     }
   </style>
-
 </body>
 </html>
