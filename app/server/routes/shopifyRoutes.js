@@ -11,6 +11,8 @@ const router = express.Router();
 const crypto = require('crypto');
 const bodyParser = require('body-parser');
 require('dotenv').config();
+const sendEmail = require("../sendEmail");
+
 
 
 
@@ -333,69 +335,76 @@ function generateInvoiceHTML(invoiceData, isPremium) {
   }
 });
 
-router.post('/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
+
+
+
+
+
+
+
+router.post("/order-created", async (req, res) => {
   try {
-    console.log('Webhook received');
+    const shopDomain = req.headers["x-shopify-shop-domain"];
+    const order = req.body;
 
-    const rawBody = req.body;
-    console.log('Raw body length:', rawBody.length);
-    console.log('Raw body (utf8):', rawBody.toString('utf8'));
-    console.log('Raw body (hex):', rawBody.toString('hex'));
-
-    console.log('Headers:', req.headers);
-    console.log('X-Shopify-Hmac-Sha256 header:', req.get('X-Shopify-Hmac-Sha256'));
-
-    verifyShopifyWebhook(req, res, rawBody);
-    console.log('Shopify webhook verified successfully');
-
-    const order = JSON.parse(rawBody.toString());
-    console.log('Parsed order:', { id: order.id, email: order.email || 'N/A' });
-
-    const shopDomain = req.headers['x-shopify-shop-domain'];
-    console.log('Shop domain from headers:', shopDomain);
-
-    if (!shopDomain) {
-      console.error('Missing X-Shopify-Shop-Domain header');
-      return res.status(400).send('Missing shop domain header');
+    if (!shopDomain || !order) {
+      return res.status(400).send("Missing shop domain or order payload");
     }
 
-    // Optional: Get store token from DB (if you store tokens per shop)
-    const token = await getTokenForShop(shopDomain);
-    console.log('Retrieved token for shop:', token ? '***' : 'No token found');
-
-    if (!token) {
-      console.error('No token found for shop:', shopDomain);
-      return res.status(401).send('Unauthorized: missing token');
-    }
-
-    // Call your existing invoice generator (same as `/shopify/invoice`)
-    const invoiceRes = await axios.post(
-      'https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice',
-      { orderId: order.id }, // only orderId in body
+    // Send order to PDFify invoice route
+    const { data } = await axios.post(
+      "https://pdfify.app/shopify/invoice",
+      { order, shopDomain },
       {
         headers: {
-          "x-shopify-shop-domain": shopDomain,
-          "x-shopify-access-token": token,
-        }
+          Authorization: `Bearer ${SHOPIFY_PDFIFY_TOKEN}`,
+        },
       }
     );
 
-    console.log('Invoice generator response status:', invoiceRes.status);
-    console.log('Invoice generator response data:', invoiceRes.data);
-    const pdfUrl = invoiceRes.data?.pdfUrl;
-    console.log('PDF Generated at:', pdfUrl);
+    const pdfUrl = data.pdfUrl;
+    console.log("PDF Generated at:", pdfUrl);
 
-    res.status(200).send('OK');
-  } catch (err) {
-    console.error('Webhook failed:', err.message);
-    if (err.response) {
-      console.error('Error response data:', err.response.data);
-      console.error('Error response status:', err.response.status);
-      console.error('Error response headers:', err.response.headers);
+    if (!pdfUrl) {
+      console.error("No PDF URL returned");
+      return res.status(500).send("PDF generation failed");
     }
-    res.status(401).send('Unauthorized or Error');
+
+    // Lookup user by shop domain
+    const user = await User.findOne({ shopDomain });
+
+    if (!user) {
+      console.error("No user found for shop:", shopDomain);
+      return res.status(404).send("User not found");
+    }
+
+    // Send email with PDF link
+    try {
+      await transporter.sendMail({
+        from: '"PDFify" <noreply@pdfify.app>',
+        to: user.email,
+        subject: `Invoice for Shopify Order ${order.name || order.id}`,
+        html: `<p>Hello ${user.name || ""},</p>
+               <p>Your invoice for order <strong>${order.name || order.id}</strong> is ready.</p>
+               <p><a href="${pdfUrl}" target="_blank">Click here to download your PDF</a></p>
+               <p>Thank you for using PDFify!</p>`,
+      });
+
+      console.log("Email sent to", user.email);
+    } catch (err) {
+      console.error("Failed to send email:", err.message);
+    }
+
+    // Increment usage
+    user.usageCount = (user.usageCount || 0) + 1;
+    await user.save();
+    console.log("Usage count updated:", user.usageCount);
+
+    res.status(200).send("OK");
+  } catch (err) {
+    console.error("Webhook error:", err.message);
+    res.status(500).send("Internal Server Error");
   }
 });
-
 
 module.exports = router;

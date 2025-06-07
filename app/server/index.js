@@ -6,7 +6,7 @@ const path = require("path");
 const cron = require("node-cron");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
-const bodyParser = require("body-parser");
+
 
 dotenv.config();
 
