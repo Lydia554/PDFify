@@ -40,7 +40,7 @@ const userSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true },
     apiKey: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    connectedShopDomain: { type: String, default: null },
+    connectedShopDomain: { type: String, required: false },
     usageCount: { type: Number, default: 0 },
     maxUsage: { type: Number, default: 30 },
     isPremium: { type: Boolean, default: false },
