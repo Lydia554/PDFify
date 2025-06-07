@@ -188,9 +188,8 @@ function generateInvoiceHTML(invoiceData, isPremium) {
     </html>
   `;
 }
-
- //const isPremium = user.isPremium && shopConfig?.isPremium;
- router.post("/shopify/invoice", authenticate, async (req, res) => {
+// === /shopify/invoice ===
+router.post("/shopify/invoice", authenticate, async (req, res) => {
   try {
     const shopDomain = req.headers["x-shopify-shop-domain"];
     const token = req.headers["x-shopify-access-token"];
@@ -207,7 +206,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       return res.status(400).json({ error: "Missing orderId" });
     }
 
-    // 🛒 Fetch order data from Shopify
     const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
     let orderResponse;
     try {
@@ -226,7 +224,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       return res.status(400).json({ error: "Invalid order data from Shopify" });
     }
 
-    // ✅ Load user based on either req.user or shopDomain
     let user = null;
     if (req.user?.userId) {
       user = await User.findById(req.user.userId);
@@ -238,18 +235,16 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       return res.status(404).json({ error: "User not found for this shop" });
     }
 
-    // Load shop config
     const shopConfig = await ShopConfig.findOne({ shopDomain });
 
     const FORCE_PREMIUM = true;
-    const isPreview = req.query.preview === 'true';
+    const isPreview = req.query.preview === "true";
     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
 
-    // Prepare invoice data
     const invoiceData = {
-      shopName: shopConfig?.shopName || shopDomain || 'Unnamed Shop',
+      shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
       date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: order.line_items.map(item => ({
+      items: order.line_items.map((item) => ({
         name: item.name,
         quantity: item.quantity,
         price: Number(item.price) || 0,
@@ -294,7 +289,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       await user.save();
     }
 
-    // ✅ Email invoice to order.email
     try {
       if (order.email) {
         await sendEmailWithAttachment({
@@ -314,10 +308,8 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       }
     } catch (emailErr) {
       console.error("Failed to send invoice email:", emailErr);
-      // Continue without blocking PDF response
     }
 
-    // 📨 Send back the PDF
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": isPreview
@@ -327,7 +319,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
     res.send(pdfBuffer);
 
     fs.unlinkSync(pdfPath);
-
   } catch (error) {
     console.error("Shopify invoice generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
@@ -335,8 +326,7 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 });
 
 
-
-
+// === /order-created ===
 router.post("/order-created", async (req, res) => {
   try {
     const shopDomain = req.headers["x-shopify-shop-domain"];
@@ -346,23 +336,25 @@ router.post("/order-created", async (req, res) => {
       return res.status(400).send("Missing shop domain or order payload");
     }
 
-    // Call your PDF generation endpoint
+    const user = await User.findOne({ connectedShopDomain: shopDomain.toLowerCase() });
+    if (!user || !user.shopifyAccessToken) {
+      return res.status(404).send("User or token not found");
+    }
+
     const { data } = await axios.post(
-      "https://pdf-api.portfolio.lidija-jokic.com/shopify-invoice",
-      { order, shopDomain }
+      "https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice",
+      { orderId: order.id },
+      {
+        headers: {
+          "x-shopify-shop-domain": shopDomain,
+          "x-shopify-access-token": user.shopifyAccessToken,
+        },
+        responseType: "arraybuffer",
+      }
     );
 
-    const pdfUrl = data.pdfUrl;
-    if (!pdfUrl) return res.status(500).send("PDF generation failed");
+    const pdfBuffer = Buffer.from(data, "binary");
 
-    // Fetch PDF as a Buffer
-    const pdfResponse = await axios.get(pdfUrl, { responseType: "arraybuffer" });
-    const pdfBuffer = Buffer.from(pdfResponse.data, "binary");
-
-    const user = await User.findOne({ shopDomain: shopDomain.toLowerCase() });
-    if (!user) return res.status(404).send("User not found");
-
-    // Send email with PDF attachment
     try {
       await sendEmail({
         to: user.email,
@@ -386,7 +378,6 @@ Thank you for using PDFify!`,
       console.error("Failed to send email:", emailErr.message);
     }
 
-    // Increment usage count only if email sent successfully
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
 
