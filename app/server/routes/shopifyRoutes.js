@@ -9,7 +9,6 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate"); 
 const router = express.Router();
 const crypto = require('crypto');
-const bodyParser = require('body-parser');
 require('dotenv').config();
 const sendEmail = require("../sendEmail");
 
@@ -338,10 +337,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
-
-
-
-
 router.post("/order-created", async (req, res) => {
   try {
     const shopDomain = req.headers["x-shopify-shop-domain"];
@@ -351,54 +346,49 @@ router.post("/order-created", async (req, res) => {
       return res.status(400).send("Missing shop domain or order payload");
     }
 
-    // Send order to PDFify invoice route
+    // Call your PDF generation endpoint
     const { data } = await axios.post(
-      "https://pdfify.app/shopify/invoice",
-      { order, shopDomain },
-      {
-        headers: {
-          Authorization: `Bearer ${SHOPIFY_PDFIFY_TOKEN}`,
-        },
-      }
+      "https://pdf-api.portfolio.lidija-jokic.com/shopify-invoice",
+      { order, shopDomain }
     );
 
     const pdfUrl = data.pdfUrl;
-    console.log("PDF Generated at:", pdfUrl);
+    if (!pdfUrl) return res.status(500).send("PDF generation failed");
 
-    if (!pdfUrl) {
-      console.error("No PDF URL returned");
-      return res.status(500).send("PDF generation failed");
-    }
+    // Fetch PDF as a Buffer
+    const pdfResponse = await axios.get(pdfUrl, { responseType: "arraybuffer" });
+    const pdfBuffer = Buffer.from(pdfResponse.data, "binary");
 
-    // Lookup user by shop domain
-    const user = await User.findOne({ shopDomain });
+    const user = await User.findOne({ shopDomain: shopDomain.toLowerCase() });
+    if (!user) return res.status(404).send("User not found");
 
-    if (!user) {
-      console.error("No user found for shop:", shopDomain);
-      return res.status(404).send("User not found");
-    }
-
-    // Send email with PDF link
+    // Send email with PDF attachment
     try {
-      await transporter.sendMail({
-        from: '"PDFify" <noreply@pdfify.app>',
+      await sendEmail({
         to: user.email,
         subject: `Invoice for Shopify Order ${order.name || order.id}`,
-        html: `<p>Hello ${user.name || ""},</p>
-               <p>Your invoice for order <strong>${order.name || order.id}</strong> is ready.</p>
-               <p><a href="${pdfUrl}" target="_blank">Click here to download your PDF</a></p>
-               <p>Thank you for using PDFify!</p>`,
+        text: `Hello ${user.name || ""},
+
+Your invoice for order ${order.name || order.id} is attached to this email.
+
+Thank you for using PDFify!`,
+        attachments: [
+          {
+            filename: `Invoice-${order.name || order.id}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ],
       });
 
-      console.log("Email sent to", user.email);
-    } catch (err) {
-      console.error("Failed to send email:", err.message);
+      console.log("Email with PDF sent to", user.email);
+    } catch (emailErr) {
+      console.error("Failed to send email:", emailErr.message);
     }
 
-    // Increment usage
+    // Increment usage count only if email sent successfully
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
-    console.log("Usage count updated:", user.usageCount);
 
     res.status(200).send("OK");
   } catch (err) {
