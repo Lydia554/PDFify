@@ -22,6 +22,9 @@
         <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
       </div>
 
+      <label for="connectedShopDomain">Connected Shop Domain (optional)</label>
+      <input type="text" id="connectedShopDomain" placeholder="Enter shop domain (optional)" />
+
       <button type="submit">Login</button>
     </form>
 
@@ -35,19 +38,9 @@
     <div class="extra-links">
       <a href="/forgot-password.html">Forgot Password?</a>
     </div>
-
-    <!-- New connect-shop section, hidden by default -->
-    <div id="connectShopSection" style="display:none; margin-top: 40px; text-align: left;">
-      <h2>Connect Your Shopify Store</h2>
-      <p>Enter your Shopify store domain (e.g. <code>your-shop.myshopify.com</code>):</p>
-      <input type="text" id="shopDomain" placeholder="your-shop.myshopify.com" style="width: 100%; padding: 10px; margin-bottom: 10px;" />
-      <button id="connectShopBtn" style="width: 100%; padding: 12px; background-color: #5e60ce; color: white; border: none; border-radius: 8px; cursor: pointer;">Connect Store</button>
-      <div id="connectShopResult" style="margin-top: 10px; font-size: 14px;"></div>
-    </div>
   </div>
 
   <script>
-    // Toggle password visibility
     document.getElementById("togglePassword").addEventListener("click", () => {
       const passwordField = document.getElementById("password");
       const toggleButton = document.getElementById("togglePassword");
@@ -60,11 +53,11 @@
       }
     });
 
-    // Login form submit handler
     document.getElementById("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
+      const connectedShopDomain = document.getElementById("connectedShopDomain").value.trim();
       const result = document.getElementById("result");
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -92,19 +85,16 @@
       }
 
       try {
-        const response = await axios.post(`/api/auth/login`, { email, password });
+        const payload = { email, password };
+        if (connectedShopDomain) {
+          payload.connectedShopDomain = connectedShopDomain;
+        }
+
+        const response = await axios.post(`/api/auth/login`, payload);
 
         if (response.data.apiKey) {
           localStorage.setItem("apiKey", response.data.apiKey);
-          result.innerText = "Login successful!";
-          result.className = "result success";
-          result.style.display = "block";
-
-          // Show connect shop section now that user is logged in
-          document.getElementById("connectShopSection").style.display = "block";
-
-          // Optionally clear login form or disable it
-          document.getElementById("loginForm").style.display = "none";
+          window.location.href = "/pdf-generator-demo";
         } else {
           result.innerText = `Error: ${response.data.error}`;
           result.className = "result error";
@@ -116,58 +106,11 @@
         result.style.display = "block";
       }
     });
-
-    // Connect shop button click handler
-    document.getElementById("connectShopBtn").addEventListener("click", async () => {
-      const apiKey = localStorage.getItem("apiKey");
-      const shopDomainInput = document.getElementById("shopDomain");
-      const domain = shopDomainInput.value.trim();
-      const resultDiv = document.getElementById("connectShopResult");
-
-      if (!domain) {
-        resultDiv.innerText = "Please enter your Shopify store domain.";
-        resultDiv.style.color = "red";
-        return;
-      }
-
-      if (!domain.endsWith(".myshopify.com")) {
-        resultDiv.innerText = "Invalid domain format. It should end with '.myshopify.com'";
-        resultDiv.style.color = "red";
-        return;
-      }
-
-      if (!apiKey) {
-        resultDiv.innerText = "You must be logged in to connect a store.";
-        resultDiv.style.color = "red";
-        return;
-      }
-
-      try {
-        const response = await axios.post(
-          '/api/user/connect-shop',
-          { connectedShopDomain: domain },
-          { headers: { Authorization: `Bearer ${apiKey}` } }
-        );
-
-        if (response.data.message) {
-          resultDiv.innerText = response.data.message;
-          resultDiv.style.color = "green";
-          shopDomainInput.value = "";
-        } else if (response.data.error) {
-          resultDiv.innerText = response.data.error;
-          resultDiv.style.color = "red";
-        }
-      } catch (error) {
-        console.error(error);
-        resultDiv.innerText = "Error connecting the store. Try again later.";
-        resultDiv.style.color = "red";
-      }
-    });
   </script>
 
   <style>
     body {
-      font-family: 'Arial', sans-serif;
+      font-family: "Arial", sans-serif;
       background: #f7f7f7;
       display: flex;
       justify-content: center;
