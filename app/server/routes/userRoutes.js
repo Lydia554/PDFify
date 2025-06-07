@@ -75,11 +75,9 @@ router.post("/user-creation", async (req, res) => {
 
 router.post('/connect-shop', authenticate, async (req, res) => {
   try {
-    const user = req.fullUser;
     const { connectedShopDomain } = req.body;
-
-    console.log("Received connectedShopDomain:", connectedShopDomain);
-    console.log("User before save:", user);
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
 
     if (!connectedShopDomain) {
       return res.status(400).json({ error: "Missing connectedShopDomain in request body" });
@@ -90,17 +88,19 @@ router.post('/connect-shop', authenticate, async (req, res) => {
     }
 
     user.connectedShopDomain = connectedShopDomain;
-
     await user.save();
 
-    console.log("User after save:", user);
+    const savedUser = await User.findById(userId);
+    console.log("✅ Saved user with shop domain:", savedUser);
 
     res.json({ message: "Shop domain connected successfully", connectedShopDomain });
   } catch (error) {
-    console.error("Error connecting shop domain:", error);
+    console.error("❌ Error connecting shop domain:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
 
 
 
