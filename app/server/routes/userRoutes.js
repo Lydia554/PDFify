@@ -73,11 +73,13 @@ router.post("/user-creation", async (req, res) => {
 });
 
 
-
 router.post('/api/user/connect-shop', authenticate, async (req, res) => {
   try {
     const user = req.fullUser;
     const { connectedShopDomain } = req.body;
+
+    console.log("Received connectedShopDomain:", connectedShopDomain);
+    console.log("User before save:", user);
 
     if (!connectedShopDomain) {
       return res.status(400).json({ error: "Missing connectedShopDomain in request body" });
@@ -88,7 +90,10 @@ router.post('/api/user/connect-shop', authenticate, async (req, res) => {
     }
 
     user.connectedShopDomain = connectedShopDomain;
+
     await user.save();
+
+    console.log("User after save:", user);
 
     res.json({ message: "Shop domain connected successfully", connectedShopDomain });
   } catch (error) {
