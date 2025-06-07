@@ -189,75 +189,60 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 }
 
  //const isPremium = user.isPremium && shopConfig?.isPremium;
-
  router.post("/shopify/invoice", authenticate, async (req, res) => {
   try {
-    // Read shop domain and token from headers (not from body)
     const shopDomain = req.headers["x-shopify-shop-domain"];
     const token = req.headers["x-shopify-access-token"];
-    console.log("Received shop domain:", shopDomain);
-    console.log("Received Shopify access token:", token ? '***' : 'missing');
 
     if (!shopDomain) {
-      console.log("Error: Missing shop domain header");
       return res.status(400).json({ error: "Missing shop domain" });
     }
     if (!token) {
-      console.log("Error: Missing Shopify access token header");
       return res.status(400).json({ error: "Missing Shopify access token" });
     }
 
-    // Read orderId only from body
     const { orderId } = req.body;
     if (!orderId) {
-      console.log("Error: Missing orderId in request body");
       return res.status(400).json({ error: "Missing orderId" });
     }
 
-    // No more shop or token in body, so skip that validation here
-
-    // Fetch order data from Shopify API using headers for auth
+    // 🛒 Fetch order data from Shopify
     const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
-    console.log("Fetching order from Shopify:", shopifyOrderUrl);
-
     let orderResponse;
     try {
       orderResponse = await axios.get(shopifyOrderUrl, {
         headers: {
           "X-Shopify-Access-Token": token,
           "Content-Type": "application/json",
-          // No Authorization Bearer needed here
         },
       });
-      console.log("Shopify order response status:", orderResponse.status);
     } catch (err) {
-      console.error("Error fetching order from Shopify:", err.response?.data || err.message);
       return res.status(500).json({ error: "Failed to fetch order from Shopify" });
     }
 
     const order = orderResponse.data.order;
     if (!order || !order.line_items) {
-      console.log("Error: Invalid order data received from Shopify");
       return res.status(400).json({ error: "Invalid order data from Shopify" });
     }
 
-    // Find user from auth middleware
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      console.log("User not found with ID:", req.user.userId);
-      return res.status(404).json({ error: "User not found" });
+    // ✅ Load user based on either req.user or shopDomain
+    let user = null;
+    if (req.user?.userId) {
+      user = await User.findById(req.user.userId);
     }
-    console.log("Authenticated user:", user.email);
+    if (!user) {
+      user = await User.findOne({ connectedShopDomain: shopDomain });
+    }
+    if (!user) {
+      return res.status(404).json({ error: "User not found for this shop" });
+    }
 
-    // Find shop config for this shop
+    // Load shop config
     const shopConfig = await ShopConfig.findOne({ shopDomain });
-    console.log("Shop config found:", !!shopConfig);
 
-    // Premium check
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === 'true';
     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
-    console.log("isPremium:", isPremium, "isPreview:", isPreview);
 
     // Prepare invoice data
     const invoiceData = {
@@ -272,45 +257,33 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       showChart: isPremium && shopConfig?.showChart,
       customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
     };
-    console.log("Invoice data prepared:", invoiceData);
 
-    // PDF paths & filenames
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir);
-      console.log("Created PDF directory:", pdfDir);
     }
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-    console.log("PDF will be saved to:", pdfPath);
 
-    // Launch puppeteer and generate PDF
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
-
     const html = generateInvoiceHTML(invoiceData, isPremium);
-    console.log("Generated invoice HTML");
 
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
-    console.log("PDF generated");
-
     await browser.close();
 
-    // Read PDF file buffer
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-    console.log("PDF page count:", pageCount);
 
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        console.log("Usage limit reached. PDF deleted.");
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
@@ -318,33 +291,47 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
       user.usageCount += pageCount;
       await user.save();
-      console.log("User usage count updated:", user.usageCount);
-
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}.pdf`,
-      });
-    } else {
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "inline",
-      });
-      console.log("Sending PDF inline preview");
     }
 
+    // ✅ Email invoice to order.email
+    try {
+      if (order.email) {
+        await sendEmailWithAttachment({
+          to: order.email,
+          subject: `Your Invoice from ${invoiceData.shopName}`,
+          text: "Please find your invoice attached.",
+          attachments: [
+            {
+              filename: `Invoice_${safeOrderId}.pdf`,
+              content: pdfBuffer,
+            },
+          ],
+        });
+        console.log("Invoice emailed to:", order.email);
+      } else {
+        console.warn("No email found on order, skipping email");
+      }
+    } catch (emailErr) {
+      console.error("Failed to send invoice email:", emailErr);
+      // Continue without blocking PDF response
+    }
+
+    // 📨 Send back the PDF
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": isPreview
+        ? "inline"
+        : `attachment; filename=Invoice_${safeOrderId}.pdf`,
+    });
     res.send(pdfBuffer);
 
-    // Clean up - delete PDF file
     fs.unlinkSync(pdfPath);
-    console.log("Temporary PDF file deleted");
 
   } catch (error) {
     console.error("Shopify invoice generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-
 
 router.post('/order-created', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
   try {
