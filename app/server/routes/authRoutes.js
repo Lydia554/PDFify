@@ -14,10 +14,8 @@ const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
   }
-};
-
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+};router.post("/login", async (req, res) => {
+  const { email, password, connectedShopDomain } = req.body;
 
   try {
     const user = await User.findOne({ email });
@@ -28,6 +26,16 @@ router.post("/login", async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid password" });
+    }
+
+    // 💡 Save connectedShopDomain if provided and valid
+    if (
+      connectedShopDomain &&
+      connectedShopDomain.endsWith(".myshopify.com")
+    ) {
+      user.connectedShopDomain = connectedShopDomain;
+      await user.save();
+      console.log("✅ connectedShopDomain saved during login:", connectedShopDomain);
     }
 
     res.json({ apiKey: user.getDecryptedApiKey() });
