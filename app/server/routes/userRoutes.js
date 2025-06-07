@@ -73,7 +73,7 @@ router.post("/user-creation", async (req, res) => {
 });
 
 
-router.post('/api/user/connect-shop', authenticate, async (req, res) => {
+router.post('/connect-shop', authenticate, async (req, res) => {
   try {
     const user = req.fullUser;
     const { connectedShopDomain } = req.body;
