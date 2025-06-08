@@ -208,6 +208,8 @@ router.post("/invoice", authenticate, async (req, res) => {
 
         },
       });
+
+      
     } catch (err) {
       return res.status(500).json({ error: "Failed to fetch order from Shopify" });
     }
