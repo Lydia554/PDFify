@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
 const axios = require("axios");
-const sendEmail = require("../utils/sendEmail"); // Your email helper
+const sendEmail = require("../sendEmail");
 
 router.post("/order-created", async (req, res) => {
   const shopDomain = req.headers["x-shopify-shop-domain"];
