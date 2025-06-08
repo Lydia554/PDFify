@@ -25,7 +25,8 @@ const htmlRoutes = require("./routes/htmlRoutes");
 const packingSlipRoutes = require("./routes/packing-slipRoutes");
 const friendlyMode = require("./routes/friendlyMode");
 const foodTrekRoutes = require("./routes/foodTrekRoutes");
-const shopifyRoutes = require('./routes/shopifyRoutes');
+const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
+const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 
 const app = express();
 
@@ -81,7 +82,8 @@ app.use("/api", htmlRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
-app.use("/shopify", shopifyRoutes);
+app.use("/webhook", shopifyWebhookRoutes); 
+app.use("/shopify", shopifyApiRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
 
