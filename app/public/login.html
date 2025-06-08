@@ -11,7 +11,7 @@
   <div class="container">
     <h1>Login</h1>
 
-    <!-- Email/Password login form -->
+    <!-- User login form -->
     <form id="loginForm">
       <label for="email">Email</label>
       <input type="email" id="email" placeholder="Enter your email" required />
@@ -22,8 +22,10 @@
         <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
       </div>
 
-      <label for="connectedShopDomain">Connected Shop Domain (optional)</label>
-      <input type="text" id="connectedShopDomain" placeholder="Enter shop domain (optional)" />
+      <label for="connectedShopDomain">
+        Connected Shopify Store <span style="font-weight: normal; color: gray;">(optional)</span>
+      </label>
+      <input type="text" id="connectedShopDomain" placeholder="e.g. your-shop-name.myshopify.com" />
 
       <button type="submit">Login</button>
     </form>
@@ -39,18 +41,19 @@
       <a href="/forgot-password.html">Forgot Password?</a>
     </div>
 
-    <hr style="margin: 30px 0;" />
+    <!-- Separator -->
+    <hr />
+    <p style="text-align:center; margin: 20px 0; color: #666;">OR</p>
 
-    <!-- Manual API Token Input -->
-    <div class="manual-token">
-      <h2>Use Token Instead</h2>
-      <form id="tokenForm">
-        <label for="manualToken">Paste Your API Token</label>
-        <input type="text" id="manualToken" placeholder="Paste your API key here" required />
-        <button type="submit">Connect with Token</button>
-      </form>
+    <!-- Token input -->
+    <div id="tokenLoginSection">
+      <h2>Connect using your API token</h2>
+      <p style="font-size: 14px; color: gray;">
+        If you already have an API key, paste it below to skip login.
+      </p>
+      <input type="text" id="manualToken" placeholder="Paste your API token here (optional)" />
+      <button onclick="useManualToken()">Use Token</button>
     </div>
-
   </div>
 
   <script>
@@ -120,17 +123,15 @@
       }
     });
 
-    // Token form handler
-    document.getElementById("tokenForm").addEventListener("submit", (event) => {
-      event.preventDefault();
+    function useManualToken() {
       const token = document.getElementById("manualToken").value.trim();
-      if (!token) {
-        alert("Please paste a token.");
-        return;
+      if (token) {
+        localStorage.setItem("apiKey", token);
+        window.location.href = "/pdf-generator-demo";
+      } else {
+        alert("Please paste your API token first.");
       }
-      localStorage.setItem("apiKey", token);
-      window.location.href = "/pdf-generator-demo";
-    });
+    }
   </script>
 
   <style>
@@ -152,9 +153,15 @@
       max-width: 450px;
       text-align: center;
     }
-    h1, h2 {
+    h1 {
       color: #5e60ce;
-      margin-bottom: 20px;
+      margin-bottom: 30px;
+      font-size: 24px;
+    }
+    h2 {
+      margin-top: 30px;
+      font-size: 18px;
+      color: #333;
     }
     label {
       text-align: left;
@@ -186,6 +193,7 @@
       cursor: pointer;
       transition: background-color 0.3s;
       width: 100%;
+      margin-bottom: 10px;
     }
     button:hover {
       background-color: #4b4dbf;
@@ -206,32 +214,47 @@
       padding: 0;
       line-height: 1;
     }
-    .extra-links, .register-link {
+    .extra-links {
       margin-top: 12px;
       font-size: 14px;
       color: #5e60ce;
     }
-    .extra-links a, .register-link a {
+    .extra-links a {
       color: #5e60ce;
       text-decoration: underline;
       margin: 0 4px;
     }
-    .extra-links a:hover, .register-link a:hover {
+    .extra-links a:hover {
       color: #4b4dbf;
     }
     .result {
       margin-top: 20px;
       font-size: 16px;
-      color: #d9534f;
+      color: #333;
     }
-    .manual-token {
-      text-align: left;
+    .register-link {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #5e60ce;
+    }
+    .register-link a {
+      color: #5e60ce;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+    .register-link a:hover {
+      color: #4b4dbf;
+    }
+    hr {
+      margin: 40px 0 10px;
+      border: none;
+      border-top: 1px solid #ddd;
     }
     @media (max-width: 480px) {
       .container {
         padding: 30px;
       }
-      h1, h2 {
+      h1 {
         font-size: 22px;
       }
       label {
