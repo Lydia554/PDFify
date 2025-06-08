@@ -35,7 +35,7 @@ const authenticate = async (req, res, next) => {
 
     const decryptedKey = user.getDecryptedApiKey();
 
-    // Plain object with limited info for convenience
+   
     req.user = {
       userId: user._id,
       email: user.email,
@@ -45,7 +45,7 @@ const authenticate = async (req, res, next) => {
       isPremium: user.isPremium,
     };
 
-    // Full Mongoose user document to allow .save() etc.
+   
     req.fullUser = user;
 
     next();
