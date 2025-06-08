@@ -183,14 +183,31 @@ router.post("/invoice", authenticate, async (req, res) => {
 
   try {
     const shopDomain = req.body.shopDomain || req.headers['x-shopify-shop-domain'];
-    const token = req.headers["x-shopify-access-token"];
+   let token = req.headers["x-shopify-access-token"]; // optional fallback
+
+if (!token && req.user?.userId) {
+  const user = await User.findById(req.user.userId);
+  if (user?.connectedShopDomain === shopDomain && user.connectedShopToken) {
+    token = user.connectedShopToken;
+  }
+}
+
+if (!token) {
+  const fallbackUser = await User.findOne({ connectedShopDomain: shopDomain });
+  if (fallbackUser?.connectedShopToken) {
+    token = fallbackUser.connectedShopToken;
+  }
+}
+
+if (!token) {
+  return res.status(400).json({ error: "Missing Shopify access token" });
+}
+
 
     if (!shopDomain) {
       return res.status(400).json({ error: "Missing shop domain" });
     }
-    if (!token) {
-      return res.status(400).json({ error: "Missing Shopify access token" });
-    }
+
 
     const { orderId } = req.body;
     if (!orderId) {
