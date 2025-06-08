@@ -11,6 +11,7 @@
   <div class="container">
     <h1>Login</h1>
 
+    <!-- Email/Password login form -->
     <form id="loginForm">
       <label for="email">Email</label>
       <input type="email" id="email" placeholder="Enter your email" required />
@@ -21,11 +22,8 @@
         <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
       </div>
 
-      <label for="connectedShopDomain">Shopify Domain <small>(optional, like store.myshopify.com)</small></label>
-      <input type="text" id="connectedShopDomain" placeholder="your-store.myshopify.com" />
-
-      <label for="shopifyToken">Shopify Access Token <small>(optional, starts with shpat_...)</small></label>
-      <input type="text" id="shopifyToken" placeholder="shpat_..." />
+      <label for="connectedShopDomain">Connected Shop Domain (optional)</label>
+      <input type="text" id="connectedShopDomain" placeholder="Enter shop domain (optional)" />
 
       <button type="submit">Login</button>
     </form>
@@ -40,6 +38,19 @@
     <div class="extra-links">
       <a href="/forgot-password.html">Forgot Password?</a>
     </div>
+
+    <hr style="margin: 30px 0;" />
+
+    <!-- Manual API Token Input -->
+    <div class="manual-token">
+      <h2>Use Token Instead</h2>
+      <form id="tokenForm">
+        <label for="manualToken">Paste Your API Token</label>
+        <input type="text" id="manualToken" placeholder="Paste your API key here" required />
+        <button type="submit">Connect with Token</button>
+      </form>
+    </div>
+
   </div>
 
   <script>
@@ -55,19 +66,11 @@
       }
     });
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const shopParam = urlParams.get("shop");
-    if (shopParam) {
-      document.getElementById("connectedShopDomain").value = shopParam;
-    }
-
     document.getElementById("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
-
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const connectedShopDomain = document.getElementById("connectedShopDomain").value.trim();
-      const shopifyToken = document.getElementById("shopifyToken").value.trim();
       const result = document.getElementById("result");
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -100,38 +103,10 @@
           payload.connectedShopDomain = connectedShopDomain;
         }
 
-        // Manually add headers here
-        const headers = {};
-        const storedApiKey = localStorage.getItem("pdfify_api_key");
-        const storedShopifyToken = localStorage.getItem("shopify_access_token");
-
-        if (storedApiKey) {
-          headers["x-api-key"] = storedApiKey;
-        }
-        if (storedShopifyToken) {
-          headers["shopify-access-token"] = storedShopifyToken;
-        }
-
-        const response = await axios.post(`/api/auth/login`, payload, { headers });
+        const response = await axios.post(`/api/auth/login`, payload);
 
         if (response.data.apiKey) {
-          const apiKey = response.data.apiKey;
-          localStorage.setItem("pdfify_api_key", apiKey);
-
-          if (connectedShopDomain && shopifyToken) {
-            try {
-              await axios.post("/api/auth/store-token", {
-                connectedShopDomain,
-                token: shopifyToken,
-                apiKey,
-              });
-              localStorage.setItem("shopify_access_token", shopifyToken);
-              console.log("✅ Shopify token saved.");
-            } catch (err) {
-              console.warn("⚠️ Failed to save Shopify token:", err.response?.data || err.message);
-            }
-          }
-
+          localStorage.setItem("apiKey", response.data.apiKey);
           window.location.href = "/pdf-generator-demo";
         } else {
           result.innerText = `Error: ${response.data.error}`;
@@ -144,10 +119,21 @@
         result.style.display = "block";
       }
     });
+
+    // Token form handler
+    document.getElementById("tokenForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const token = document.getElementById("manualToken").value.trim();
+      if (!token) {
+        alert("Please paste a token.");
+        return;
+      }
+      localStorage.setItem("apiKey", token);
+      window.location.href = "/pdf-generator-demo";
+    });
   </script>
 
   <style>
-    /* Your existing styles here */
     body {
       font-family: "Arial", sans-serif;
       background: #f7f7f7;
@@ -166,10 +152,9 @@
       max-width: 450px;
       text-align: center;
     }
-    h1 {
+    h1, h2 {
       color: #5e60ce;
-      margin-bottom: 30px;
-      font-size: 24px;
+      margin-bottom: 20px;
     }
     label {
       text-align: left;
@@ -221,42 +206,32 @@
       padding: 0;
       line-height: 1;
     }
-    .extra-links {
+    .extra-links, .register-link {
       margin-top: 12px;
       font-size: 14px;
       color: #5e60ce;
     }
-    .extra-links a {
+    .extra-links a, .register-link a {
       color: #5e60ce;
       text-decoration: underline;
       margin: 0 4px;
     }
-    .extra-links a:hover {
+    .extra-links a:hover, .register-link a:hover {
       color: #4b4dbf;
     }
     .result {
       margin-top: 20px;
       font-size: 16px;
-      color: #333;
+      color: #d9534f;
     }
-    .register-link {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #5e60ce;
-    }
-    .register-link a {
-      color: #5e60ce;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-    .register-link a:hover {
-      color: #4b4dbf;
+    .manual-token {
+      text-align: left;
     }
     @media (max-width: 480px) {
       .container {
         padding: 30px;
       }
-      h1 {
+      h1, h2 {
         font-size: 22px;
       }
       label {
