@@ -38,39 +38,6 @@ router.post("/login", async (req, res) => {
 });
 
 
-router.post("/connect-shopify", authenticate, async (req, res) => {
-  const { connectedShopDomain, shopifyAccessToken } = req.body;
-  const userId = req.user._id; // Assuming your `authenticate` middleware attaches user info to req.user
-
-  if (!connectedShopDomain || !shopifyAccessToken) {
-    return res.status(400).json({ error: "Missing Shopify domain or access token" });
-  }
-
-  try {
-    const normalizedDomain = connectedShopDomain.trim().toLowerCase();
-
-    if (!normalizedDomain.endsWith(".myshopify.com")) {
-      return res.status(400).json({ error: "Invalid Shopify domain" });
-    }
-
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    user.connectedShopDomain = normalizedDomain;
-    user.shopifyAccessToken = shopifyAccessToken; // You may want to encrypt this token
-    await user.save();
-
-    console.log("✅ Shopify info updated for user:", user.email);
-
-    res.json({ message: "Shopify info saved successfully" });
-  } catch (error) {
-    console.error("Error updating Shopify info:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;

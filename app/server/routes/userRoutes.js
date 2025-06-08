@@ -73,33 +73,38 @@ router.post("/user-creation", async (req, res) => {
 });
 
 
-router.post('/connect-shop', authenticate, async (req, res) => {
+router.post("/connect-shopify", authenticate, async (req, res) => {
+  const { connectedShopDomain, shopifyAccessToken } = req.body;
+  const userId = req.user._id; // Assuming your `authenticate` middleware attaches user info to req.user
+
+  if (!connectedShopDomain || !shopifyAccessToken) {
+    return res.status(400).json({ error: "Missing Shopify domain or access token" });
+  }
+
   try {
-    const { connectedShopDomain } = req.body;
-    const userId = req.user.userId;
+    const normalizedDomain = connectedShopDomain.trim().toLowerCase();
+
+    if (!normalizedDomain.endsWith(".myshopify.com")) {
+      return res.status(400).json({ error: "Invalid Shopify domain" });
+    }
+
     const user = await User.findById(userId);
-
-    if (!connectedShopDomain) {
-      return res.status(400).json({ error: "Missing connectedShopDomain in request body" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    if (!connectedShopDomain.endsWith('.myshopify.com')) {
-      return res.status(400).json({ error: "Invalid Shopify domain format" });
-    }
-
-    user.connectedShopDomain = connectedShopDomain;
+    user.connectedShopDomain = normalizedDomain;
+    user.shopifyAccessToken = shopifyAccessToken; // You may want to encrypt this token
     await user.save();
 
-    const savedUser = await User.findById(userId);
-    console.log("✅ Saved user with shop domain:", savedUser);
+    console.log("✅ Shopify info updated for user:", user.email);
 
-    res.json({ message: "Shop domain connected successfully", connectedShopDomain });
+    res.json({ message: "Shopify info saved successfully" });
   } catch (error) {
-    console.error("❌ Error connecting shop domain:", error);
-    res.status(500).json({ error: "Server error" });
+    console.error("Error updating Shopify info:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 
 
