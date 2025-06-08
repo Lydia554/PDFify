@@ -75,7 +75,7 @@ router.post("/user-creation", async (req, res) => {
 
 router.get("/shopify/connection", authMiddleware, async (req, res) => {
   try {
-    const connectedShopDomain = req.user.connectedShopDomain || null;
+    const connectedShopDomain = req.fullUser.connectedShopDomain || null;
     res.json({ connectedShopDomain });
   } catch (err) {
     console.error(err);
@@ -107,18 +107,17 @@ router.post("/shopify/connect", authMiddleware, async (req, res) => {
 });
 
 
-
 router.post("/shopify/disconnect", authMiddleware, async (req, res) => {
   try {
-    req.user.connectedShopDomain = null;
-    req.user.shopifyAccessToken = null;
-    await req.user.save();
+    req.fullUser.connectedShopDomain = null;
+    req.fullUser.shopifyAccessToken = null;
+    await req.fullUser.save();
     res.json({ message: "Shopify store disconnected successfully." });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: "Failed to disconnect Shopify store" });
   }
 });
-
 
 
 
