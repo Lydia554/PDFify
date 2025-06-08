@@ -46,16 +46,17 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
   try {
     const user = await User.findOne({ connectedShopDomain: normalizedShopDomain });
 
-    if (!user || !user.shopifyAccessToken) {
-      console.error(`❌ No user or token found for ${normalizedShopDomain}`);
-      return res.status(404).send("User or token not found");
+    if (!user) {
+      console.error(`❌ No user found for ${normalizedShopDomain}`);
+      return res.status(404).send("User not found");
     }
 
-    // Use your server-side internal API key (from env) to call your PDF API
-    const internalApiKey = process.env.INTERNAL_API_KEY;
-    if (!internalApiKey) {
-      console.error("Internal API key not configured");
-      return res.status(500).send("Server configuration error");
+    // Use the user's own API key from DB to call your PDF API
+    const userApiKey = user.apiKey; // adjust field name if different
+
+    if (!userApiKey) {
+      console.error(`❌ No API key found for user ${user._id} (${normalizedShopDomain})`);
+      return res.status(403).send("User API key not found");
     }
 
     // Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
@@ -68,7 +69,7 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${internalApiKey}`, // Use your internal API key here
+          Authorization: `Bearer ${userApiKey}`, // <-- Use user’s API key here
         },
         responseType: "arraybuffer",
       }
