@@ -77,7 +77,7 @@ app.use("/api", packingSlipRoutes);
 app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
 app.use("/webhook", shopifyWebhookRoutes); 
-app.use("/shopify", shopifyApiRoutes);
+app.use("/api", shopifyApiRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
 
