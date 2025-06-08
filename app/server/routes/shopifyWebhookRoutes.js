@@ -29,17 +29,20 @@ router.post("/order-created", async (req, res) => {
 
     // Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
     const invoiceResponse = await axios.post(
-      "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
-      { order }, 
-      {
-        headers: {
-          "x-shopify-shop-domain": normalizedShopDomain,
-          "x-shopify-access-token": user.shopifyAccessToken,
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        responseType: "arraybuffer",
-      }
-    );
+        "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
+        { 
+          order,
+          shopDomain: normalizedShopDomain,
+          shopifyAccessToken: user.shopifyAccessToken,
+        }, 
+        {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          responseType: "arraybuffer",
+        }
+      );
+      
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 

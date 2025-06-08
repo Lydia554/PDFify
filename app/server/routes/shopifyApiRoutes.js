@@ -204,7 +204,7 @@ router.post("/invoice", authenticate, async (req, res) => {
         headers: {
           "X-Shopify-Access-Token": token,
           "Content-Type": "application/json",
-          'Authorization': `Bearer ${apiKey}`,
+         
 
         },
       });
