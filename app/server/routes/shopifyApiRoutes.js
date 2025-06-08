@@ -179,6 +179,9 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 router.post("/shopify/invoice", authenticate, async (req, res) => {
+  console.log('POST /invoice route hit');
+  res.json({ message: 'Invoice route reached' });
+
   try {
     const shopDomain = req.headers["x-shopify-shop-domain"];
     const token = req.headers["x-shopify-access-token"];
