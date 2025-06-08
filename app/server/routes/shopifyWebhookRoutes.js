@@ -35,6 +35,7 @@ router.post("/order-created", async (req, res) => {
         headers: {
           "x-shopify-shop-domain": normalizedShopDomain,
           "x-shopify-access-token": user.shopifyAccessToken,
+          'Authorization': `Bearer ${apiKey}`,
         },
         responseType: "arraybuffer",
       }
