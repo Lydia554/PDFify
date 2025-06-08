@@ -23,28 +23,29 @@ router.post("/login", async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-
-    if (!user || user.deleted) {
-      return res.status(401).json({ error: "Invalid email or password." });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) {
-      return res.status(401).json({ error: "Invalid email or password." });
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: "Invalid password" });
     }
 
-    if (connectedShopDomain && connectedShopDomain !== user.connectedShopDomain) {
-      user.connectedShopDomain = connectedShopDomain;
+    // Normalize and store domain
+    if (connectedShopDomain?.trim().toLowerCase().endsWith(".myshopify.com")) {
+      const normalized = connectedShopDomain.trim().toLowerCase();
+      user.connectedShopDomain = normalized;
       await user.save();
+      console.log("✅ connectedShopDomain saved during login:", normalized);
     }
 
-    return res.json({ apiKey: user.apiKey });
+    res.json({ apiKey: user.getDecryptedApiKey() });
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ error: "Server error during login." });
+    console.error("❌ Error during login:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 
 router.post("/store-token", async (req, res) => {
