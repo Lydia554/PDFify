@@ -35,7 +35,26 @@
   <button id="upgradeSubscriptionButton" style="color: white; background-color: green; padding: 10px; cursor: pointer;">Upgrade to Premium</button>
   <button id="downgradeSubscriptionButton" style="color: white; background-color: orange; padding: 10px; cursor: pointer;">Downgrade to Free</button>
 
+
+
   <hr />
+
+<h2>Shopify Store Integration</h2>
+<div id="shopifyConnectionSection">
+  <p>
+    <strong>Connected Shopify Store:</strong>
+    <span id="connectedShopDomain">None</span>
+  </p>
+
+  <label for="shopDomainInput">Shop Domain (e.g. mystore.myshopify.com):</label>
+  <input type="text" id="shopDomainInput" placeholder="Enter your Shopify store domain" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+  
+  <button id="connectShopifyButton" style="background-color: #5e72e4; color: white;">Connect Shopify Store</button>
+  <button id="disconnectShopifyButton" style="background-color: #ff4081; color: white; margin-left: 10px;">Disconnect Shopify Store</button>
+  
+  <p id="shopifyResult" style="margin-top: 10px; font-weight: bold;"></p>
+</div>
+
 
   <h2>Update Your Information</h2>
   <form id="updateUserForm">
@@ -126,6 +145,8 @@
         }
       }
     }
+
+    
 
 
     document.querySelectorAll("nav a").forEach((link) => {
@@ -250,6 +271,69 @@
         resultMessage.textContent = "Failed to delete account. Please try again.";
       }
     });
+
+    // Fetch Shopify connection info and update UI
+async function fetchShopifyConnection() {
+  try {
+    const response = await api.get("/shopify/connection");
+    const { connectedShopDomain } = response.data;
+    document.getElementById("connectedShopDomain").textContent = connectedShopDomain || "None";
+  } catch (error) {
+    console.error("Failed to fetch Shopify connection:", error);
+    document.getElementById("connectedShopDomain").textContent = "Error fetching data";
+  }
+}
+
+// Connect Shopify store
+document.getElementById("connectShopifyButton").addEventListener("click", async () => {
+  const shopDomain = document.getElementById("shopDomainInput").value.trim();
+  if (!shopDomain) {
+    document.getElementById("shopifyResult").textContent = "Please enter a valid shop domain.";
+    return;
+  }
+  document.getElementById("connectShopifyButton").disabled = true;
+  document.getElementById("shopifyResult").textContent = "";
+
+  try {
+    // Here you can implement OAuth flow or just save domain & token for demo
+    // For demo, assume you get token from backend or input for now.
+    // Replace with actual OAuth flow as needed.
+    const dummyAccessToken = "dummy-access-token-for-demo"; // Replace this with real OAuth token in production
+    
+    const response = await api.post("/shopify/connect", {
+      shopDomain,
+      accessToken: dummyAccessToken,
+    });
+    document.getElementById("shopifyResult").textContent = response.data.message || "Shopify store connected!";
+    document.getElementById("connectedShopDomain").textContent = shopDomain;
+  } catch (error) {
+    console.error("Error connecting Shopify store:", error);
+    document.getElementById("shopifyResult").textContent = "Failed to connect Shopify store.";
+  } finally {
+    document.getElementById("connectShopifyButton").disabled = false;
+  }
+});
+
+// Disconnect Shopify store
+document.getElementById("disconnectShopifyButton").addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to disconnect your Shopify store?")) return;
+  document.getElementById("disconnectShopifyButton").disabled = true;
+  document.getElementById("shopifyResult").textContent = "";
+
+  try {
+    const response = await api.post("/shopify/disconnect");
+    document.getElementById("shopifyResult").textContent = response.data.message || "Shopify store disconnected.";
+    document.getElementById("connectedShopDomain").textContent = "None";
+  } catch (error) {
+    console.error("Error disconnecting Shopify store:", error);
+    document.getElementById("shopifyResult").textContent = "Failed to disconnect Shopify store.";
+  } finally {
+    document.getElementById("disconnectShopifyButton").disabled = false;
+  }
+});
+
+// Fetch Shopify connection info on load as well
+fetchShopifyConnection();
 
 
     fetchUserData();
