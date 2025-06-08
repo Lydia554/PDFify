@@ -4,20 +4,16 @@ const authenticate = async (req, res, next) => {
   let apiKey;
 
   const authHeader = req.headers.authorization;
- 
 
   if (authHeader && authHeader.startsWith("Bearer ")) {
     apiKey = authHeader.split(" ")[1];
-   
   }
 
   if (!apiKey) {
     apiKey = req.query.apiKey;
-    
   }
 
   if (!apiKey) {
-   
     return res.status(403).json({ error: "API key not provided" });
   }
 
@@ -34,13 +30,12 @@ const authenticate = async (req, res, next) => {
     });
 
     if (!user) {
-     
       return res.status(403).json({ error: "User not found or API key is invalid" });
     }
 
     const decryptedKey = user.getDecryptedApiKey();
-   
 
+    // Plain object with limited info for convenience
     req.user = {
       userId: user._id,
       email: user.email,
@@ -50,6 +45,7 @@ const authenticate = async (req, res, next) => {
       isPremium: user.isPremium,
     };
 
+    // Full Mongoose user document to allow .save() etc.
     req.fullUser = user;
 
     next();

@@ -87,21 +87,17 @@ router.get("/shopify/connection", authMiddleware, async (req, res) => {
 router.post("/shopify/connect", authMiddleware, async (req, res) => {
   try {
     const { shopDomain, accessToken } = req.body;
+
     if (!shopDomain || !accessToken) {
       return res.status(400).json({ error: "Shop domain and access token required" });
     }
 
     const normalizedShopDomain = shopDomain.toLowerCase();
 
-    // Fetch full user document from DB by ID
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    user.connectedShopDomain = normalizedShopDomain;
-    user.shopifyAccessToken = accessToken;
-    await user.save();
+    // Use req.fullUser (the Mongoose doc) to update and save
+    req.fullUser.connectedShopDomain = normalizedShopDomain;
+    req.fullUser.shopifyAccessToken = accessToken;
+    await req.fullUser.save();
 
     res.json({ message: `Shopify store ${normalizedShopDomain} connected successfully.` });
   } catch (err) {
