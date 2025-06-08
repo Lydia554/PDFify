@@ -325,19 +325,24 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
   }
 });
 
-
-// === /order-created ===
 router.post("/order-created", async (req, res) => {
+  const shopDomain = req.headers["x-shopify-shop-domain"];
+  const order = req.body;
+
+  console.log("🧾 Order webhook received");
+  console.log("🏪 x-shopify-shop-domain:", shopDomain);
+  console.log("📦 Order payload:", JSON.stringify(order, null, 2));
+
+  if (!shopDomain || !order || !order.id) {
+    console.error("❌ Missing shop domain or order ID");
+    return res.status(400).send("Missing shop domain or order payload");
+  }
+
   try {
-    const shopDomain = req.headers["x-shopify-shop-domain"];
-    const order = req.body;
-
-    if (!shopDomain || !order) {
-      return res.status(400).send("Missing shop domain or order payload");
-    }
-
     const user = await User.findOne({ connectedShopDomain: shopDomain.toLowerCase() });
+
     if (!user || !user.shopifyAccessToken) {
+      console.error("❌ No user or token found for", shopDomain);
       return res.status(404).send("User or token not found");
     }
 
@@ -355,36 +360,30 @@ router.post("/order-created", async (req, res) => {
 
     const pdfBuffer = Buffer.from(data, "binary");
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: `Invoice for Shopify Order ${order.name || order.id}`,
-        text: `Hello ${user.name || ""},
+    await sendEmail({
+      to: user.email,
+      subject: `Invoice for Shopify Order ${order.name || order.id}`,
+      text: `Hello ${user.name || ""},\n\nYour invoice for order ${
+        order.name || order.id
+      } is attached.\n\nThanks for using PDFify!`,
+      attachments: [
+        {
+          filename: `Invoice-${order.name || order.id}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+    });
 
-Your invoice for order ${order.name || order.id} is attached to this email.
-
-Thank you for using PDFify!`,
-        attachments: [
-          {
-            filename: `Invoice-${order.name || order.id}.pdf`,
-            content: pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ],
-      });
-
-      console.log("Email with PDF sent to", user.email);
-    } catch (emailErr) {
-      console.error("Failed to send email:", emailErr.message);
-    }
+    console.log("✅ Email with invoice sent to", user.email);
 
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
 
-    res.status(200).send("OK");
+    return res.status(200).send("Invoice generated and emailed.");
   } catch (err) {
-    console.error("Webhook error:", err.message);
-    res.status(500).send("Internal Server Error");
+    console.error("❌ Error in webhook handler:", err.message);
+    return res.status(500).send("Internal Server Error");
   }
 });
 
