@@ -73,7 +73,8 @@ router.post("/user-creation", async (req, res) => {
 });
 
 
-router.get("/shopify/connection", authMiddleware, async (req, res) => {
+router.get("/shopify/connection", authenticate, async (req, res) => {
+
   try {
     const connectedShopDomain = req.fullUser.connectedShopDomain || null;
     res.json({ connectedShopDomain });
@@ -84,7 +85,7 @@ router.get("/shopify/connection", authMiddleware, async (req, res) => {
 });
 
 
-router.post("/shopify/connect", authMiddleware, async (req, res) => {
+router.post("/shopify/connect", authenticate, async (req, res) => {
   try {
     const { shopDomain, accessToken } = req.body;
 
@@ -106,7 +107,7 @@ router.post("/shopify/connect", authMiddleware, async (req, res) => {
   }
 });
 
-router.post("/shopify/disconnect", authMiddleware, async (req, res) => {
+router.post("/shopify/disconnect", authenticate, async (req, res) => {
   try {
     req.fullUser.connectedShopDomain = null;
     req.fullUser.shopifyAccessToken = null;
