@@ -25,9 +25,6 @@
       <label for="connectedShopDomain">Shopify Domain <small>(optional, like store.myshopify.com)</small></label>
       <input type="text" id="connectedShopDomain" placeholder="your-store.myshopify.com" />
 
-      <label for="shopifyToken">Shopify Access Token <small>(optional, starts with shpat_...)</small></label>
-      <input type="text" id="shopifyToken" placeholder="shpat_..." />
-
       <button type="submit">Login</button>
     </form>
 
@@ -44,7 +41,6 @@
   </div>
 
   <script>
- 
     document.getElementById("togglePassword").addEventListener("click", () => {
       const passwordField = document.getElementById("password");
       const toggleButton = document.getElementById("togglePassword");
@@ -57,7 +53,6 @@
       }
     });
 
-
     const urlParams = new URLSearchParams(window.location.search);
     const shopParam = urlParams.get("shop");
     if (shopParam) {
@@ -69,7 +64,6 @@
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const connectedShopDomain = document.getElementById("connectedShopDomain").value.trim();
-      const shopifyToken = document.getElementById("shopifyToken").value.trim();
       const result = document.getElementById("result");
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -105,23 +99,12 @@
         const response = await axios.post(`/api/auth/login`, payload);
 
         if (response.data.apiKey) {
-          const apiKey = response.data.apiKey;
-          localStorage.setItem("apiKey", apiKey);
-
-          if (connectedShopDomain && shopifyToken) {
-            try {
-              await axios.post("/api/auth/store-token", {
-                connectedShopDomain,
-                token: shopifyToken,
-                apiKey,
-              });
-              console.log("✅ Shopify token saved.");
-            } catch (err) {
-              console.warn("⚠️ Failed to save Shopify token:", err.response?.data || err.message);
-            }
+          localStorage.setItem("x-api-key", response.data.apiKey);
+          if (response.data.shopifyAccessToken) {
+            localStorage.setItem("shopify-access-token", response.data.shopifyAccessToken);
           }
 
-       
+          // ✅ Redirect to main dashboard
           window.location.href = "/pdf-generator-demo";
         } else {
           result.innerText = `Error: ${response.data.error}`;
@@ -129,6 +112,7 @@
           result.style.display = "block";
         }
       } catch (error) {
+        console.error("Login error:", error);
         result.innerText = "An unexpected error occurred. Please try again.";
         result.className = "result error";
         result.style.display = "block";

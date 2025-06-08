@@ -32,7 +32,7 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Normalize and store domain
+    // Normalize and store connectedShopDomain if provided
     if (connectedShopDomain?.trim().toLowerCase().endsWith(".myshopify.com")) {
       const normalized = connectedShopDomain.trim().toLowerCase();
       user.connectedShopDomain = normalized;
@@ -40,12 +40,17 @@ router.post("/login", async (req, res) => {
       console.log("✅ connectedShopDomain saved during login:", normalized);
     }
 
-    res.json({ apiKey: user.getDecryptedApiKey() });
+    // Return both API key and optional Shopify access token
+    res.json({
+      apiKey: user.getDecryptedApiKey(), // You already have this
+      shopifyAccessToken: user.shopifyAccessToken || null // Return if exists
+    });
   } catch (error) {
     console.error("❌ Error during login:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 
 router.post("/store-token", async (req, res) => {
