@@ -27,7 +27,6 @@ function verifyShopifyWebhook(req, res, next) {
 
   next();
 }
-
 router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
   const shopDomain = req.headers["x-shopify-shop-domain"];
   const order = req.body;
@@ -44,21 +43,21 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
   const connectedShopDomain = shopDomain.trim().toLowerCase();
 
   try {
-    const user = await User.findOne({ connectedShopDomain: normalizedShopDomain });
+    const user = await User.findOne({ connectedShopDomain }); // 🛠️ Corrected here
 
     if (!user) {
-      console.error(`❌ No user found for ${normalizedShopDomain}`);
+      console.error(`❌ No user found for ${connectedShopDomain}`);
       return res.status(404).send("User not found");
     }
-    
+
     // Use the model method to decrypt the API key
     const userApiKey = user.getDecryptedApiKey();
-    
+
     if (!userApiKey) {
       console.error(`❌ No API key found for user ${user._id} (${connectedShopDomain})`);
       return res.status(403).send("User API key not found");
     }
-    
+
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -68,12 +67,11 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${userApiKey}`,  // <-- decrypted key here
+          Authorization: `Bearer ${userApiKey}`,
         },
         responseType: "arraybuffer",
       }
     );
-    
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
