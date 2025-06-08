@@ -289,20 +289,24 @@ async function fetchShopifyConnection() {
 }
 
 document.getElementById("connectShopifyButton").addEventListener("click", async () => {
-  const shopDomain = document.getElementById("shopifyDomain").value.trim();
-  const accessToken = document.getElementById("shopifyToken").value.trim();
-  const resultEl = document.getElementById("shopifyResult");
+  const shopDomainInput = document.getElementById("shopDomainInput");
+  const accessTokenInput = document.getElementById("shopifyAccessToken");
+
+  if (!shopDomainInput || !accessTokenInput) {
+    document.getElementById("shopifyResult").textContent = "Missing input elements.";
+    return;
+  }
+
+  const shopDomain = shopDomainInput.value.trim();
+  const accessToken = accessTokenInput.value.trim();
 
   if (!shopDomain || !accessToken) {
-    resultEl.textContent = "Please enter both the shop domain and access token.";
-    resultEl.className = "result error";
-    resultEl.style.display = "block";
+    document.getElementById("shopifyResult").textContent = "Please enter both shop domain and access token.";
     return;
   }
 
   document.getElementById("connectShopifyButton").disabled = true;
-  resultEl.textContent = "";
-  resultEl.style.display = "none";
+  document.getElementById("shopifyResult").textContent = "";
 
   try {
     const response = await api.post("/shopify/connect", {
@@ -310,20 +314,17 @@ document.getElementById("connectShopifyButton").addEventListener("click", async 
       accessToken,
     });
 
-    resultEl.textContent = response.data.message || "Shopify store connected!";
-    resultEl.className = "result success";
-    resultEl.style.display = "block";
-
-    document.getElementById("shopifyConnectedStatus").textContent = `Connected: ${shopDomain}`;
+    document.getElementById("shopifyResult").textContent =
+      response.data.message || "Shopify store connected!";
+    document.getElementById("connectedShopDomain").textContent = shopDomain;
   } catch (error) {
     console.error("Error connecting Shopify store:", error);
-    resultEl.textContent = "Failed to connect Shopify store.";
-    resultEl.className = "result error";
-    resultEl.style.display = "block";
+    document.getElementById("shopifyResult").textContent = "Failed to connect Shopify store.";
   } finally {
     document.getElementById("connectShopifyButton").disabled = false;
   }
 });
+
 
 document.getElementById("disconnectShopifyButton").addEventListener("click", async () => {
   const resultEl = document.getElementById("shopifyResult");
