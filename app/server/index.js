@@ -30,12 +30,7 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 
 
 const app = express();
-
-app.use(express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf.toString();
-  }
-}));
+app.use(express.json()); 
 
 
 
