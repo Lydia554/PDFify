@@ -2,10 +2,32 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const path = require("path");
+const cron = require("node-cron");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
+
 dotenv.config();
+
+const User = require("./models/User");
+const authenticate = require("./middleware/authenticate");
+
+const recipeRoutes = require("./routes/recipeRoutes");
+const shopOrderRoutes = require("./routes/shopOrderRoutes");
+const therapyReportRoutes = require("./routes/therapyReportRoutes");
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const stripeRoutes = require("./routes/stripeRoutes");
+const invoiceRoutes = require("./routes/invoiceRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
+const htmlRoutes = require("./routes/htmlRoutes");
+const packingSlipRoutes = require("./routes/packing-slipRoutes");
+const friendlyMode = require("./routes/friendlyMode");
+const foodTrekRoutes = require("./routes/foodTrekRoutes");
+const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
+const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
+
 
 const app = express();
 
@@ -14,6 +36,10 @@ app.use(express.json({
     req.rawBody = buf.toString();
   }
 }));
+
+
+
+
 
 app.use(cors({
   origin: "https://food-trek.com",
@@ -27,6 +53,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => console.log("MongoDB connected"))
 .catch((error) => console.error("MongoDB connection error:", error));
+
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "fallbackSecretKey",
@@ -43,7 +70,7 @@ app.use(session({
   }
 }));
 
-// Routes
+
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api", invoiceRoutes);
@@ -58,6 +85,7 @@ app.use("/webhook", shopifyWebhookRoutes);
 app.use("/api/shopify", shopifyApiRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
+
 
 
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
