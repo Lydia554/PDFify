@@ -73,51 +73,7 @@ router.post("/user-creation", async (req, res) => {
 });
 
 
-router.get("/shopify/connection", authenticate, async (req, res) => {
 
-  try {
-    const connectedShopDomain = req.fullUser.connectedShopDomain || null;
-    res.json({ connectedShopDomain });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch Shopify connection" });
-  }
-});
-
-
-router.post("/shopify/connect", authenticate, async (req, res) => {
-  try {
-    const { shopDomain, accessToken } = req.body;
-
-    if (!shopDomain || !accessToken) {
-      return res.status(400).json({ error: "Shop domain and access token required" });
-    }
-
-    const normalizedShopDomain = shopDomain.toLowerCase();
-
-    // Use req.fullUser (the Mongoose doc) to update and save
-    req.fullUser.connectedShopDomain = normalizedShopDomain;
-    req.fullUser.shopifyAccessToken = accessToken;
-    await req.fullUser.save();
-
-    res.json({ message: `Shopify store ${normalizedShopDomain} connected successfully.` });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to connect Shopify store" });
-  }
-});
-
-router.post("/shopify/disconnect", authenticate, async (req, res) => {
-  try {
-    req.fullUser.connectedShopDomain = null;
-    req.fullUser.shopifyAccessToken = null;
-    await req.fullUser.save();
-    res.json({ message: "Shopify store disconnected successfully." });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to disconnect Shopify store" });
-  }
-});
 
 
 
