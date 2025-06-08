@@ -48,6 +48,8 @@
 
   <label for="shopDomainInput">Shop Domain (e.g. mystore.myshopify.com):</label>
   <input type="text" id="shopDomainInput" placeholder="Enter your Shopify store domain" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
+  <label for="shopifyAccessToken">Shopify Access Token:</label>
+<input type="text" id="shopifyAccessToken" name="shopifyAccessToken" />
   
   <button id="connectShopifyButton" style="background-color: #5e72e4; color: white;">Connect Shopify Store</button>
   <button id="disconnectShopifyButton" style="background-color: #ff4081; color: white; margin-left: 10px;">Disconnect Shopify Store</button>
@@ -272,6 +274,8 @@
       }
     });
 
+
+
     // Fetch Shopify connection info and update UI
 async function fetchShopifyConnection() {
   try {
@@ -313,6 +317,38 @@ document.getElementById("connectShopifyButton").addEventListener("click", async 
     document.getElementById("connectShopifyButton").disabled = false;
   }
 });
+
+document.getElementById('connectShopifyBtn').addEventListener('click', async () => {
+  const shopDomain = document.getElementById('shopDomain').value.trim();
+  const accessToken = document.getElementById('shopifyAccessToken').value.trim();
+
+  if (!shopDomain || !accessToken) {
+    alert('Please enter both shop domain and access token.');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/shopify/connect', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + yourUserApiKeyOrTokenHere, // Adjust if you use token auth
+      },
+      body: JSON.stringify({ shopDomain, accessToken }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      alert(data.message);
+    } else {
+      alert('Error: ' + data.error);
+    }
+  } catch (err) {
+    alert('Network or server error');
+  }
+});
+
 
 // Disconnect Shopify store
 document.getElementById("disconnectShopifyButton").addEventListener("click", async () => {
