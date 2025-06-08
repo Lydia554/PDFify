@@ -38,9 +38,7 @@ app.use((req, res, next) => {
   }
 })
 
-app.use('/webhook', shopifyRoutes);
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
 
 
 app.use(cors({
@@ -83,7 +81,7 @@ app.use("/api", htmlRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
-app.use("/api", shopifyRoutes);
+app.use("/shopify", shopifyRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
 
