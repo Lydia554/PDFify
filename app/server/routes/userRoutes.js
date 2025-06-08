@@ -72,14 +72,6 @@ router.post("/user-creation", async (req, res) => {
   }
 });
 
-router.get("/shopify/connection", authMiddleware, async (req, res) => {
-  try {
-    const user = req.user;
-    res.json({ connectedShopDomain: user.connectedShopDomain || null });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to get Shopify connection info" });
-  }
-});
 
 router.get("/shopify/connection", authMiddleware, async (req, res) => {
   try {
@@ -101,10 +93,15 @@ router.post("/shopify/connect", authMiddleware, async (req, res) => {
 
     const normalizedShopDomain = shopDomain.toLowerCase();
 
-    // Save connected Shopify store info to the authenticated user
-    req.user.connectedShopDomain = normalizedShopDomain;
-    req.user.shopifyAccessToken = accessToken;
-    await req.user.save();
+    // Fetch full user document from DB by ID
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.connectedShopDomain = normalizedShopDomain;
+    user.shopifyAccessToken = accessToken;
+    await user.save();
 
     res.json({ message: `Shopify store ${normalizedShopDomain} connected successfully.` });
   } catch (err) {
@@ -112,6 +109,7 @@ router.post("/shopify/connect", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Failed to connect Shopify store" });
   }
 });
+
 
 
 router.post("/shopify/disconnect", authMiddleware, async (req, res) => {
