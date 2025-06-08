@@ -33,7 +33,7 @@ const app = express();
 
 
 
-app.use("/webhook", shopifyWebhookRoutes);
+app.use("/webhook", shopifyWebhookRoutes, express.raw({ type: "application/json" }));
 
 
 app.use(express.json()); 
