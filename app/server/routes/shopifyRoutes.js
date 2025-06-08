@@ -325,6 +325,10 @@ router.post("/shopify/invoice", authenticate, async (req, res) => {
   }
 });
 
+
+
+
+
 router.post("/order-created", async (req, res) => {
   const shopDomain = req.headers["x-shopify-shop-domain"];
   const order = req.body;
@@ -339,7 +343,13 @@ router.post("/order-created", async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ connectedShopDomain: shopDomain.toLowerCase() });
+    const normalizedShopDomain = shopDomain.trim().toLowerCase();
+console.log("🔍 Searching for connectedShopDomain:", normalizedShopDomain);
+
+const user = await User.findOne({
+  connectedShopDomain: normalizedShopDomain,
+});
+
 
     if (!user || !user.shopifyAccessToken) {
       console.error("❌ No user or token found for", shopDomain);
