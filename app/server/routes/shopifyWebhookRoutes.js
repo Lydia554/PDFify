@@ -29,7 +29,7 @@ router.post("/order-created", async (req, res) => {
 
     // Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
     const invoiceResponse = await axios.post(
-      "https://pdf-api.portfolio.lidija-jokic.com/shopify/invoice",
+      "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       { order }, 
       {
         headers: {
