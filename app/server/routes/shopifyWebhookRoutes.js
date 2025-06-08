@@ -27,79 +27,83 @@ function verifyShopifyWebhook(req, res, next) {
 
   next();
 }
-router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
-  const shopDomain = req.headers["x-shopify-shop-domain"];
-  const order = req.body;
 
-  console.log("🧾 Order webhook received");
-  console.log("🏪 x-shopify-shop-domain:", shopDomain);
-  console.log("📦 Order payload:", JSON.stringify(order, null, 2));
 
-  if (!shopDomain || !order || !order.id) {
-    console.error("❌ Missing shop domain or order ID");
-    return res.status(400).send("Missing shop domain or order payload");
-  }
+router.post(
+  "/order-created",
+  express.raw({ type: "application/json" }),
+  verifyShopifyWebhook,
+  async (req, res) => {
+    const shopDomain = req.headers["x-shopify-shop-domain"];
+    const order = JSON.parse(req.body.toString()); // Convert raw body to JSON
 
-  const connectedShopDomain = shopDomain.trim().toLowerCase();
+    console.log("🧾 Order webhook received");
+    console.log("🏪 x-shopify-shop-domain:", shopDomain);
+    console.log("📦 Order payload:", JSON.stringify(order, null, 2));
 
-  try {
-    const user = await User.findOne({ connectedShopDomain }); // 🛠️ Corrected here
-
-    if (!user) {
-      console.error(`❌ No user found for ${connectedShopDomain}`);
-      return res.status(404).send("User not found");
+    if (!shopDomain || !order || !order.id) {
+      console.error("❌ Missing shop domain or order ID");
+      return res.status(400).send("Missing shop domain or order payload");
     }
 
-    // Use the model method to decrypt the API key
-    const userApiKey = user.getDecryptedApiKey();
+    const connectedShopDomain = shopDomain.trim().toLowerCase();
 
-    if (!userApiKey) {
-      console.error(`❌ No API key found for user ${user._id} (${connectedShopDomain})`);
-      return res.status(403).send("User API key not found");
-    }
+    try {
+      const user = await User.findOne({ connectedShopDomain });
 
-    const invoiceResponse = await axios.post(
-      "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
-      {
-        order,
-        shopDomain: connectedShopDomain,
-        shopifyAccessToken: user.shopifyAccessToken,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${userApiKey}`,
-        },
-        responseType: "arraybuffer",
+      if (!user) {
+        console.error(`❌ No user found for ${connectedShopDomain}`);
+        return res.status(404).send("User not found");
       }
-    );
 
-    const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
+      const userApiKey = user.getDecryptedApiKey();
 
-    // Send email with PDF invoice attached
-    await sendEmail({
-      to: user.email,
-      subject: `Invoice for Shopify Order ${order.name || order.id}`,
-      text: `Hello ${user.name || ""},\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for using PDFify!`,
-      attachments: [
+      if (!userApiKey) {
+        console.error(`❌ No API key found for user ${user._id} (${connectedShopDomain})`);
+        return res.status(403).send("User API key not found");
+      }
+
+      const invoiceResponse = await axios.post(
+        "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
         {
-          filename: `Invoice-${order.name || order.id}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf",
+          order,
+          shopDomain: connectedShopDomain,
+          shopifyAccessToken: user.shopifyAccessToken,
         },
-      ],
-    });
+        {
+          headers: {
+            Authorization: `Bearer ${userApiKey}`,
+          },
+          responseType: "arraybuffer",
+        }
+      );
 
-    console.log("✅ Email with invoice sent to", user.email);
+      const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
-    // Increment usage count for this user
-    user.usageCount = (user.usageCount || 0) + 1;
-    await user.save();
+      await sendEmail({
+        to: user.email,
+        subject: `Invoice for Shopify Order ${order.name || order.id}`,
+        text: `Hello ${user.name || ""},\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for using PDFify!`,
+        attachments: [
+          {
+            filename: `Invoice-${order.name || order.id}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ],
+      });
 
-    res.status(200).send("Invoice generated and emailed.");
-  } catch (err) {
-    console.error("❌ Error in webhook handler:", err);
-    res.status(500).send("Internal Server Error");
+      console.log("✅ Email with invoice sent to", user.email);
+
+      user.usageCount = (user.usageCount || 0) + 1;
+      await user.save();
+
+      res.status(200).send("Invoice generated and emailed.");
+    } catch (err) {
+      console.error("❌ Error in webhook handler:", err);
+      res.status(500).send("Internal Server Error");
+    }
   }
-});
+);
 
 module.exports = router;
