@@ -1,10 +1,34 @@
 const express = require("express");
 const router = express.Router();
+const crypto = require("crypto");
 const User = require("../models/User");
 const axios = require("axios");
 const sendEmail = require("../sendEmail");
 
-router.post("/order-created", async (req, res) => {
+// Middleware to verify Shopify webhook HMAC signature
+function verifyShopifyWebhook(req, res, next) {
+  const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+  const body = req.rawBody; // raw body stored by express json 'verify' option below
+
+  if (!hmacHeader || !body) {
+    console.error("Missing HMAC header or raw body");
+    return res.status(401).send("Unauthorized");
+  }
+
+  const generatedHmac = crypto
+    .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
+    .update(body, "utf8")
+    .digest("base64");
+
+  if (generatedHmac !== hmacHeader) {
+    console.error("Invalid HMAC signature");
+    return res.status(401).send("Unauthorized");
+  }
+
+  next();
+}
+
+router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
   const shopDomain = req.headers["x-shopify-shop-domain"];
   const order = req.body;
 
@@ -27,33 +51,30 @@ router.post("/order-created", async (req, res) => {
       return res.status(404).send("User or token not found");
     }
 
-    // Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
-// 🔐 Extract the API key from the incoming request's Authorization header
-const authHeader = req.headers.authorization;
-if (!authHeader || !authHeader.startsWith("Bearer ")) {
-  console.error("Missing or invalid Authorization header");
-  return res.status(401).send("Unauthorized");
-}
+    // 🔐 Extract the API key from the incoming request's Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.error("Missing or invalid Authorization header");
+      return res.status(401).send("Unauthorized");
+    }
 
-const apiKey = authHeader.replace("Bearer ", "");
+    const apiKey = authHeader.replace("Bearer ", "");
 
-// 📄 Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
-const invoiceResponse = await axios.post(
-  "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
-  { 
-    order,
-    shopDomain: normalizedShopDomain,
-    shopifyAccessToken: user.shopifyAccessToken,
-  }, 
-  {
-    headers: {
-      Authorization: `Bearer ${apiKey}`, // ✅ Pass the user’s token forward
-    },
-    responseType: "arraybuffer",
-  }
-);
-
-      
+    // 📄 Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
+    const invoiceResponse = await axios.post(
+      "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
+      {
+        order,
+        shopDomain: normalizedShopDomain,
+        shopifyAccessToken: user.shopifyAccessToken,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`, // ✅ Pass the user’s token forward
+        },
+        responseType: "arraybuffer",
+      }
+    );
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
@@ -83,7 +104,5 @@ const invoiceResponse = await axios.post(
     res.status(500).send("Internal Server Error");
   }
 });
-
-
 
 module.exports = router;
