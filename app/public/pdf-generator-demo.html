@@ -365,6 +365,33 @@ document.getElementById("generateDevBtn").addEventListener("click", () => {
   sendRequest(false); 
 });
 
+
+async function connectShopify(domain, token) {
+        const apiKey = localStorage.getItem('apiKey');
+
+  if (!apiKey) return alert('You must login first.');
+
+  try {
+    const res = await fetch('/api/auth/connect-shopify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey
+      },
+      body: JSON.stringify({ connectedShopDomain: domain, shopifyAccessToken: token })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      alert('Shopify connected!');
+    } else {
+      alert(data.error || 'Failed to connect Shopify');
+    }
+  } catch (err) {
+    alert('Error connecting Shopify');
+  }
+}
+
 async function sendRequest(isPreview = false) {
   console.log('Sending request, isPreview =', isPreview);
   const endpoint = document.getElementById("endpoint").value.trim();
@@ -516,7 +543,8 @@ async function sendRequest(isPreview = false) {
       })
       .catch(error => console.error('Error fetching Stripe key:', error));
 
-     
+
+
   
 
 

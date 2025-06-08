@@ -21,21 +21,24 @@ router.post("/login", async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid password" });
+    if (!isPasswordValid) return res.status(401).json({ error: "Invalid password" });
+
+    // Return the decrypted API key here:
+    const apiKey = user.getDecryptedApiKey();
+    if (!apiKey) {
+      return res.status(400).json({ error: "No API key found for user" });
     }
 
-    res.json({ apiKey: user.getDecryptedApiKey() });
+    res.json({ apiKey });  // <-- Make sure API key is sent here
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
