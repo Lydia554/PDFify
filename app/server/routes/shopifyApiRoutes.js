@@ -182,7 +182,7 @@ router.post("/invoice", authenticate, async (req, res) => {
 
 
   try {
-    const shopDomain = req.headers["x-shopify-shop-domain"];
+    const shopDomain = req.body.shopDomain || req.headers['x-shopify-shop-domain'];
     const token = req.headers["x-shopify-access-token"];
 
     if (!shopDomain) {

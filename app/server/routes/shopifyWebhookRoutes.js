@@ -41,7 +41,7 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
     return res.status(400).send("Missing shop domain or order payload");
   }
 
-  const normalizedShopDomain = shopDomain.trim().toLowerCase();
+  const connectedShopDomain = shopDomain.trim().toLowerCase();
 
   try {
     const user = await User.findOne({ connectedShopDomain: normalizedShopDomain });
@@ -55,7 +55,7 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
     const userApiKey = user.getDecryptedApiKey();
     
     if (!userApiKey) {
-      console.error(`❌ No API key found for user ${user._id} (${normalizedShopDomain})`);
+      console.error(`❌ No API key found for user ${user._id} (${connectedShopDomain})`);
       return res.status(403).send("User API key not found");
     }
     
@@ -63,7 +63,7 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
         order,
-        shopDomain: normalizedShopDomain,
+        shopDomain: connectedShopDomain,
         shopifyAccessToken: user.shopifyAccessToken,
       },
       {
