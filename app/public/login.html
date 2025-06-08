@@ -11,7 +11,7 @@
   <div class="container">
     <h1>Login</h1>
 
-    <!-- User login form -->
+    <!-- Email/Password login form -->
     <form id="loginForm">
       <label for="email">Email</label>
       <input type="email" id="email" placeholder="Enter your email" required />
@@ -38,6 +38,19 @@
     <div class="extra-links">
       <a href="/forgot-password.html">Forgot Password?</a>
     </div>
+
+    <hr style="margin: 30px 0;" />
+
+    <!-- Manual API Token Input -->
+    <div class="manual-token">
+      <h2>Use Token Instead</h2>
+      <form id="tokenForm">
+        <label for="manualToken">Paste Your API Token</label>
+        <input type="text" id="manualToken" placeholder="Paste your API key here" required />
+        <button type="submit">Connect with Token</button>
+      </form>
+    </div>
+
   </div>
 
   <script>
@@ -106,6 +119,18 @@
         result.style.display = "block";
       }
     });
+
+    // Token form handler
+    document.getElementById("tokenForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const token = document.getElementById("manualToken").value.trim();
+      if (!token) {
+        alert("Please paste a token.");
+        return;
+      }
+      localStorage.setItem("apiKey", token);
+      window.location.href = "/pdf-generator-demo";
+    });
   </script>
 
   <style>
@@ -127,10 +152,9 @@
       max-width: 450px;
       text-align: center;
     }
-    h1 {
+    h1, h2 {
       color: #5e60ce;
-      margin-bottom: 30px;
-      font-size: 24px;
+      margin-bottom: 20px;
     }
     label {
       text-align: left;
@@ -182,42 +206,32 @@
       padding: 0;
       line-height: 1;
     }
-    .extra-links {
+    .extra-links, .register-link {
       margin-top: 12px;
       font-size: 14px;
       color: #5e60ce;
     }
-    .extra-links a {
+    .extra-links a, .register-link a {
       color: #5e60ce;
       text-decoration: underline;
       margin: 0 4px;
     }
-    .extra-links a:hover {
+    .extra-links a:hover, .register-link a:hover {
       color: #4b4dbf;
     }
     .result {
       margin-top: 20px;
       font-size: 16px;
-      color: #333;
+      color: #d9534f;
     }
-    .register-link {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #5e60ce;
-    }
-    .register-link a {
-      color: #5e60ce;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-    .register-link a:hover {
-      color: #4b4dbf;
+    .manual-token {
+      text-align: left;
     }
     @media (max-width: 480px) {
       .container {
         padding: 30px;
       }
-      h1 {
+      h1, h2 {
         font-size: 22px;
       }
       label {

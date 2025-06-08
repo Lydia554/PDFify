@@ -14,36 +14,63 @@ const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
   }
-};router.post("/login", async (req, res) => {
+};
+
+
+
+router.post("/login", async (req, res) => {
   const { email, password, connectedShopDomain } = req.body;
 
   try {
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+
+    if (!user || user.deleted) {
+      return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid password" });
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    // 💡 Save connectedShopDomain if provided and valid
-    if (
-      connectedShopDomain &&
-      connectedShopDomain.endsWith(".myshopify.com")
-    ) {
+    if (connectedShopDomain && connectedShopDomain !== user.connectedShopDomain) {
       user.connectedShopDomain = connectedShopDomain;
       await user.save();
-      console.log("✅ connectedShopDomain saved during login:", connectedShopDomain);
     }
 
-    res.json({ apiKey: user.getDecryptedApiKey() });
+    return res.json({ apiKey: user.apiKey });
   } catch (error) {
-    console.error("Error during login:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Server error during login." });
   }
 });
+
+
+
+router.post("/store-token", async (req, res) => {
+  const { connectedShopDomain, token, apiKey } = req.body;
+
+  try {
+    const user = await User.findOne({
+      connectedShopDomain,
+      apiKey,
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found or unauthorized" });
+    }
+
+    user.shopifyAccessToken = token;
+    await user.save();
+
+    console.log(`✅ Saved token for ${connectedShopDomain}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Failed to store Shopify token:", err);
+    res.status(500).json({ error: "Server error while saving token" });
+  }
+});
+
 
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
