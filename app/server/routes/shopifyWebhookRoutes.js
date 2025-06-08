@@ -51,16 +51,14 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       return res.status(404).send("User or token not found");
     }
 
-    // 🔐 Extract the API key from the incoming request's Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.error("Missing or invalid Authorization header");
-      return res.status(401).send("Unauthorized");
+    // Use your server-side internal API key (from env) to call your PDF API
+    const internalApiKey = process.env.INTERNAL_API_KEY;
+    if (!internalApiKey) {
+      console.error("Internal API key not configured");
+      return res.status(500).send("Server configuration error");
     }
 
-    const apiKey = authHeader.replace("Bearer ", "");
-
-    // 📄 Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
+    // Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -70,7 +68,7 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${apiKey}`, // ✅ Pass the user’s token forward
+          Authorization: `Bearer ${internalApiKey}`, // Use your internal API key here
         },
         responseType: "arraybuffer",
       }
