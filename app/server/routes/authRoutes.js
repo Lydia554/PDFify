@@ -27,24 +27,25 @@ router.post("/login", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Assuming user.password is the hashed password saved in DB
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Normalize and store connectedShopDomain if provided
-    if (connectedShopDomain?.trim().toLowerCase().endsWith(".myshopify.com")) {
+    // Normalize and store Shopify domain if valid
+    if (
+      connectedShopDomain &&
+      connectedShopDomain.trim().toLowerCase().endsWith(".myshopify.com")
+    ) {
       const normalized = connectedShopDomain.trim().toLowerCase();
       user.connectedShopDomain = normalized;
       await user.save();
       console.log("✅ connectedShopDomain saved during login:", normalized);
     }
 
-    // Return both API key and optional Shopify access token
-    res.json({
-      apiKey: user.getDecryptedApiKey(), // You already have this
-      shopifyAccessToken: user.shopifyAccessToken || null // Return if exists
-    });
+    // Return decrypted API key for frontend storage
+    res.json({ apiKey: user.getDecryptedApiKey() });
   } catch (error) {
     console.error("❌ Error during login:", error);
     res.status(500).json({ error: "Internal server error" });
