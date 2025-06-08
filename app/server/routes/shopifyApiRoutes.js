@@ -229,8 +229,8 @@ router.post("/invoice", authenticate, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found for this shop" });
     }
+const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
 
-    const shopConfig = await ShopConfig.findOne({ shopDomain });
 
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === "true";
