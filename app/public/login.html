@@ -22,10 +22,11 @@
         <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
       </div>
 
-      <label for="connectedShopDomain">
-        Connected Shopify Store <span style="font-weight: normal; color: gray;">(optional)</span>
-      </label>
-      <input type="text" id="connectedShopDomain" placeholder="e.g. your-shop-name.myshopify.com" />
+      <label for="connectedShopDomain">Shopify Domain <small>(optional, like store.myshopify.com)</small></label>
+      <input type="text" id="connectedShopDomain" placeholder="your-store.myshopify.com" />
+
+      <label for="shopifyToken">Shopify Access Token <small>(optional, starts with shpat_...)</small></label>
+      <input type="text" id="shopifyToken" placeholder="shpat_..." />
 
       <button type="submit">Login</button>
     </form>
@@ -40,23 +41,10 @@
     <div class="extra-links">
       <a href="/forgot-password.html">Forgot Password?</a>
     </div>
-
-    <!-- Separator -->
-    <hr />
-    <p style="text-align:center; margin: 20px 0; color: #666;">OR</p>
-
-    <!-- Token input -->
-    <div id="tokenLoginSection">
-      <h2>Connect using your API token</h2>
-      <p style="font-size: 14px; color: gray;">
-        If you already have an API key, paste it below to skip login.
-      </p>
-      <input type="text" id="manualToken" placeholder="Paste your API token here (optional)" />
-      <button onclick="useManualToken()">Use Token</button>
-    </div>
   </div>
 
   <script>
+    // Toggle password visibility
     document.getElementById("togglePassword").addEventListener("click", () => {
       const passwordField = document.getElementById("password");
       const toggleButton = document.getElementById("togglePassword");
@@ -69,11 +57,19 @@
       }
     });
 
+    // Auto-detect shop domain from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const shopParam = urlParams.get("shop");
+    if (shopParam) {
+      document.getElementById("connectedShopDomain").value = shopParam;
+    }
+
     document.getElementById("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const connectedShopDomain = document.getElementById("connectedShopDomain").value.trim();
+      const shopifyToken = document.getElementById("shopifyToken").value.trim();
       const result = document.getElementById("result");
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -109,7 +105,24 @@
         const response = await axios.post(`/api/auth/login`, payload);
 
         if (response.data.apiKey) {
-          localStorage.setItem("apiKey", response.data.apiKey);
+          const apiKey = response.data.apiKey;
+          localStorage.setItem("apiKey", apiKey);
+
+          // Optionally store Shopify token
+          if (connectedShopDomain && shopifyToken) {
+            try {
+              await axios.post("/api/auth/store-token", {
+                connectedShopDomain,
+                token: shopifyToken,
+                apiKey,
+              });
+              console.log("✅ Shopify token saved.");
+            } catch (err) {
+              console.warn("⚠️ Failed to save Shopify token:", err.response?.data || err.message);
+            }
+          }
+
+          // Redirect after login
           window.location.href = "/pdf-generator-demo";
         } else {
           result.innerText = `Error: ${response.data.error}`;
@@ -122,16 +135,6 @@
         result.style.display = "block";
       }
     });
-
-    function useManualToken() {
-      const token = document.getElementById("manualToken").value.trim();
-      if (token) {
-        localStorage.setItem("apiKey", token);
-        window.location.href = "/pdf-generator-demo";
-      } else {
-        alert("Please paste your API token first.");
-      }
-    }
   </script>
 
   <style>
@@ -157,11 +160,6 @@
       color: #5e60ce;
       margin-bottom: 30px;
       font-size: 24px;
-    }
-    h2 {
-      margin-top: 30px;
-      font-size: 18px;
-      color: #333;
     }
     label {
       text-align: left;
@@ -193,7 +191,6 @@
       cursor: pointer;
       transition: background-color 0.3s;
       width: 100%;
-      margin-bottom: 10px;
     }
     button:hover {
       background-color: #4b4dbf;
@@ -244,11 +241,6 @@
     }
     .register-link a:hover {
       color: #4b4dbf;
-    }
-    hr {
-      margin: 40px 0 10px;
-      border: none;
-      border-top: 1px solid #ddd;
     }
     @media (max-width: 480px) {
       .container {

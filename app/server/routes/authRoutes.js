@@ -14,7 +14,12 @@ const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
   }
-};router.post("/login", async (req, res) => {
+};
+
+
+
+
+router.post("/login", async (req, res) => {
   const { email, password, connectedShopDomain } = req.body;
 
   try {
@@ -44,6 +49,8 @@ const log = (message, data = null) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
 
 router.post("/forgot-password", async (req, res) => {
   const { email } = req.body;
