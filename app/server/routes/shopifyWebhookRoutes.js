@@ -8,7 +8,7 @@ const sendEmail = require("../sendEmail");
 // Middleware to verify Shopify webhook HMAC signature
 function verifyShopifyWebhook(req, res, next) {
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-  const body = req.rawBody; // raw body stored by express json 'verify' option below
+  const body = req.rawBody; // raw body stored by express.raw() verify option below
 
   if (!hmacHeader || !body) {
     console.error("Missing HMAC header or raw body");
@@ -28,14 +28,18 @@ function verifyShopifyWebhook(req, res, next) {
   next();
 }
 
-
 router.post(
   "/order-created",
-  express.raw({ type: "application/json" }),
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => {
+      req.rawBody = buf;  // Store raw body buffer here for webhook verification
+    },
+  }),
   verifyShopifyWebhook,
   async (req, res) => {
     const shopDomain = req.headers["x-shopify-shop-domain"];
-    const order = JSON.parse(req.body.toString()); // Convert raw body to JSON
+    const order = JSON.parse(req.body.toString()); // Convert raw body buffer to JSON
 
     console.log("🧾 Order webhook received");
     console.log("🏪 x-shopify-shop-domain:", shopDomain);
