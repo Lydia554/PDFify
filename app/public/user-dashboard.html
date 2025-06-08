@@ -288,83 +288,57 @@ async function fetchShopifyConnection() {
   }
 }
 
-// Connect Shopify store
 document.getElementById("connectShopifyButton").addEventListener("click", async () => {
-  const shopDomain = document.getElementById("shopDomainInput").value.trim();
-  if (!shopDomain) {
-    document.getElementById("shopifyResult").textContent = "Please enter a valid shop domain.";
+  const shopDomain = document.getElementById("shopifyDomain").value.trim();
+  const accessToken = document.getElementById("shopifyToken").value.trim();
+  const resultEl = document.getElementById("shopifyResult");
+
+  if (!shopDomain || !accessToken) {
+    resultEl.textContent = "Please enter both the shop domain and access token.";
+    resultEl.className = "result error";
+    resultEl.style.display = "block";
     return;
   }
+
   document.getElementById("connectShopifyButton").disabled = true;
-  document.getElementById("shopifyResult").textContent = "";
+  resultEl.textContent = "";
+  resultEl.style.display = "none";
 
   try {
-    // Here you can implement OAuth flow or just save domain & token for demo
-    // For demo, assume you get token from backend or input for now.
-    // Replace with actual OAuth flow as needed.
-    const dummyAccessToken = "dummy-access-token-for-demo"; // Replace this with real OAuth token in production
-    
     const response = await api.post("/shopify/connect", {
       shopDomain,
-      accessToken: dummyAccessToken,
+      accessToken,
     });
-    document.getElementById("shopifyResult").textContent = response.data.message || "Shopify store connected!";
-    document.getElementById("connectedShopDomain").textContent = shopDomain;
+
+    resultEl.textContent = response.data.message || "Shopify store connected!";
+    resultEl.className = "result success";
+    resultEl.style.display = "block";
+
+    document.getElementById("shopifyConnectedStatus").textContent = `Connected: ${shopDomain}`;
   } catch (error) {
     console.error("Error connecting Shopify store:", error);
-    document.getElementById("shopifyResult").textContent = "Failed to connect Shopify store.";
+    resultEl.textContent = "Failed to connect Shopify store.";
+    resultEl.className = "result error";
+    resultEl.style.display = "block";
   } finally {
     document.getElementById("connectShopifyButton").disabled = false;
   }
 });
 
-document.getElementById('connectShopifyBtn').addEventListener('click', async () => {
-  const shopDomain = document.getElementById('shopDomain').value.trim();
-  const accessToken = document.getElementById('shopifyAccessToken').value.trim();
-
-  if (!shopDomain || !accessToken) {
-    alert('Please enter both shop domain and access token.');
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/shopify/connect', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + yourUserApiKeyOrTokenHere, // Adjust if you use token auth
-      },
-      body: JSON.stringify({ shopDomain, accessToken }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      alert(data.message);
-    } else {
-      alert('Error: ' + data.error);
-    }
-  } catch (err) {
-    alert('Network or server error');
-  }
-});
-
-
-// Disconnect Shopify store
 document.getElementById("disconnectShopifyButton").addEventListener("click", async () => {
-  if (!confirm("Are you sure you want to disconnect your Shopify store?")) return;
-  document.getElementById("disconnectShopifyButton").disabled = true;
-  document.getElementById("shopifyResult").textContent = "";
+  const resultEl = document.getElementById("shopifyResult");
 
   try {
-    const response = await api.post("/shopify/disconnect");
-    document.getElementById("shopifyResult").textContent = response.data.message || "Shopify store disconnected.";
-    document.getElementById("connectedShopDomain").textContent = "None";
+    await api.post("/shopify/disconnect");
+    resultEl.textContent = "Shopify store disconnected.";
+    resultEl.className = "result success";
+    resultEl.style.display = "block";
+    document.getElementById("shopifyConnectedStatus").textContent = "Not connected.";
   } catch (error) {
     console.error("Error disconnecting Shopify store:", error);
-    document.getElementById("shopifyResult").textContent = "Failed to disconnect Shopify store.";
-  } finally {
-    document.getElementById("disconnectShopifyButton").disabled = false;
+    resultEl.textContent = "Failed to disconnect Shopify store.";
+    resultEl.className = "result error";
+    resultEl.style.display = "block";
   }
 });
 
