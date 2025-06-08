@@ -31,13 +31,7 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 const app = express();
 
 
-app.use((req, res, next) => {
-  if (req.originalUrl.startsWith('/webhook')) {
-    next();
-  } else {
-    express.json()(req, res, next);
-  }
-})
+app.use(express.json());
 
 
 
