@@ -22,12 +22,6 @@
         <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
       </div>
 
-      <label for="connectedShopDomain">Shopify Domain <small>(optional, like store.myshopify.com)</small></label>
-      <input type="text" id="connectedShopDomain" placeholder="your-store.myshopify.com" />
-
-      <label for="shopifyToken">Shopify Access Token <small>(optional, starts with shpat_...)</small></label>
-      <input type="text" id="shopifyToken" placeholder="shpat_..." />
-
       <button type="submit">Login</button>
     </form>
 
@@ -57,24 +51,13 @@
       }
     });
 
-    // Auto-detect shop domain from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const shopParam = urlParams.get("shop");
-    if (shopParam) {
-      document.getElementById("connectedShopDomain").value = shopParam;
-    }
-
     document.getElementById("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
-      const connectedShopDomain = document.getElementById("connectedShopDomain").value.trim();
-      const shopifyToken = document.getElementById("shopifyToken").value.trim();
       const result = document.getElementById("result");
 
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const passwordRegex = /^(?=.*[0-9]).{8,}$/;
-
+      // Basic validation
       if (!email || !password) {
         result.innerText = "Please enter both email and password.";
         result.className = "result error";
@@ -82,50 +65,17 @@
         return;
       }
 
-      if (!emailRegex.test(email)) {
-        result.innerText = "Invalid email format.";
-        result.className = "result error";
-        result.style.display = "block";
-        return;
-      }
-
-      if (!passwordRegex.test(password)) {
-        result.innerText = "Password must be at least 8 characters long and include at least one number.";
-        result.className = "result error";
-        result.style.display = "block";
-        return;
-      }
-
       try {
-        const payload = { email, password };
-        if (connectedShopDomain) {
-          payload.connectedShopDomain = connectedShopDomain;
-        }
-
-        const response = await axios.post(`/api/auth/login`, payload);
+        const response = await axios.post(`/api/auth/login`, { email, password });
 
         if (response.data.apiKey) {
           const apiKey = response.data.apiKey;
-          localStorage.setItem("apiKey", apiKey);
-
-          // Optionally store Shopify token
-          if (connectedShopDomain && shopifyToken) {
-            try {
-              await axios.post("/api/auth/store-token", {
-                connectedShopDomain,
-                token: shopifyToken,
-                apiKey,
-              });
-              console.log("✅ Shopify token saved.");
-            } catch (err) {
-              console.warn("⚠️ Failed to save Shopify token:", err.response?.data || err.message);
-            }
-          }
+          localStorage.setItem("pdfify_api_key", apiKey);
 
           // Redirect after login
-          window.location.href = "/pdf-generator-demo";
+          window.location.href = "/pdf-generator-demo.html";
         } else {
-          result.innerText = `Error: ${response.data.error}`;
+          result.innerText = `Error: ${response.data.error || 'Login failed'}`;
           result.className = "result error";
           result.style.display = "block";
         }

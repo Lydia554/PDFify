@@ -16,10 +16,8 @@ const log = (message, data = null) => {
   }
 };
 
-
-
 router.post("/login", async (req, res) => {
-  const { email, password, connectedShopDomain } = req.body;
+  const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
@@ -32,43 +30,44 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Normalize and store domain
-    if (connectedShopDomain?.trim().toLowerCase().endsWith(".myshopify.com")) {
-      const normalized = connectedShopDomain.trim().toLowerCase();
-      user.connectedShopDomain = normalized;
-      await user.save();
-      console.log("✅ connectedShopDomain saved during login:", normalized);
-    }
-
     res.json({ apiKey: user.getDecryptedApiKey() });
   } catch (error) {
-    console.error("❌ Error during login:", error);
+    console.error("Error during login:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
 
-router.post("/store-token", async (req, res) => {
-  const { connectedShopDomain, token, apiKey } = req.body;
+router.post("/connect-shopify", authenticate, async (req, res) => {
+  const { connectedShopDomain, shopifyAccessToken } = req.body;
+  const userId = req.user._id; // Assuming your `authenticate` middleware attaches user info to req.user
+
+  if (!connectedShopDomain || !shopifyAccessToken) {
+    return res.status(400).json({ error: "Missing Shopify domain or access token" });
+  }
 
   try {
-    const user = await User.findOne({
-      connectedShopDomain,
-      apiKey,
-    });
+    const normalizedDomain = connectedShopDomain.trim().toLowerCase();
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found or unauthorized" });
+    if (!normalizedDomain.endsWith(".myshopify.com")) {
+      return res.status(400).json({ error: "Invalid Shopify domain" });
     }
 
-    user.shopifyAccessToken = token;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.connectedShopDomain = normalizedDomain;
+    user.shopifyAccessToken = shopifyAccessToken; // You may want to encrypt this token
     await user.save();
 
-    console.log(`✅ Saved token for ${connectedShopDomain}`);
-    res.json({ success: true });
-  } catch (err) {
-    console.error("❌ Failed to store Shopify token:", err);
-    res.status(500).json({ error: "Server error while saving token" });
+    console.log("✅ Shopify info updated for user:", user.email);
+
+    res.json({ message: "Shopify info saved successfully" });
+  } catch (error) {
+    console.error("Error updating Shopify info:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
