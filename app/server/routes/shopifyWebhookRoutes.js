@@ -50,16 +50,15 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       console.error(`❌ No user found for ${normalizedShopDomain}`);
       return res.status(404).send("User not found");
     }
-
-    // Use the user's own API key from DB to call your PDF API
-    const userApiKey = user.apiKey; // adjust field name if different
-
+    
+    // Use the model method to decrypt the API key
+    const userApiKey = user.getDecryptedApiKey();
+    
     if (!userApiKey) {
       console.error(`❌ No API key found for user ${user._id} (${normalizedShopDomain})`);
       return res.status(403).send("User API key not found");
     }
-
-    // Call Shopify invoice PDF API to generate PDF (returns PDF buffer)
+    
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -69,11 +68,12 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${userApiKey}`, // <-- Use user’s API key here
+          Authorization: `Bearer ${userApiKey}`,  // <-- decrypted key here
         },
         responseType: "arraybuffer",
       }
     );
+    
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
