@@ -18,7 +18,6 @@ const log = (message, data = null) => {
 
 
 
-
 router.post("/login", async (req, res) => {
   const { email, password, connectedShopDomain } = req.body;
 
@@ -33,23 +32,45 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // 💡 Save connectedShopDomain if provided and valid
-    if (
-      connectedShopDomain &&
-      connectedShopDomain.endsWith(".myshopify.com")
-    ) {
-      user.connectedShopDomain = connectedShopDomain;
+    // Normalize and store domain
+    if (connectedShopDomain?.trim().toLowerCase().endsWith(".myshopify.com")) {
+      const normalized = connectedShopDomain.trim().toLowerCase();
+      user.connectedShopDomain = normalized;
       await user.save();
-      console.log("✅ connectedShopDomain saved during login:", connectedShopDomain);
+      console.log("✅ connectedShopDomain saved during login:", normalized);
     }
 
     res.json({ apiKey: user.getDecryptedApiKey() });
   } catch (error) {
-    console.error("Error during login:", error);
+    console.error("❌ Error during login:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
+
+router.post("/store-token", async (req, res) => {
+  const { connectedShopDomain, token, apiKey } = req.body;
+
+  try {
+    const user = await User.findOne({
+      connectedShopDomain,
+      apiKey,
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found or unauthorized" });
+    }
+
+    user.shopifyAccessToken = token;
+    await user.save();
+
+    console.log(`✅ Saved token for ${connectedShopDomain}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("❌ Failed to store Shopify token:", err);
+    res.status(500).json({ error: "Server error while saving token" });
+  }
+});
 
 
 router.post("/forgot-password", async (req, res) => {
