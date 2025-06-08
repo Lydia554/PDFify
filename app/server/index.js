@@ -30,6 +30,12 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 
 
 const app = express();
+
+
+
+app.use("/webhook", shopifyWebhookRoutes);
+
+
 app.use(express.json()); 
 
 
@@ -76,7 +82,7 @@ app.use("/api", htmlRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
-app.use("/webhook", shopifyWebhookRoutes); 
+ 
 app.use("/api/shopify", shopifyApiRoutes);
 app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
