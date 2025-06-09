@@ -36,14 +36,27 @@ function verifyShopifyWebhook(req, res, next) {
 
 
 
-router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
-      req.rawBody = buf;  // Store raw body buffer here for webhook verification
+router.post(
+  "/order-created",
+  verifyShopifyWebhook,
+  (req, res, next) => {
+    try {
+      req.body = JSON.parse(req.rawBody.toString());
+      next();
+    } catch (e) {
+      console.error("Nevalidan JSON u rawBody:", e);
+      return res.status(400).send("Invalid JSON");
+    }
+  },
+  async (req, res) => {
+    const order = req.body;
 
-    const order = JSON.parse(req.body.toString()); // Convert raw body buffer to JSON
+    console.log("📦 Parsed order:", order);
 
-    console.log("🧾 Order webhook received");
-    console.log("🏪 x-shopify-shop-domain:", shopDomain);
-    console.log("📦 Order payload:", JSON.stringify(order, null, 2));
+    if (!order || !order.id) {
+      console.error("❌ Missing order id");
+      return res.status(400).send("Missing order id");
+    }
 
     if (!shopDomain || !order || !order.id) {
       console.error("❌ Missing shop domain or order ID");
