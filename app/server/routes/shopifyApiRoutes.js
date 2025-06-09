@@ -204,7 +204,6 @@ const resolveShopifyToken = async (req, shopDomain) => {
 };
 
 
-
 router.post("/invoice", authenticate, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -218,38 +217,38 @@ router.post("/invoice", authenticate, async (req, res) => {
     }
 
     let orderId = req.body.orderId;
+    let order = req.body.order || null;
 
-    if (!orderId) {
-      return res.status(400).json({ error: "Missing orderId" });
+    // Sanitize: extract numeric ID from GraphQL format if needed
+    if (typeof orderId === "string" && orderId.startsWith("gid://")) {
+      const parts = orderId.split("/");
+      orderId = parts[parts.length - 1]; // numeric ID from the end
     }
 
-
-
-// Sanitize: extract numeric ID from GraphQL format if needed
-if (typeof orderId === "string" && orderId.startsWith("gid://")) {
-  const parts = orderId.split("/");
-  orderId = parts[parts.length - 1]; // get the numeric ID from the end
-}
-
-
-
-
-    const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
-    let orderResponse;
-    try {
-      orderResponse = await axios.get(shopifyOrderUrl, {
-        headers: {
-          "X-Shopify-Access-Token": token,
-          "Content-Type": "application/json",
-        },
-      });
-    } catch (err) {
-      return res.status(500).json({ error: "Failed to fetch order from Shopify" });
+    // Fallback: If order data is not passed in body, fetch from Shopify
+    if (!order && orderId) {
+      const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
+      try {
+        const orderResponse = await axios.get(shopifyOrderUrl, {
+          headers: {
+            "X-Shopify-Access-Token": token,
+            "Content-Type": "application/json",
+          },
+        });
+        order = orderResponse.data.order;
+      } catch (err) {
+        console.error("❌ Failed to fetch order from Shopify:", err.response?.data || err.message);
+        return res.status(500).json({ error: "Failed to fetch order from Shopify" });
+      }
     }
 
-    const order = orderResponse.data.order;
     if (!order || !order.line_items) {
-      return res.status(400).json({ error: "Invalid order data from Shopify" });
+      return res.status(400).json({ error: "Invalid or missing order data" });
+    }
+
+    // Optional: If orderId wasn’t passed but order was, extract it here
+    if (!orderId && order?.id) {
+      orderId = order.id;
     }
 
     let user = null;
@@ -265,6 +264,8 @@ if (typeof orderId === "string" && orderId.startsWith("gid://")) {
 
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
 
+
+    
     
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === "true";
