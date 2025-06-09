@@ -74,6 +74,9 @@ router.post(
         return res.status(403).send("User API key not found");
       }
 
+
+      console.log("📤 Sending internal POST to /shopify/invoice with API key:", userApiKey);
+
       const invoiceResponse = await axios.post(
         "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
         {
@@ -89,6 +92,9 @@ router.post(
           responseType: "arraybuffer",
         }
       );
+
+
+      console.log("📥 Invoice response received, length:", invoiceResponse.data.length);
 
       const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
