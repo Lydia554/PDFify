@@ -257,17 +257,20 @@ router.post("/invoice", authenticate, async (req, res) => {
     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
 
     const invoiceData = {
-      shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
-      date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: order.line_items.map((item) => ({
+  shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
+  date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : "",
+  items: Array.isArray(order.line_items)
+    ? order.line_items.map((item) => ({
         name: item.name,
         quantity: item.quantity,
         price: Number(item.price) || 0,
-      })),
-      total: Number(order.total_price) || 0,
-      showChart: isPremium && shopConfig?.showChart,
-      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-    };
+      }))
+    : [],
+  total: Number(order.total_price) || 0,
+  showChart: isPremium && shopConfig?.showChart,
+  customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+};
+
 
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
