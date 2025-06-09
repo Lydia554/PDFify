@@ -221,6 +221,7 @@ router.post("/invoice", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Missing orderId" });
     }
 
+    // Dohvati narudžbinu iz Shopify Admin API
     const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
     let orderResponse;
     try {
@@ -239,7 +240,7 @@ router.post("/invoice", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Invalid order data from Shopify" });
     }
 
-    // Resolve user
+    // Resolve korisnik - prvo po tokenu, pa po shopDomain
     let user = null;
     if (req.user?.userId) {
       user = await User.findById(req.user.userId);
@@ -251,11 +252,15 @@ router.post("/invoice", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found for this shop" });
     }
 
+    // Shop konfiguracija iz baze (ima i custom logo, ime, premium status itd.)
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
+
+    // FORCIRAJ premium radi testiranja, inače koristi user i shopConfig
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === "true";
     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
 
+    // Pripremi podatke za invoice
     const invoiceData = {
       shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
       date: new Date(order.created_at).toISOString().slice(0, 10),
@@ -267,8 +272,10 @@ router.post("/invoice", authenticate, async (req, res) => {
       total: Number(order.total_price) || 0,
       showChart: isPremium && shopConfig?.showChart,
       customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+      fallbackLogoUrl: "/assets/default-logo.png", // putanja do default logotipa u tvom projektu
     };
 
+    // Kreiranje fajla sa sigurnim imenom
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
@@ -281,6 +288,8 @@ router.post("/invoice", authenticate, async (req, res) => {
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
+
+    // Generiši HTML koji uključuje detaljan prikaz logotipa
     const html = generateInvoiceHTML(invoiceData, isPremium);
 
     await page.setContent(html, { waitUntil: "networkidle0" });
