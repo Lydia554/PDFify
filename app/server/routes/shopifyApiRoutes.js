@@ -203,6 +203,15 @@ const resolveShopifyToken = async (req, shopDomain) => {
   return token;
 };
 
+function normalizeOrderId(orderId) {
+  if (typeof orderId === "string" && orderId.includes("/")) {
+    const parts = orderId.split("/");
+    return parts[parts.length - 1];
+  }
+  return orderId;
+}
+
+
 
 router.post("/invoice", authenticate, async (req, res) => {
   try {
@@ -218,14 +227,14 @@ router.post("/invoice", authenticate, async (req, res) => {
 
     let orderId = req.body.orderId;
     let order = req.body.order || null;
+     orderId = normalizeOrderId(orderId);
 
-    // Sanitize: extract numeric ID from GraphQL format if needed
+
     if (typeof orderId === "string" && orderId.startsWith("gid://")) {
       const parts = orderId.split("/");
-      orderId = parts[parts.length - 1]; // numeric ID from the end
+      orderId = parts[parts.length - 1]; 
     }
 
-    // Fallback: If order data is not passed in body, fetch from Shopify
     if (!order && orderId) {
       const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
       try {
@@ -246,7 +255,9 @@ router.post("/invoice", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
-    // Optional: If orderId wasn’t passed but order was, extract it here
+     
+
+    
     if (!orderId && order?.id) {
       orderId = order.id;
     }
@@ -265,7 +276,7 @@ router.post("/invoice", authenticate, async (req, res) => {
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
 
 
-    
+
     
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === "true";
@@ -286,7 +297,7 @@ router.post("/invoice", authenticate, async (req, res) => {
       fallbackLogoUrl: "/assets/default-logo.png", 
     };
 
-    const safeOrderId = `shopify-${order.id}`;
+    const safeOrderId = `shopify-${normalizeOrderId(order.id)}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir);
