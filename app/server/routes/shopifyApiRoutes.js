@@ -199,9 +199,10 @@ if (!token) {
   }
 }
 
-if (!token) {
-  return res.status(400).json({ error: "Missing Shopify access token" });
+if (!req.body.shopifyAccessToken) {
+  return res.status(400).json({ error: 'Missing Shopify access token' });
 }
+
 
 
     if (!shopDomain) {
