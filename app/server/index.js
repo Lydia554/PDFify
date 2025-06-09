@@ -32,8 +32,8 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 const app = express();
 
 
-
-app.use("/webhook", shopifyWebhookRoutes, express.raw({ type: "application/json" }));
+app.use("/webhook", express.raw({ type: "application/json" }), shopifyWebhookRoutes);
+app.use("/api/stripe/webhook", stripeRoutes); 
 
 
 app.use(express.json()); 
@@ -67,7 +67,7 @@ app.use(session({
   cookie: {
     maxAge: 2 * 60 * 60 * 1000, 
     httpOnly: true,
-    secure: false 
+    secure: process.env.NODE_ENV === 'production'
   }
 }));
 
@@ -82,9 +82,7 @@ app.use("/api", htmlRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
- 
 app.use("/api/shopify", shopifyApiRoutes);
-app.use("/api/stripe/webhook", stripeRoutes); 
 app.use("/api/stripe", paymentRoutes);
 
 
