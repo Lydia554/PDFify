@@ -20,14 +20,17 @@ const authenticate = async (req, res, next) => {
   try {
     const users = await User.find();
 
-    const user = users.find((u) => {
-      try {
-        const decrypted = u.getDecryptedApiKey();
-        return decrypted === apiKey;
-      } catch (e) {
-        return false;
-      }
-    });
+  const user = users.find((u) => {
+  try {
+    const decrypted = u.getDecryptedApiKey();
+    console.log(`Trying API key for user ${u.email}: decrypted = ${decrypted}`);
+    return decrypted === apiKey;
+  } catch (e) {
+    console.error(`Error decrypting API key for user ${u.email}:`, e.message);
+    return false;
+  }
+});
+
 
     if (!user) {
       return res.status(403).json({ error: "User not found or API key is invalid" });
