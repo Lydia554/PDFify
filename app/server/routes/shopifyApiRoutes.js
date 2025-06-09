@@ -216,11 +216,10 @@ router.post("/invoice", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Missing Shopify access token" });
     }
 
- const orderId = req.body.order?.id;
-if (!orderId) {
-  return res.status(400).json({ error: 'Missing orderId' });
-}
-
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ error: "Missing orderId" });
+    }
 
     const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
     let orderResponse;
