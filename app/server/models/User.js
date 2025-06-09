@@ -56,6 +56,12 @@ deletedAt: { type: Date, default: null },
 );
 
 
+userSchema.pre("save", function (next) {
+  if (this.connectedShopDomain) {
+    this.connectedShopDomain = this.connectedShopDomain.trim().toLowerCase();
+  }
+  next();
+});
 
 
 
