@@ -188,15 +188,15 @@ const resolveShopifyToken = async (req, shopDomain) => {
 
   if (!token && req.user?.userId) {
     const user = await User.findById(req.user.userId);
-    if (user?.connectedShopDomain === shopDomain && user.connectedShopToken) {
-      token = user.connectedShopToken;
+    if (user?.connectedShopDomain === shopDomain && user.shopifyAccessToken) {
+      token = user.shopifyAccessToken;
     }
   }
 
   if (!token) {
     const fallbackUser = await User.findOne({ connectedShopDomain: shopDomain });
-    if (fallbackUser?.connectedShopToken) {
-      token = fallbackUser.connectedShopToken;
+    if (fallbackUser?.shopifyAccessToken) {
+      token = fallbackUser.shopifyAccessToken;
     }
   }
 
