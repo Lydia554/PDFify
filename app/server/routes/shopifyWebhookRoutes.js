@@ -23,7 +23,7 @@ function verifyShopifyWebhook(req, res, next) {
 
   const generatedHmac = crypto
     .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
-    .update(req.rawBody, "utf8")
+    .update(body, "utf8")
     .digest("base64");
 
   if (generatedHmac !== hmacHeader) {
@@ -44,7 +44,7 @@ function verifyShopifyWebhook(req, res, next) {
 router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
 
 
-    const order = JSON.parse(req.rawBody.toString()); // Convert raw body buffer to JSON
+    const order = JSON.parse(req.body.toString()); // Convert raw body buffer to JSON
 
     console.log("🧾 Order webhook received");
     console.log("🏪 x-shopify-shop-domain:", shopDomain);
