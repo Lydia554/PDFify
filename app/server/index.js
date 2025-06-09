@@ -34,7 +34,7 @@ const app = express();
 
 // Ovde postavljamo express.raw middleware *pre* nego što idu webhook rute
 app.use(
-  "/webhook",
+   "/api/shopify/webhook",
   express.raw({
     type: "application/json",
     verify: (req, res, buf) => {
