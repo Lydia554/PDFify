@@ -32,7 +32,8 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 const app = express();
 
 
-app.use("/webhook", express.raw({ type: "application/json" }), shopifyWebhookRoutes);
+app.use("/webhook", shopifyWebhookRoutes);
+
 app.use("/api/stripe/webhook", stripeRoutes); 
 
 
