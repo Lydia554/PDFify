@@ -32,14 +32,25 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 const app = express();
 
 
-app.use("/webhook", shopifyWebhookRoutes);
+// 1. Raw body ONLY for webhook routes that need HMAC verification
+app.use(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  verifyShopifyWebhook,
+  shopifyWebhookRoutes
+);
 
-app.use("/api/stripe/webhook", stripeRoutes); 
+app.use(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeRoutes
+);
 
+// 2. JSON body parsing for ALL other API routes
+app.use(express.json());
 
-app.use(express.json()); 
-
-
+// 3. Your API routes that expect JSON body
+app.use("/api/shopify", shopifyRoutes);
 
 
 
