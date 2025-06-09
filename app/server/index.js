@@ -32,14 +32,23 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 const app = express();
 
 
-app.use("/webhook", shopifyWebhookRoutes);
+// 1. Raw body parser samo na webhook ruti, pre middleware za verifikaciju
+app.use(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  verifyShopifyWebhook,
+  shopifyWebhookRoutes
+);
 
-app.use("/api/stripe/webhook", stripeRoutes); 
+// 2. Stripe webhook takođe koristi raw body
+app.use(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  stripeRoutes
+);
 
-
-app.use(express.json()); 
-
-
+// 3. Za SVE ostale API rute koristi express.json()
+app.use(express.json());
 
 
 
