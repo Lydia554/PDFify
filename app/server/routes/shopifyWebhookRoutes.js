@@ -8,9 +8,9 @@ const sendEmail = require("../sendEmail");
 
 
 function verifyShopifyWebhook(req, res, next) {
-  console.log("Headers:", req.headers); // Loguj sve heder-e
+  console.log("HEADERS:", req.headers);
   console.log("X-Shopify-Hmac-Sha256:", req.get("X-Shopify-Hmac-Sha256"));
-  console.log("Raw body length:", req.rawBody ? req.rawBody.length : "NO RAW BODY");
+  console.log("RAW BODY:", req.rawBody ? req.rawBody.toString() : "NO RAW BODY");
 
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
@@ -19,6 +19,8 @@ function verifyShopifyWebhook(req, res, next) {
     console.error("Missing HMAC header or raw body");
     return res.status(401).send("Unauthorized");
   }
+
+
   const generatedHmac = crypto
     .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
     .update(body, "utf8")
