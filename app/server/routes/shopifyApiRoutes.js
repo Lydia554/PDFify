@@ -203,7 +203,6 @@ const resolveShopifyToken = async (req, shopDomain) => {
   return token;
 };
 
-// Route handler
 router.post("/invoice", authenticate, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -231,6 +230,13 @@ router.post("/invoice", authenticate, async (req, res) => {
         },
       });
     } catch (err) {
+      console.error("Shopify API error fetching order:", {
+        message: err.message,
+        responseData: err.response ? err.response.data : null,
+        status: err.response ? err.response.status : null,
+        headers: err.response ? err.response.headers : null,
+        stack: err.stack,
+      });
       return res.status(500).json({ error: "Failed to fetch order from Shopify" });
     }
 
@@ -251,7 +257,7 @@ router.post("/invoice", authenticate, async (req, res) => {
       return res.status(404).json({ error: "User not found for this shop" });
     }
 
-    const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
+    const shopConfig = (await ShopConfig.findOne({ shopDomain })) || {};
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === "true";
     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
