@@ -178,37 +178,43 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
+// Helper function to resolve Shopify token
+const resolveShopifyToken = async (req, shopDomain) => {
+  let token = req.body.shopifyAccessToken;
+
+  if (!token) {
+    token = req.headers["x-shopify-access-token"];
+  }
+
+  if (!token && req.user?.userId) {
+    const user = await User.findById(req.user.userId);
+    if (user?.connectedShopDomain === shopDomain && user.connectedShopToken) {
+      token = user.connectedShopToken;
+    }
+  }
+
+  if (!token) {
+    const fallbackUser = await User.findOne({ connectedShopDomain: shopDomain });
+    if (fallbackUser?.connectedShopToken) {
+      token = fallbackUser.connectedShopToken;
+    }
+  }
+
+  return token;
+};
+
+// Route handler
 router.post("/invoice", authenticate, async (req, res) => {
-
-
   try {
-    const shopDomain = req.body.shopDomain || req.headers['x-shopify-shop-domain'];
-   let token = req.headers["x-shopify-access-token"]; // optional fallback
-
-if (!token && req.user?.userId) {
-  const user = await User.findById(req.user.userId);
-  if (user?.connectedShopDomain === shopDomain && user.connectedShopToken) {
-    token = user.connectedShopToken;
-  }
-}
-
-if (!token) {
-  const fallbackUser = await User.findOne({ connectedShopDomain: shopDomain });
-  if (fallbackUser?.connectedShopToken) {
-    token = fallbackUser.connectedShopToken;
-  }
-}
-
-if (!req.body.shopifyAccessToken) {
-  return res.status(400).json({ error: 'Missing Shopify access token' });
-}
-
-
-
+    const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
     if (!shopDomain) {
       return res.status(400).json({ error: "Missing shop domain" });
     }
 
+    const token = await resolveShopifyToken(req, shopDomain);
+    if (!token) {
+      return res.status(400).json({ error: "Missing Shopify access token" });
+    }
 
     const { orderId } = req.body;
     if (!orderId) {
@@ -222,12 +228,8 @@ if (!req.body.shopifyAccessToken) {
         headers: {
           "X-Shopify-Access-Token": token,
           "Content-Type": "application/json",
-         
-
         },
       });
-
-      
     } catch (err) {
       return res.status(500).json({ error: "Failed to fetch order from Shopify" });
     }
@@ -237,6 +239,7 @@ if (!req.body.shopifyAccessToken) {
       return res.status(400).json({ error: "Invalid order data from Shopify" });
     }
 
+    // Resolve user
     let user = null;
     if (req.user?.userId) {
       user = await User.findById(req.user.userId);
@@ -247,9 +250,8 @@ if (!req.body.shopifyAccessToken) {
     if (!user) {
       return res.status(404).json({ error: "User not found for this shop" });
     }
-const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
 
-
+    const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
     const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === "true";
     const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
@@ -274,7 +276,6 @@ const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
     }
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -337,6 +338,7 @@ const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 
 
