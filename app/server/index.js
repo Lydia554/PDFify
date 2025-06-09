@@ -34,7 +34,7 @@ const app = express();
 
 // Ovde postavljamo express.raw middleware *pre* nego što idu webhook rute
 app.use(
-   "/api/shopify/webhook",
+  "/webhook",
   express.raw({
     type: "application/json",
     verify: (req, res, buf) => {
@@ -46,7 +46,7 @@ app.use(
 // Registrujemo ruter za /webhook putanje
 app.use("/webhook", shopifyWebhookRoutes);
 
-app.use("/api/shopify", shopifyApiRoutes);
+
 
 app.use("/api/stripe/webhook", stripeRoutes); 
 
@@ -99,7 +99,7 @@ app.use("/api", htmlRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
-
+app.use("/api/shopify", shopifyApiRoutes);
 app.use("/api/stripe", paymentRoutes);
 
 
