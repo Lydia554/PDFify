@@ -27,7 +27,6 @@ function verifyShopifyWebhook(req, res, next) {
 
   next();
 }
-
 router.post(
   "/order-created",
   express.raw({
@@ -70,7 +69,8 @@ router.post(
       const invoiceResponse = await axios.post(
         "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
         {
-          order,
+          orderId: order.id,                // <-- Added this line to explicitly send orderId
+          order,                          // keep sending full order if needed
           shopDomain: connectedShopDomain,
           shopifyAccessToken: user.shopifyAccessToken,
         },
