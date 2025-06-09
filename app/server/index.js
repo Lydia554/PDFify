@@ -32,28 +32,11 @@ const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 const app = express();
 
 
-// Ovde postavljamo express.raw middleware *pre* nego što idu webhook rute
-app.use(
-  "/webhook",
-  express.raw({
-    type: "application/json",
-    verify: (req, res, buf) => {
-      req.rawBody = buf; // Čuvamo sirovi buffer u req.rawBody
-    },
-  })
-);
+app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
 
-// Registrujemo ruter za /webhook putanje
 app.use("/webhook", shopifyWebhookRoutes);
 
-
-
-app.use("/api/stripe/webhook", stripeRoutes); 
-
-
-// Sad je sigurno da koristiš json:
 app.use(express.json());
-
 
 
 

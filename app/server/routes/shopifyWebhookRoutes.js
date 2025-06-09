@@ -20,7 +20,6 @@ function verifyShopifyWebhook(req, res, next) {
     return res.status(401).send("Unauthorized");
   }
 
-
   const generatedHmac = crypto
     .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
     .update(body, "utf8")
@@ -35,17 +34,20 @@ function verifyShopifyWebhook(req, res, next) {
 }
 
 
+router.post(
+  "/order-created",
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+  verifyShopifyWebhook,
+  async (req, res) => {
+   
+    const order = JSON.parse(req.rawBody.toString());
 
-
-
-
-
-
-router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
-
-
-    const order = JSON.parse(req.body.toString()); // Convert raw body buffer to JSON
-
+    const shopDomain = req.headers["x-shopify-shop-domain"];
     console.log("🧾 Order webhook received");
     console.log("🏪 x-shopify-shop-domain:", shopDomain);
     console.log("📦 Order payload:", JSON.stringify(order, null, 2));
@@ -75,8 +77,8 @@ router.post("/order-created", verifyShopifyWebhook, async (req, res) => {
       const invoiceResponse = await axios.post(
         "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
         {
-          orderId: order.id,                // <-- Added this line to explicitly send orderId
-          order,                          // keep sending full order if needed
+          orderId: order.id,
+          order,
           shopDomain: connectedShopDomain,
           shopifyAccessToken: user.shopifyAccessToken,
         },
