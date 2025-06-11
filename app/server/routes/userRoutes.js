@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
 const sendEmail = require("../sendEmail");
 const router = express.Router();
 
@@ -78,7 +79,7 @@ router.post("/user-creation", async (req, res) => {
 
 
 
-router.get("/usage", authenticate, (req, res) => {
+router.get("/usage", authenticate, dualAuth, async (req, res) => {
   const user = req.user;
 
   if (!user) {
@@ -94,7 +95,7 @@ router.get("/usage", authenticate, (req, res) => {
   });
 });
 
-router.get("/me", authenticate, async (req, res) => {
+router.get("/me", authenticate, dualAuth,  async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
 
@@ -117,7 +118,7 @@ router.get("/me", authenticate, async (req, res) => {
   }
 });
 
-router.put("/update", authenticate, async (req, res) => {
+router.put("/update", authenticate, dualAuth, async (req, res) => {
   const { email, password } = req.body;
   const userId = req.user.userId;
 
@@ -159,7 +160,7 @@ router.put("/update", authenticate, async (req, res) => {
   }
 });
 
-router.delete("/delete", authenticate, async (req, res) => {
+router.delete("/delete", authenticate, dualAuth, async (req, res) => {
   const userId = req.user.userId;
 
   try {
@@ -180,36 +181,6 @@ router.delete("/delete", authenticate, async (req, res) => {
 });
 
 
-
-
-router.post("/unsubscribe", authenticate, async (req, res) => {
-  const userId = req.user.userId;
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    if (!user.stripeSubscriptionId) {
-      return res.status(400).json({ error: "No Stripe subscription found for this user." });
-    }
-
-
-    await stripe.subscriptions.del(user.stripeSubscriptionId);
-
-    
-    user.isPremium = false;
-    user.maxUsage = 30;
-    user.stripeSubscriptionId = undefined;
-    await user.save();
-
-    log("Stripe subscription canceled and user downgraded:", user);
-
-    res.json({ message: "Subscription canceled and downgraded to free!" });
-  } catch (error) {
-    console.error("Error canceling subscription:", error);
-    res.status(500).json({ error: "Error canceling subscription" });
-  }
-});
 
 
 module.exports = router;

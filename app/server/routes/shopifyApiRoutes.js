@@ -7,6 +7,7 @@ const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
+const dualAuth = require("../middleware/dualAuth");
 const router = express.Router();
 require('dotenv').config();
 
@@ -198,7 +199,7 @@ const resolveShopifyToken = async (req, shopDomain) => {
 };
 
 
-router.post("/invoice", authenticate, async (req, res) => {
+router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
     if (!shopDomain) return res.status(400).json({ error: "Missing shop domain" });
@@ -245,9 +246,8 @@ router.post("/invoice", authenticate, async (req, res) => {
 
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
     const isPreview = req.query.preview === "true";
-    const isPremium = true; // forced premium for now
+    const isPremium = true; 
 
-    // 🖼️ Fetch product image per item
     const getImageForItem = async (item) => {
       if (!item.product_id) return null;
       try {
@@ -354,7 +354,7 @@ router.post("/invoice", authenticate, async (req, res) => {
 
 
 
-router.get("/connection", authenticate, async (req, res) => {
+router.get("/connection", authenticate, dualAuth, async (req, res) => {
 
   try {
     const connectedShopDomain = req.fullUser.connectedShopDomain || null;
@@ -366,7 +366,7 @@ router.get("/connection", authenticate, async (req, res) => {
 });
 
 
-router.post("/connect", authenticate, async (req, res) => {
+router.post("/connect", authenticate, dualAuth, async (req, res) => {
   try {
     const { shopDomain, accessToken } = req.body;
 
@@ -388,7 +388,7 @@ router.post("/connect", authenticate, async (req, res) => {
   }
 });
 
-router.post("/disconnect", authenticate, async (req, res) => {
+router.post("/disconnect", authenticate, dualAuth, async (req, res) => {
   try {
     req.fullUser.connectedShopDomain = null;
     req.fullUser.shopifyAccessToken = null;
