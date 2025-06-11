@@ -12,43 +12,10 @@ require('dotenv').config();
 
 
 
-function generateInvoiceHTML(invoiceData) {
-  // 🔐 TEMP: Force premium mode for testing
-  const isPremium = true;
-
-  // ✅ When ready to switch back to normal logic, use something like:
-  // const isPremium = invoiceData?.isPremium || false;
-  // Or check some external flag/payment logic
-
+function generateInvoiceHTML(invoiceData, isPremium) {
   const { shopName, date, items, total, showChart, customLogoUrl } = invoiceData;
 
-  // 🔹 BASIC (Free) Template
-  const basicTemplate = `
-    <html>
-      <head><meta charset="UTF-8" /><title>Invoice</title></head>
-      <body style="font-family: sans-serif;">
-        <h1>Invoice</h1>
-        <p><strong>From:</strong> ${shopName}</p>
-        <p><strong>Date:</strong> ${date}</p>
-        <table border="1" cellpadding="10" cellspacing="0" width="100%">
-          <thead><tr><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
-          <tbody>
-            ${items.map(item => `
-              <tr>
-                <td>${item.name}</td>
-                <td>${item.quantity}</td>
-                <td>$${item.price.toFixed(2)}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-        <h3>Total: $${total.toFixed(2)}</h3>
-      </body>
-    </html>
-  `;
-
-  // 🌟 PREMIUM Template
-  const premiumTemplate = `
+  return `
     <html>
       <head>
         <meta charset="UTF-8" />
@@ -63,6 +30,7 @@ function generateInvoiceHTML(invoiceData) {
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            position: relative;
           }
           .container {
             max-width: 800px;
@@ -77,39 +45,74 @@ function generateInvoiceHTML(invoiceData) {
             width: 150px;
             margin-bottom: 20px;
           }
+          .logo:empty {
+            display: none;
+          }
           h1 {
             font-family: 'Playfair Display', serif;
             font-size: 32px;
             color: #2a3d66;
             text-align: center;
+            margin: 20px 0;
+            letter-spacing: 1px;
           }
           .invoice-header {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
+            align-items: flex-start;
             border-bottom: 2px solid #4a69bd;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .invoice-header .left,
+          .invoice-header .right {
+            font-size: 16px;
+            line-height: 1.6;
+          }
+          .invoice-header .right {
+            text-align: right;
+            color: #777;
           }
           .table {
             width: 100%;
             border-collapse: collapse;
+            margin-bottom: 20px;
           }
           .table th,
           .table td {
             padding: 14px;
             border: 1px solid #dee2ef;
+            text-align: left;
           }
           .table th {
             background-color: #dbe7ff;
+            color: #2a3d66;
+            font-weight: 600;
+          }
+          .table td {
+            color: #444;
+            background-color: #fdfdff;
+          }
+          .table tr:nth-child(even) td {
+            background-color: #f6f9fe;
           }
           .total {
             text-align: right;
             font-size: 20px;
             font-weight: bold;
+            color: #2a3d66;
+            margin-top: 10px;
           }
           .chart-container {
-            margin-top: 30px;
             text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            background-color: #fdfdff;
+            border: 1px solid #e0e4ec;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
           .footer {
             max-width: 800px;
@@ -117,10 +120,12 @@ function generateInvoiceHTML(invoiceData) {
             padding: 10px 20px;
             background-color: #f0f2f7;
             color: #555;
-            text-align: center;
-            font-size: 11px;
             border-top: 2px solid #cbd2e1;
+            text-align: center;
+            line-height: 1.6;
+            font-size: 11px;
             border-radius: 0 0 16px 16px;
+            box-sizing: border-box;
           }
         </style>
       </head>
@@ -129,12 +134,20 @@ function generateInvoiceHTML(invoiceData) {
           ${customLogoUrl ? `<img src="${customLogoUrl}" class="logo" />` : ""}
           <h1>Invoice</h1>
           <div class="invoice-header">
-            <div><strong>From:</strong><br>${shopName}</div>
-            <div><strong>Date:</strong><br>${date}</div>
+            <div class="left">
+              <strong>From:</strong><br/>
+              ${shopName}
+            </div>
+            <div class="right">
+              <strong>Date:</strong><br/>
+              ${date}
+            </div>
           </div>
           <table class="table">
             <thead>
-              <tr><th>Item</th><th>Qty</th><th>Price</th></tr>
+              <tr>
+                <th>Item</th><th>Qty</th><th>Price</th>
+              </tr>
             </thead>
             <tbody>
               ${items.map(item => `
@@ -157,10 +170,8 @@ function generateInvoiceHTML(invoiceData) {
       </body>
     </html>
   `;
-
-  // 🎯 Return the appropriate template
-  return isPremium ? premiumTemplate : basicTemplate;
 }
+
 
 
 
@@ -251,7 +262,13 @@ router.post("/invoice", authenticate, async (req, res) => {
 
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
 
-    const isPremium = user.isPremium || shopConfig.isPremium || false;
+
+
+    
+    const FORCE_PREMIUM = true;
+    const isPreview = req.query.preview === "true";
+    const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
+
    
     const invoiceData = {
       shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
@@ -338,6 +355,7 @@ router.post("/invoice", authenticate, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 
 
