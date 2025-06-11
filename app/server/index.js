@@ -29,8 +29,6 @@ const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
 const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 
 
-
-
 const app = express();
 
 
@@ -43,11 +41,12 @@ app.use(express.json());
 
 
 
+
 app.use(cors({
   origin: "https://food-trek.com",
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
+  
 }));
 
 mongoose.connect(process.env.MONGODB_URI, {
@@ -58,7 +57,20 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((error) => console.error("MongoDB connection error:", error));
 
 
-
+app.use(session({
+  secret: process.env.SESSION_SECRET || "fallbackSecretKey",
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    ttl: 2 * 60 * 60 
+  }),
+  cookie: {
+    maxAge: 2 * 60 * 60 * 1000, 
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production'
+  }
+}));
 
 
 app.use("/api/auth", authRoutes);
