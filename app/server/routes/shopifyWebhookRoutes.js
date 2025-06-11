@@ -7,17 +7,14 @@ const sendEmail = require("../sendEmail");
 
 
 
+// Verify HMAC signature
 function verifyShopifyWebhook(req, res, next) {
-  console.log("HEADERS:", req.headers);
-  console.log("X-Shopify-Hmac-Sha256:", req.get("X-Shopify-Hmac-Sha256"));
-  console.log("RAW BODY:", req.rawBody ? req.rawBody.toString() : "NO RAW BODY");
-
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
 
   if (!hmacHeader || !body) {
-    console.error("Missing HMAC header or raw body");
-    return res.status(401).send("Unauthorized");
+    console.error("❌ Missing HMAC header or raw body");
+    return res.status(200).send("OK"); // Don't block Shopify
   }
 
   const generatedHmac = crypto
@@ -26,32 +23,14 @@ function verifyShopifyWebhook(req, res, next) {
     .digest("base64");
 
   if (generatedHmac !== hmacHeader) {
-    console.error("Invalid HMAC signature");
-    return res.status(401).send("Unauthorized");
+    console.error("❌ Invalid HMAC signature");
+    return res.status(200).send("OK"); // Don't block Shopify
   }
 
   next();
 }
 
-
-
-// Helper function to fetch product image
-async function fetchProductImage(productId, shopDomain, accessToken) {
-  try {
-    const response = await axios.get(`https://${shopDomain}/admin/api/2024-01/products/${productId}.json`, {
-      headers: {
-        "X-Shopify-Access-Token": accessToken,
-      },
-    });
-    return response.data.product?.image?.src || null;
-  } catch (err) {
-    console.error(`❌ Failed to fetch image for product ${productId}:`, err.message);
-    return null;
-  }
-}
-
-
-
+// Shopify webhook endpoint
 router.post(
   "/order-created",
   express.raw({
@@ -69,40 +48,40 @@ router.post(
       order = JSON.parse(req.rawBody.toString());
     } catch (err) {
       console.error("❌ Failed to parse raw body:", err);
-      return res.status(400).send("Invalid request body");
+      return res.status(200).send("OK"); // Still respond
     }
 
     if (!shopDomain || !order || !order.id) {
       console.error("❌ Missing shop domain or order ID");
-      return res.status(400).send("Missing shop domain or order payload");
+      return res.status(200).send("OK");
     }
 
+    // Always respond immediately
+    res.status(200).send("Webhook received");
+
+    // Continue processing in background
     const connectedShopDomain = shopDomain.trim().toLowerCase();
 
     try {
       const user = await User.findOne({ connectedShopDomain });
       if (!user) {
         console.error(`❌ No user found for ${connectedShopDomain}`);
-        return res.status(404).send("User not found");
+        return;
       }
 
-      // Respond immediately to avoid checkout timeout
-      res.status(200).send("Webhook received");
-
-      // Process invoice async (image fetching, PDF, email, etc.)
       processOrderAsync(order, user, connectedShopDomain);
     } catch (err) {
-      console.error("❌ Error in webhook handler:", err);
-      res.status(500).send("Internal Server Error");
+      console.error("❌ Webhook handler error:", err);
     }
   }
 );
 
-// Async logic outside the route
+// Async processing (PDF + email)
 async function processOrderAsync(order, user, shopDomain) {
   try {
     const accessToken = user.shopifyAccessToken;
 
+    // Enhance line items with images if missing
     const enhancedLineItems = await Promise.all(
       order.line_items.map(async (item) => {
         if (!item.image?.src && item.product_id) {
@@ -115,6 +94,7 @@ async function processOrderAsync(order, user, shopDomain) {
 
     order.line_items = enhancedLineItems;
 
+    // Request PDF from external API
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -133,6 +113,7 @@ async function processOrderAsync(order, user, shopDomain) {
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
+    // Email the invoice
     await sendEmail({
       to: user.email,
       subject: `Invoice for Shopify Order ${order.name || order.id}`,
@@ -149,32 +130,28 @@ async function processOrderAsync(order, user, shopDomain) {
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
 
-    console.log("✅ Order processed successfully for:", shopDomain);
+    console.log("✅ Invoice processed and emailed for", order.name || order.id);
   } catch (err) {
     console.error("❌ Error during async order processing:", err);
   }
 }
 
-// Fetch fallback product image
+// Product image fallback
 async function fetchProductImage(productId, shopDomain, accessToken) {
   try {
     const response = await axios.get(
-      `https://${shopDomain}/admin/api/2023-10/products/${productId}.json`,
+      `https://${shopDomain}/admin/api/2024-01/products/${productId}.json`,
       {
         headers: {
           "X-Shopify-Access-Token": accessToken,
-          "Content-Type": "application/json",
         },
       }
     );
-
-    const images = response.data.product?.images;
-    return images?.[0]?.src || null;
+    return response.data.product?.images?.[0]?.src || null;
   } catch (err) {
     console.error(`❌ Failed to fetch product image for ${productId}:`, err.message);
     return null;
   }
 }
-
 
 module.exports = router;
