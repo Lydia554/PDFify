@@ -10,17 +10,13 @@ const authenticate = require("../middleware/authenticate");
 const router = express.Router();
 require('dotenv').config();
 
-function generateInvoiceHTML(invoiceData) {
-  // 🔐 TEMP: Force premium mode for testing
-  const isPremium = true;
 
-  // ✅ When ready to switch back to normal logic, use something like:
-  // const isPremium = invoiceData?.isPremium || false;
-  // Or check some external flag/payment logic
+function generateInvoiceHTML(invoiceData, isPremium) {
+  const FORCE_PREMIUM = true; // TEMP: force premium mode
+  const premium = FORCE_PREMIUM || isPremium;
 
-  const { shopName, date, items, total, showChart, customLogoUrl } = invoiceData;
+  const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
 
-  // 🔹 BASIC (Free) Template
   const basicTemplate = `
     <html>
       <head><meta charset="UTF-8" /><title>Invoice</title></head>
@@ -45,7 +41,6 @@ function generateInvoiceHTML(invoiceData) {
     </html>
   `;
 
-  // 🌟 PREMIUM Template
   const premiumTemplate = `
     <html>
       <head>
@@ -60,7 +55,6 @@ function generateInvoiceHTML(invoiceData) {
             background: #f4f7fb;
             margin: 0;
             padding: 0;
-            min-height: 100vh;
           }
           .container {
             max-width: 800px;
@@ -69,7 +63,6 @@ function generateInvoiceHTML(invoiceData) {
             background: linear-gradient(to bottom right, #ffffff, #f8fbff);
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
             border-radius: 16px;
-            border: 1px solid #e0e4ec;
           }
           .logo {
             width: 150px;
@@ -96,14 +89,24 @@ function generateInvoiceHTML(invoiceData) {
           .table td {
             padding: 14px;
             border: 1px solid #dee2ef;
+            vertical-align: middle;
           }
           .table th {
             background-color: #dbe7ff;
+          }
+          .product-image {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background: white;
           }
           .total {
             text-align: right;
             font-size: 20px;
             font-weight: bold;
+            margin-top: 20px;
           }
           .chart-container {
             margin-top: 30px;
@@ -124,7 +127,7 @@ function generateInvoiceHTML(invoiceData) {
       </head>
       <body>
         <div class="container">
-          ${customLogoUrl ? `<img src="${customLogoUrl}" class="logo" />` : ""}
+          <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
           <h1>Invoice</h1>
           <div class="invoice-header">
             <div><strong>From:</strong><br>${shopName}</div>
@@ -132,11 +135,17 @@ function generateInvoiceHTML(invoiceData) {
           </div>
           <table class="table">
             <thead>
-              <tr><th>Item</th><th>Qty</th><th>Price</th></tr>
+              <tr>
+                <th>Image</th>
+                <th>Item</th>
+                <th>Qty</th>
+                <th>Price</th>
+              </tr>
             </thead>
             <tbody>
               ${items.map(item => `
                 <tr>
+                  <td>${item.imageUrl ? `<img src="${item.imageUrl}" class="product-image" />` : ""}</td>
                   <td>${item.name}</td>
                   <td>${item.quantity}</td>
                   <td>$${item.price.toFixed(2)}</td>
@@ -156,8 +165,7 @@ function generateInvoiceHTML(invoiceData) {
     </html>
   `;
 
-  // 🎯 Return the appropriate template
-  return isPremium ? premiumTemplate : basicTemplate;
+  return premium ? premiumTemplate : basicTemplate;
 }
 
 
@@ -263,9 +271,10 @@ router.post("/invoice", authenticate, async (req, res) => {
       shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
       date: new Date(order.created_at).toISOString().slice(0, 10),
       items: order.line_items.map((item) => ({
-        name: item.name,
+        name: item.name || item.title,
         quantity: item.quantity,
         price: Number(item.price) || 0,
+        imageUrl: item.image?.src || null,
       })),
       total: Number(order.total_price) || 0,
       showChart: isPremium && shopConfig?.showChart,
