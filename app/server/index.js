@@ -39,6 +39,21 @@ app.use("/webhook", shopifyWebhookRoutes);
 app.use(express.json());
 
 
+app.use(session({
+  secret: process.env.SESSION_SECRET || "fallbackSecretKey",
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    ttl: 2 * 60 * 60 
+  }),
+  cookie: {
+    maxAge: 2 * 60 * 60 * 1000, 
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production'
+  }
+}));
+
 
 
 
@@ -57,20 +72,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((error) => console.error("MongoDB connection error:", error));
 
 
-app.use(session({
-  secret: process.env.SESSION_SECRET || "fallbackSecretKey",
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    ttl: 2 * 60 * 60 
-  }),
-  cookie: {
-    maxAge: 2 * 60 * 60 * 1000, 
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production'
-  }
-}));
+
 
 
 app.use("/api/auth", authRoutes);
