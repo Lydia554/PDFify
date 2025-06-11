@@ -26,7 +26,11 @@ const packingSlipRoutes = require("./routes/packing-slipRoutes");
 const friendlyMode = require("./routes/friendlyMode");
 const foodTrekRoutes = require("./routes/foodTrekRoutes");
 const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
-const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
+const shopifyApiRoutes = require('./routes/shopifyApiRoutes');#
+
+
+const app = express();
+
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "fallbackSecretKey",
@@ -45,7 +49,7 @@ app.use(session({
 
 
 
-const app = express();
+
 
 
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
