@@ -180,7 +180,6 @@
       loadingOverlay.style.display = "none";
     });
 
-
     const upgradeBtn = document.getElementById("upgradeSubscriptionButton");
     const downgradeBtn = document.getElementById("downgradeSubscriptionButton");
     const resultMessage = document.getElementById("result");
@@ -227,29 +226,15 @@
     downgradeBtn.addEventListener("click", () => handleSubscriptionChange("downgrade"));
 
     
-document.getElementById("logoutButton").addEventListener("click", async () => {
-  const loadingOverlay = document.getElementById("loadingOverlay");
-  loadingOverlay.style.display = "flex";
+    document.getElementById("logoutButton").addEventListener("click", () => {
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      loadingOverlay.style.display = "flex";
 
-  try {
-
-    await fetch("/api/logout", {
-      method: "POST",
-      credentials: "include", 
+      setTimeout(() => {
+        localStorage.removeItem("apiKey");
+        window.location.href = "/login.html";
+      }, 500);
     });
-
-    localStorage.removeItem("apiKey");
-
-    setTimeout(() => {
-      window.location.href = "/login.html";
-    }, 500);
-  } catch (error) {
-    console.error("Logout failed:", error);
-    alert("Failed to log out. Please try again.");
-    loadingOverlay.style.display = "none";
-  }
-});
-
 
     
     document.getElementById("updateUserForm").addEventListener("submit", async (event) => {
