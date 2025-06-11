@@ -26,7 +26,7 @@ const packingSlipRoutes = require("./routes/packing-slipRoutes");
 const friendlyMode = require("./routes/friendlyMode");
 const foodTrekRoutes = require("./routes/foodTrekRoutes");
 const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
-const shopifyApiRoutes = require('./routes/shopifyApiRoutes');#
+const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 
 
 const app = express();
@@ -48,10 +48,6 @@ app.use(session({
 }));
 
 
-
-
-
-
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
 
 app.use("/webhook", shopifyWebhookRoutes);
@@ -61,11 +57,11 @@ app.use(express.json());
 
 
 
+
 app.use(cors({
   origin: "https://food-trek.com",
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
 }));
 
 mongoose.connect(process.env.MONGODB_URI, {
@@ -74,7 +70,6 @@ mongoose.connect(process.env.MONGODB_URI, {
 })
 .then(() => console.log("MongoDB connected"))
 .catch((error) => console.error("MongoDB connection error:", error));
-
 
 
 
