@@ -238,6 +238,18 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
       credentials: "include", 
     });
 
+    if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem("apiKey");
+    window.location.href = "/login.html";
+    return;
+  }
+
+    if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem("apiKey");
+    window.location.href = "/login.html";
+    return;
+  }
+
     localStorage.removeItem("apiKey");
 
     setTimeout(() => {

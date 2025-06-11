@@ -25,6 +25,12 @@ async function fetchAccessType() {
       },
       credentials: "include",
     });
+
+    if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem("apiKey");
+    window.location.href = "/login.html";
+    return;
+  }
     
     
 
@@ -261,6 +267,12 @@ generatePdfBtn.addEventListener('click', async () => {
       body: JSON.stringify({ template, ...formData }),
       credentials: "include",
     });
+
+    if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem("apiKey");
+    window.location.href = "/login.html";
+    return;
+  }
 
     if (!response.ok) {
       const errorData = await response.json();

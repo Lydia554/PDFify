@@ -29,6 +29,12 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
         credentials: "include",
       });
 
+      if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem("apiKey");
+    window.location.href = "/login.html";
+    return;
+  }
+
       if (!response.ok) {
         const errorText = await response.text();
         alert('Error generating preview: ' + errorText);
@@ -76,6 +82,12 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
         body: JSON.stringify(payload),
         credentials: "include",
       });
+
+      if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem("apiKey");
+    window.location.href = "/login.html";
+    return;
+  }
   
       if (!response.ok) {
         const errorText = await response.text();
