@@ -31,13 +31,10 @@ function verifyShopifyWebhook(req, res, next) {
 }
 
 // Shopify webhook endpoint
-router.post(
-  "/order-created",
-  express.raw({
-    type: "application/json",
-    verify: (req, res, buf) => {
-      req.rawBody = buf;
+router.post( "/order-created", express.raw({type: "application/json",verify: (req, res, buf) => {req.rawBody = buf;
+   console.log("🚨 Webhook POST /order-created received from shop:", req.headers["x-shopify-shop-domain"]);
     },
+    
   }),
   verifyShopifyWebhook,
   async (req, res) => {
