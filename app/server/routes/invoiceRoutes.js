@@ -4,7 +4,6 @@ const path = require("path");
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
@@ -296,7 +295,7 @@ return `
 
 
 
-router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
+router.post("/generate-invoice", authenticate, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
     if (!data || typeof data !== "object") {

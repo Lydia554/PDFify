@@ -4,10 +4,8 @@ const path = require('path');
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User"); 
 const pdfParse = require("pdf-parse");
-const dualAuth = require('../middleware/dualAuth');
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -253,7 +251,7 @@ function generateTherapyReportHTML(data) {
 }
 
 
-router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
+router.post("/generate-therapy-report", authenticate, async (req, res) => {
   const { data, isPreview = false } = req.body;
 
   const cleanedData = {

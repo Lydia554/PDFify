@@ -6,7 +6,7 @@ const puppeteer = require('puppeteer');
 const pdfParse = require('pdf-parse');
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
-const dualAuth = require("../middleware/dualAuth");
+
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
 
@@ -26,7 +26,7 @@ const templates = {
 };
 
 
-router.get('/check-access', authenticate, dualAuth, async (req, res) => {
+router.get('/check-access', authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -42,7 +42,7 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
   }
 });
 
-router.post('/generate', authenticate, dualAuth, async (req, res) => {
+router.post('/generate', authenticate, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
 
   const templateConfig = templates[template];

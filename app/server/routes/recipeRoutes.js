@@ -6,7 +6,6 @@ const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
-const dualAuth = require('../middleware/dualAuth');
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -236,7 +235,7 @@ function generateRecipeHTML(data) {
 }
 
 
-router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
+router.post("/generate-recipe", authenticate, async (req, res) => {
   const { data, isPreview } = req.body;
   log("Received data for recipe generation:", data);
 

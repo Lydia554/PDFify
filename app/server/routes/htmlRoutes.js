@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const authenticate = require('../middleware/authenticate'); 
-const dualAuth = require("../middleware/dualAuth");
 const User = require('../models/User');
 const pdfParse = require("pdf-parse");
 
@@ -116,7 +115,7 @@ function wrapHtmlWithBranding(htmlContent) {
 }
 
 
-router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
+router.post("/generate-pdf-from-html", authenticate, async (req, res) => {
   const { html, isPreview } = req.body;
 
   if (!html) {

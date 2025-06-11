@@ -7,7 +7,6 @@ const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
-const dualAuth = require("../middleware/dualAuth");
 const router = express.Router();
 require('dotenv').config();
 
@@ -199,7 +198,7 @@ const resolveShopifyToken = async (req, shopDomain) => {
 };
 
 
-router.post("/invoice", authenticate, dualAuth, async (req, res) => {
+router.post("/invoice", authenticate, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
     if (!shopDomain) return res.status(400).json({ error: "Missing shop domain" });

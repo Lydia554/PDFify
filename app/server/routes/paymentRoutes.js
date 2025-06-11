@@ -2,7 +2,6 @@ const express = require("express");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
 const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 
 const log = (message, data = null) => {
@@ -40,7 +39,7 @@ router.post("/create-checkout-session", async (req, res) => {
 });
 
 
-router.post("/unsubscribe", authenticate, dualAuth, async (req, res) => {
+router.post("/unsubscribe", authenticate, async (req, res) => {
   const userId = req.user.userId;
 
   try {
