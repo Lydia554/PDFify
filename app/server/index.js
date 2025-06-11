@@ -28,35 +28,6 @@ const foodTrekRoutes = require("./routes/foodTrekRoutes");
 const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
 const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 
-
-const app = express();
-
-
-app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
-
-app.use("/webhook", shopifyWebhookRoutes);
-
-app.use(express.json());
-
-
-
-
-
-app.use(cors({
-  origin: "https://food-trek.com",
-  methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  
-}));
-
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log("MongoDB connected"))
-.catch((error) => console.error("MongoDB connection error:", error));
-
-
 app.use(session({
   secret: process.env.SESSION_SECRET || "fallbackSecretKey",
   resave: false,
@@ -71,6 +42,37 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production'
   }
 }));
+
+
+
+const app = express();
+
+
+app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
+
+app.use("/webhook", shopifyWebhookRoutes);
+
+app.use(express.json());
+
+
+
+
+app.use(cors({
+  origin: "https://food-trek.com",
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
+}));
+
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log("MongoDB connected"))
+.catch((error) => console.error("MongoDB connection error:", error));
+
+
+
 
 
 app.use("/api/auth", authRoutes);
