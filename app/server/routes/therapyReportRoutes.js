@@ -7,7 +7,6 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User"); 
 const pdfParse = require("pdf-parse");
-const dualAuth = require('../middleware/dualAuth');
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
