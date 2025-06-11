@@ -6,6 +6,7 @@ const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User"); 
 const pdfParse = require("pdf-parse");
+const dualAuth = require('../middleware/dualAuth');
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -188,7 +189,7 @@ function generateShopOrderHTML(data) {
     </html>
   `;
 }
-router.post("/generate-shop-order", authenticate, async (req, res) => {
+router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
   if (!data || !data.shopName) {
     return res.status(400).json({ error: "Missing shop order data" });

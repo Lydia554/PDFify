@@ -4,6 +4,7 @@ const path = require("path");
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
@@ -199,7 +200,7 @@ function generatePackingSlipHTML(data) {
   `;
 }
 
-router.post("/generate-packing-slip", authenticate, async (req, res) => {
+router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
 
   try {

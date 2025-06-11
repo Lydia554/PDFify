@@ -7,14 +7,14 @@ const sendEmail = require("../sendEmail");
 
 
 
-// Verify HMAC signature
+
 function verifyShopifyWebhook(req, res, next) {
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK"); // Don't block Shopify
+    return res.status(200).send("OK"); 
   }
 
   const generatedHmac = crypto
@@ -24,13 +24,13 @@ function verifyShopifyWebhook(req, res, next) {
 
   if (generatedHmac !== hmacHeader) {
     console.error("❌ Invalid HMAC signature");
-    return res.status(200).send("OK"); // Don't block Shopify
+    return res.status(200).send("OK"); 
   }
 
   next();
 }
 
-// Shopify webhook endpoint
+
 router.post( "/order-created", express.raw({type: "application/json",verify: (req, res, buf) => {req.rawBody = buf;
     },
     
@@ -44,7 +44,7 @@ router.post( "/order-created", express.raw({type: "application/json",verify: (re
       order = JSON.parse(req.rawBody.toString());
     } catch (err) {
       console.error("❌ Failed to parse raw body:", err);
-      return res.status(200).send("OK"); // Still respond
+      return res.status(200).send("OK"); 
     }
 
     if (!shopDomain || !order || !order.id) {
@@ -52,10 +52,10 @@ router.post( "/order-created", express.raw({type: "application/json",verify: (re
       return res.status(200).send("OK");
     }
 
-    // Always respond immediately
+
     res.status(200).send("Webhook received");
 
-    // Continue processing in background
+    
     const connectedShopDomain = shopDomain.trim().toLowerCase();
 
     try {
@@ -72,12 +72,12 @@ router.post( "/order-created", express.raw({type: "application/json",verify: (re
   }
 );
 
-// Async processing (PDF + email)
+
 async function processOrderAsync(order, user, shopDomain) {
   try {
     const accessToken = user.shopifyAccessToken;
 
-    // Enhance line items with images if missing
+  
     const enhancedLineItems = await Promise.all(
       order.line_items.map(async (item) => {
         if (!item.image?.src && item.product_id) {
@@ -90,7 +90,6 @@ async function processOrderAsync(order, user, shopDomain) {
 
     order.line_items = enhancedLineItems;
 
-    // Request PDF from external API
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -109,7 +108,7 @@ async function processOrderAsync(order, user, shopDomain) {
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
-    // Email the invoice
+  
     await sendEmail({
       to: user.email,
       subject: `Invoice for Shopify Order ${order.name || order.id}`,
@@ -132,7 +131,7 @@ async function processOrderAsync(order, user, shopDomain) {
   }
 }
 
-// Product image fallback
+
 async function fetchProductImage(productId, shopDomain, accessToken) {
   try {
     const response = await axios.get(

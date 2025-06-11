@@ -26,6 +26,7 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
+        credentials: "include",
       });
 
       if (!response.ok) {
@@ -73,6 +74,7 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify(payload),
+        credentials: "include",
       });
   
       if (!response.ok) {

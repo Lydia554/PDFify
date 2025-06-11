@@ -45,7 +45,8 @@ app.use(express.json());
 app.use(cors({
   origin: "https://food-trek.com",
   methods: ["GET", "POST", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
 }));
 
 mongoose.connect(process.env.MONGODB_URI, {
@@ -67,7 +68,7 @@ app.use(session({
   cookie: {
     maxAge: 2 * 60 * 60 * 1000, 
     httpOnly: true,
-    secure: false,
+    secure: process.env.NODE_ENV === 'production'
   }
 }));
 

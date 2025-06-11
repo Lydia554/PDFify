@@ -22,8 +22,10 @@ async function fetchAccessType() {
     const res = await fetch('/api/friendly/check-access', {
       headers: {
         Authorization: `Bearer ${apiKey}`
-      }
+      },
+      credentials: "include",
     });
+    
     
 
     if (res.ok) {
@@ -257,6 +259,7 @@ generatePdfBtn.addEventListener('click', async () => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ template, ...formData }),
+      credentials: "include",
     });
 
     if (!response.ok) {
