@@ -1,6 +1,6 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");;
 const User = require("../models/User");
 const crypto = require("crypto");
 const sendEmail = require("../sendEmail");
@@ -17,6 +17,10 @@ const log = (message, data = null) => {
   }
 };
 
+
+
+
+
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -31,11 +35,35 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    res.json({ apiKey: user.getDecryptedApiKey() });
+   
+    req.session.userId = user._id;
+
+    res.json({
+      message: "Login successful",
+      user: {
+        email: user.email,
+        isPremium: user.isPremium,
+        usageCount: user.usageCount,
+        maxUsage: user.maxUsage,
+        apiKey: user.getDecryptedApiKey(),
+      },
+    });
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+
+router.post("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Logout error:", err);
+      return res.status(500).json({ error: "Failed to log out" });
+    }
+    res.clearCookie("connect.sid");
+    res.json({ message: "Logged out successfully" });
+  });
 });
 
 
