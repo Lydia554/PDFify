@@ -28,17 +28,6 @@ const foodTrekRoutes = require("./routes/foodTrekRoutes");
 const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
 const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
 
-
-const app = express();
-
-
-app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
-
-app.use("/webhook", shopifyWebhookRoutes);
-
-app.use(express.json());
-
-
 app.use(session({
   secret: process.env.SESSION_SECRET || "fallbackSecretKey",
   resave: false,
@@ -53,6 +42,17 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production'
   }
 }));
+
+
+
+const app = express();
+
+
+app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
+
+app.use("/webhook", shopifyWebhookRoutes);
+
+app.use(express.json());
 
 
 
