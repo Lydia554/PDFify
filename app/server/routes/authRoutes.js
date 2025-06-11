@@ -26,8 +26,13 @@ router.post("/login", async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
+
     if (!user) {
       return res.status(404).json({ error: "User not found" });
+    }
+
+    if (!user.password) {
+      return res.status(400).json({ error: "User has no password set" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -35,21 +40,17 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-   
+    // Set session
     req.session.userId = user._id;
 
     res.json({
       message: "Login successful",
-      user: {
-        email: user.email,
-        isPremium: user.isPremium,
-        usageCount: user.usageCount,
-        maxUsage: user.maxUsage,
-        apiKey: user.getDecryptedApiKey(),
-      },
+      email: user.email,
+      apiKey: user.getDecryptedApiKey(),
+      isPremium: user.isPremium,
     });
   } catch (error) {
-    console.error("Error during login:", error);
+    console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
