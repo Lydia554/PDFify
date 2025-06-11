@@ -100,7 +100,7 @@ app.get("/cancel.html", (req, res) => res.sendFile(path.join(__dirname, "public"
 
 
 
-app.get("/get-stripe-key", (req, res) => {
+app.get("/api/get-stripe-key", (req, res) => {
   if (!process.env.STRIPE_PUBLISHABLE_KEY) {
     return res.status(500).json({ error: "Stripe publishable key not set" });
   }
