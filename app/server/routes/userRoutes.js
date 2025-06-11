@@ -182,34 +182,4 @@ router.delete("/delete", authenticate, async (req, res) => {
 
 
 
-router.post("/unsubscribe", authenticate, async (req, res) => {
-  const userId = req.user.userId;
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    if (!user.stripeSubscriptionId) {
-      return res.status(400).json({ error: "No Stripe subscription found for this user." });
-    }
-
-
-    await stripe.subscriptions.del(user.stripeSubscriptionId);
-
-    
-    user.isPremium = false;
-    user.maxUsage = 30;
-    user.stripeSubscriptionId = undefined;
-    await user.save();
-
-    log("Stripe subscription canceled and user downgraded:", user);
-
-    res.json({ message: "Subscription canceled and downgraded to free!" });
-  } catch (error) {
-    console.error("Error canceling subscription:", error);
-    res.status(500).json({ error: "Error canceling subscription" });
-  }
-});
-
-
 module.exports = router;
