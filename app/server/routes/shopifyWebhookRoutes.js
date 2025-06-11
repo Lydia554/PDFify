@@ -34,6 +34,24 @@ function verifyShopifyWebhook(req, res, next) {
 }
 
 
+
+// Helper function to fetch product image
+async function fetchProductImage(productId, shopDomain, accessToken) {
+  try {
+    const response = await axios.get(`https://${shopDomain}/admin/api/2024-01/products/${productId}.json`, {
+      headers: {
+        "X-Shopify-Access-Token": accessToken,
+      },
+    });
+    return response.data.product?.image?.src || null;
+  } catch (err) {
+    console.error(`❌ Failed to fetch image for product ${productId}:`, err.message);
+    return null;
+  }
+}
+
+
+
 router.post(
   "/order-created",
   express.raw({
@@ -44,13 +62,15 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
-   
-    const order = JSON.parse(req.rawBody.toString());
-
+    let order;
     const shopDomain = req.headers["x-shopify-shop-domain"];
-    console.log("🧾 Order webhook received");
-    console.log("🏪 x-shopify-shop-domain:", shopDomain);
-    console.log("📦 Order payload:", JSON.stringify(order, null, 2));
+
+    try {
+      order = JSON.parse(req.rawBody.toString());
+    } catch (err) {
+      console.error("❌ Failed to parse raw body:", err);
+      return res.status(400).send("Invalid request body");
+    }
 
     if (!shopDomain || !order || !order.id) {
       console.error("❌ Missing shop domain or order ID");
@@ -61,67 +81,100 @@ router.post(
 
     try {
       const user = await User.findOne({ connectedShopDomain });
-
       if (!user) {
         console.error(`❌ No user found for ${connectedShopDomain}`);
         return res.status(404).send("User not found");
       }
 
-      const userApiKey = user.getDecryptedApiKey();
+      // Respond immediately to avoid checkout timeout
+      res.status(200).send("Webhook received");
 
-      if (!userApiKey) {
-        console.error(`❌ No API key found for user ${user._id} (${connectedShopDomain})`);
-        return res.status(403).send("User API key not found");
-      }
-
-
-      console.log("📤 Sending internal POST to /shopify/invoice with API key:", userApiKey);
-
-      const invoiceResponse = await axios.post(
-        "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
-        {
-          orderId: order.id,
-          order,
-          shopDomain: connectedShopDomain,
-          shopifyAccessToken: user.shopifyAccessToken,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userApiKey}`,
-          },
-          responseType: "arraybuffer",
-        }
-      );
-
-
-      console.log("📥 Invoice response received, length:", invoiceResponse.data.length);
-
-      const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
-
-      await sendEmail({
-        to: user.email,
-        subject: `Invoice for Shopify Order ${order.name || order.id}`,
-        text: `Hello ${user.name || ""},\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for using PDFify!`,
-        attachments: [
-          {
-            filename: `Invoice-${order.name || order.id}.pdf`,
-            content: pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ],
-      });
-
-      console.log("✅ Email with invoice sent to", user.email);
-
-      user.usageCount = (user.usageCount || 0) + 1;
-      await user.save();
-
-      res.status(200).send("Invoice generated and emailed.");
+      // Process invoice async (image fetching, PDF, email, etc.)
+      processOrderAsync(order, user, connectedShopDomain);
     } catch (err) {
       console.error("❌ Error in webhook handler:", err);
       res.status(500).send("Internal Server Error");
     }
   }
 );
+
+// Async logic outside the route
+async function processOrderAsync(order, user, shopDomain) {
+  try {
+    const accessToken = user.shopifyAccessToken;
+
+    const enhancedLineItems = await Promise.all(
+      order.line_items.map(async (item) => {
+        if (!item.image?.src && item.product_id) {
+          const imageUrl = await fetchProductImage(item.product_id, shopDomain, accessToken);
+          return { ...item, image: { src: imageUrl } };
+        }
+        return item;
+      })
+    );
+
+    order.line_items = enhancedLineItems;
+
+    const invoiceResponse = await axios.post(
+      "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
+      {
+        orderId: order.id,
+        order,
+        shopDomain,
+        shopifyAccessToken: accessToken,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${user.getDecryptedApiKey()}`,
+        },
+        responseType: "arraybuffer",
+      }
+    );
+
+    const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
+
+    await sendEmail({
+      to: user.email,
+      subject: `Invoice for Shopify Order ${order.name || order.id}`,
+      text: `Hello ${user.name || ""},\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for using PDFify!`,
+      attachments: [
+        {
+          filename: `Invoice-${order.name || order.id}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+    });
+
+    user.usageCount = (user.usageCount || 0) + 1;
+    await user.save();
+
+    console.log("✅ Order processed successfully for:", shopDomain);
+  } catch (err) {
+    console.error("❌ Error during async order processing:", err);
+  }
+}
+
+// Fetch fallback product image
+async function fetchProductImage(productId, shopDomain, accessToken) {
+  try {
+    const response = await axios.get(
+      `https://${shopDomain}/admin/api/2023-10/products/${productId}.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const images = response.data.product?.images;
+    return images?.[0]?.src || null;
+  } catch (err) {
+    console.error(`❌ Failed to fetch product image for ${productId}:`, err.message);
+    return null;
+  }
+}
+
 
 module.exports = router;
