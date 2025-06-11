@@ -198,27 +198,19 @@ const resolveShopifyToken = async (req, shopDomain) => {
 };
 
 
-
-
 router.post("/invoice", authenticate, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
-    if (!shopDomain) {
-      return res.status(400).json({ error: "Missing shop domain" });
-    }
+    if (!shopDomain) return res.status(400).json({ error: "Missing shop domain" });
 
     const token = await resolveShopifyToken(req, shopDomain);
-    if (!token) {
-      return res.status(400).json({ error: "Missing Shopify access token" });
-    }
+    if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
 
     let orderId = req.body.orderId;
     let order = req.body.order || null;
 
-
     if (typeof orderId === "string" && orderId.startsWith("gid://")) {
-      const parts = orderId.split("/");
-      orderId = parts[parts.length - 1]; 
+      orderId = orderId.split("/").pop();
     }
 
     if (!order && orderId) {
@@ -241,52 +233,58 @@ router.post("/invoice", authenticate, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
-    
     if (!orderId && order?.id) {
       orderId = order.id;
     }
 
-    let user = null;
-    if (req.user?.userId) {
-      user = await User.findById(req.user.userId);
-    }
-    if (!user) {
-      user = await User.findOne({ connectedShopDomain: shopDomain });
-    }
-    if (!user) {
-      return res.status(404).json({ error: "User not found for this shop" });
-    }
+    let user = req.user?.userId
+      ? await User.findById(req.user.userId)
+      : await User.findOne({ connectedShopDomain: shopDomain });
+
+    if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
-
-
-
-    
-    const FORCE_PREMIUM = true;
     const isPreview = req.query.preview === "true";
-    const isPremium = FORCE_PREMIUM || (user.isPremium && shopConfig?.isPremium);
+    const isPremium = true; // forced premium for now
 
-   
+    // 🖼️ Fetch product image per item
+    const getImageForItem = async (item) => {
+      if (!item.product_id) return null;
+      try {
+        const url = `https://${shopDomain}/admin/api/2023-10/products/${item.product_id}.json`;
+        const response = await axios.get(url, {
+          headers: {
+            "X-Shopify-Access-Token": token,
+            "Content-Type": "application/json",
+          },
+        });
+        return response.data.product?.image?.src || null;
+      } catch (err) {
+        console.warn(`⚠️ Could not fetch image for product ${item.product_id}:`, err.message);
+        return null;
+      }
+    };
+
+    const enrichedItems = await Promise.all(order.line_items.map(async (item) => ({
+      name: item.name || item.title,
+      quantity: item.quantity,
+      price: Number(item.price) || 0,
+      imageUrl: await getImageForItem(item),
+    })));
+
     const invoiceData = {
       shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
       date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: order.line_items.map((item) => ({
-        name: item.name || item.title,
-        quantity: item.quantity,
-        price: Number(item.price) || 0,
-        imageUrl: item.image?.src || null,
-      })),
+      items: enrichedItems,
       total: Number(order.total_price) || 0,
       showChart: isPremium && shopConfig?.showChart,
       customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-      fallbackLogoUrl: "/assets/default-logo.png", 
+      fallbackLogoUrl: "/assets/default-logo.png",
     };
 
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir);
-    }
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const browser = await puppeteer.launch({
@@ -295,9 +293,7 @@ router.post("/invoice", authenticate, async (req, res) => {
     });
     const page = await browser.newPage();
 
-   
     const html = generateInvoiceHTML(invoiceData, isPremium);
-
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
@@ -313,7 +309,6 @@ router.post("/invoice", authenticate, async (req, res) => {
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
       }
-
       user.usageCount += pageCount;
       await user.save();
     }
@@ -331,12 +326,12 @@ router.post("/invoice", authenticate, async (req, res) => {
             },
           ],
         });
-        console.log("Invoice emailed to:", order.email);
+        console.log("✅ Invoice emailed to:", order.email);
       } else {
-        console.warn("No email found on order, skipping email");
+        console.warn("⚠️ No email found on order, skipping email");
       }
     } catch (emailErr) {
-      console.error("Failed to send invoice email:", emailErr);
+      console.error("❌ Failed to send invoice email:", emailErr);
     }
 
     res.set({
@@ -349,7 +344,7 @@ router.post("/invoice", authenticate, async (req, res) => {
 
     fs.unlinkSync(pdfPath);
   } catch (error) {
-    console.error("Shopify invoice generation error:", error);
+    console.error("❌ Shopify invoice generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
