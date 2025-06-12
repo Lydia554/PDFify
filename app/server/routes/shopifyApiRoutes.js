@@ -13,7 +13,7 @@ require('dotenv').config();
 
 
 function generateInvoiceHTML(invoiceData, isPremium) {
-  const FORCE_PREMIUM = true; // TEMP: force premium mode
+  const FORCE_PREMIUM = true; 
   const premium = FORCE_PREMIUM || isPremium;
 
   const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
@@ -376,7 +376,7 @@ router.post("/connect", authenticate, dualAuth, async (req, res) => {
 
     const normalizedShopDomain = shopDomain.toLowerCase();
 
-    // Use req.fullUser (the Mongoose doc) to update and save
+
     req.fullUser.connectedShopDomain = normalizedShopDomain;
     req.fullUser.shopifyAccessToken = accessToken;
     await req.fullUser.save();

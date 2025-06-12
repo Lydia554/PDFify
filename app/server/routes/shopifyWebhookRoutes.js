@@ -1,18 +1,20 @@
 const express = require("express");
 const router = express.Router();
 const crypto = require("crypto");
-const axios = require("axios");
 const User = require("../models/User");
+const axios = require("axios");
 const sendEmail = require("../sendEmail");
 
-// Middleware to verify Shopify Webhook
+
+
+
 function verifyShopifyWebhook(req, res, next) {
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK"); // Always 200 to avoid retries
+    return res.status(200).send("OK"); 
   }
 
   const generatedHmac = crypto
@@ -22,20 +24,16 @@ function verifyShopifyWebhook(req, res, next) {
 
   if (generatedHmac !== hmacHeader) {
     console.error("❌ Invalid HMAC signature");
-    return res.status(200).send("OK");
+    return res.status(200).send("OK"); 
   }
 
   next();
 }
 
-// Webhook endpoint for order creation
-router.post(
-  "/order-created",
-  express.raw({
-    type: "application/json",
-    verify: (req, res, buf) => {
-      req.rawBody = buf;
+
+router.post( "/order-created", express.raw({type: "application/json",verify: (req, res, buf) => {req.rawBody = buf;
     },
+    
   }),
   verifyShopifyWebhook,
   async (req, res) => {
@@ -46,16 +44,18 @@ router.post(
       order = JSON.parse(req.rawBody.toString());
     } catch (err) {
       console.error("❌ Failed to parse raw body:", err);
-      return res.status(200).send("OK");
+      return res.status(200).send("OK"); 
     }
 
-    if (!shopDomain || !order?.id) {
+    if (!shopDomain || !order || !order.id) {
       console.error("❌ Missing shop domain or order ID");
       return res.status(200).send("OK");
     }
 
-    res.status(200).send("Webhook received"); // Respond immediately
 
+    res.status(200).send("Webhook received");
+
+    
     const connectedShopDomain = shopDomain.trim().toLowerCase();
 
     try {
@@ -72,12 +72,12 @@ router.post(
   }
 );
 
-// Processes the order and sends an invoice
+
 async function processOrderAsync(order, user, shopDomain) {
   try {
     const accessToken = user.shopifyAccessToken;
 
-    // Enhance each item with image if missing
+  
     const enhancedLineItems = await Promise.all(
       order.line_items.map(async (item) => {
         if (!item.image?.src && item.product_id) {
@@ -90,7 +90,6 @@ async function processOrderAsync(order, user, shopDomain) {
 
     order.line_items = enhancedLineItems;
 
-    // Get invoice PDF from your external API
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -109,12 +108,7 @@ async function processOrderAsync(order, user, shopDomain) {
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
 
-    // Email the invoice
-    if (!user.email) {
-      console.warn("⚠️ No email found for user", user._id);
-      return;
-    }
-
+  
     await sendEmail({
       to: user.email,
       subject: `Invoice for Shopify Order ${order.name || order.id}`,
@@ -137,21 +131,20 @@ async function processOrderAsync(order, user, shopDomain) {
   }
 }
 
-// Fetch product image from Shopify
+
 async function fetchProductImage(productId, shopDomain, accessToken) {
   try {
-    const apiUrl = `https://${shopDomain}/admin/api/2024-01/products/${productId}.json`;
-
-    const response = await axios.get(apiUrl, {
-      headers: {
-        "X-Shopify-Access-Token": accessToken,
-        "Content-Type": "application/json",
-      },
-    });
-
+    const response = await axios.get(
+      `https://${shopDomain}/admin/api/2024-01/products/${productId}.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      }
+    );
     return response.data.product?.images?.[0]?.src || null;
   } catch (err) {
-    console.error(`❌ Failed to fetch product image for ${productId}: ${err.response?.status || err.message}`);
+    console.error(`❌ Failed to fetch product image for ${productId}:`, err.message);
     return null;
   }
 }
