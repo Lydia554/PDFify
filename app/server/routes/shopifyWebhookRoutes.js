@@ -161,25 +161,19 @@ async function processOrderAsync(order, user, shopDomain) {
   }
 }
 
-async function fetchProductImage(productId, shopDomain, accessToken) {
+
+async function fetchProductImages(shop, accessToken, productId) {
   try {
-    const response = await axios.get(
-      `https://${shopDomain}/admin/api/2024-01/products/${productId}.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": accessToken,
-        },
+    const res = await axios.get(`https://${shop}/admin/api/2023-10/products/${productId}/images.json`, {
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json'
       }
-    );
-    let imageUrl = response.data.product?.images?.[0]?.src || null;
-    if (imageUrl && imageUrl.startsWith('//')) {
-      imageUrl = 'https:' + imageUrl;
-    }
-    console.log(`🔍 Fetched product image for product ${productId}: ${imageUrl}`);
-    return imageUrl;
+    });
+    return res.data.images; // array of images
   } catch (err) {
-    console.error(`❌ Failed to fetch product image for ${productId}:`, err.message);
-    return null;
+    console.error(`Failed to fetch images for product ${productId}:`, err.response?.status, err.message);
+    return [];
   }
 }
 

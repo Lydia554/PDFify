@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-const sendEmail = async ({ to, subject, text, attachments }) => {
+const sendEmail = async ({ to, subject, text, attachments = [] }) => {
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -15,13 +15,13 @@ const sendEmail = async ({ to, subject, text, attachments }) => {
       to,
       subject,
       text,
-      attachments, // optional
+      attachments, 
     };
 
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
 
     if (process.env.NODE_ENV !== "production") {
-      console.log("Email sent successfully to:", to);
+      console.log("Email sent successfully:", info.messageId);
     }
   } catch (error) {
     console.error("Error sending email:", error);
