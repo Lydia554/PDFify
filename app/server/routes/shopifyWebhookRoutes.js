@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const router = express.Router();
+const User = require("../models/User");
 
 router.post(
   "/order-created",
