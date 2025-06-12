@@ -2,28 +2,60 @@ const express = require("express");
 const fs = require("fs");
 const router = express.Router();
 
-router.post("/order-created", express.json(), async (req, res) => {
-  try {
-    const now = new Date().toISOString();
+router.post(
+  "/order-created",
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+  async (req, res) => {
+    console.warn("🔔 Received Shopify webhook");
 
-    // Safe fallback body
-    const order = req.body || {};
+    let order;
+    const shopDomain = req.headers["x-shopify-shop-domain"];
+    console.warn("📦 Shop domain:", shopDomain);
 
-    fs.writeFileSync("order-test.json", JSON.stringify({ timestamp: now, order }, null, 2));
+    try {
+      order = JSON.parse(req.rawBody.toString());
+      console.warn("✅ Parsed order:", order.id || "No ID");
+    } catch (err) {
+      console.error("❌ Failed to parse order:", err.message);
+      return res.status(200).send("OK");
+    }
 
-    console.warn("✅ Order webhook HIT:", order.id || "no order ID");
-    console.warn("📝 Body:", JSON.stringify(order, null, 2));
+    try {
+      fs.writeFileSync("order-real.json", JSON.stringify(order, null, 2));
+      console.warn("📝 Order saved to order-real.json");
+    } catch (err) {
+      console.error("❌ Could not write order-real.json:", err.message);
+    }
+
+    if (!shopDomain || !order?.id) {
+      console.error("❌ Missing shop domain or order ID");
+      return res.status(200).send("OK");
+    }
 
     res.status(200).send("Webhook received");
 
-    // Optional fake email log
-    if (order.id) {
-      console.warn(`📧 Pretending to send email for order ${order.id}`);
+    try {
+      const connectedShopDomain = shopDomain.trim().toLowerCase();
+      const user = await User.findOne({ connectedShopDomain });
+
+      if (!user) {
+        console.error("❌ No user found for domain:", connectedShopDomain);
+        return;
+      }
+
+      console.warn("🔐 Found user:", user.email || user._id);
+
+      await processOrderAsync(order, user, connectedShopDomain);
+    } catch (err) {
+      console.error("❌ Uncaught webhook error:", err.message);
     }
-  } catch (err) {
-    console.error("❌ Error inside /order-created:", err.message || err);
-    res.status(200).send("OK (error)");
   }
-});
+);
+
 
 module.exports = router;
