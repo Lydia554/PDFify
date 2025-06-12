@@ -5,14 +5,19 @@ const User = require("../models/User");
 const axios = require("axios");
 const sendEmail = require("../sendEmail");
 
-// Shopify webhook verification middleware
+// Middleware to verify Shopify webhook signature
 function verifyShopifyWebhook(req, res, next) {
+  if (process.env.NODE_ENV !== "production") {
+    console.log("⚠️ Skipping HMAC verification in non-production environment");
+    return next();
+  }
+
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK");
+    return res.status(200).send("OK"); // Respond 200 so Shopify retries don't get triggered
   }
 
   const generatedHmac = crypto
@@ -20,18 +25,15 @@ function verifyShopifyWebhook(req, res, next) {
     .update(body, "utf8")
     .digest("base64");
 
-  console.log("🔑 Generated HMAC:", generatedHmac);
-
   if (generatedHmac !== hmacHeader) {
     console.error("❌ Invalid HMAC signature");
     return res.status(200).send("OK");
   }
 
+  console.log("✅ HMAC signature verified");
   next();
 }
 
-
-// POST /webhook/order-created
 router.post(
   "/order-created",
   express.raw({
@@ -41,95 +43,58 @@ router.post(
     },
   }),
   (req, res, next) => {
-    console.log("📥 X-Shopify-Hmac-Sha256 header:", req.get("X-Shopify-Hmac-Sha256"));
-    console.log("📥 Raw body:", req.rawBody.toString());
+    console.log("🚨 Webhook POST /order-created received");
+    console.log("Headers:", req.headers);
+    console.log("Raw body snippet:", req.rawBody.toString().substring(0, 200));
     next();
   },
   verifyShopifyWebhook,
   async (req, res) => {
-    const shopDomain = req.headers["x-shopify-shop-domain"];
-    let order;
+    console.log("✅ Passed HMAC verification");
 
+    let order;
     try {
       order = JSON.parse(req.rawBody.toString());
+      console.log("Parsed order ID:", order.id || order.name || "(no id)");
     } catch (err) {
-      console.error(JSON.stringify({
-        level: "error",
-        msg: "Failed to parse raw body",
-        error: err.message,
-        event: "webhook_parse_fail",
-      }));
+      console.error("❌ Failed to parse JSON body:", err);
       return res.status(200).send("OK");
     }
 
-    if (!shopDomain || !order || !order.id) {
-      console.error(JSON.stringify({
-        level: "error",
-        msg: "Missing shop domain or order ID",
-        event: "webhook_invalid_payload",
-      }));
+    const shopDomain = req.headers["x-shopify-shop-domain"];
+    if (!shopDomain) {
+      console.error("❌ Missing X-Shopify-Shop-Domain header");
       return res.status(200).send("OK");
     }
+    console.log("Shop domain:", shopDomain);
 
-    console.log(JSON.stringify({
-      level: "info",
-      msg: "Shopify webhook received",
-      shopDomain,
-      orderId: order.id,
-      event: "webhook_received",
-    }));
-
-    // Immediately respond 200 to Shopify to avoid retries
+    // Respond ASAP so Shopify doesn't retry (order processing is async)
     res.status(200).send("Webhook received");
 
-    const connectedShopDomain = shopDomain.trim().toLowerCase();
-
     try {
+      const connectedShopDomain = shopDomain.trim().toLowerCase();
+
       const user = await User.findOne({ connectedShopDomain });
       if (!user) {
-        console.error(JSON.stringify({
-          level: "error",
-          msg: `No user found for connectedShopDomain: ${connectedShopDomain}`,
-          event: "webhook_user_not_found",
-        }));
+        console.error(`❌ No user found for connectedShopDomain: ${connectedShopDomain}`);
         return;
       }
+      console.log(`🔐 Found user: ${user.email}`);
 
-      // Run order processing async but catch errors internally
-      processOrderAsync(order, user, connectedShopDomain);
+      await processOrderAsync(order, user, connectedShopDomain);
     } catch (err) {
-      console.error(JSON.stringify({
-        level: "error",
-        msg: "Webhook handler error",
-        error: err.message || err,
-        event: "webhook_handler_error",
-      }));
+      console.error("❌ Error in webhook async handler:", err);
     }
   }
 );
 
 async function processOrderAsync(order, user, shopDomain) {
   try {
+    console.log("▶️ Starting async order processing for order:", order.id);
+
+    // Enhance line items with product images if missing
     const accessToken = user.shopifyAccessToken;
-    if (!accessToken) {
-      console.error(JSON.stringify({
-        level: "error",
-        msg: "Missing Shopify access token",
-        userId: user._id,
-        event: "process_order_fail",
-      }));
-      return;
-    }
 
-    console.log(JSON.stringify({
-      level: "info",
-      msg: "Processing order async",
-      orderId: order.id,
-      userId: user._id,
-      event: "process_order_start",
-    }));
-
-    // Enrich line items with images if missing
     const enhancedLineItems = await Promise.all(
       order.line_items.map(async (item) => {
         if (!item.image?.src && item.product_id) {
@@ -141,8 +106,9 @@ async function processOrderAsync(order, user, shopDomain) {
     );
 
     order.line_items = enhancedLineItems;
+    console.log("🔍 Enhanced line items with images");
 
-    // Call PDF API to generate invoice
+    // Call PDF API to generate invoice PDF
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -160,48 +126,34 @@ async function processOrderAsync(order, user, shopDomain) {
     );
 
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
+    console.log("📄 Received PDF invoice buffer");
 
-    if (!user.email) {
-      console.warn(JSON.stringify({
-        level: "warn",
-        msg: "User email missing, cannot send invoice",
-        userId: user._id,
-        event: "process_order_warn",
-      }));
-      return;
+    // Send email with attached PDF invoice
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: `Invoice for Shopify Order ${order.name || order.id}`,
+        text: `Hello ${user.name || ""},\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for using PDFify!`,
+        attachments: [
+          {
+            filename: `Invoice-${order.name || order.id}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ],
+      });
+      console.log(`✉️ Email sent to ${user.email}`);
+    } catch (emailErr) {
+      console.error("❌ Failed to send email:", emailErr);
     }
-
-    // Send invoice by email
-    await sendEmail({
-      to: user.email,
-      subject: `Invoice for Shopify Order ${order.name || order.id}`,
-      text: `Hello ${user.name || ""},\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for using PDFify!`,
-      attachments: [
-        {
-          filename: `Invoice-${order.name || order.id}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf",
-        },
-      ],
-    });
 
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
+    console.log("💾 User usage count incremented and saved");
 
-    console.log(JSON.stringify({
-      level: "info",
-      msg: "Invoice processed and emailed",
-      orderId: order.id,
-      userId: user._id,
-      event: "process_order_success",
-    }));
+    console.log("✅ Finished processing order:", order.id);
   } catch (err) {
-    console.error(JSON.stringify({
-      level: "error",
-      msg: "Error during async order processing",
-      error: err.message || err,
-      event: "process_order_error",
-    }));
+    console.error("❌ Error during async order processing:", err);
   }
 }
 
@@ -215,14 +167,11 @@ async function fetchProductImage(productId, shopDomain, accessToken) {
         },
       }
     );
-    return response.data.product?.images?.[0]?.src || null;
+    const imageUrl = response.data.product?.images?.[0]?.src || null;
+    console.log(`🔍 Fetched product image for product ${productId}: ${imageUrl}`);
+    return imageUrl;
   } catch (err) {
-    console.error(JSON.stringify({
-      level: "error",
-      msg: `Failed to fetch product image for ${productId}`,
-      error: err.message,
-      event: "fetch_product_image_error",
-    }));
+    console.error(`❌ Failed to fetch product image for ${productId}:`, err.message);
     return null;
   }
 }
