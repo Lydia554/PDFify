@@ -8,28 +8,7 @@ const router = express.Router();
 const User = require("../models/User");
 const sendEmail = require("../sendEmail");
 
-// Middleware to verify Shopify webhook signature
-function verifyShopifyWebhook(req, res, next) {
-  const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-  const body = req.rawBody;
 
-  if (!hmacHeader || !body) {
-    console.warn("⚠️ Missing HMAC header or raw body for verification.");
-    return res.status(200).send("OK");
-  }
-
-  const generatedHmac = crypto
-    .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
-    .update(body, "utf8")
-    .digest("base64");
-
-  if (generatedHmac !== hmacHeader) {
-    console.error("❌ Invalid HMAC signature. Ignoring request.");
-    return res.status(200).send("OK");
-  }
-
-  next();
-}
 
 // Shopify Order Created Webhook Route
 router.post(
