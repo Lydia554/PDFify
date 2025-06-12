@@ -11,12 +11,8 @@ function verifyShopifyWebhook(req, res, next) {
   const body = req.rawBody;
 
   if (!hmacHeader || !body) {
-    console.error(JSON.stringify({
-      level: "error",
-      msg: "Missing HMAC header or raw body",
-      event: "webhook_verify_fail",
-    }));
-    return res.status(200).send("OK"); // Respond 200 to avoid retries
+    console.error("❌ Missing HMAC header or raw body");
+    return res.status(200).send("OK");
   }
 
   const generatedHmac = crypto
@@ -24,28 +20,31 @@ function verifyShopifyWebhook(req, res, next) {
     .update(body, "utf8")
     .digest("base64");
 
+  console.log("🔑 Generated HMAC:", generatedHmac);
+
   if (generatedHmac !== hmacHeader) {
-    console.error(JSON.stringify({
-      level: "error",
-      msg: "Invalid HMAC signature",
-      event: "webhook_verify_fail",
-    }));
+    console.error("❌ Invalid HMAC signature");
     return res.status(200).send("OK");
   }
 
   next();
 }
 
+
 // POST /webhook/order-created
 router.post(
   "/order-created",
-  // Parse raw body for HMAC verification and JSON parsing
   express.raw({
     type: "application/json",
     verify: (req, res, buf) => {
       req.rawBody = buf;
     },
   }),
+  (req, res, next) => {
+    console.log("📥 X-Shopify-Hmac-Sha256 header:", req.get("X-Shopify-Hmac-Sha256"));
+    console.log("📥 Raw body:", req.rawBody.toString());
+    next();
+  },
   verifyShopifyWebhook,
   async (req, res) => {
     const shopDomain = req.headers["x-shopify-shop-domain"];
