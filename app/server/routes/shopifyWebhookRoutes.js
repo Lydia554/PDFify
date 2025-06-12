@@ -17,7 +17,7 @@ function verifyShopifyWebhook(req, res, next) {
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK"); // Respond 200 so Shopify retries don't get triggered
+    return res.status(200).send("OK"); // Avoid Shopify retry flood
   }
 
   const generatedHmac = crypto
@@ -52,23 +52,29 @@ router.post(
   async (req, res) => {
     console.log("✅ Passed HMAC verification");
 
-    let order;
+    let parsedPayload;
     try {
-      order = JSON.parse(req.rawBody.toString());
-      console.log("Parsed order ID:", order.id || order.name || "(no id)");
+      parsedPayload = JSON.parse(req.rawBody.toString());
+      console.log("📦 Parsed full payload:", JSON.stringify(parsedPayload, null, 2));
     } catch (err) {
       console.error("❌ Failed to parse JSON body:", err);
       return res.status(200).send("OK");
     }
 
-    const shopDomain = req.headers["x-shopify-shop-domain"];
+    // Support both Postman test payload with "order" key and Shopify webhook payload directly
+    const order = parsedPayload.order || parsedPayload;
+
+    console.log("🆔 Parsed order ID:", order.id || order.name || "(no id)");
+
+    // Shop domain: Shopify webhook header or Postman payload property
+    const shopDomain = req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain;
     if (!shopDomain) {
-      console.error("❌ Missing X-Shopify-Shop-Domain header");
+      console.error("❌ Missing shop domain");
       return res.status(200).send("OK");
     }
-    console.log("Shop domain:", shopDomain);
+    console.log("🏪 Shop domain:", shopDomain);
 
-    // Respond ASAP so Shopify doesn't retry (order processing is async)
+    // Respond ASAP to avoid webhook retries
     res.status(200).send("Webhook received");
 
     try {
