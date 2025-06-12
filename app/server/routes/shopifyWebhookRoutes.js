@@ -93,31 +93,40 @@ router.post(
   }
 );
 
-async function processOrderAsync(order, user, shopDomain) {
+async function fetchProductImages(shop, accessToken, productId) {
   try {
-    console.log("▶️ Starting async order processing for order:", order.id);
+    const res = await axios.get(`https://${shop}/admin/api/2023-10/products/${productId}/images.json`, {
+      headers: {
+        'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json'
+      }
+    });
+    return res.data.images || []; // array of images
+  } catch (err) {
+    console.error(`❌ Failed to fetch images for product ${productId}:`, err.response?.status, err.message);
+    return [];
+  }
+}
 
-  
-    const accessToken = user.shopifyAccessToken;
+async function processOrder({ order, user, accessToken, shopDomain }) {
+  try {
+    // STEP 1: Enhance order.line_items with product images
+    for (let item of order.line_items) {
+      const productId = item.product_id;
+      if (productId) {
+        const images = await fetchProductImages(shopDomain, accessToken, productId);
+        item.image = images?.[0]?.src || null; // just the first image
+      } else {
+        item.image = null;
+      }
+    }
 
-    const enhancedLineItems = await Promise.all(
-      order.line_items.map(async (item) => {
-        if (!item.image?.src && item.product_id) {
-          const imageUrl = await fetchProductImage(item.product_id, shopDomain, accessToken);
-          return { ...item, image: { src: imageUrl } };
-        }
-        return item;
-      })
-    );
-
-    order.line_items = enhancedLineItems;
-    console.log("🔍 Enhanced line items with images");
-
+    // STEP 2: Request the PDF from your API
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
         orderId: order.id,
-        order,
+        order, // now includes images
         shopDomain,
         shopifyAccessToken: accessToken,
       },
@@ -132,26 +141,23 @@ async function processOrderAsync(order, user, shopDomain) {
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
     console.log("📄 Received PDF invoice buffer");
 
-  
-    try {
-      await sendEmail({
-  to: order.email,  
-  subject: `Invoice for Shopify Order ${order.name || order.id}`,
-  text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
-  attachments: [
-    {
-      filename: `Invoice-${order.name || order.id}.pdf`,
-      content: pdfBuffer,
-      contentType: "application/pdf",
-    },
-  ],
-});
+    // STEP 3: Send to the customer
+    await sendEmail({
+      to: order.email,
+      subject: `Invoice for Shopify Order ${order.name || order.id}`,
+      text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
+      attachments: [
+        {
+          filename: `Invoice-${order.name || order.id}.pdf`,
+          content: pdfBuffer,
+          contentType: "application/pdf",
+        },
+      ],
+    });
 
-      console.log(`✉️ Email sent to ${user.email}`);
-    } catch (emailErr) {
-      console.error("❌ Failed to send email:", emailErr);
-    }
+    console.log(`✉️ Email sent to ${order.email}`);
 
+    // STEP 4: Track usage
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
     console.log("💾 User usage count incremented and saved");
@@ -163,20 +169,6 @@ async function processOrderAsync(order, user, shopDomain) {
 }
 
 
-async function fetchProductImages(shop, accessToken, productId) {
-  try {
-    const res = await axios.get(`https://${shop}/admin/api/2023-10/products/${productId}/images.json`, {
-      headers: {
-        'X-Shopify-Access-Token': accessToken,
-        'Content-Type': 'application/json'
-      }
-    });
-    return res.data.images; // array of images
-  } catch (err) {
-    console.error(`Failed to fetch images for product ${productId}:`, err.response?.status, err.message);
-    return [];
-  }
-}
 
 
 module.exports = router;
