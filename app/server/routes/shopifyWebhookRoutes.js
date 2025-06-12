@@ -35,7 +35,7 @@ router.post( "/order-created", express.raw({type: "application/json",verify: (re
     },
     
   }),
-  verifyShopifyWebhook,
+  //verifyShopifyWebhook,
   async (req, res) => {
     let order;
     const shopDomain = req.headers["x-shopify-shop-domain"];
