@@ -350,29 +350,32 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   loadingOverlay.style.display = "flex";
 
   try {
-
-    await fetch("/api/logout", {
+    const res = await fetch("/api/logout", {
       method: "POST",
-      credentials: "include", 
+      credentials: "include",
     });
 
     if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem("apiKey");
-    window.location.href = "/login.html";
-    return;
-  }
+      localStorage.removeItem("apiKey");
+      window.location.href = "/login.html";
+      return;
+    }
 
     localStorage.removeItem("apiKey");
 
     setTimeout(() => {
       window.location.href = "/login.html";
     }, 500);
+    
   } catch (error) {
     console.error("Logout failed:", error);
     alert("Failed to log out. Please try again.");
     loadingOverlay.style.display = "none";
   }
 });
+
+
+
     document.getElementById("previewDevBtn").addEventListener("click", () => {
   sendRequest(true);
 });
@@ -394,7 +397,8 @@ async function connectShopify(domain, token) {
         'Content-Type': 'application/json',
         'x-api-key': apiKey
       },
-      body: JSON.stringify({ connectedShopDomain: domain, shopifyAccessToken: token })
+      body: JSON.stringify({ connectedShopDomain: domain, shopifyAccessToken: token }),
+        credentials: "include",
     });
 
     const data = await res.json();
@@ -469,6 +473,7 @@ async function sendRequest(isPreview = false) {
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify(payload),
+        credentials: "include",
     });
 
     if (!response.ok) {
@@ -529,6 +534,7 @@ async function sendRequest(isPreview = false) {
                 email: "user@example.com", 
                 plan: "premium" 
               }),
+                credentials: "include",
             });
     
             if (!response.ok) {
