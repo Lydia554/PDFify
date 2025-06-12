@@ -5,7 +5,7 @@ const User = require("../models/User");
 const axios = require("axios");
 const sendEmail = require("../sendEmail");
 
-// Middleware to verify Shopify webhook signature
+
 function verifyShopifyWebhook(req, res, next) {
   if (process.env.NODE_ENV !== "production") {
     console.log("⚠️ Skipping HMAC verification in non-production environment");
@@ -17,7 +17,7 @@ function verifyShopifyWebhook(req, res, next) {
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK"); // Avoid Shopify retry flood
+    return res.status(200).send("OK"); 
   }
 
   const generatedHmac = crypto
@@ -61,12 +61,11 @@ router.post(
       return res.status(200).send("OK");
     }
 
-    // Support both Postman test payload with "order" key and Shopify webhook payload directly
     const order = parsedPayload.order || parsedPayload;
 
     console.log("🆔 Parsed order ID:", order.id || order.name || "(no id)");
 
-    // Shop domain: Shopify webhook header or Postman payload property
+ 
     const shopDomain = req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain;
     if (!shopDomain) {
       console.error("❌ Missing shop domain");
@@ -74,7 +73,7 @@ router.post(
     }
     console.log("🏪 Shop domain:", shopDomain);
 
-    // Respond ASAP to avoid webhook retries
+  
     res.status(200).send("Webhook received");
 
     try {
@@ -98,7 +97,7 @@ async function processOrderAsync(order, user, shopDomain) {
   try {
     console.log("▶️ Starting async order processing for order:", order.id);
 
-    // Enhance line items with product images if missing
+  
     const accessToken = user.shopifyAccessToken;
 
     const enhancedLineItems = await Promise.all(
@@ -114,7 +113,6 @@ async function processOrderAsync(order, user, shopDomain) {
     order.line_items = enhancedLineItems;
     console.log("🔍 Enhanced line items with images");
 
-    // Call PDF API to generate invoice PDF
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -134,7 +132,7 @@ async function processOrderAsync(order, user, shopDomain) {
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
     console.log("📄 Received PDF invoice buffer");
 
-    // Send email with attached PDF invoice
+  
     try {
       await sendEmail({
         to: user.email,
@@ -173,7 +171,10 @@ async function fetchProductImage(productId, shopDomain, accessToken) {
         },
       }
     );
-    const imageUrl = response.data.product?.images?.[0]?.src || null;
+    let imageUrl = response.data.product?.images?.[0]?.src || null;
+    if (imageUrl && imageUrl.startsWith('//')) {
+      imageUrl = 'https:' + imageUrl;
+    }
     console.log(`🔍 Fetched product image for product ${productId}: ${imageUrl}`);
     return imageUrl;
   } catch (err) {
@@ -181,5 +182,6 @@ async function fetchProductImage(productId, shopDomain, accessToken) {
     return null;
   }
 }
+
 
 module.exports = router;
