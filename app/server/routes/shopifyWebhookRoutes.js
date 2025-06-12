@@ -108,7 +108,7 @@ async function fetchProductImages(shop, accessToken, productId) {
   }
 }
 
-async function processOrder({ order, user, accessToken, shopDomain }) {
+async function processOrderAsync({ order, user, accessToken, shopDomain }) {
   try {
     // STEP 1: Enhance order.line_items with product images
     for (let item of order.line_items) {
