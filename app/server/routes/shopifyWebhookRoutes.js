@@ -135,17 +135,18 @@ async function processOrderAsync(order, user, shopDomain) {
   
     try {
       await sendEmail({
-        to: user.email,
-        subject: `Invoice for Shopify Order ${order.name || order.id}`,
-        text: `Hello ${user.name || ""},\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for using PDFify!`,
-        attachments: [
-          {
-            filename: `Invoice-${order.name || order.id}.pdf`,
-            content: pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ],
-      });
+  to: order.email,  
+  subject: `Invoice for Shopify Order ${order.name || order.id}`,
+  text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
+  attachments: [
+    {
+      filename: `Invoice-${order.name || order.id}.pdf`,
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    },
+  ],
+});
+
       console.log(`✉️ Email sent to ${user.email}`);
     } catch (emailErr) {
       console.error("❌ Failed to send email:", emailErr);
