@@ -86,7 +86,8 @@ router.post(
       }
       console.log(`🔐 Found user: ${user.email}`);
 
-      await processOrderAsync(order, user, connectedShopDomain);
+     await processOrderAsync({ order, user, accessToken: user.shopifyAccessToken, shopDomain: connectedShopDomain });
+      console.log("✅ Order processing initiated for user:", user.email);
     } catch (err) {
       console.error("❌ Error in webhook async handler:", err);
     }
