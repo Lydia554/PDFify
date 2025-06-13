@@ -4,18 +4,19 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>How to Connect Your Shopify Store to PDFify</title>
-  <link rel="icon" href="data:," /> <!-- no favicon -->
+  <link rel="icon" href="data:," />
+  
 </head>
 <body>
 
-     <header class="bg-white shadow">
+  <header class="bg-white shadow">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
       <h1 class="text-2xl font-bold text-purple-700">PDFify</h1>
       <nav class="space-x-4">
         <a href="/" class="text-gray-600 hover:text-purple-600">Home</a>
         <a href="#" id="userDashboardLink" class="text-gray-600 hover:text-purple-600">Dashboard</a>
         <a href="/api-guide" class="text-gray-600 hover:text-purple-600">API Guide</a>
-          <a href="/shopify-guide" class="text-purple-700 font-semibold">Shopify Guide</a>
+        <a href="/shopify-guide" class="text-purple-700 font-semibold">Shopify Guide</a>
         <a href="/pdf-generator-demo" class="text-gray-600 hover:text-purple-600">📄 PDF Generator</a>
       </nav>
     </div>
@@ -46,7 +47,7 @@
     <section class="step" id="step2">
       <h2>✅ Step 2: Set Required Permissions</h2>
       <p>
-        Configure the app’s permissions so PDFify can read your orders data and (optionally) update order notes.
+        Configure the app’s permissions so PDFify can read your orders data, product images, and (optionally) update order notes.
       </p>
       <ul>
         <li>Go to the <strong>Configuration</strong> tab inside your app.</li>
@@ -54,6 +55,7 @@
         <li>Enable the following scopes:
           <ul>
             <li><code>read_orders</code> – Required for PDFify to read order details.</li>
+            <li><code>read_products</code> – Required to fetch product images for invoices.</li>
             <li><code>write_orders</code> – Optional, allows PDFify to add invoice links or notes to orders.</li>
           </ul>
         </li>
@@ -112,12 +114,6 @@
         If you run into any issues or want to customize your invoices further, visit our developer documentation or contact support.
       </p>
     </section>
-
-
-      <!-- Footer -->
-  <footer class="text-center text-sm text-gray-500 py-6">
-    &copy; 2025 PDFify. All rights reserved.
-  </footer>
   </main>
 
   <script>
@@ -125,24 +121,31 @@
     document.querySelectorAll("section.step h2").forEach(header => {
       header.style.cursor = "pointer";
       header.addEventListener("click", () => {
-        const content = header.nextElementSibling;
-        if (!content) return;
-        if (content.style.display === "none") {
-          content.style.display = "";
-        } else {
-          content.style.display = "none";
+        const nextEl = header.nextElementSibling;
+        if (!nextEl) return;
+        const isVisible = nextEl.style.display !== "none";
+        // toggle all siblings until next h2 or section end
+        let el = nextEl;
+        while(el && el.tagName !== "H2") {
+          el.style.display = isVisible ? "none" : "";
+          el = el.nextElementSibling;
         }
       });
     });
   </script>
 
-  <style>
+</body>
+</html>
+
+
+<style>
+    /* Reset and base */
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       max-width: 720px;
-      margin: 2rem auto;
+      margin: 0 auto;
       line-height: 1.6;
-      padding: 0 1rem;
+      padding: 6rem 1rem 2rem; /* top padding to offset fixed header */
       background-color: #f9f9f9;
       color: #333;
     }
@@ -166,6 +169,7 @@
       margin-top: 2rem;
       margin-bottom: 0.5rem;
       user-select: none;
+      cursor: default;
     }
 
     p {
@@ -198,7 +202,54 @@
       margin-top: 2rem;
       border-radius: 4px;
     }
+
+    /* Header styles */
+    header.bg-white {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+      z-index: 1000;
+    }
+
+    header .max-w-6xl {
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 1rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #6b21a8; /* purple-700 */
+      margin: 0;
+    }
+
+    nav.space-x-4 a {
+      margin-left: 1rem;
+      color: #4b5563; /* gray-600 */
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+
+    nav.space-x-4 a:first-child {
+      margin-left: 0;
+    }
+
+    nav.space-x-4 a:hover {
+      color: #7c3aed; /* purple-600 */
+    }
+
+    nav.space-x-4 a.text-purple-700 {
+      color: #6b21a8; /* purple-700 */
+      font-weight: 600;
+      cursor: default;
+    }
+
   </style>
-  
-</body>
-</html>
