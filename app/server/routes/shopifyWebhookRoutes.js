@@ -93,16 +93,24 @@ router.post(
     }
   }
 );
-
 async function fetchProductImages(shop, accessToken, productId) {
   try {
+    console.log(`🔍 Fetching images for product ID ${productId} from shop ${shop}`);
+    console.log(`🔐 Using access token: ${accessToken?.slice(0, 6)}...`);
+
     const res = await axios.get(`https://${shop}/admin/api/2023-10/products/${productId}/images.json`, {
       headers: {
         'X-Shopify-Access-Token': accessToken,
         'Content-Type': 'application/json'
       }
     });
-    return res.data.images || []; // array of images
+
+    console.log(`📸 Shopify returned ${res.data.images?.length || 0} image(s) for product ${productId}`);
+    if (res.data.images?.length > 0) {
+      console.log("🖼️ First image URL:", res.data.images[0].src);
+    }
+
+    return res.data.images || [];
   } catch (err) {
     console.error(`❌ Failed to fetch images for product ${productId}:`, err.response?.status, err.message);
     return [];
@@ -112,22 +120,39 @@ async function fetchProductImages(shop, accessToken, productId) {
 async function processOrderAsync({ order, user, accessToken, shopDomain }) {
   try {
     // STEP 1: Enhance order.line_items with product images
+    console.log("🧪 Enhancing line_items with product images...");
     for (let item of order.line_items) {
+      console.log("🛒 Line item:", {
+        title: item.title,
+        product_id: item.product_id,
+        variant_id: item.variant_id
+      });
+
       const productId = item.product_id;
       if (productId) {
         const images = await fetchProductImages(shopDomain, accessToken, productId);
-        item.image = images?.[0]?.src || null; // just the first image
+        item.image = images?.[0]?.src || null;
+
+        if (item.image) {
+          console.log(`✅ Added image to line item "${item.title}":`, item.image);
+        } else {
+          console.warn(`⚠️ No image found for product_id ${productId}`);
+        }
       } else {
+        console.warn(`⚠️ No product_id found for item "${item.title}", cannot fetch image`);
         item.image = null;
       }
     }
+
+    console.log("📦 Final order.line_items with image fields:");
+    console.log(JSON.stringify(order.line_items, null, 2));
 
     // STEP 2: Request the PDF from your API
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
         orderId: order.id,
-        order, // now includes images
+        order,
         shopDomain,
         shopifyAccessToken: accessToken,
       },
@@ -168,6 +193,7 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
     console.error("❌ Error during async order processing:", err);
   }
 }
+
 
 
 
