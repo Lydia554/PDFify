@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How to Connect Your Shopify Store to PDFify</title>
+  <link rel="icon" href="data:," /> <!-- no favicon -->
+</head>
+<body>
+
+  <main>
+    <h1>🧾 How to Connect Your Shopify Store to PDFify</h1>
+
+    <p>
+      Follow this step-by-step guide to set up PDFify with your Shopify store. Once connected, PDFify will
+      automatically generate and email PDF invoices for every new order in your store.
+    </p>
+
+    <section class="step" id="step1">
+      <h2>✅ Step 1: Create a Custom App in Shopify</h2>
+      <p>
+        To connect PDFify, you first need to create a custom app inside your Shopify Admin. This app will
+        provide the necessary permissions for PDFify to access your orders securely.
+      </p>
+      <ol>
+        <li>Log in to your Shopify Admin panel and go to <strong>Apps</strong>.</li>
+        <li>Click on <strong>App and sales channel settings</strong> at the bottom of the page.</li>
+        <li>Select <strong>Develop apps for your store</strong>.</li>
+        <li>Click <strong>Create an app</strong> and give it a descriptive name, like <em>PDFify Connector</em>.</li>
+      </ol>
+    </section>
+
+    <section class="step" id="step2">
+      <h2>✅ Step 2: Set Required Permissions</h2>
+      <p>
+        Configure the app’s permissions so PDFify can read your orders data and (optionally) update order notes.
+      </p>
+      <ul>
+        <li>Go to the <strong>Configuration</strong> tab inside your app.</li>
+        <li>Click <strong>Configure Admin API scopes</strong>.</li>
+        <li>Enable the following scopes:
+          <ul>
+            <li><code>read_orders</code> – Required for PDFify to read order details.</li>
+            <li><code>write_orders</code> – Optional, allows PDFify to add invoice links or notes to orders.</li>
+          </ul>
+        </li>
+        <li>Save your changes.</li>
+      </ul>
+    </section>
+
+    <section class="step" id="step3">
+      <h2>✅ Step 3: Install the Custom App</h2>
+      <p>
+        Now that the app has the correct permissions, install it to your Shopify store.
+      </p>
+      <ul>
+        <li>Go back to the <strong>Overview</strong> tab of your app.</li>
+        <li>Click <strong>Install app</strong>.</li>
+        <li>Confirm the installation.</li>
+      </ul>
+    </section>
+
+    <section class="step" id="step4">
+      <h2>✅ Step 4: Copy the Admin API Access Token</h2>
+      <p>
+        This token authorizes PDFify to securely communicate with your store’s API.
+      </p>
+      <ul>
+        <li>Go to the <strong>API credentials</strong> tab in your custom app.</li>
+        <li>Click <strong>Reveal token once</strong> to view your Admin API access token.</li>
+        <li>Copy the token. It will look something like <code>shpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</code>.</li>
+      </ul>
+    </section>
+
+    <section class="step" id="step5">
+      <h2>✅ Step 5: Add Your Token to PDFify</h2>
+      <p>
+        Paste your Admin API access token and your Shopify store domain into the PDFify dashboard or onboarding screen.
+      </p>
+      <ul>
+        <li>In the PDFify dashboard, find the integration or setup section.</li>
+        <li>Paste the copied token.</li>
+        <li>Enter your full Shopify store domain, for example <code>your-shop.myshopify.com</code>.</li>
+        <li>Save or confirm to complete the connection.</li>
+      </ul>
+    </section>
+
+    <section class="result">
+      <h2>🎉 You’re all set!</h2>
+      <p>
+        After setup, PDFify will automatically:
+      </p>
+      <ul>
+        <li>Generate a beautiful PDF invoice for every new Shopify order.</li>
+        <li>Email the invoice instantly to the customer’s email address.</li>
+        <li><em>Optionally</em>, add a link to the invoice in the order notes for easy access.</li>
+      </ul>
+      <p>
+        If you run into any issues or want to customize your invoices further, visit our developer documentation or contact support.
+      </p>
+    </section>
+  </main>
+
+  <script>
+    // Optional: simple script to collapse/expand steps if you want
+    document.querySelectorAll("section.step h2").forEach(header => {
+      header.style.cursor = "pointer";
+      header.addEventListener("click", () => {
+        const content = header.nextElementSibling;
+        if (!content) return;
+        if (content.style.display === "none") {
+          content.style.display = "";
+        } else {
+          content.style.display = "none";
+        }
+      });
+    });
+  </script>
+
+  <style>
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      line-height: 1.6;
+      padding: 0 1rem;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+
+    main {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      color: #0a74da;
+    }
+
+    h2 {
+      color: #0a74da;
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+      user-select: none;
+    }
+
+    p {
+      margin-bottom: 1rem;
+    }
+
+    ol, ul {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    code {
+      background-color: #eef3fc;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 0.95em;
+      color: #0a74da;
+    }
+
+    ul ul {
+      margin-left: 1rem;
+      list-style-type: disc;
+    }
+
+    .result {
+      background-color: #e6f4ea;
+      border-left: 6px solid #34a853;
+      padding: 1rem 1.5rem;
+      margin-top: 2rem;
+      border-radius: 4px;
+    }
+  </style>
+  
+</body>
+</html>

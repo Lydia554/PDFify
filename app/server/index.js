@@ -97,6 +97,7 @@ app.get("/user-dashboard", authenticate, (req, res) => res.sendFile(path.join(__
 app.get("/user-creation", (req, res) => res.sendFile(path.join(__dirname, "../public/user-creation.html")));
 app.get("/pdf-generator-demo", (req, res) => res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html")));
 app.get("/api-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/api-guide.html")));
+app.get("/shopify-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/shopify-guide.html")));
 app.get("/success.html", (req, res) => res.sendFile(path.join(__dirname, "public", "success.html")));
 app.get("/cancel.html", (req, res) => res.sendFile(path.join(__dirname, "public", "cancel.html")));
 
