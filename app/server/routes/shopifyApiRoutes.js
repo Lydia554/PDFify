@@ -176,31 +176,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
 
 
 
-const resolveShopifyToken = async (req, shopDomain) => {
-  let token = req.body.shopifyAccessToken;
-
-  if (!token) {
-    token = req.headers["x-shopify-access-token"];
-  }
-
-  if (!token && req.user?.userId) {
-    const user = await User.findById(req.user.userId);
-    if (user?.connectedShopDomain === shopDomain && user.shopifyAccessToken) {
-      token = user.shopifyAccessToken;
-    }
-  }
-
-  if (!token) {
-    const fallbackUser = await User.findOne({ connectedShopDomain: shopDomain });
-    if (fallbackUser?.shopifyAccessToken) {
-      token = fallbackUser.shopifyAccessToken;
-    }
-  }
-
-  return token;
-};
-
-
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
