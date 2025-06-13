@@ -99,7 +99,7 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
    order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
 
-    // STEP 2: Request the PDF from your API
+
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
