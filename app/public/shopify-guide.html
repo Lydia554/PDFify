@@ -118,8 +118,10 @@
     </section>
   </main>
  <!-- Footer -->
-  <footer class="text-center text-sm text-gray-500 py-6">
-    &copy; 2025 PDFify. All rights reserved.
+  <footer class="bg-white border-t mt-12">
+    <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
+      &copy; 2025 PDFify. Built for creators and developers.
+    </div>
   </footer>
 
 
@@ -139,6 +141,13 @@
         }
       });
     });
+
+
+         window.addEventListener("pageshow", () => {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "none";
+  console.log("Spinner hidden on page show (e.g., back navigation)");
+});
   </script>
 
 </body>

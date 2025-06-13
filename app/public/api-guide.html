@@ -841,6 +841,12 @@ devModeBtn.addEventListener('click', () => {
   userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
 });
 
+     window.addEventListener("pageshow", () => {
+  const loadingOverlay = document.getElementById("loadingOverlay");
+  loadingOverlay.style.display = "none";
+  console.log("Spinner hidden on page show (e.g., back navigation)");
+});
+
   
 
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
@@ -919,7 +925,89 @@ devModeBtn.addEventListener('click', () => {
 
   <style>
 
+/* Reset and base */
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 720px;
+      margin: 0 auto;
+      line-height: 1.6;
+      padding: 6rem 1rem 2rem; /* top padding to offset fixed header */
+      background-color: #f9f9f9;
+      color: #333;
+    }
 
+    main {
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 700;
+      color: #0a74da;
+    }
+
+    h2 {
+      color: #0a74da;
+      margin-top: 2rem;
+      margin-bottom: 0.5rem;
+      user-select: none;
+      cursor: default;
+    }
+
+    p {
+      margin-bottom: 1rem;
+    }
+
+    ol, ul {
+      margin-left: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    code {
+      background-color: #eef3fc;
+      padding: 0.2em 0.4em;
+      border-radius: 4px;
+      font-family: Consolas, monospace;
+      font-size: 0.95em;
+      color: #0a74da;
+    }
+
+    ul ul {
+      margin-left: 1rem;
+      list-style-type: disc;
+    }
+
+    .result {
+      background-color: #e6f4ea;
+      border-left: 6px solid #34a853;
+      padding: 1rem 1.5rem;
+      margin-top: 2rem;
+      border-radius: 4px;
+    }
+
+    /* Header styles */
+    header.bg-white {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+      z-index: 1000;
+    }
+
+    header .max-w-6xl {
+      max-width: 72rem;
+      margin: 0 auto;
+      padding: 1rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
   /* Hover zoom effect */
   img.zoomable {
