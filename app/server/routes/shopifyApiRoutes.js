@@ -226,8 +226,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const isPremium = true; 
 
 
-
- const enrichedItems = await enrichLineItemsWithImages(order.line_items, shopDomain, token);
+const enrichedItems = order.line_items;
 
 
     const invoiceData = {
