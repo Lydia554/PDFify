@@ -32,7 +32,16 @@ const dualAuth = async (req, res, next) => {
       }
     }
 
-    // If no API key match, try session
+
+    if (!user && req.session && typeof req.session.userId === "string") {
+  user = await User.findById(req.session.userId);
+  if (!user || user.deleted) {
+    return res.status(403).json({ error: "User not found or inactive" });
+  }
+}
+
+
+
     if (!user && req.session?.userId) {
       user = await User.findById(req.session.userId);
       if (!user || user.deleted) {
