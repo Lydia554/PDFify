@@ -8,6 +8,8 @@ const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
+const {resolveShopifyToken,enrichLineItemsWithImages} = require("../utils/shopifyHelpers");
+
 const router = express.Router();
 require('dotenv').config();
 
@@ -248,29 +250,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const isPreview = req.query.preview === "true";
     const isPremium = true; 
 
-    const getImageForItem = async (item) => {
-      if (!item.product_id) return null;
-      try {
-        const url = `https://${shopDomain}/admin/api/2023-10/products/${item.product_id}.json`;
-        const response = await axios.get(url, {
-          headers: {
-            "X-Shopify-Access-Token": token,
-            "Content-Type": "application/json",
-          },
-        });
-        return response.data.product?.image?.src || null;
-      } catch (err) {
-        console.warn(`⚠️ Could not fetch image for product ${item.product_id}:`, err.message);
-        return null;
-      }
-    };
 
-    const enrichedItems = await Promise.all(order.line_items.map(async (item) => ({
-      name: item.name || item.title,
-      quantity: item.quantity,
-      price: Number(item.price) || 0,
-      imageUrl: await getImageForItem(item),
-    })));
+
+ const enrichedItems = await enrichLineItemsWithImages(order.line_items, shopDomain, token);
+
 
     const invoiceData = {
       shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
