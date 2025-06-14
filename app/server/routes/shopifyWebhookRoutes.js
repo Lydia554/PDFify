@@ -4,7 +4,11 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const axios = require("axios");
 const sendEmail = require("../sendEmail");
-const { enrichLineItemsWithImages, fetchShopLogo } = require("../utils/shopifyHelpers");
+const {
+  enrichLineItemsWithImages,
+} = require("../utils/shopifyHelpers");
+
+
 
 function verifyShopifyWebhook(req, res, next) {
   if (process.env.NODE_ENV !== "production") {
@@ -16,7 +20,7 @@ function verifyShopifyWebhook(req, res, next) {
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK");
+    return res.status(200).send("OK"); 
   }
 
   const generatedHmac = crypto
@@ -40,8 +44,12 @@ router.post(
       req.rawBody = buf;
     },
   }),
+  (req, res, next) => {
+    next();
+  },
   verifyShopifyWebhook,
   async (req, res) => {
+
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
@@ -53,12 +61,16 @@ router.post(
 
     const order = parsedPayload.order || parsedPayload;
 
+
+ 
     const shopDomain = req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain;
     if (!shopDomain) {
       console.error("❌ Missing shop domain");
       return res.status(200).send("OK");
     }
+   
 
+  
     res.status(200).send("Webhook received");
 
     try {
@@ -69,23 +81,25 @@ router.post(
         console.error(`❌ No user found for connectedShopDomain: ${connectedShopDomain}`);
         return;
       }
+  
 
-      await processOrderAsync({ order, user, accessToken: user.shopifyAccessToken, shopDomain: connectedShopDomain });
+     await processOrderAsync({ order, user, accessToken: user.shopifyAccessToken, shopDomain: connectedShopDomain });
+
     } catch (err) {
       console.error("❌ Error in webhook async handler:", err);
     }
   }
 );
 
+
+
 async function processOrderAsync({ order, user, accessToken, shopDomain }) {
   try {
-    // Enrich order line items with product images
-    order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
-    // Fetch shop logo URL
-    const logoUrl = await fetchShopLogo(shopDomain, accessToken);
+   order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
-    // Send invoice generation request with logo URL
+
+
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
       {
@@ -93,7 +107,6 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
         order,
         shopDomain,
         shopifyAccessToken: accessToken,
-        logoUrl,
       },
       {
         headers: {
@@ -106,7 +119,6 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
     const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
     console.log("📄 Received PDF invoice buffer");
 
-    // Send email with invoice attached
     await sendEmail({
       to: order.email,
       subject: `Invoice for Shopify Order ${order.name || order.id}`,
@@ -122,7 +134,7 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
 
     console.log(`✉️ Email sent to ${order.email}`);
 
-    // Update usage count for the user
+  
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
     console.log("💾 User usage count incremented and saved");
@@ -132,5 +144,9 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
     console.error("❌ Error during async order processing:", err);
   }
 }
+
+
+
+
 
 module.exports = router;

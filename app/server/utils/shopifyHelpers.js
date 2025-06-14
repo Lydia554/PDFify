@@ -1,3 +1,5 @@
+const axios = require("axios");
+const User = require("../models/User"); // Adjust path if needed
 
 // Resolves the Shopify access token from request headers or DB
 async function resolveShopifyToken(req, shopDomain) {
@@ -52,36 +54,8 @@ async function enrichLineItemsWithImages(lineItems, shopDomain, token) {
   );
 }
 
-// Fetches the shop logo URL from Shopify shop info
-async function fetchShopLogo(shopDomain, token) {
-  try {
-    const url = `https://${shopDomain}/admin/api/2023-04/shop.json`;
-    const response = await axios.get(url, {
-      headers: {
-        "X-Shopify-Access-Token": token,
-        "Content-Type": "application/json",
-      },
-    });
-
-    // Shopify does not officially provide a 'logo' property on the shop object,
-    // but some themes/apps may add it or you can fallback to shop domain or other branding.
-    // Adjust this logic as per your actual API response.
-    if (response.data && response.data.shop) {
-      // Example fallback: use shop.domain or shop.name or empty
-      // If you have a custom metafield or setting for logo, you'd fetch that differently.
-      return response.data.shop.logo || null;
-    }
-
-    return null;
-  } catch (err) {
-    console.error("❌ Failed to fetch shop logo:", err.message);
-    return null;
-  }
-}
-
 module.exports = {
   resolveShopifyToken,
   fetchProductImage,
   enrichLineItemsWithImages,
-  fetchShopLogo,  // <-- export it here
 };
