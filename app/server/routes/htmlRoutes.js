@@ -130,7 +130,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     });
 
     const page = await browser.newPage();
-    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium); // ✅ FIXED: pass actual isPremium value
+    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium); 
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
