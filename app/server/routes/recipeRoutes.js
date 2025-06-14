@@ -1,170 +1,176 @@
-const express = require("express");
-const puppeteer = require("puppeteer");
-const path = require("path");
+const express = require('express');
+const puppeteer = require('puppeteer');
+const path = require('path');
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
+const dualAuth = require('../middleware/dualAuth');
 
-function generateRecipeHTML(data) {
-  const logoUrl =
-    data.isPremium && typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
-      ? data.customLogoUrl.trim()
-      : data.isPremium
-      ? "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" // default premium logo
-      : null; // no logo for non-premium or you can use a basic logo url here
-
-  return `
-<html>
-<head>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
-    body {
-      font-family: 'Open Sans', sans-serif;
-      color: #333;
-      background: #f4f7fb;
-      margin: 0; padding: 0; min-height: 100vh; position: relative;
-    }
-    .container {
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 30px 40px 160px;
-      background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-      border-radius: 16px;
-      border: 1px solid #e0e4ec;
-    }
-    .logo {
-      width: 150px;
-      margin-bottom: 20px;
-    }
-    .logo:empty {
-      display: none;
-    }
-    h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: 32px;
-      color: #2a3d66;
-      text-align: center;
-      margin: 20px 0;
-      letter-spacing: 1px;
-    }
-    p {
-      font-size: 16px;
-      margin: 10px 0;
-    }
-    .chart-container {
-      text-align: center;
-      margin-top: 40px;
-      padding: 20px;
-      background-color: #fdfdff;
-      border: 1px solid #e0e4ec;
-      border-radius: 12px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-      break-inside: avoid;
-      page-break-inside: avoid;
-    }
-    .chart-container h2 {
-      font-size: 20px;
-      color: #2a3d66;
-      margin-bottom: 15px;
-    }
-    @media (max-width: 768px) {
-      .container {
-        margin: 20px auto;
-        padding: 20px 20px 160px;
-      }
-      h1 {
-        font-size: 24px;
-      }
-      .chart-container h2 {
-        font-size: 16px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    ${
-      logoUrl
-        ? `<img src="${logoUrl}" alt="Logo" style="height: 60px; margin-bottom: 20px;" />`
-        : ""
-    }
-    <h1>Recipe for ${data.recipeName || "Unnamed Recipe"}</h1>
-    <p><strong>Author:</strong> ${data.authorName || "Unknown"}</p>
-    <p><strong>Description:</strong> ${data.description || "No description provided."}</p>
-    <p><strong>Preparation Time:</strong> ${data.prepTime || "N/A"}</p>
-    <p><strong>Cooking Time:</strong> ${data.cookTime || "N/A"}</p>
-
-    ${
-      Array.isArray(data.ingredients) && data.ingredients.length > 0
-        ? `<h2>Ingredients</h2><ul>${data.ingredients
-            .map((ing) => `<li>${ing}</li>`)
-            .join("")}</ul>`
-        : ""
-    }
-
-    ${
-      Array.isArray(data.steps) && data.steps.length > 0
-        ? `<h2>Steps</h2><ol>${data.steps
-            .map((step) => `<li>${step}</li>`)
-            .join("")}</ol>`
-        : ""
-    }
-
-    ${
-      data.showChart
-        ? `<div class="chart-container">
-          <h2>Nutrition Breakdown</h2>
-          <img src="https://quickchart.io/chart?c={
-            type:'pie',
-            data:{
-              labels:['Protein','Carbs','Fat'],
-              datasets:[{data:[${data.protein || 0},${data.carbs || 0},${data.fat || 0}]}]
-            }
-          }" alt="Nutrition Chart" style="max-width:500px; display:block; margin:auto;" />
-        </div>`
-        : ""
-    }
-  </div>
-</body>
-</html>
-`;
+if (typeof ReadableStream === "undefined") {
+  global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
-  try {
-    let { data, isPreview } = req.body;
-    if (!data || typeof data !== "object") {
-      return res.status(400).json({ error: "Invalid or missing data" });
-    }
+// Default logo URL (used if no custom logo)
+const defaultLogoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-    // Find user
+const log = (message, data = null) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(message, data);
+  }
+};
+
+function generateRecipeHTML(data) {
+  // Show ingredient breakdown chart only if allowed and data is present
+  const breakdownChart = (data.showChart && data.ingredientBreakdown)
+    ? `<div class="chart-container">
+        <h2>Ingredient Breakdown</h2>
+        <img src="https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
+          type: 'pie',
+          data: {
+            labels: Object.keys(data.ingredientBreakdown),
+            datasets: [{
+              data: Object.values(data.ingredientBreakdown)
+            }]
+          }
+        }))}" alt="Ingredient Breakdown" style="max-width:300px;display:block;margin:auto;" />
+      </div>`
+    : '';
+
+  // Use custom logo if provided, else fallback to default
+  const logoUrl = data.customLogoUrl || defaultLogoUrl;
+
+  return `
+    <html>
+      <head>
+        <style>
+          /* your styles here - keep the styles you already have */
+          @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+          body {
+            font-family: 'Open Sans', sans-serif;
+            color: #333;
+            background-color: #f4f7fb;
+            margin: 0; padding: 0;
+          }
+          .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 40px;
+            background-color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+          }
+          h1 { text-align: center; color: #5e60ce; font-size: 2.5em; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+          h2 {
+            font-size: 1.8em;
+            color: #2a3d66;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+          }
+          p { line-height: 1.8; font-size: 1.1em; margin-bottom: 15px; }
+          .section { margin-bottom: 30px; }
+          .label { font-weight: bold; color: #5e60ce; font-size: 1.1em; }
+          .ingredients, .instructions { padding-left: 20px; }
+          .ingredients li, .instructions li { margin-bottom: 8px; font-size: 1.05em; }
+          .chart-container { text-align: center; margin: 40px 0 20px; }
+          .chart-container h2 { font-size: 18px; color: #2a3d66; margin-bottom: 10px; }
+          .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #777;
+            border-top: 1px dashed #ccc;
+            padding-top: 20px;
+          }
+          .footer a { color: #2a3d66; text-decoration: none; }
+          .footer a:hover { text-decoration: underline; }
+          .terms { margin-top: 15px; font-size: 12px; color: #aaa; }
+          .logo { display: block; margin: 0 auto 30px; max-width: 100px; }
+
+          @media (max-width: 600px) {
+            .container { padding: 20px; margin: 20px; }
+            h1 { font-size: 1.8em; letter-spacing: 1px; }
+            h2 { font-size: 1.4em; }
+            p { font-size: 1em; }
+            .label { font-size: 1em; }
+            .ingredients li, .instructions li { font-size: 1em; }
+            .chart-container h2 { font-size: 16px; }
+            .footer { font-size: 13px; }
+            .terms { font-size: 11px; }
+            .logo { max-width: 80px; margin-bottom: 20px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <img src="${logoUrl}" alt="Logo" class="logo" />
+          <h1>${data.recipeName}</h1>
+
+          <div class="section">
+            <p><span class="label">Author:</span> ${data.author}</p>
+            <p><span class="label">Preparation Time:</span> ${data.prepTime}</p>
+            <p><span class="label">Cooking Time:</span> ${data.cookTime}</p>
+          </div>
+
+          <div class="section ingredients">
+            <h2>Ingredients:</h2>
+            <ul>${data.ingredients.map(i => `<li>${i}</li>`).join('')}</ul>
+          </div>
+
+          <div class="section instructions">
+            <h2>Instructions:</h2>
+            <ul>${data.instructions.map(i => `<li>${i}</li>`).join('')}</ul>
+          </div>
+
+          ${breakdownChart}
+
+          <div class="footer">
+            <p>Enjoy your recipe! For questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+            <p>&copy; 2025 Food Trek Recipes — All rights reserved.</p>
+            <p>Generated using <strong>PDFify</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.</p>
+            <p class="terms">
+              Terms & Conditions: This recipe is for personal use only. Reproduction or distribution without permission is prohibited.
+            </p>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+
+router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
+  const { data, isPreview } = req.body;
+  log("Received data for recipe generation:", data);
+
+  if (!data || !data.recipeName) {
+    log("Invalid recipe data:", data);
+    return res.status(400).json({ error: "Missing recipe data" });
+  }
+
+  const pdfDir = path.join(__dirname, "../pdfs");
+  if (!fs.existsSync(pdfDir)) {
+    fs.mkdirSync(pdfDir, { recursive: true });
+  }
+
+  const pdfPath = path.join(pdfDir, `recipe_${Date.now()}.pdf`);
+
+  try {
+    // Find user from DB
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Attach user's premium status to data for HTML
-    data.isPremium = user.isPremium;
-
-    // If user is not premium, disable logo and chart unless frontend specifically allows chart? Here we disable both
+    // Only premium users get custom logos and charts
     if (!user.isPremium) {
-      data.customLogoUrl = null;
-      data.showChart = false;
+      data.customLogoUrl = null;  // Remove custom logo for non-premium
+      data.showChart = false;     // Hide chart for non-premium
     }
 
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
-
-    const safeId = data.recipeId || `preview-${Date.now()}`;
-    const pdfPath = path.join(pdfDir, `Recipe_${safeId}.pdf`);
-
+    // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -176,29 +182,34 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
+    // Read PDF buffer to get page count
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
+    log(`Generated PDF has ${pageCount} pages.`);
 
+    // Check user usage limits if not preview
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
+
       user.usageCount += pageCount;
       await user.save();
+      log("User usage count updated:", user.usageCount);
     }
 
+    // Send PDF file and delete after sending
     res.download(pdfPath, (err) => {
       if (err) {
-        // handle error
+        console.error("Error sending file:", err);
       }
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
-    res.status(500).json({ error: "Recipe PDF generation failed" });
+    console.error("Recipe PDF generation failed:", error);
+    res.status(500).json({ error: "PDF generation failed" });
   }
 });
 
