@@ -5,7 +5,7 @@ const User = require("../models/User");
 const axios = require("axios");
 const sendEmail = require("../sendEmail");
 const {
-  enrichLineItemsWithImages,
+  enrichLineItemsWithImages,fetchShopLogo 
 } = require("../utils/shopifyHelpers");
 
 
