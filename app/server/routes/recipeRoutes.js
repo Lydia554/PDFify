@@ -21,7 +21,6 @@ const log = (message, data = null) => {
 };
 
 function generateRecipeHTML(data) {
-
   const logoHtml = data.customLogoUrl
     ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
     : '';
@@ -155,42 +154,38 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   const pdfPath = path.join(pdfDir, `recipe_${Date.now()}.pdf`);
 
   try {
-   
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Force premium for test
-// user.isPremium = true;
+    // 🔧 Uncomment the line below to force premium for testing:
+    // user.isPremium = true;
 
-if (user.isPremium) {
-  data.customLogoUrl = null;
-  data.showChart = true;
-} else {
-  data.customLogoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png"; 
-  data.showChart = false;
-}
+    const isPremium = user.isPremium;
+    const customLogoUrl = isPremium ? null : defaultLogoUrl;
+    const showChart = isPremium;
 
+    const html = generateRecipeHTML({
+      ...data,
+      customLogoUrl,
+      showChart
+    });
 
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
-
-    const html = generateRecipeHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-   
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
     log(`Generated PDF has ${pageCount} pages.`);
 
-  
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
@@ -202,7 +197,6 @@ if (user.isPremium) {
       log("User usage count updated:", user.usageCount);
     }
 
-  
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
