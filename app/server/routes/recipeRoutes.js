@@ -194,7 +194,9 @@ function generateRecipeHTML(data) {
       </head>
       <body>
         <div class="container">
-          <img src="${logoUrl}" alt="Logo" class="logo" />
+    
+    
+          <img src="${data.customLogoUrl || logoUrl}" alt="Recipe Logo" class="logo">
           <h1>${data.recipeName}</h1>
 
           <div class="section">
@@ -264,7 +266,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
    
     if (!user.isPremium) {
       data.customLogoUrl = null;
-      data.showChart = false;
+      data.showChart = true;
     }
 
     
