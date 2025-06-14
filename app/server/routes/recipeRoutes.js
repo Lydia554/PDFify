@@ -23,16 +23,15 @@ const log = (message, data = null) => {
 
 function generateRecipeHTML(data) {
   // Show ingredient breakdown chart only if allowed and data is present
-  const breakdownChart = (data.showChart && data.ingredientBreakdown)
+
+  const breakdownChart = data.showChart && data.ingredientBreakdown
     ? `<div class="chart-container">
         <h2>Ingredient Breakdown</h2>
         <img src="https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
           type: 'pie',
           data: {
             labels: Object.keys(data.ingredientBreakdown),
-            datasets: [{
-              data: Object.values(data.ingredientBreakdown)
-            }]
+            datasets: [{ data: Object.values(data.ingredientBreakdown) }]
           }
         }))}" alt="Ingredient Breakdown" style="max-width:300px;display:block;margin:auto;" />
       </div>`

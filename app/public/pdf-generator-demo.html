@@ -176,27 +176,33 @@ friendlyBtn.addEventListener('click', () => {
       const baseUrl = window.location.origin;
 
   let jsonData = "";
-
-  if (endpoint === "generate-recipe") {
-    jsonData = `{
-      "data": {
-        "recipeName": "Cheese Pie",
-        "author": "Anna Moore",
-        "ingredients": [
-          "500g flour",
-          "200g cheese",
-          "100g butter",
-          "1 egg"
-        ],
-        "instructions": [
-          "Mix the flour, egg, and butter.",
-          "Add crumbled cheese.",
-          "Bake in preheated oven at 180°C for 40 minutes."
-        ],
-        "prepTime": "30 minutes",
-        "cookTime": "40 minutes"
+if (endpoint === "generate-recipe") {
+  jsonData = `{
+    "data": {
+      "recipeName": "Cheese Pie",
+      "author": "Anna Moore",
+      "ingredients": [
+        "500g flour",
+        "200g cheese",
+        "100g butter",
+        "1 egg"
+      ],
+      "instructions": [
+        "Mix the flour, egg, and butter.",
+        "Add crumbled cheese.",
+        "Bake in preheated oven at 180°C for 40 minutes."
+      ],
+      "prepTime": "30 minutes",
+      "cookTime": "40 minutes",
+      "ingredientBreakdown": {
+        "Flour": 500,
+        "Cheese": 200,
+        "Butter": 100,
+        "Egg": 1
       }
-    }`;
+    }
+  }`;
+
 
   } else if (endpoint === "generate-therapy-report") {
     jsonData = `{
