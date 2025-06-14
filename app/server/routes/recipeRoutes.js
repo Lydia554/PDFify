@@ -12,7 +12,7 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-
+const defaultLogoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -23,11 +23,10 @@ const log = (message, data = null) => {
 function generateRecipeHTML(data) {
   // Show ingredient breakdown chart only if allowed and data is present
 
-  // Only set logoUrl if data.customLogoUrl is truthy, else don't render <img>
-const logoHtml = data.customLogoUrl
-  ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
-  : '';
-
+  // Only set logoHtml if data.customLogoUrl is truthy, else don't render <img>
+  const logoHtml = data.customLogoUrl
+    ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
+    : '';
 
   const breakdownChart = data.showChart && data.ingredientBreakdown
     ? `<div class="chart-container">
@@ -42,14 +41,10 @@ const logoHtml = data.customLogoUrl
       </div>`
     : '';
 
-  // Use custom logo if provided, else fallback to default
-  const logoUrl = data.customLogoUrl || defaultLogoUrl;
-
   return `
     <html>
       <head>
         <style>
-          /* your styles here - keep the styles you already have */
           @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
           body {
             font-family: 'Open Sans', sans-serif;
@@ -109,7 +104,7 @@ const logoHtml = data.customLogoUrl
       </head>
       <body>
         <div class="container">
-      ${logoHtml}
+          ${logoHtml}
 
           <h1>${data.recipeName}</h1>
 
@@ -145,7 +140,6 @@ const logoHtml = data.customLogoUrl
   `;
 }
 
-
 router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
   log("Received data for recipe generation:", data);
@@ -168,18 +162,19 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-// Force premium for test
-user.isPremium = true;
 
-if (user.isPremium) {
-  data.customLogoUrl = null; // no logo
-  data.showChart = true;
-} else {
-  // Non-premium get the default logo
-  data.customLogoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-  data.showChart = false;
-}
+    // Force premium for test
+    user.isPremium = true;
 
+    if (user.isPremium) {
+      // Premium: no logo
+      data.customLogoUrl = null;
+      data.showChart = true;
+    } else {
+      // Basic: show default logo
+      data.customLogoUrl = data.customLogoUrl || defaultLogoUrl;
+      data.showChart = false;
+    }
 
     // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
