@@ -12,8 +12,11 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-// Default logo URL (used if no custom logo)
-const defaultLogoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+// Only set logoUrl if data.customLogoUrl is truthy, else don't render <img>
+const logoHtml = data.customLogoUrl
+  ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
+  : '';
+
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -104,7 +107,8 @@ function generateRecipeHTML(data) {
       </head>
       <body>
         <div class="container">
-          <img src="${logoUrl}" alt="Logo" class="logo" />
+          ${logoHtml}
+
           <h1>${data.recipeName}</h1>
 
           <div class="section">
