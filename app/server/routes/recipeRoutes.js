@@ -169,7 +169,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isPremium = user.isPremium;
+   // const isPremium = user.isPremium;
 
     // Sanitize payload for basic users
     const cleanedData = { ...data };
