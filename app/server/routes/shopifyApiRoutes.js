@@ -221,6 +221,23 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
+
+
+    // Get shop logo from Shopify branding API (only available in certain plans)
+let shopLogoUrl = null;
+try {
+  const brandingResponse = await axios.get(`https://${shopDomain}/admin/api/2023-10/branding.json`, {
+    headers: {
+      "X-Shopify-Access-Token": token,
+      "Content-Type": "application/json",
+    },
+  });
+  shopLogoUrl = brandingResponse.data?.branding?.logo?.original || null;
+} catch (err) {
+  console.warn("⚠️ Failed to fetch shop logo:", err.response?.data || err.message);
+}
+
+
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
     const isPreview = req.query.preview === "true";
     const isPremium = true; 
@@ -229,15 +246,16 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 const enrichedItems = order.line_items;
 
 
-    const invoiceData = {
-      shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
-      date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: enrichedItems,
-      total: Number(order.total_price) || 0,
-      showChart: isPremium && shopConfig?.showChart,
-      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-      fallbackLogoUrl: "/assets/default-logo.png",
-    };
+const invoiceData = {
+  shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
+  date: new Date(order.created_at).toISOString().slice(0, 10),
+  items: enrichedItems,
+  total: Number(order.total_price) || 0,
+  showChart: isPremium && shopConfig?.showChart,
+  customLogoUrl: isPremium ? (shopConfig?.customLogoUrl || shopLogoUrl) : null,
+  fallbackLogoUrl: "/assets/default-logo.png",
+};
+
 
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
