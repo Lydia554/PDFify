@@ -29,11 +29,12 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
         credentials: "include",
       });
 
-      if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem("apiKey");
-    window.location.href = "/login.html";
-    return;
-  }
+  if (response.status === 401 || response.status === 403) {
+  localStorage.removeItem("apiKey");
+  window.location.href = "/login.html";
+  return;
+}
+
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -83,11 +84,12 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
         credentials: "include",
       });
 
-      if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem("apiKey");
-    window.location.href = "/login.html";
-    return;
-  }
+if (response.status === 401 || response.status === 403) {
+  localStorage.removeItem("apiKey");
+  window.location.href = "/login.html";
+  return;
+}
+
   
       if (!response.ok) {
         const errorText = await response.text();
