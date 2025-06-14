@@ -164,6 +164,9 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+        // Force premium for test
+user.isPremium = true;
+
     // Only premium users get custom logos and charts
     if (!user.isPremium) {
       data.customLogoUrl = null;  // Remove custom logo for non-premium
