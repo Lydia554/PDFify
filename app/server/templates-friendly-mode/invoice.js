@@ -1,4 +1,9 @@
 function generateInvoiceHtml(data) {
+  const logoUrl =
+    typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
+      ? data.customLogoUrl.trim()
+      : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
   return `
   <html>
   <head>
@@ -114,9 +119,12 @@ function generateInvoiceHtml(data) {
     </style>
   </head>
   <body>
-    ${data.logoBase64 ? `<div class="logo-container"><img src="${data.logoBase64}" alt="Company Logo"></div>` : ''}
+    <div class="logo-container">
+      <img src="${logoUrl}" alt="Company Logo">
+    </div>
+
     ${data.includeTitle ? `<h1>Invoice for ${data.customerName}</h1>` : ''}
-    
+
     <p><strong>Date:</strong> ${data.date}</p>
     <p><strong>Invoice Number:</strong> ${data.invoiceNumber || 'N/A'}</p>
 
@@ -176,7 +184,5 @@ function generateInvoiceHtml(data) {
   </html>
   `;
 }
-
-
 
 module.exports = generateInvoiceHtml;
