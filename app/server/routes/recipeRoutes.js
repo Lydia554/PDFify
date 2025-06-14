@@ -21,6 +21,9 @@ const log = (message, data = null) => {
 };
 
 function generateRecipeHTML(data) {
+  log("🧪 Inside HTML Generator - showChart:", data.showChart);
+  log("🧪 customLogoUrl:", data.customLogoUrl);
+
   const logoHtml = data.customLogoUrl
     ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
     : '';
@@ -166,17 +169,23 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // 🔧 TEMP: Uncomment this line to force premium behavior for testing
-    // user.isPremium = true;
-
     const isPremium = user.isPremium;
 
-    const html = generateRecipeHTML({
-      ...data,
+    // Sanitize payload for basic users
+    const cleanedData = { ...data };
+    if (!isPremium) delete cleanedData.ingredientBreakdown;
+
+    const payload = {
+      ...cleanedData,
       customLogoUrl: isPremium ? null : defaultLogoUrl,
       showChart: isPremium,
       showWatermark: !isPremium,
-    });
+    };
+
+    log("User isPremium:", isPremium);
+    log("Payload sent to HTML generator:", payload);
+
+    const html = generateRecipeHTML(payload);
 
     const browser = await puppeteer.launch({
       headless: true,
