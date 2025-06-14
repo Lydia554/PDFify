@@ -3,27 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title> PDFify</title>
-  
+  <title>PDFify</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
-
   <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
     <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
   </div>
 
-
-  
   <!-- Hero -->
   <section class="bg-white py-16 text-center shadow">
     <div class="max-w-3xl mx-auto">
-      <h1 class="text-4xl font-bold mb-4">Design and Download Custom PDFs with Ease</h1>
+      <h1 class="text-4xl font-bold mb-4">Instant PDF Invoices from Your Code or Shopify Store</h1>
       <p class="text-sm inline-block bg-green-100 text-green-700 font-medium px-3 py-1 rounded-full mt-2">
-        💚 Built for Creators & Developers
+        💚 Built for Developers & Shop Owners
       </p>
-      <p class="text-lg mb-6">No app install. Just send JSON, get back a PDF.</p>
+      <p class="text-lg mb-6">No app install. Just send data—get beautiful, branded PDFs back instantly.</p>
       <a href="#get-started" id="getStartedButton" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition">Get Started</a>
+    </div>
+  </section>
+
+  <!-- Why PDFify -->
+  <section class="py-16 bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h2 class="text-2xl font-bold mb-6">Why PDFify?</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-lg text-left">
+        <div>✅ Skip the headaches of building your own PDF logic.</div>
+        <div>🧐 Generate invoices, receipts, or reports from your app with one API call.</div>
+        <div>🛍️ Seamlessly integrates with Shopify checkout and order webhooks.</div>
+        <div>✨ Built for speed—no installation, no app bloat, just your data and our service.</div>
+        <div>🖼️ Premium templates support product images and logos (great for branding).</div>
+        <div>🔧 Developers can customize templates, while non-coders can use “friendly mode.”</div>
+      </div>
     </div>
   </section>
 
@@ -33,19 +44,18 @@
       <h2 class="text-2xl font-bold mb-6 text-center">How It Works</h2>
       <ol class="space-y-4 text-lg text-gray-700">
         <li class="list">1. Register and get your unique API token.</li>
-        <li class="list">2. Send HTML content via our API endpoint.</li>
-        <li class="list">3. Receive a downloadable PDF in response.</li>
+        <li class="list">2. Send HTML or JSON content via our API endpoint.</li>
+        <li class="list">3. Receive a downloadable, print-ready PDF in response.</li>
       </ol>
     </div>
   </section>
 
+  <!-- Invoice Examples -->
   <section class="py-16">
     <div class="max-w-4xl mx-auto px-4 text-center">
       <h2 class="text-2xl font-bold mb-4">✨ Beautiful Invoice Examples</h2>
-      <p class="text-lg mb-6">Crafted to look great in emails, print, and downloads. Fully responsive PDF layouts.</p>
-  
+      <p class="text-lg mb-6">Automatically generate print-ready, mobile-friendly invoices—great for customer emails and order confirmations.</p>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <!-- Basic Thumbnail -->
         <div>
           <h3 class="text-lg font-semibold mb-2">Basic Invoice</h3>
           <a href="/demo/Invoice-Basic.pdf" target="_blank">
@@ -53,10 +63,8 @@
           </a>
           <a href="/demo/Invoice-Basic.pdf" class="mt-2 inline-block text-blue-600 hover:underline text-sm">Download Basic PDF</a>
         </div>
-  
-        <!-- Premium Thumbnail -->
         <div>
-          <h3 class="text-lg font-semibold mb-2">Premium Invoice</h3>
+          <h3 class="text-lg font-semibold mb-2">Branded Invoice with Product Images (Premium)</h3>
           <a href="/demo/Invoice-Premium.pdf" target="_blank">
             <img src="/demo/invoice-thumbnail-premium-1.jpg" alt="Premium Invoice Preview" class="mx-auto rounded-lg shadow-lg border border-yellow-400">
             <img src="/demo/invoice-thumbnail-premium-2.jpg" alt="Premium Invoice Preview" class="mx-auto rounded-lg shadow-lg border border-yellow-400">
@@ -66,46 +74,51 @@
       </div>
     </div>
   </section>
-  
-
-
 
   <!-- Features -->
-<section class="py-16 bg-gray-100">
-  <div class="max-w-4xl mx-auto px-8 text-center">
-    <h2 class="text-2xl font-bold mb-6 text-center">Features</h2>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-lg">
-      <div>🧾 HTML to PDF conversion</div>
-      <div>🔐 Secure token-based access</div>
-      <div>🎨 Fully customizable templates</div>
-      <div>⚡ Works in Shopify themes and scripts</div>
-      <div>📦 No app installation required</div>
-      <div>💳 Stripe-based premium plans</div>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing -->
-<section class="py-16">
-  <div class="max-w-4xl mx-auto px-4 text-center">
-    <h2 class="text-2xl font-bold mb-6">Simple Pricing</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-      <!-- Free Plan -->
-      <div class="border p-6 rounded shadow hover:shadow-lg transition cursor-pointer">
-        <h3 class="text-xl font-bold mb-2">Free</h3>
-        <p class="mb-4">Up to 30 PDFs/month</p>
-        <p class="text-2xl font-bold">€0</p>
+  <section class="py-16 bg-gray-100">
+    <div class="max-w-4xl mx-auto px-8 text-center">
+      <h2 class="text-2xl font-bold mb-6 text-center">Features</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-lg">
+        <div>📟 Convert any HTML or JSON into a ready-to-download PDF</div>
+        <div>🔐 Secure, token-based API—no public exposure</div>
+        <div>🎨 Premium templates with logo and image support</div>
+        <div>🛒 Works with Shopify themes, webhooks, and scripts</div>
+        <div>⚙️ Zero-install: integrate with just a few lines of code</div>
+        <div>💳 Stripe plans with instant upgrade to premium features</div>
       </div>
-
- <!-- Premium Plan -->
-<div class="border p-6 rounded shadow bg-blue-50 hover:shadow-lg hover:bg-blue-100 transition cursor-pointer">
-  <h3 class="text-xl font-bold mb-2">Premium</h3>
-  <p class="mb-4">1000 PDFs, priority support</p>
-  <p class="text-2xl font-bold">€4.99/mo</p>
-</div>
     </div>
-  </div>
-</section>
+  </section>
+
+  <!-- Pricing -->
+  <section class="py-16">
+    <div class="max-w-4xl mx-auto px-4 text-center">
+      <h2 class="text-2xl font-bold mb-6">Simple Pricing</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="border p-6 rounded shadow hover:shadow-lg transition cursor-pointer">
+          <h3 class="text-xl font-bold mb-2">Free</h3>
+          <p class="mb-4">Up to 30 PDFs/month<br>Use basic invoice layout</p>
+          <p class="text-2xl font-bold">€0</p>
+        </div>
+        <div class="border p-6 rounded shadow bg-blue-50 hover:shadow-lg hover:bg-blue-100 transition cursor-pointer">
+          <h3 class="text-xl font-bold mb-2">Premium</h3>
+          <p class="mb-4">1,000 PDFs/month<br>Branded templates, product images, priority support</p>
+          <p class="text-2xl font-bold">€4.99/mo</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Use Case Section -->
+  <section class="py-12 bg-white">
+    <div class="max-w-4xl mx-auto text-center px-4">
+      <h2 class="text-2xl font-bold mb-4">Use It Your Way</h2>
+      <p class="mb-6 text-lg">Whether you're building a web app, running a Shopify store, or automating your invoices—PDFify does the work for you.</p>
+      <div class="grid sm:grid-cols-2 gap-6 text-left text-lg">
+        <div>👩‍💻 <strong>Developers:</strong> Send HTML or JSON to our API. We'll return a PDF.</div>
+        <div>🛎️ <strong>Shopify Stores:</strong> Connect a webhook to generate branded invoices with logos & product images.</div>
+      </div>
+    </div>
   </section>
 
   <!-- Get Started -->
