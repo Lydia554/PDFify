@@ -162,17 +162,15 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     }
 
     // Force premium for test
-    //user.isPremium = true;
+// user.isPremium = true;
 
-    if (user.isPremium) {
-    
-      data.customLogoUrl = null;
-      data.showChart = true;
-    } else {
-
-      data.customLogoUrl = data.customLogoUrl || defaultLogoUrl;
-      data.showChart = false;
-    }
+if (user.isPremium) {
+  data.customLogoUrl = null;
+  data.showChart = true;
+} else {
+  data.customLogoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png"; 
+  data.showChart = false;
+}
 
 
     const browser = await puppeteer.launch({
