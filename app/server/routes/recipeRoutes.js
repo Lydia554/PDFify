@@ -172,10 +172,11 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
 user.isPremium = true;
 
 if (user.isPremium) {
-  data.customLogoUrl = null;  // No logo for premium
-  data.showChart = true;      // or false if you want no chart either
+  data.customLogoUrl = null; // no logo
+  data.showChart = true;
 } else {
-  data.customLogoUrl = defaultLogoUrl;  // Show default logo for non-premium
+  // Non-premium get the default logo
+  data.customLogoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
   data.showChart = false;
 }
 
