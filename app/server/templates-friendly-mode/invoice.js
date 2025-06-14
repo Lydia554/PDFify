@@ -13,45 +13,54 @@ function generateInvoiceHtml(data) {
         padding: 30px;
         color: #444;
         background: #fff;
-        position: relative;
       }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 30px;
+      }
+
+      .logo {
+        max-width: 180px;
+        height: auto;
+      }
+
       h1 {
         color: #1565c0;
         border-bottom: 3px solid #42a5f5;
         padding-bottom: 10px;
+        margin-top: 0;
       }
-      .logo-container {
-        position: absolute;
-        top: 30px;
-        right: 30px;
-        max-width: 150px;
-      }
-      .logo-container img {
-        width: 100%;
-        height: auto;
-      }
+
       p {
         font-size: 16px;
         line-height: 1.5;
         margin: 4px 0;
       }
+
       table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
       }
+
       th, td {
         border: 1px solid #ccc;
         padding: 10px;
         text-align: left;
       }
+
       th {
         background-color: #e3f2fd;
       }
+
       tfoot td {
         font-weight: bold;
         border-top: 2px solid #1565c0;
       }
+
       .section-title {
         font-size: 22px;
         color: #1565c0;
@@ -61,6 +70,7 @@ function generateInvoiceHtml(data) {
         border-bottom: 2px solid #42a5f5;
         padding-bottom: 4px;
       }
+
       .footer {
         font-size: 11px !important;
         background-color: #f9f9f9;
@@ -72,46 +82,68 @@ function generateInvoiceHtml(data) {
         margin-top: auto;
         page-break-inside: avoid;
       }
+
       .footer a {
         color: #0073e6;
         text-decoration: none;
       }
+
       .footer a:hover {
         text-decoration: underline;
       }
+
       .footer p {
         margin: 6px 0;
         font-size: 11px !important;
         line-height: 1.5;
       }
+
       @media screen and (max-width: 600px) {
         body {
           padding: 20px;
         }
+
+        .header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .logo {
+          max-width: 140px;
+          margin-bottom: 10px;
+        }
+
         h1 {
           font-size: 1.6rem;
         }
+
         .section-title {
           font-size: 18px;
         }
+
         p {
           font-size: 15px;
         }
+
         th, td {
           padding: 8px;
           font-size: 14px;
         }
+
         table {
           min-width: 100%;
         }
+
         .footer {
           font-size: 11px;
           padding: 15px 10px;
           line-height: 1.4;
         }
+
         .footer p {
           margin: 6px 0;
         }
+
         .footer a {
           word-break: break-word;
         }
@@ -119,11 +151,10 @@ function generateInvoiceHtml(data) {
     </style>
   </head>
   <body>
-    <div class="logo-container">
-      <img src="${logoUrl}" alt="Company Logo">
+    <div class="header">
+      ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" class="logo">` : ''}
+      ${data.includeTitle ? `<h1>Invoice for ${data.customerName}</h1>` : ''}
     </div>
-
-    ${data.includeTitle ? `<h1>Invoice for ${data.customerName}</h1>` : ''}
 
     <p><strong>Date:</strong> ${data.date}</p>
     <p><strong>Invoice Number:</strong> ${data.invoiceNumber || 'N/A'}</p>
