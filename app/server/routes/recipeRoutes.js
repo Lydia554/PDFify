@@ -19,7 +19,6 @@ const log = (message, data = null) => {
     console.log(message, data);
   }
 };
-
 function generateRecipeHTML(data) {
   log("🧪 Inside HTML Generator - showChart:", data.showChart);
   log("🧪 customLogoUrl:", data.customLogoUrl);
@@ -41,7 +40,11 @@ function generateRecipeHTML(data) {
       </div>`
     : '';
 
-  const watermark = data.showWatermark
+  const watermarkOverlay = data.showWatermark
+    ? `<div class="background-watermark">Food Trek</div>`
+    : '';
+
+  const footerNote = data.showWatermark
     ? `<div class="footer watermark">
         <p>Watermarked by <strong>Food Trek</strong>. Upgrade to premium to remove this.</p>
       </div>`
@@ -57,6 +60,19 @@ function generateRecipeHTML(data) {
             color: #333;
             background-color: #f4f7fb;
             margin: 0; padding: 0;
+            position: relative;
+          }
+          .background-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 120px;
+            color: rgba(0, 0, 0, 0.05);
+            z-index: 0;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
           }
           .container {
             max-width: 800px;
@@ -65,6 +81,8 @@ function generateRecipeHTML(data) {
             background-color: #fff;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
+            position: relative;
+            z-index: 1;
           }
           h1 { text-align: center; color: #5e60ce; font-size: 2.5em; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
           h2 {
@@ -110,6 +128,7 @@ function generateRecipeHTML(data) {
         </style>
       </head>
       <body>
+        ${watermarkOverlay}
         <div class="container">
           ${logoHtml}
 
@@ -142,12 +161,13 @@ function generateRecipeHTML(data) {
             </p>
           </div>
 
-          ${watermark}
+          ${footerNote}
         </div>
       </body>
     </html>
   `;
 }
+
 
 router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
