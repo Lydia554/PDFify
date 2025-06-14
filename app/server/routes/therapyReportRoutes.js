@@ -13,11 +13,12 @@ if (typeof ReadableStream === "undefined") {
 }
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+function generateTherapyReportHTML(data, isPremiumUser) {
 
-function generateTherapyReportHTML(data) {
   const innerHtml = `
-    <div class="watermark">Confidential</div>
-    <img src="${logoUrl}" alt="Logo" class="logo" />
+   ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
+${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
+
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -289,7 +290,9 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     });
 
     const page = await browser.newPage();
-    const html = generateTherapyReportHTML(cleanedData);
+    const isPremiumUser = user.plan === "premium";
+const html = generateTherapyReportHTML(cleanedData, isPremiumUser);
+
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     await page.pdf({
