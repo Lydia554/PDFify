@@ -14,8 +14,9 @@ const router = express.Router();
 require('dotenv').config();
 
 
+// HTML generator
 function generateInvoiceHTML(invoiceData, isPremium) {
-  const FORCE_PREMIUM = true; 
+  const FORCE_PREMIUM = true;
   const premium = FORCE_PREMIUM || isPremium;
 
   const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
@@ -157,7 +158,6 @@ function generateInvoiceHTML(invoiceData, isPremium) {
             </tbody>
           </table>
           <div class="total">Total: $${total.toFixed(2)}</div>
-
           ${showChart ? `<div class="chart-container"><h2>Spending Overview</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>` : ""}
         </div>
         <div class="footer">
@@ -171,11 +171,7 @@ function generateInvoiceHTML(invoiceData, isPremium) {
   return premium ? premiumTemplate : basicTemplate;
 }
 
-
-
-
-
-
+// Route
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -192,9 +188,9 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     if (!order && orderId) {
-      const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
+      const orderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
       try {
-        const orderResponse = await axios.get(shopifyOrderUrl, {
+        const orderResponse = await axios.get(orderUrl, {
           headers: {
             "X-Shopify-Access-Token": token,
             "Content-Type": "application/json",
@@ -202,12 +198,12 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         });
         order = orderResponse.data.order;
       } catch (err) {
-        console.error("❌ Failed to fetch order from Shopify:", err.response?.data || err.message);
+        console.error("❌ Failed to fetch order:", err.response?.data || err.message);
         return res.status(500).json({ error: "Failed to fetch order from Shopify" });
       }
     }
 
-    if (!order || !order.line_items) {
+    if (!order?.line_items?.length) {
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
@@ -215,47 +211,39 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       orderId = order.id;
     }
 
-    let user = req.user?.userId
+    const user = req.user?.userId
       ? await User.findById(req.user.userId)
       : await User.findOne({ connectedShopDomain: shopDomain });
 
-    if (!user) return res.status(404).json({ error: "User not found for this shop" });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-
-
-    // Get shop logo from Shopify branding API (only available in certain plans)
-let shopLogoUrl = null;
-try {
-  const brandingResponse = await axios.get(`https://${shopDomain}/admin/api/2023-10/branding.json`, {
-    headers: {
-      "X-Shopify-Access-Token": token,
-      "Content-Type": "application/json",
-    },
-  });
-  shopLogoUrl = brandingResponse.data?.branding?.logo?.original || null;
-} catch (err) {
-  console.warn("⚠️ Failed to fetch shop logo:", err.response?.data || err.message);
-}
-
+    let shopLogoUrl = null;
+    try {
+      const brandingRes = await axios.get(`https://${shopDomain}/admin/api/2023-10/branding.json`, {
+        headers: {
+          "X-Shopify-Access-Token": token,
+        },
+      });
+      shopLogoUrl = brandingRes.data?.branding?.logo?.original || null;
+    } catch (err) {
+      console.warn("⚠️ Failed to fetch shop logo:", err.response?.data || err.message);
+    }
 
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
     const isPreview = req.query.preview === "true";
-    const isPremium = true; 
+    const isPremium = true;
 
+    const enrichedItems = order.line_items;
 
-const enrichedItems = order.line_items;
-
-
-const invoiceData = {
-  shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
-  date: new Date(order.created_at).toISOString().slice(0, 10),
-  items: enrichedItems,
-  total: Number(order.total_price) || 0,
-  showChart: isPremium && shopConfig?.showChart,
-  customLogoUrl: isPremium ? (shopConfig?.customLogoUrl || shopLogoUrl) : null,
-  fallbackLogoUrl: "/assets/default-logo.png",
-};
-
+    const invoiceData = {
+      shopName: shopConfig.shopName || shopDomain || "Unnamed Shop",
+      date: new Date(order.created_at).toISOString().slice(0, 10),
+      items: enrichedItems,
+      total: Number(order.total_price) || 0,
+      showChart: isPremium && shopConfig.showChart,
+      customLogoUrl: isPremium ? (shopConfig.customLogoUrl || shopLogoUrl) : null,
+      fallbackLogoUrl: "/assets/default-logo.png",
+    };
 
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
@@ -280,49 +268,38 @@ const invoiceData = {
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium." });
       }
       user.usageCount += pageCount;
       await user.save();
     }
 
-    try {
-      if (order.email) {
-        await sendEmailWithAttachment({
-          to: order.email,
-          subject: `Your Invoice from ${invoiceData.shopName}`,
-          text: "Please find your invoice attached.",
-          attachments: [
-            {
-              filename: `Invoice_${safeOrderId}.pdf`,
-              content: pdfBuffer,
-            },
-          ],
-        });
-        console.log("✅ Invoice emailed to:", order.email);
-      } else {
-        console.warn("⚠️ No email found on order, skipping email");
-      }
-    } catch (emailErr) {
-      console.error("❌ Failed to send invoice email:", emailErr);
+    if (order.email) {
+      await sendEmailWithAttachment({
+        to: order.email,
+        subject: `Your Invoice from ${invoiceData.shopName}`,
+        text: "Please find your invoice attached.",
+        attachments: [{
+          filename: `Invoice_${safeOrderId}.pdf`,
+          content: pdfBuffer,
+        }],
+      });
     }
 
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": isPreview
-        ? "inline"
-        : `attachment; filename=Invoice_${safeOrderId}.pdf`,
+      "Content-Disposition": isPreview ? "inline" : `attachment; filename=Invoice_${safeOrderId}.pdf`,
     });
     res.send(pdfBuffer);
-
     fs.unlinkSync(pdfPath);
+
   } catch (error) {
-    console.error("❌ Shopify invoice generation error:", error);
+    console.error("❌ Invoice error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
+module.exports = router;
 
 
 
