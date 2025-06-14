@@ -3,13 +3,10 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
-const authenticate = require('../middleware/authenticate'); 
+const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
 const User = require('../models/User');
 const pdfParse = require("pdf-parse");
-
-
-
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -17,14 +14,13 @@ const log = (message, data = null) => {
   }
 };
 
-
 if (typeof ReadableStream === 'undefined') {
   global.ReadableStream = require('web-streams-polyfill').ReadableStream;
 }
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-function wrapHtmlWithBranding(htmlContent) {
+function wrapHtmlWithBranding(htmlContent, isPremium) {
   return `
     <html>
       <head>
@@ -43,78 +39,69 @@ function wrapHtmlWithBranding(htmlContent) {
           .content {
             margin-top: 30px;
           }
-       .footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 20px;
-    font-size: 12px;
-    background-color: #f9f9f9;
-    color: #444;
-    border-top: 1px solid #ccc;
-    text-align: center;
-    line-height: 1.6;
-  }
-  .footer a {
-    color: #0073e6;
-    text-decoration: none;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
+          .footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            font-size: 12px;
+            background-color: #f9f9f9;
+            color: #444;
+            border-top: 1px solid #ccc;
+            text-align: center;
+            line-height: 1.6;
+          }
+          .footer a {
+            color: #0073e6;
+            text-decoration: none;
+          }
+          .footer a:hover {
+            text-decoration: underline;
+          }
 
-
-         /* MOBILE STYLES */
           @media (max-width: 600px) {
             body {
               padding: 20px;
             }
-        
             .content {
               font-size: 15px;
             }
-        
-                 .footer {
-      font-size: 11px;
-      padding: 15px 10px;
-      line-height: 1.4;
-    }
-
-    .footer p {
-      margin: 6px 0;
-    }
-
-    .footer a {
-      word-break: break-word;
-    }
-        
+            .footer {
+              font-size: 11px;
+              padding: 15px 10px;
+              line-height: 1.4;
+            }
+            .footer p {
+              margin: 6px 0;
+            }
+            .footer a {
+              word-break: break-word;
+            }
             .logo {
               max-width: 100px;
             }
           }
-
         </style>
       </head>
       <body>
-        <img src="${logoUrl}" alt="Logo" class="logo" />
+        ${!isPremium ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ""}
         <div class="content">
           ${htmlContent}
         </div>
-         <div class="footer">
-  <p>Thanks for using our service!</p>
-  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
-  <p>
-    Generated using <strong>PDFify</strong>. Visit 
-    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-  </p>
-</div>
+        <div class="footer">
+          <p>Thanks for using our service!</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+          <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+          <p>
+            Generated using <strong>PDFify</strong>. Visit
+            <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+          </p>
+        </div>
       </body>
     </html>
   `;
 }
-
 
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
   const { html, isPreview } = req.body;
@@ -143,7 +130,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     });
 
     const page = await browser.newPage();
-    const wrappedHtml = wrapHtmlWithBranding(html);
+    const wrappedHtml = wrapHtmlWithBranding(html, !user.isPremium);
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
@@ -163,12 +150,10 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
       await user.save();
     }
 
-  
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
       }
-     
       if (fs.existsSync(pdfPath)) {
         fs.unlinkSync(pdfPath);
       }
