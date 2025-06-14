@@ -76,7 +76,7 @@ function generateRecipeHTML(data) {
           .footer {
             text-align: center;
             margin-top: 100px;
-            font-size: 14px;
+            font-size: 11px;
             color: #777;
             border-top: 1px dashed #ccc;
             padding-top: 20px;
