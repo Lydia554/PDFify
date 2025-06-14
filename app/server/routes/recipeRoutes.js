@@ -38,6 +38,12 @@ function generateRecipeHTML(data) {
       </div>`
     : '';
 
+  const watermark = data.showWatermark
+    ? `<div class="footer watermark">
+        <p>Watermarked by <strong>Food Trek</strong>. Upgrade to premium to remove this.</p>
+      </div>`
+    : '';
+
   return `
     <html>
       <head>
@@ -74,7 +80,7 @@ function generateRecipeHTML(data) {
           .chart-container h2 { font-size: 18px; color: #2a3d66; margin-bottom: 10px; }
           .footer {
             text-align: center;
-            margin-top: 100px;
+            margin-top: 50px;
             font-size: 11px;
             color: #777;
             border-top: 1px dashed #ccc;
@@ -84,6 +90,7 @@ function generateRecipeHTML(data) {
           .footer a:hover { text-decoration: underline; }
           .terms { margin-top: 15px; font-size: 12px; color: #aaa; }
           .logo { display: block; margin: 0 auto 30px; max-width: 100px; }
+          .watermark { color: #c44; font-weight: bold; }
 
           @media (max-width: 600px) {
             .container { padding: 20px; margin: 20px; }
@@ -131,6 +138,8 @@ function generateRecipeHTML(data) {
               Terms & Conditions: This recipe is for personal use only. Reproduction or distribution without permission is prohibited.
             </p>
           </div>
+
+          ${watermark}
         </div>
       </body>
     </html>
@@ -155,27 +164,19 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
 
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-// 🔧 TEMP: Uncomment to force premium behavior for testing
-// user.isPremium = true;
+    // 🔧 TEMP: Uncomment this line to force premium behavior for testing
+    // user.isPremium = true;
 
-const isPremium = user.isPremium;
+    const isPremium = user.isPremium;
 
-// 🚫 Non-premium users always see the default logo
-const customLogoUrl = isPremium ? null : defaultLogoUrl;
-
-// ✅ Only premium users get the chart
-const showChart = isPremium;
-
-// Ensure these values are enforced and not overridden from the client
-const html = generateRecipeHTML({
-  ...data,
-  customLogoUrl,
-  showChart,
-});
+    const html = generateRecipeHTML({
+      ...data,
+      customLogoUrl: isPremium ? null : defaultLogoUrl,
+      showChart: isPremium,
+      showWatermark: !isPremium,
+    });
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -203,9 +204,7 @@ const html = generateRecipeHTML({
     }
 
     res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
-      }
+      if (err) console.error("Error sending file:", err);
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
