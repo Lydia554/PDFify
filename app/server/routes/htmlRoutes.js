@@ -19,6 +19,7 @@ if (typeof ReadableStream === 'undefined') {
 }
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
 function wrapHtmlWithBranding(htmlContent, isPremium) {
   return `
     <html>
@@ -102,7 +103,6 @@ function wrapHtmlWithBranding(htmlContent, isPremium) {
   `;
 }
 
-
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
   const { html, isPreview } = req.body;
 
@@ -130,7 +130,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     });
 
     const page = await browser.newPage();
-    const wrappedHtml = wrapHtmlWithBranding(html, !user.isPremium);
+    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium); // ✅ FIXED: pass actual isPremium value
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
