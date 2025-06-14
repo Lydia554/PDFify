@@ -19,7 +19,6 @@ if (typeof ReadableStream === 'undefined') {
 }
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-
 function wrapHtmlWithBranding(htmlContent, isPremium) {
   return `
     <html>
@@ -85,7 +84,7 @@ function wrapHtmlWithBranding(htmlContent, isPremium) {
         </style>
       </head>
       <body>
-        ${!isPremium ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ""}
+        ${isPremium ? "" : `<img src="${logoUrl}" alt="Logo" class="logo" />`}
         <div class="content">
           ${htmlContent}
         </div>
@@ -102,6 +101,7 @@ function wrapHtmlWithBranding(htmlContent, isPremium) {
     </html>
   `;
 }
+
 
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
   const { html, isPreview } = req.body;
