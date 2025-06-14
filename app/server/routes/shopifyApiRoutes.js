@@ -130,8 +130,7 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       </head>
       <body>
         <div class="container">
-          <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" onerror="this.src='https://via.placeholder.com/150x50?text=No+Logo'" />
-
+          <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
           <h1>Invoice</h1>
           <div class="invoice-header">
             <div><strong>From:</strong><br>${shopName}</div>
