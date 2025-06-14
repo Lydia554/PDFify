@@ -181,7 +181,7 @@ function generateInvoicePremiumHtml(data) {
     <body>
       <div class="header">
         ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
-        ${logoBase64 ? `<img src="${logoBase64}" alt="Company Logo" class="logo">` : ''}
+       
 
       </div>
   
