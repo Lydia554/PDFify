@@ -36,7 +36,6 @@ function verifyShopifyWebhook(req, res, next) {
 }
 
 
-
 async function fetchStoreLogoUrl(shop, accessToken) {
   try {
     const apiBase = `https://${shop}/admin/api/2023-10`;
@@ -47,7 +46,11 @@ async function fetchStoreLogoUrl(shop, accessToken) {
     });
 
     const mainTheme = themesRes.data.themes.find((t) => t.role === "main");
-    if (!mainTheme) throw new Error("Main theme not found");
+    if (!mainTheme) {
+      console.error("❌ Main theme not found");
+      throw new Error("Main theme not found");
+    }
+    console.log("🖼️ Main theme found:", mainTheme.name, `(ID: ${mainTheme.id})`);
 
     // 2. Get settings_data.json
     const assetRes = await axios.get(`${apiBase}/themes/${mainTheme.id}/assets.json`, {
@@ -56,8 +59,9 @@ async function fetchStoreLogoUrl(shop, accessToken) {
     });
 
     const settings = JSON.parse(assetRes.data.asset.value);
+    console.log("🖼️ Theme settings_data.json content:", JSON.stringify(settings, null, 2));
 
-    // 3. Try multiple possible keys
+    // 3. Try multiple possible keys for logo path
     const logoKeyCandidates = [
       "settings.logo",
       "settings.logo_image",
@@ -74,6 +78,7 @@ async function fetchStoreLogoUrl(shop, accessToken) {
         value = value?.[k];
         if (!value) break;
       }
+      console.log(`🔍 Checking key '${key}':`, value);
       if (value) {
         logoPath = value;
         break;
@@ -85,13 +90,20 @@ async function fetchStoreLogoUrl(shop, accessToken) {
       return null;
     }
 
-    // 4. Resolve full URL
-    return `https://${shop}/cdn/shop/files/${logoPath}`;
+    console.log("🖼️ Logo path found:", logoPath);
+
+    // 4. Resolve full URL to the logo file
+    const logoUrl = `https://${shop}/cdn/shop/files/${logoPath}`;
+    console.log("🖼️ Resolved logo URL:", logoUrl);
+
+    return logoUrl;
   } catch (err) {
     console.error("❌ Failed to fetch logo from theme settings:", err.message);
     return null;
   }
 }
+
+
 
 
 
