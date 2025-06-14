@@ -35,41 +35,66 @@ function verifyShopifyWebhook(req, res, next) {
   next();
 }
 
-// Fetch store logo from current theme settings
-async function fetchStoreLogoUrl(shopDomain, accessToken) {
+
+
+async function fetchStoreLogoUrl(shop, accessToken) {
   try {
-    const themesRes = await axios.get(
-      `https://${shopDomain}/admin/api/2023-10/themes.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": accessToken,
-        },
-      }
-    );
+    const apiBase = `https://${shop}/admin/api/2023-10`;
+
+    // 1. Get the main theme
+    const themesRes = await axios.get(`${apiBase}/themes.json`, {
+      headers: { "X-Shopify-Access-Token": accessToken },
+    });
 
     const mainTheme = themesRes.data.themes.find((t) => t.role === "main");
-    if (!mainTheme) {
-      console.warn("⚠️ No main theme found.");
+    if (!mainTheme) throw new Error("Main theme not found");
+
+    // 2. Get settings_data.json
+    const assetRes = await axios.get(`${apiBase}/themes/${mainTheme.id}/assets.json`, {
+      headers: { "X-Shopify-Access-Token": accessToken },
+      params: { "asset[key]": "config/settings_data.json" },
+    });
+
+    const settings = JSON.parse(assetRes.data.asset.value);
+
+    // 3. Try multiple possible keys
+    const logoKeyCandidates = [
+      "settings.logo",
+      "settings.logo_image",
+      "settings.logo_header",
+      "settings.header_logo",
+      "settings.brand.logo",
+    ];
+
+    let logoPath = null;
+    for (const key of logoKeyCandidates) {
+      const keys = key.split(".");
+      let value = settings;
+      for (const k of keys) {
+        value = value?.[k];
+        if (!value) break;
+      }
+      if (value) {
+        logoPath = value;
+        break;
+      }
+    }
+
+    if (!logoPath) {
+      console.warn("⚠️ Logo not found in theme settings.");
       return null;
     }
 
-    const settingsRes = await axios.get(
-      `https://${shopDomain}/admin/api/2023-10/themes/${mainTheme.id}/assets.json?asset[key]=config/settings_data.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": accessToken,
-        },
-      }
-    );
-
-    const settingsJSON = JSON.parse(settingsRes.data.asset.value);
-    const logoUrl = settingsJSON?.current?.settings?.logo?.split("?")[0]; // Optional cleanup
-    return logoUrl || null;
+    // 4. Resolve full URL
+    return `https://${shop}/cdn/shop/files/${logoPath}`;
   } catch (err) {
     console.error("❌ Failed to fetch logo from theme settings:", err.message);
     return null;
   }
 }
+
+
+
 
 // Webhook handler
 router.post(
