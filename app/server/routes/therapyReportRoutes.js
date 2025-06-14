@@ -13,12 +13,11 @@ if (typeof ReadableStream === "undefined") {
 }
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
 function generateTherapyReportHTML(data, isPremiumUser) {
-
   const innerHtml = `
-   ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
-${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
-
+    ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
+    ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -42,7 +41,6 @@ ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
             ? data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')
             : `<tr><td colspan="2">No milestone data available.</td></tr>`
           }
-          
         </table>
       </div>
     </div>
@@ -138,16 +136,19 @@ ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
             margin: 0 auto 30px;
           }
           .watermark {
-            position: absolute;
-            top: 50%;
+            content: "Confidential";
+            position: fixed;
+            top: 40%;
             left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0.1;
-            font-size: 50px;
+            font-size: 6rem;
+            font-weight: 700;
             color: #5e60ce;
-            font-weight: bold;
+            opacity: 0.05;
+            transform: translate(-50%, -50%) rotate(-30deg);
             pointer-events: none;
+            user-select: none;
             z-index: 0;
+            font-family: 'Playfair Display', serif;
           }
           .multi-column {
             display: grid;
@@ -168,21 +169,18 @@ ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
             background-color: #5e60ce;
             color: white;
           }
-        .footer {
-  
-  background-color: #f9f9f9;
-  color: #444;
-  border-top: 1px solid #ccc;
-  text-align: center;
- padding: 10px 20px;
-  margin-top: auto;
-}
- .footer p {
-    font-size: 11px;
-     line-height: 1.0;
-    
-  }
-
+          .footer {
+            background-color: #f9f9f9;
+            color: #444;
+            border-top: 1px solid #ccc;
+            text-align: center;
+            padding: 10px 20px;
+            margin-top: auto;
+          }
+          .footer p {
+            font-size: 11px;
+            line-height: 1.0;
+          }
           .footer a {
             color: #0073e6;
             text-decoration: none;
@@ -236,7 +234,6 @@ ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
           <div class="content-wrapper">
             ${innerHtml}
           </div>
-           
           <div class="footer">
             <p>Thanks for using our service!</p>
             <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
@@ -251,7 +248,6 @@ ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
     </html>
   `;
 }
-
 
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview = false } = req.body;
@@ -273,7 +269,6 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       ? data.milestonesData
       : [2, 3, 4, 4]
   };
-  
 
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) {
@@ -290,9 +285,14 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     });
 
     const page = await browser.newPage();
-    const isPremiumUser = user.plan === "premium";
-const html = generateTherapyReportHTML(cleanedData, isPremiumUser);
 
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const isPremiumUser = user.plan === "premium";
+    const html = generateTherapyReportHTML(cleanedData, isPremiumUser);
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     await page.pdf({
@@ -317,12 +317,6 @@ const html = generateTherapyReportHTML(cleanedData, isPremiumUser);
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      fs.unlinkSync(pdfPath);
-      return res.status(404).json({ error: "User not found" });
-    }
 
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
