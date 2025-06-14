@@ -159,18 +159,23 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // 🔧 Uncomment the line below to force premium for testing:
-    // user.isPremium = true;
+// 🔧 TEMP: Uncomment to force premium behavior for testing
+// user.isPremium = true;
 
-    const isPremium = user.isPremium;
-    const customLogoUrl = isPremium ? null : defaultLogoUrl;
-    const showChart = isPremium;
+const isPremium = user.isPremium;
 
-    const html = generateRecipeHTML({
-      ...data,
-      customLogoUrl,
-      showChart
-    });
+// 🚫 Non-premium users always see the default logo
+const customLogoUrl = isPremium ? null : defaultLogoUrl;
+
+// ✅ Only premium users get the chart
+const showChart = isPremium;
+
+// Ensure these values are enforced and not overridden from the client
+const html = generateRecipeHTML({
+  ...data,
+  customLogoUrl,
+  showChart,
+});
 
     const browser = await puppeteer.launch({
       headless: true,
