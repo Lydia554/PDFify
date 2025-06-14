@@ -163,15 +163,20 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
-        // Force premium for test
+// Force premium for test
 user.isPremium = true;
 
-    // Only premium users get custom logos and charts
-    if (!user.isPremium) {
-      data.customLogoUrl = null;  // Remove custom logo for non-premium
-      data.showChart = false;     // Hide chart for non-premium
-    }
+// Ensure premium features are enabled if user is premium
+if (user.isPremium) {
+  // Assign your premium logo URL or whatever custom logo you want to test with
+  data.customLogoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  // Enable chart display
+  data.showChart = true;
+} else {
+  data.customLogoUrl = null;
+  data.showChart = false;
+}
+
 
     // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
