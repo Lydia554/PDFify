@@ -35,88 +35,104 @@ function verifyShopifyWebhook(req, res, next) {
   next();
 }
 
-async function fetchStoreLogoUrl(shop, accessToken) {
-  try {
-    const apiBase = `https://${shop}/admin/api/2023-10`;
 
-    // 1. Get the main theme
-    const themesRes = await axios.get(`${apiBase}/themes.json`, {
-      headers: { "X-Shopify-Access-Token": accessToken },
-    });
 
-    const mainTheme = themesRes.data.themes.find((t) => t.role === "main");
-    if (!mainTheme) {
-      console.error("❌ Main theme not found");
-      throw new Error("Main theme not found");
-    }
-    console.log("🖼️ Main theme found:", mainTheme.name, `(ID: ${mainTheme.id})`);
+async function fetchStoreLogoUrlCombined(shop, accessToken) {
+  const apiBase = `https://${shop}/admin/api/2023-10`;
 
-    // 2. Get settings_data.json
-    const assetRes = await axios.get(`${apiBase}/themes/${mainTheme.id}/assets.json`, {
-      headers: { "X-Shopify-Access-Token": accessToken },
-      params: { "asset[key]": "config/settings_data.json" },
-    });
-
-    const settings = JSON.parse(assetRes.data.asset.value);
-    console.log("🖼️ Theme settings_data.json content:", JSON.stringify(settings, null, 2));
-
-    // 3. Try multiple possible keys for logo path
-    const logoKeyCandidates = [
-      "settings.logo",
-      "settings.logo_image",
-      "settings.logo_header",
-      "settings.header_logo",
-      "settings.brand.logo",
-    ];
-
-    let logoPath = null;
-    for (const key of logoKeyCandidates) {
-      const keys = key.split(".");
-      let value = settings;
-      for (const k of keys) {
-        value = value?.[k];
-        if (!value) break;
+  // 1. Try to get logo URL from metafield
+  async function getLogoFromMetafield() {
+    try {
+      const metafieldsRes = await axios.get(`${apiBase}/metafields.json`, {
+        headers: { "X-Shopify-Access-Token": accessToken },
+        params: { namespace: "custom", key: "store_logo_url" },
+      });
+      const metafields = metafieldsRes.data.metafields;
+      if (metafields.length > 0 && metafields[0].value) {
+        console.log("🖼️ Logo found in metafield:", metafields[0].value);
+        return metafields[0].value;
       }
-      console.log(`🔍 Checking key '${key}':`, value);
-      if (value) {
-        logoPath = value;
-        break;
-      }
-    }
-
-    if (!logoPath) {
-      console.warn("⚠️ Logo not found in theme settings.");
+      console.log("⚠️ No logo URL metafield found.");
+      return null;
+    } catch (err) {
+      console.error("❌ Error fetching metafield:", err.message);
       return null;
     }
-
-    // 4. Resolve full URL to the logo file
-    let logoUrl;
-    if (
-      logoPath.startsWith("http://") ||
-      logoPath.startsWith("https://") ||
-      logoPath.startsWith("//")
-    ) {
-      // It's already a full or protocol-relative URL
-      logoUrl = logoPath.startsWith("//") ? "https:" + logoPath : logoPath;
-    } else if (logoPath.startsWith("/")) {
-      // Relative URL — prefix with shop domain
-      logoUrl = `https://${shop}${logoPath}`;
-    } else {
-      // Assume it's a theme asset file name
-      // Theme assets can be accessed like this:
-      logoUrl = `https://${shop}/assets/${logoPath}`;
-    }
-
-    console.log("🖼️ Resolved logo URL:", logoUrl);
-
-    return logoUrl;
-  } catch (err) {
-    console.error("❌ Failed to fetch logo from theme settings:", err.message);
-    return null;
   }
+
+  // 2. Fallback: get logo from theme settings
+  async function getLogoFromThemeSettings() {
+    try {
+      // Get main theme
+      const themesRes = await axios.get(`${apiBase}/themes.json`, {
+        headers: { "X-Shopify-Access-Token": accessToken },
+      });
+      const mainTheme = themesRes.data.themes.find((t) => t.role === "main");
+      if (!mainTheme) throw new Error("Main theme not found");
+
+      // Get settings_data.json
+      const assetRes = await axios.get(`${apiBase}/themes/${mainTheme.id}/assets.json`, {
+        headers: { "X-Shopify-Access-Token": accessToken },
+        params: { "asset[key]": "config/settings_data.json" },
+      });
+      const settings = JSON.parse(assetRes.data.asset.value);
+
+      // Keys to check for logo path
+      const keysToCheck = [
+        "settings.logo",
+        "settings.logo_image",
+        "settings.logo_header",
+        "settings.header_logo",
+        "settings.brand.logo",
+      ];
+
+      let logoPath = null;
+      for (const key of keysToCheck) {
+        const parts = key.split(".");
+        let val = settings;
+        for (const p of parts) {
+          val = val?.[p];
+          if (!val) break;
+        }
+        if (val) {
+          logoPath = val;
+          break;
+        }
+      }
+      if (!logoPath) {
+        console.warn("⚠️ Logo not found in theme settings.");
+        return null;
+      }
+
+      // Resolve full URL
+      if (
+        logoPath.startsWith("http://") ||
+        logoPath.startsWith("https://") ||
+        logoPath.startsWith("//")
+      ) {
+        return logoPath.startsWith("//") ? "https:" + logoPath : logoPath;
+      } else if (logoPath.startsWith("/")) {
+        return `https://${shop}${logoPath}`;
+      } else {
+        return `https://${shop}/assets/${logoPath}`;
+      }
+    } catch (err) {
+      console.error("❌ Error fetching logo from theme settings:", err.message);
+      return null;
+    }
+  }
+
+  // Main logic
+  let logoUrl = await getLogoFromMetafield();
+  if (logoUrl) return logoUrl;
+
+  console.log("🔄 Falling back to theme settings...");
+  logoUrl = await getLogoFromThemeSettings();
+  if (logoUrl) return logoUrl;
+
+  console.warn("⚠️ No store logo found anywhere.");
+  return null;
 }
-
-
 
 
 
