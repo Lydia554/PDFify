@@ -107,8 +107,7 @@ function generateRecipeHTML(data) {
       </head>
       <body>
         <div class="container">
-          ${logoHtml}
-
+          <img src="${logoHtml}" alt="Logo" class="logo" />
           <h1>${data.recipeName}</h1>
 
           <div class="section">
@@ -169,14 +168,16 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
 // Force premium for test
 user.isPremium = true;
 
+// Ensure premium features are enabled if user is premium
 if (user.isPremium) {
-  data.customLogoUrl = null;  // No logo for premium
-  data.showChart = true;      // or false if you want no chart either
+  // Assign your premium logo URL or whatever custom logo you want to test with
+  data.customLogoUrl = data.customLogoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  // Enable chart display
+  data.showChart = true;
 } else {
-  data.customLogoUrl = defaultLogoUrl;  // Show default logo for non-premium
+  data.customLogoUrl = null;
   data.showChart = false;
 }
-
 
 
     // Launch Puppeteer and generate PDF
