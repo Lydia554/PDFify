@@ -8,7 +8,7 @@ const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
-const {resolveShopifyToken,enrichLineItemsWithImages} = require("../utils/shopifyHelpers");
+const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 
 const router = express.Router();
 require('dotenv').config();
@@ -130,7 +130,8 @@ function generateInvoiceHTML(invoiceData, isPremium) {
       </head>
       <body>
         <div class="container">
-          <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
+          <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" onerror="this.src='https://via.placeholder.com/150x50?text=No+Logo'" />
+
           <h1>Invoice</h1>
           <div class="invoice-header">
             <div><strong>From:</strong><br>${shopName}</div>
