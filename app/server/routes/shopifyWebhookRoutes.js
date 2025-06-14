@@ -8,8 +8,7 @@ const {
   enrichLineItemsWithImages,
 } = require("../utils/shopifyHelpers");
 
-
-
+// Middleware: Verify Shopify HMAC
 function verifyShopifyWebhook(req, res, next) {
   if (process.env.NODE_ENV !== "production") {
     return next();
@@ -20,7 +19,7 @@ function verifyShopifyWebhook(req, res, next) {
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK"); 
+    return res.status(200).send("OK");
   }
 
   const generatedHmac = crypto
@@ -36,6 +35,43 @@ function verifyShopifyWebhook(req, res, next) {
   next();
 }
 
+// Fetch store logo from current theme settings
+async function fetchStoreLogoUrl(shopDomain, accessToken) {
+  try {
+    const themesRes = await axios.get(
+      `https://${shopDomain}/admin/api/2023-10/themes.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      }
+    );
+
+    const mainTheme = themesRes.data.themes.find((t) => t.role === "main");
+    if (!mainTheme) {
+      console.warn("⚠️ No main theme found.");
+      return null;
+    }
+
+    const settingsRes = await axios.get(
+      `https://${shopDomain}/admin/api/2023-10/themes/${mainTheme.id}/assets.json?asset[key]=config/settings_data.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      }
+    );
+
+    const settingsJSON = JSON.parse(settingsRes.data.asset.value);
+    const logoUrl = settingsJSON?.current?.settings?.logo?.split("?")[0]; // Optional cleanup
+    return logoUrl || null;
+  } catch (err) {
+    console.error("❌ Failed to fetch logo from theme settings:", err.message);
+    return null;
+  }
+}
+
+// Webhook handler
 router.post(
   "/order-created",
   express.raw({
@@ -44,12 +80,9 @@ router.post(
       req.rawBody = buf;
     },
   }),
-  (req, res, next) => {
-    next();
-  },
+  (req, res, next) => next(),
   verifyShopifyWebhook,
   async (req, res) => {
-
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
@@ -60,30 +93,30 @@ router.post(
     }
 
     const order = parsedPayload.order || parsedPayload;
-
-
- 
     const shopDomain = req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain;
+
     if (!shopDomain) {
       console.error("❌ Missing shop domain");
       return res.status(200).send("OK");
     }
-   
 
-  
     res.status(200).send("Webhook received");
 
     try {
       const connectedShopDomain = shopDomain.trim().toLowerCase();
-
       const user = await User.findOne({ connectedShopDomain });
+
       if (!user) {
         console.error(`❌ No user found for connectedShopDomain: ${connectedShopDomain}`);
         return;
       }
-  
 
-     await processOrderAsync({ order, user, accessToken: user.shopifyAccessToken, shopDomain: connectedShopDomain });
+      await processOrderAsync({
+        order,
+        user,
+        accessToken: user.shopifyAccessToken,
+        shopDomain: connectedShopDomain,
+      });
 
     } catch (err) {
       console.error("❌ Error in webhook async handler:", err);
@@ -91,14 +124,14 @@ router.post(
   }
 );
 
-
-
+// Core async processing logic
 async function processOrderAsync({ order, user, accessToken, shopDomain }) {
   try {
+    order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
-   order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
-
-
+    // 🔍 Fetch the logo from theme settings
+    const logoUrl = await fetchStoreLogoUrl(shopDomain, accessToken);
+    console.log("🖼️ Logo URL:", logoUrl);
 
     const invoiceResponse = await axios.post(
       "https://pdf-api.portfolio.lidija-jokic.com/api/shopify/invoice",
@@ -107,6 +140,7 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
         order,
         shopDomain,
         shopifyAccessToken: accessToken,
+        logoUrl, // 🚀 Include logo URL for PDF rendering
       },
       {
         headers: {
@@ -134,19 +168,14 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
 
     console.log(`✉️ Email sent to ${order.email}`);
 
-  
     user.usageCount = (user.usageCount || 0) + 1;
     await user.save();
     console.log("💾 User usage count incremented and saved");
-
     console.log("✅ Finished processing order:", order.id);
+
   } catch (err) {
     console.error("❌ Error during async order processing:", err);
   }
 }
-
-
-
-
 
 module.exports = router;
