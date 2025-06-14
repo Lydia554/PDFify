@@ -8,7 +8,7 @@ const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
-const {resolveShopifyToken,enrichLineItemsWithImages} = require("../utils/shopifyHelpers");
+const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 
 const router = express.Router();
 require('dotenv').config();
