@@ -21,7 +21,7 @@ const log = (message, data = null) => {
 };
 
 function generateRecipeHTML(data) {
-  const breakdownChart = data.ingredientBreakdown
+  const breakdownChart = (data.ingredientBreakdown && data.showChart)
     ? `<div class="chart-container">
         <h2>Ingredient Breakdown</h2>
         <img src="https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
@@ -142,61 +142,57 @@ function generateRecipeHTML(data) {
             max-width: 100px;
           }
 
+          /* MOBILE STYLES */
+          @media (max-width: 600px) {
+            .container {
+              padding: 20px;
+              margin: 20px;
+            }
 
-          
-  /* MOBILE STYLES */
-  @media (max-width: 600px) {
-    .container {
-      padding: 20px;
-      margin: 20px;
-    }
+            h1 {
+              font-size: 1.8em;
+              letter-spacing: 1px;
+            }
 
-    h1 {
-      font-size: 1.8em;
-      letter-spacing: 1px;
-    }
+            h2 {
+              font-size: 1.4em;
+            }
 
-    h2 {
-      font-size: 1.4em;
-    }
+            p {
+              font-size: 1em;
+            }
 
-    p {
-      font-size: 1em;
-    }
+            .label {
+              font-size: 1em;
+            }
 
-    .label {
-      font-size: 1em;
-    }
+            .ingredients li,
+            .instructions li {
+              font-size: 1em;
+            }
 
-    .ingredients li,
-    .instructions li {
-      font-size: 1em;
-    }
+            .chart-container h2 {
+              font-size: 16px;
+            }
 
-    .chart-container h2 {
-      font-size: 16px;
-    }
+            .footer {
+              font-size: 13px;
+            }
 
-    .footer {
-      font-size: 13px;
-    }
+            .terms {
+              font-size: 11px;
+            }
 
-    .terms {
-      font-size: 11px;
-    }
-
-    .logo {
-      max-width: 80px;
-      margin-bottom: 20px;
-    }
-  }
+            .logo {
+              max-width: 80px;
+              margin-bottom: 20px;
+            }
+          }
         </style>
       </head>
       <body>
         <div class="container">
-    
-    
-          <img src="${data.customLogoUrl || logoUrl}" alt="Recipe Logo" class="logo">
+          <img src="${data.customLogoUrl || logoUrl}" alt="Logo" class="logo" />
           <h1>${data.recipeName}</h1>
 
           <div class="section">
@@ -224,9 +220,9 @@ function generateRecipeHTML(data) {
           <div class="footer">
             <p>Enjoy your recipe! For questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
             <p>&copy; 2025 Food Trek Recipes — All rights reserved.</p> 
-             <p>
-                Generated using <strong>PDFify</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
-              </p>
+            <p>
+              Generated using <strong>PDFify</strong>. Visit <a href="https://pdf-api.portfolio.lidija-jokic.com/">our site</a> for more.
+            </p>
             <p class="terms">
               Terms & Conditions: This recipe is for personal use only. Reproduction or distribution without permission is prohibited.
             </p>
@@ -255,21 +251,23 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   const pdfPath = path.join(pdfDir, `recipe_${Date.now()}.pdf`);
 
   try {
-    
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
+    // Force premium for testing
     user.isPremium = true;
 
-   
-    if (!user.isPremium) {
-      data.customLogoUrl = null;
+    // Set showChart and customLogoUrl for premium user
+    if (user.isPremium) {
       data.showChart = true;
+      data.customLogoUrl = logoUrl;
+    } else {
+      data.showChart = false;
+      data.customLogoUrl = null;
     }
 
-    
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -280,13 +278,11 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-   
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
     log(`Generated PDF has ${pageCount} pages.`);
 
-   
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
@@ -298,7 +294,6 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       log("User usage count updated:", user.usageCount);
     }
 
-    
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
