@@ -12,10 +12,6 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-// Only set logoUrl if data.customLogoUrl is truthy, else don't render <img>
-const logoHtml = data.customLogoUrl
-  ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
-  : '';
 
 
 const log = (message, data = null) => {
@@ -26,6 +22,12 @@ const log = (message, data = null) => {
 
 function generateRecipeHTML(data) {
   // Show ingredient breakdown chart only if allowed and data is present
+
+  // Only set logoUrl if data.customLogoUrl is truthy, else don't render <img>
+const logoHtml = data.customLogoUrl
+  ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
+  : '';
+
 
   const breakdownChart = data.showChart && data.ingredientBreakdown
     ? `<div class="chart-container">
@@ -107,7 +109,8 @@ function generateRecipeHTML(data) {
       </head>
       <body>
         <div class="container">
-          <img src="${logoHtml}" alt="Logo" class="logo" />
+      ${logoHtml}
+
           <h1>${data.recipeName}</h1>
 
           <div class="section">
