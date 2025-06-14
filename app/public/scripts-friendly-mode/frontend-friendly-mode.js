@@ -268,11 +268,12 @@ generatePdfBtn.addEventListener('click', async () => {
       credentials: "include",
     });
 
-    if (res.status === 401 || res.status === 403) {
-    localStorage.removeItem("apiKey");
-    window.location.href = "/login.html";
-    return;
-  }
+  if (response.status === 401 || response.status === 403) {
+  localStorage.removeItem("apiKey");
+  window.location.href = "/login.html";
+  return;
+}
+
 
     if (!response.ok) {
       const errorData = await response.json();
