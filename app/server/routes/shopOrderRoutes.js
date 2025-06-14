@@ -4,7 +4,7 @@ const path = require('path');
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
-const User = require("../models/User"); 
+const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const dualAuth = require('../middleware/dualAuth');
 
@@ -12,14 +12,8 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-const log = (message, data = null) => {
-  if (process.env.NODE_ENV !== "production") {
-    console.log(message, data);
-  }
-};
-
 function generateShopOrderHTML(data) {
-  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  const logoUrl = data.logoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
   return `
     <html>
@@ -82,80 +76,49 @@ function generateShopOrderHTML(data) {
             font-weight: bold;
             color: #5e60ce;
           }
-      .footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 20px;
-    font-size: 12px;
-    background-color: #f9f9f9;
-    color: #444;
-    border-top: 1px solid #ccc;
-    text-align: center;
-    line-height: 1.6;
-  }
-  .footer a {
-    color: #0073e6;
-    text-decoration: none;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
-
-/* MOBILE STYLES */
-  @media (max-width: 600px) {
-    body {
-      padding: 20px;
-    }
-
-    h1 {
-      font-size: 1.5em;
-    }
-
-    h2 {
-      font-size: 1.2em;
-    }
-
-    .section {
-      padding: 15px;
-    }
-
-    .products-list {
-      padding: 8px;
-    }
-
-    .total {
-      font-size: 1em;
-    }
-
-    img.logo {
-      width: 100px;
-    }
-
           .footer {
-      font-size: 11px;
-      padding: 15px 10px;
-      line-height: 1.4;
-    }
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            font-size: 12px;
+            background-color: #f9f9f9;
+            color: #444;
+            border-top: 1px solid #ccc;
+            text-align: center;
+            line-height: 1.6;
+          }
+          .footer a {
+            color: #0073e6;
+            text-decoration: none;
+          }
+          .footer a:hover {
+            text-decoration: underline;
+          }
 
-    .footer p {
-      margin: 6px 0;
-    }
-
-    .footer a {
-      word-break: break-word;
-    }
-  }
-
-
-
+          @media (max-width: 600px) {
+            body { padding: 20px; }
+            h1 { font-size: 1.5em; }
+            h2 { font-size: 1.2em; }
+            .section { padding: 15px; }
+            .products-list { padding: 8px; }
+            .total { font-size: 1em; }
+            img.logo { width: 100px; }
+            .footer {
+              font-size: 11px;
+              padding: 15px 10px;
+              line-height: 1.4;
+            }
+            .footer p { margin: 6px 0; }
+            .footer a { word-break: break-word; }
+          }
         </style>
       </head>
       <body>
         <img src="${logoUrl}" alt="Company Logo" class="logo" />
         <h1>Shop Order: ${data.shopName}</h1>
-        
+
         <div class="section">
           <p><span class="label">Customer:</span> ${data.customer.name}</p>
           <p><span class="label">Email:</span> ${data.customer.email}</p>
@@ -176,19 +139,16 @@ function generateShopOrderHTML(data) {
           <p class="total"><span class="label">Total:</span> ${data.total}</p>
         </div>
 
-         <div class="footer">
-  <p>Thanks for using our service!</p>
-  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
-  <p>
-    Generated using <strong>PDFify</strong>. Visit 
-    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-  </p>
-</div>
+        <div class="footer">
+          <p>Thanks for using our service!</p>
+          <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+          <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+        </div>
       </body>
     </html>
   `;
 }
+
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
   if (!data || !data.shopName) {
@@ -201,7 +161,10 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
   const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
 
   try {
-    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
     const page = await browser.newPage();
     const html = generateShopOrderHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -217,7 +180,6 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       fs.unlinkSync(pdfPath);
       return res.status(404).json({ error: "User not found" });
     }
-    
 
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
@@ -228,8 +190,9 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       await user.save();
     }
 
-    res.download(pdfPath, (err) => fs.unlinkSync(pdfPath));
+    res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
+    console.error("PDF generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
