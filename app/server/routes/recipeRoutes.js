@@ -135,7 +135,7 @@ function generateRecipeHTML(data) {
 `;
 }
 
-router.post("/generate-recipe-pdf", authenticate, dualAuth, async (req, res) => {
+router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
     if (!data || typeof data !== "object") {
