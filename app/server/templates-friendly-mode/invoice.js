@@ -23,7 +23,7 @@ function generateInvoiceHtml(data) {
       }
 
       .logo {
-        max-width: 180px;
+        max-width: 70px;
         height: auto;
       }
 
@@ -109,7 +109,7 @@ function generateInvoiceHtml(data) {
         }
 
         .logo {
-          max-width: 70px;
+          max-width: 170px;
           margin-bottom: 10px;
         }
 
