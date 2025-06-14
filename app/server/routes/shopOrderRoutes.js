@@ -13,8 +13,6 @@ if (typeof ReadableStream === "undefined") {
 }
 
 function generateShopOrderHTML(data) {
-  const logoUrl = data.logoUrl || "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-
   return `
     <html>
       <head>
@@ -26,13 +24,6 @@ function generateShopOrderHTML(data) {
             background-color: #f9f9f9;
             margin: 0;
             box-sizing: border-box;
-          }
-          img.logo {
-            width: 150px;
-            margin-bottom: 20px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
           }
           h1 {
             text-align: center;
@@ -104,7 +95,6 @@ function generateShopOrderHTML(data) {
             .section { padding: 15px; }
             .products-list { padding: 8px; }
             .total { font-size: 1em; }
-            img.logo { width: 100px; }
             .footer {
               font-size: 11px;
               padding: 15px 10px;
@@ -116,7 +106,6 @@ function generateShopOrderHTML(data) {
         </style>
       </head>
       <body>
-        <img src="${logoUrl}" alt="Company Logo" class="logo" />
         <h1>Shop Order: ${data.shopName}</h1>
 
         <div class="section">
