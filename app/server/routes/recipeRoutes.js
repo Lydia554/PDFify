@@ -63,7 +63,7 @@ function generateRecipeHTML(data) {
 
   const footerNote = data.showWatermark
     ? `<div class="footer watermark">
-        <p>Watermarked by <strong>Food Trek</strong>. Upgrade to premium to remove this.</p>
+        
       </div>`
     : '';
 
