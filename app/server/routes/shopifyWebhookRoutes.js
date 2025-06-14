@@ -35,7 +35,6 @@ function verifyShopifyWebhook(req, res, next) {
   next();
 }
 
-
 async function fetchStoreLogoUrl(shop, accessToken) {
   try {
     const apiBase = `https://${shop}/admin/api/2023-10`;
@@ -90,10 +89,24 @@ async function fetchStoreLogoUrl(shop, accessToken) {
       return null;
     }
 
-    console.log("🖼️ Logo path found:", logoPath);
-
     // 4. Resolve full URL to the logo file
-    const logoUrl = `https://${shop}/cdn/shop/files/${logoPath}`;
+    let logoUrl;
+    if (
+      logoPath.startsWith("http://") ||
+      logoPath.startsWith("https://") ||
+      logoPath.startsWith("//")
+    ) {
+      // It's already a full or protocol-relative URL
+      logoUrl = logoPath.startsWith("//") ? "https:" + logoPath : logoPath;
+    } else if (logoPath.startsWith("/")) {
+      // Relative URL — prefix with shop domain
+      logoUrl = `https://${shop}${logoPath}`;
+    } else {
+      // Assume it's a theme asset file name
+      // Theme assets can be accessed like this:
+      logoUrl = `https://${shop}/assets/${logoPath}`;
+    }
+
     console.log("🖼️ Resolved logo URL:", logoUrl);
 
     return logoUrl;
