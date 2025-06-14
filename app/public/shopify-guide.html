@@ -2,118 +2,99 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDFify – Custom PDF API for Developers & Shopify</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Shopify Guide - PDFify</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans">
+<body class="bg-gray-50 text-gray-800">
 
-  <!-- Hero Section -->
-  <section class="bg-white py-16 text-center shadow">
-    <div class="max-w-3xl mx-auto">
-      <h1 class="text-4xl font-bold mb-4">Generate Smart, Branded PDFs from HTML</h1>
-      <p class="text-lg mb-4 text-gray-600">PDFify lets you generate professional PDFs—like invoices or receipts—via simple API calls. No app install needed. Works perfectly with Shopify themes & backends.</p>
-      <a href="#get-started" class="bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition">Get Started</a>
+  <!-- Header -->
+  <header class="bg-white shadow fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-2xl font-bold text-purple-700">PDFify</h1>
+      <nav class="space-x-4">
+        <a href="/" class="text-gray-600 hover:text-purple-600">Home</a>
+        <a href="#" id="userDashboardLink" class="text-gray-600 hover:text-purple-600">Dashboard</a>
+        <a href="/api-guide" class="text-gray-600 hover:text-purple-600">API Guide</a>
+        <a href="/shopify-guide" class="text-purple-700 font-semibold">Shopify Guide</a>
+        <a href="/pdf-generator-demo" class="text-gray-600 hover:text-purple-600">📄 PDF Generator</a>
+      </nav>
     </div>
-  </section>
+  </header>
 
-  <!-- Benefits Section -->
-  <section class="py-16 bg-gray-100">
-    <div class="max-w-4xl mx-auto px-4">
-      <h2 class="text-2xl font-bold mb-6 text-center">Why PDFify?</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-lg">
-        <div>📦 No app install – works directly with webhooks and themes</div>
-        <div>🔑 Secure API token system for access control</div>
-        <div>🎯 Designed for Shopify store devs & freelancers</div>
-        <div>🧾 HTML-to-PDF conversion with smart formatting</div>
-        <div>🖼️ Auto-fetch your store logo on premium plans</div>
-        <div>🧠 Logic-based templates: conditionals, loops, formatting</div>
-      </div>
-    </div>
-  </section>
+  <!-- Main Content -->
+  <main class="pt-32 max-w-3xl mx-auto px-4 py-8 bg-white rounded-lg shadow-md">
+    <h1 class="text-3xl font-bold text-blue-700 text-center mb-8">🧾 How to Connect Your Shopify Store to PDFify</h1>
 
-  <!-- Built for Shopify -->
-  <section class="py-16">
-    <div class="max-w-4xl mx-auto px-4 text-center">
-      <h2 class="text-2xl font-bold mb-4">Built for Shopify Developers</h2>
-      <p class="text-lg mb-6">Generate custom-branded order PDFs via Shopify webhooks—no need for public apps. Premium mode supports automatic logo detection and advanced invoice templates.</p>
-      <ul class="list-disc list-inside text-left mx-auto max-w-2xl text-gray-700">
-        <li>Plug into <code>orders/create</code> webhooks</li>
-        <li>Auto-brand invoices using store metadata</li>
-        <li>PDFs optimized for email, print, and download</li>
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold text-blue-600 mb-2">✅ Step 1: Create a Custom App</h2>
+      <ol class="list-decimal list-inside space-y-1">
+        <li>Go to your Shopify Admin → <strong>Apps</strong></li>
+        <li>Click <strong>App and sales channel settings</strong></li>
+        <li>Click <strong>Develop apps for your store</strong></li>
+        <li>Click <strong>Create an app</strong></li>
+        <li>Name it something like <code class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">PDFify Connector</code></li>
+      </ol>
+    </section>
+
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold text-blue-600 mb-2">✅ Step 2: Set Required Permissions</h2>
+      <ul class="list-disc list-inside space-y-1">
+        <li>Go to the <strong>Configuration</strong> tab</li>
+        <li>Under <strong>Admin API</strong>, click <strong>Configure Admin API scopes</strong></li>
+        <li>Enable the following permissions:
+          <ul class="ml-6 list-disc space-y-1">
+            <li><code class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">read_orders</code></li>
+            <li><code class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">write_orders</code> <span class="text-sm text-gray-500">(optional – allows notes to be edited)</span></li>
+            <li><code class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">read_products</code> <span class="text-sm text-gray-500">(needed to fetch product images)</span></li>
+          </ul>
+        </li>
+        <li>Save changes</li>
+      </ul>
+    </section>
+
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold text-blue-600 mb-2">✅ Step 3: Install the App</h2>
+      <ul class="list-disc list-inside space-y-1">
+        <li>Return to the <strong>Overview</strong> tab</li>
+        <li>Click <strong>Install app</strong></li>
+        <li>Confirm installation</li>
+      </ul>
+    </section>
+
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold text-blue-600 mb-2">✅ Step 4: Copy Your Access Token</h2>
+      <ul class="list-disc list-inside space-y-1">
+        <li>Go to the <strong>API credentials</strong> tab</li>
+        <li>Click <strong>Reveal token once</strong></li>
+        <li>Copy the Admin API Access Token (starts with <code class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">shpat_...</code>)</li>
+      </ul>
+    </section>
+
+    <section class="mb-6">
+      <h2 class="text-xl font-semibold text-blue-600 mb-2">✅ Step 5: Paste the Token into PDFify</h2>
+      <ul class="list-disc list-inside space-y-1">
+        <li>In your PDFify dashboard or onboarding screen:</li>
+        <li>Paste the <code class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">shpat_...</code> token</li>
+        <li>Enter your store domain: <code class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">your-shop.myshopify.com</code></li>
+      </ul>
+    </section>
+
+    <div class="bg-green-50 border-l-4 border-green-500 text-green-800 p-4 rounded">
+      <p class="font-medium mb-1">That’s it! 🎉</p>
+      <p>Now every time you get a new order, PDFify will:</p>
+      <ul class="list-disc list-inside ml-4 mt-2">
+        <li>Auto-generate a beautiful invoice</li>
+        <li>Email it to you instantly</li>
+        <li><em>(Optional)</em> Leave a link in the order notes</li>
       </ul>
     </div>
-  </section>
-
-  <!-- How It Works -->
-  <section class="py-16 bg-gray-100">
-    <div class="max-w-4xl mx-auto px-4">
-      <h2 class="text-2xl font-bold mb-6 text-center">How It Works</h2>
-      <ol class="space-y-4 text-lg text-gray-700 list-decimal list-inside">
-        <li>Register to get your API token.</li>
-        <li>Send HTML/JSON to our API endpoint.</li>
-        <li>Receive a downloadable, branded PDF response.</li>
-      </ol>
-    </div>
-  </section>
-
-  <!-- PDF Previews -->
-  <section class="py-16">
-    <div class="max-w-4xl mx-auto px-4 text-center">
-      <h2 class="text-2xl font-bold mb-4">Preview Our Templates</h2>
-      <p class="text-lg mb-6">Two tiers of beautifully formatted invoices. Built to impress customers and look sharp in every email.</p>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <h3 class="text-lg font-semibold mb-2">Basic Invoice</h3>
-          <a href="/demo/Invoice-Basic.pdf" target="_blank">
-            <img src="/demo/invoice-thumbnail-basic.jpg" alt="Basic Invoice Preview" class="mx-auto rounded shadow">
-          </a>
-          <a href="/demo/Invoice-Basic.pdf" class="mt-2 inline-block text-blue-600 hover:underline text-sm">Download Basic PDF</a>
-        </div>
-        <div>
-          <h3 class="text-lg font-semibold mb-2">Premium Invoice</h3>
-          <a href="/demo/Invoice-Premium.pdf" target="_blank">
-            <img src="/demo/invoice-thumbnail-premium-1.jpg" alt="Premium Invoice Preview" class="mx-auto rounded shadow mb-2">
-          </a>
-          <a href="/demo/Invoice-Premium.pdf" class="mt-2 inline-block text-blue-600 hover:underline text-sm">Download Premium PDF</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Pricing -->
-  <section class="py-16 bg-gray-100">
-    <div class="max-w-4xl mx-auto px-4 text-center">
-      <h2 class="text-2xl font-bold mb-6">Simple Pricing</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="border p-6 rounded shadow">
-          <h3 class="text-xl font-bold mb-2">Free</h3>
-          <p class="mb-4">Up to 30 PDFs/month. Basic template only.</p>
-          <p class="text-2xl font-bold">€0</p>
-        </div>
-        <div class="border p-6 rounded shadow bg-blue-50">
-          <h3 class="text-xl font-bold mb-2">Premium</h3>
-          <p class="mb-4">1,000 PDFs/month. Includes branding, logic, logos & support.</p>
-          <p class="text-2xl font-bold">€4.99/mo</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section id="get-started" class="py-16 bg-blue-600 text-white text-center">
-    <h2 class="text-3xl font-bold mb-4">Start Generating PDFs in Minutes</h2>
-    <p class="mb-6">Sign up to receive your API token instantly and start integrating today.</p>
-    <div class="flex justify-center space-x-4">
-      <a href="/user-creation.html" class="bg-white text-blue-600 px-6 py-3 rounded font-bold hover:bg-gray-100 transition">Sign Up</a>
-      <a href="/login.html" class="bg-white text-blue-600 px-6 py-3 rounded font-bold hover:bg-gray-100 transition">Log In</a>
-    </div>
-  </section>
+  </main>
 
   <!-- Footer -->
-  <footer class="bg-white border-t mt-12">
+   <footer class="bg-white border-t mt-12">
     <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-      &copy; 2025 PDFify. Built for developers, optimized for Shopify.
+      &copy; 2025 PDFify. Built for creators and developers.
     </div>
   </footer>
 
