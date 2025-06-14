@@ -40,8 +40,25 @@ function generateRecipeHTML(data) {
       </div>`
     : '';
 
-  const watermarkOverlay = data.showWatermark
-    ? `<div class="background-watermark">Food Trek</div>`
+  const watermarkCSS = data.showWatermark
+    ? `
+      /* Watermark */
+      body::before {
+        content: "Food Trek";
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        font-size: 6rem;
+        font-weight: 700;
+        color: #eee;
+        opacity: 0.05;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        pointer-events: none;
+        user-select: none;
+        z-index: 0;
+        font-family: 'Playfair Display', serif;
+      }
+    `
     : '';
 
   const footerNote = data.showWatermark
@@ -55,6 +72,8 @@ function generateRecipeHTML(data) {
       <head>
         <style>
           @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');
+
           body {
             font-family: 'Open Sans', sans-serif;
             color: #333;
@@ -62,18 +81,9 @@ function generateRecipeHTML(data) {
             margin: 0; padding: 0;
             position: relative;
           }
-          .background-watermark {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            font-size: 120px;
-            color: rgba(0, 0, 0, 0.05);
-            z-index: 0;
-            pointer-events: none;
-            user-select: none;
-            white-space: nowrap;
-          }
+
+          ${watermarkCSS}
+
           .container {
             max-width: 800px;
             margin: 50px auto;
@@ -84,6 +94,7 @@ function generateRecipeHTML(data) {
             position: relative;
             z-index: 1;
           }
+
           h1 { text-align: center; color: #5e60ce; font-size: 2.5em; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
           h2 {
             font-size: 1.8em;
@@ -128,7 +139,6 @@ function generateRecipeHTML(data) {
         </style>
       </head>
       <body>
-        ${watermarkOverlay}
         <div class="container">
           ${logoHtml}
 
