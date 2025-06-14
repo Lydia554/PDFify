@@ -311,9 +311,10 @@
         <span class="absolute top-2 left-2 bg-gray-300 text-gray-700 text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Basic</span>
         <span class="absolute top-2 right-2 bg-pink-700 text-white text-xs font-semibold px-2 py-0.5 rounded-full z-10 select-none">Developer Only</span>
 <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
-  <img src="/demo/Friendly-Recipe-Basic-1.jpg" class="rounded zoomable toggle-image active" alt="Recipe" />
-  <img src="/demo/Friendly-Recipe-Basic-2.jpg" class="rounded zoomable toggle-image" alt="Recipe" />
+  <img src="/demo/Friendly-Recipe-Basic-1.jpg" class="rounded zoomable" alt="Recipe" />
+  <img src="/demo/Friendly-Recipe-Basic-2.jpg" class="rounded zoomable hidden" alt="Recipe" />
 </div>
+
 
           
           <a href="/demo/Friendly-Recipe-Basic.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 hover:underline font-semibold text-sm">
@@ -917,10 +918,20 @@ devModeBtn.addEventListener('click', () => {
     friendlySection.classList.add('hidden');
 
   
-  function toggleImage(container) {
-    const images = container.querySelectorAll('img');
-    images.forEach(img => img.classList.toggle('hidden'));
+function toggleImage(container) {
+  const images = container.querySelectorAll('img');
+  if (images.length < 2) return; // safeguard
+
+  if (images[0].classList.contains('hidden')) {
+    // If first is hidden, show first, hide second
+    images[0].classList.remove('hidden');
+    images[1].classList.add('hidden');
+  } else {
+    // If first visible, hide first, show second
+    images[0].classList.add('hidden');
+    images[1].classList.remove('hidden');
   }
+}
 
 
   </script>
