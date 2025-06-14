@@ -259,6 +259,8 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    user.isPremium = true;
+
    
     if (!user.isPremium) {
       data.customLogoUrl = null;

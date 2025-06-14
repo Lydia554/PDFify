@@ -914,14 +914,14 @@ devModeBtn.addEventListener('click', () => {
   
 function toggleImage(container) {
   const images = container.querySelectorAll('img');
-  if (images.length < 2) return; // safeguard
+  if (images.length < 2) return; 
 
   if (images[0].classList.contains('hidden')) {
-    // If first is hidden, show first, hide second
+
     images[0].classList.remove('hidden');
     images[1].classList.add('hidden');
   } else {
-    // If first visible, hide first, show second
+   
     images[0].classList.add('hidden');
     images[1].classList.remove('hidden');
   }
@@ -938,13 +938,12 @@ function toggleImage(container) {
 
   <style>
 
-/* Reset and base */
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       max-width: 720px;
       margin: 0 auto;
       line-height: 1.6;
-      padding: 6rem 1rem 2rem; /* top padding to offset fixed header */
+      padding: 6rem 1rem 2rem; 
       background-color: #f9f9f9;
       color: #333;
     }
