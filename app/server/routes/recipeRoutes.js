@@ -21,9 +21,7 @@ const log = (message, data = null) => {
 };
 
 function generateRecipeHTML(data) {
-  // Show ingredient breakdown chart only if allowed and data is present
 
-  // Only set logoHtml if data.customLogoUrl is truthy, else don't render <img>
   const logoHtml = data.customLogoUrl
     ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
     : '';
@@ -77,7 +75,7 @@ function generateRecipeHTML(data) {
           .chart-container h2 { font-size: 18px; color: #2a3d66; margin-bottom: 10px; }
           .footer {
             text-align: center;
-            margin-top: 40px;
+            margin-top: 100px;
             font-size: 14px;
             color: #777;
             border-top: 1px dashed #ccc;
@@ -157,7 +155,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   const pdfPath = path.join(pdfDir, `recipe_${Date.now()}.pdf`);
 
   try {
-    // Find user from DB
+   
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -167,16 +165,16 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     user.isPremium = true;
 
     if (user.isPremium) {
-      // Premium: no logo
+    
       data.customLogoUrl = null;
       data.showChart = true;
     } else {
-      // Basic: show default logo
+
       data.customLogoUrl = data.customLogoUrl || defaultLogoUrl;
       data.showChart = false;
     }
 
-    // Launch Puppeteer and generate PDF
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -188,13 +186,13 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-    // Read PDF buffer to get page count
+   
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
     log(`Generated PDF has ${pageCount} pages.`);
 
-    // Check user usage limits if not preview
+  
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
@@ -206,7 +204,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       log("User usage count updated:", user.usageCount);
     }
 
-    // Send PDF file and delete after sending
+  
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
