@@ -208,112 +208,106 @@ return `
       }
     </style>
   </head>
-  <body>
-    <div class="container">
-      <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
+ <body>
+      <div class="container">
+        <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
+        <h1>Invoice for ${data.customerName}</h1>
 
-      <h1>Invoice for ${data.customerName}</h1>
+        <div class="invoice-header">
+          <div class="left">
+            <p><strong>Order ID:</strong> ${data.orderId}</p>
+            <p><strong>Date:</strong> ${data.date}</p>
+          </div>
+          <div class="right">
+            <p><strong>Customer:</strong><br>${data.customerName}</p>
+            <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
+          </div>
+        </div>
 
-      <div class="invoice-header">
-        <div class="left">
-          <p><strong>Order ID:</strong> ${data.orderId}</p>
-          <p><strong>Date:</strong> ${data.date}</p>
+        ${data.showWatermark ? `
+        <div style="
+          position: fixed;
+          top: 40%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-30deg);
+          color: rgba(200, 0, 0, 0.15);
+          font-size: 48px;
+          font-weight: 900;
+          z-index: 9999;
+          pointer-events: none;
+          white-space: nowrap;
+        ">
+          PREVIEW ONLY – NOT FOR PRODUCTION USE
+        </div>` : ''}
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Quantity</th>
+              <th>Price</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${
+              Array.isArray(items)
+                ? items.map(item => `
+                    <tr>
+                      <td>${item.name || ''}</td>
+                      <td>${item.quantity || ''}</td>
+                      <td>${item.price || ''}</td>
+                      <td>${item.total || ''}</td>
+                    </tr>
+                  `).join('')
+                : `<tr><td colspan="4">No items available</td></tr>`
+            }
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3">Subtotal</td>
+              <td>${data.subtotal}</td>
+            </tr>
+            <tr>
+              <td colspan="3">Tax (21%)</td>
+              <td>${data.tax}</td>
+            </tr>
+            <tr>
+              <td colspan="3">Total</td>
+              <td>${data.total}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <div class="total">
+          <p>Total Amount Due: ${data.total}</p>
         </div>
-        <div class="right">
-          <p><strong>Customer:</strong><br>${data.customerName}</p>
-          <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
-        </div>
+
+        ${data.showChart ? `
+          <div class="chart-container">
+            <h2>Breakdown</h2>
+            <img src="https://quickchart.io/chart?c={
+              type:'pie',
+              data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
+              ]}
+            }" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
+          </div>
+        ` : ''}
       </div>
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Quantity</th>
-            <th>Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-${data.showWatermark ? `
-  <div style="
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    color: rgba(200, 0, 0, 0.15);
-    font-size: 48px;
-    font-weight: 900;
-    z-index: 9999;
-    pointer-events: none;
-    white-space: nowrap;
-  ">
-    PREVIEW ONLY – NOT FOR PRODUCTION USE
-  </div>
-` : ''}
-
-
-          ${
-            Array.isArray(items)
-              ? items.map(item => `
-                  <tr>
-                    <td>${item.name || ''}</td>
-                    <td>${item.quantity || ''}</td>
-                    <td>${item.price || ''}</td>
-                    <td>${item.total || ''}</td>
-                  </tr>
-                `).join('')
-              : `<tr><td colspan="4">No items available</td></tr>`
-          }
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3">Subtotal</td>
-            <td>${data.subtotal}</td>
-          </tr>
-          <tr>
-            <td colspan="3">Tax (21%)</td>
-            <td>${data.tax}</td>
-          </tr>
-          <tr>
-            <td colspan="3">Total</td>
-            <td>${data.total}</td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div class="total">
-        <p>Total Amount Due: ${data.total}</p>
+      <div class="footer">
+        <p>Thanks for using our service!</p>
+        <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+        <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+        <p>
+          Generated using <strong>PDFify</strong>. Visit 
+          <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+        </p>
       </div>
-
-      ${data.showChart ? `
-        <div class="chart-container">
-          <h2>Breakdown</h2>
-          <img src="https://quickchart.io/chart?c={
-            type:'pie',
-            data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
-            ]}
-          }" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
-        </div>
-      ` : ''}
-    </div>
-
-    <div class="footer">
-      <p>Thanks for using our service!</p>
-      <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-      <p>
-        Generated using <strong>PDFify</strong>. Visit 
-        <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-      </p>
-    </div>
-  </body>
+    </body>
 </html>
 `;
 }
-
-
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
@@ -321,29 +315,28 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
-    let invoiceData = { ...data }; 
-   
+    let invoiceData = { ...data };
+
     if (typeof invoiceData.items === "string") {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
-      } catch (err) { 
+      } catch (err) {
         invoiceData.items = [];
       }
     }
-    
 
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
     }
- 
+
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-
-    // Force premium for test
-//user.isPremium = true;
+ 
+    user.usageCount = user.usageCount || 0;
+    user.previewCount = user.previewCount || 0;
 
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
@@ -351,8 +344,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     invoiceData.showWatermark = isPreview && !user.isPremium;
-
-   
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
 
     const pdfDir = path.join(__dirname, "../pdfs");
@@ -361,53 +352,58 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-   
- 
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
-
     const html = generateInvoiceHTML(invoiceData);
-
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-  
+
+    if (isPreview && !user.isPremium) {
+   
+      if (user.previewCount < 3) {
+        user.previewCount += 1;
+        await user.save();
+      } else {
+        
+        if (user.usageCount + pageCount > user.maxUsage) {
+          fs.unlinkSync(pdfPath);
+          return res.status(403).json({
+            error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+          });
+        }
+        user.usageCount += pageCount;
+        await user.save();
+      }
+    }
+
     if (!isPreview) {
-  
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
       }
-
       user.usageCount += pageCount;
       await user.save();
-    } else {
-      
-     }
-
+    }
 
     res.download(pdfPath, (err) => {
-      if (err) {
-      } else {
-      }
       fs.unlinkSync(pdfPath);
     });
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 
 module.exports = router;

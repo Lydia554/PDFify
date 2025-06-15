@@ -34,7 +34,6 @@ function decrypt(text) {
   decrypted = Buffer.concat([decrypted, decipher.final()]);
   return decrypted.toString("utf8");
 }
-
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true },
@@ -46,15 +45,17 @@ const userSchema = new mongoose.Schema(
     maxUsage: { type: Number, default: 30 },
     isPremium: { type: Boolean, default: false },
     deleted: { type: Boolean, default: false },
-deletedAt: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     isActive: { type: Boolean, default: true },
     resetToken: { type: String },
     resetTokenExpiry: { type: Date },
+
+    previewCount: { type: Number, default: 0 },
+    previewLastReset: { type: Date, default: Date.now }
   },
   { timestamps: true }
 );
-
 
 userSchema.pre("save", function (next) {
   if (this.connectedShopDomain) {
