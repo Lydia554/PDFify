@@ -391,7 +391,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     // Updated PDF generation with footer and page numbering for all users
-    const pdfPath = path.join(__dirname, "../pdfs/invoice.pdf");
+    const pdfPath = path.join(__dirname, "/pdfs/invoice.pdf");
 
     await page.pdf({
       path: pdfPath,
