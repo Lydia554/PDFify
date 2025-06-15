@@ -20,7 +20,6 @@ if (typeof ReadableStream === 'undefined') {
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-// Helper to reset monthly counters if it's a new month
 async function resetMonthlyUsageIfNeeded(user) {
   const now = new Date();
   if (!user.usageLastReset) {
@@ -36,7 +35,6 @@ async function resetMonthlyUsageIfNeeded(user) {
     now.getFullYear() > lastReset.getFullYear() ||
     now.getMonth() > lastReset.getMonth()
   ) {
-    // New month — reset counters
     user.usageCount = 0;
     user.previewCount = 0;
     user.usageLastReset = now;
@@ -151,8 +149,6 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
   `;
 }
 
-
-
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
   const { html, isPreview } = req.body;
 
@@ -166,24 +162,17 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Monthly reset for previewCount
-    const now = new Date();
-    if (!user.previewLastReset || (now - user.previewLastReset) > 30 * 24 * 60 * 60 * 1000) {
-      user.previewCount = 0;
-      user.previewLastReset = now;
-      await user.save();
-    }
+    
+    await resetMonthlyUsageIfNeeded(user);
 
     if (isPreview && !user.isPremium) {
       if (user.previewCount >= 3) {
-        // After 3 free previews, previews count as usage
         if (user.usageCount >= user.maxUsage) {
           return res.status(403).json({
             error: "Monthly usage limit reached. Upgrade to premium for more previews.",
           });
         }
       } else {
-        // Under free preview limit, increment previewCount and save
         user.previewCount++;
         await user.save();
       }
@@ -204,7 +193,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
 
     const page = await browser.newPage();
     const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
-const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
+    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
 
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
@@ -215,7 +204,6 @@ const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
     const pageCount = parsed.numpages;
 
     if (!isPreview) {
-      // Normal PDF download usage counting
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -225,7 +213,6 @@ const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
       user.usageCount += pageCount;
       await user.save();
     } else if (isPreview && user.previewCount >= 3 && !user.isPremium) {
-      // After free previews, count preview pages as usage
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
