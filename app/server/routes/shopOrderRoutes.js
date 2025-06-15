@@ -176,48 +176,45 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
     const isBasicUser = !user.isPremium;
 
-    // Initialize tracking fields if missing
-    user.previewCount = user.previewCount || 0;
-    user.usageCount = user.usageCount || 0;
-    user.maxUsage = user.maxUsage || 1000;
-    user.lastPreviewReset = user.lastPreviewReset || new Date(0);
+    // Ensure default tracking fields
+    user.previewCount = user.previewCount ?? 0;
+    user.usageCount = user.usageCount ?? 0;
+    user.maxUsage = user.maxUsage ?? 1000;
+    user.lastPreviewReset = user.lastPreviewReset ?? new Date(0);
 
     const now = new Date();
     const lastReset = new Date(user.lastPreviewReset);
 
-    // Reset preview count monthly
+    // Monthly reset
     if (
       now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
       now.getUTCMonth() !== lastReset.getUTCMonth()
     ) {
       user.previewCount = 0;
+      user.usageCount = 0;
       user.lastPreviewReset = now;
       await user.save();
     }
 
-    // Decide watermark and usage logic
     let addWatermark = false;
     let shouldCountAsUsage = false;
 
     if (isBasicUser && isPreview) {
       if (user.previewCount < 3) {
-        user.previewCount++;
         addWatermark = true;
+        user.previewCount += 1;
         await user.save();
       } else {
+        // After 3 previews, preview counts toward usage
         shouldCountAsUsage = true;
       }
     } else if (!isPreview) {
+      // Always count if it's a real download (not preview)
       shouldCountAsUsage = true;
     }
 
-    // Prepare data for HTML generator
+    // Prepare HTML input
     data.showWatermark = addWatermark;
-
-    // Force default logo for basic users
-    if (isBasicUser) {
-      data.customLogoUrl = null;
-    }
 
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
