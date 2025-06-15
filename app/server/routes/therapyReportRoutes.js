@@ -276,7 +276,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const fullHtml = wrapHtmlWithBranding(reportHtml, user.isPremium, addPreviewWatermark);
 
     await page.setContent(fullHtml, { waitUntil: "networkidle0" });
-    await page.waitForTimeout(1000); // wait 1 second to ensure fonts/scripts load
+   
 
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();

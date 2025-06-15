@@ -8,41 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require('../models/User');
 const pdfParse = require("pdf-parse");
 
-const log = (message, data = null) => {
-  if (process.env.NODE_ENV !== "production") {
-    console.log(`[DEV LOG] ${message}`, data || '');
-  }
-};
-
-if (typeof ReadableStream === 'undefined') {
-  global.ReadableStream = require('web-streams-polyfill').ReadableStream;
-}
-
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
-
-
-async function resetMonthlyUsageIfNeeded(user) {
-  const now = new Date();
-  if (!user.usageLastReset) {
-    user.usageLastReset = now;
-    user.usageCount = 0;
-    user.previewCount = 0;
-    await user.save();
-    return;
-  }
-
-  const lastReset = new Date(user.usageLastReset);
-  if (
-    now.getFullYear() > lastReset.getFullYear() ||
-    now.getMonth() > lastReset.getMonth()
-  ) {
-   
-    user.usageCount = 0;
-    user.previewCount = 0;
-    user.usageLastReset = now;
-    await user.save();
-  }
-}
 
 function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
   return `
@@ -151,8 +117,6 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
   `;
 }
 
-
-
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
   const { html, isPreview } = req.body;
 
@@ -166,19 +130,34 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
       return res.status(404).json({ error: "User not found" });
     }
 
-    await resetMonthlyUsageIfNeeded(user);
-
+    // Inline monthly usage reset logic
+    const now = new Date();
+    if (!user.usageLastReset) {
+      user.usageLastReset = now;
+      user.usageCount = 0;
+      user.previewCount = 0;
+      await user.save();
+    } else {
+      const lastReset = new Date(user.usageLastReset);
+      if (
+        now.getFullYear() > lastReset.getFullYear() ||
+        now.getMonth() > lastReset.getMonth()
+      ) {
+        user.usageCount = 0;
+        user.previewCount = 0;
+        user.usageLastReset = now;
+        await user.save();
+      }
+    }
 
     if (isPreview && !user.isPremium) {
       if (user.previewCount >= 3) {
-       
         if (user.usageCount >= user.maxUsage) {
           return res.status(403).json({
             error: "Monthly usage limit reached. Upgrade to premium for more previews.",
           });
         }
       } else {
-       
         user.previewCount++;
         await user.save();
       }
@@ -199,7 +178,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
 
     const page = await browser.newPage();
     const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
-const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
+    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
 
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
@@ -210,7 +189,6 @@ const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
     const pageCount = parsed.numpages;
 
     if (!isPreview) {
-   
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -220,7 +198,6 @@ const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
       user.usageCount += pageCount;
       await user.save();
     } else if (isPreview && user.previewCount >= 3 && !user.isPremium) {
-     
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
