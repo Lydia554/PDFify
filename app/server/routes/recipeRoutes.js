@@ -20,10 +20,9 @@ const log = (message, data = null) => {
   }
 };
 
-
 function generateRecipeHTML(data) {
-const watermarkCSS = data.showWatermark
-  ? `
+  const watermarkCSS = data.showWatermark
+    ? `
     body::before {
       content: "Food Trek";
       position: fixed;
@@ -40,8 +39,7 @@ const watermarkCSS = data.showWatermark
       font-family: 'Playfair Display', serif;
     }
   `
-  : '';
-
+    : '';
 
   const logoHtml = data.customLogoUrl
     ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
@@ -144,6 +142,7 @@ const watermarkCSS = data.showWatermark
     </html>
   `;
 }
+
 router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
 
@@ -157,7 +156,6 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
 
     const isPremium = user.isPremium;
 
-    
     const now = new Date();
     const lastReset = user.previewLastReset || new Date(0);
     const sameMonth = now.getFullYear() === lastReset.getFullYear() &&
@@ -179,7 +177,6 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       }
     }
 
- 
     const cleanedData = { ...data };
     if ((!isPremium && !isPreview) || countAsDownload) {
       delete cleanedData.ingredientBreakdown;
@@ -187,10 +184,11 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
 
     const payload = {
       ...cleanedData,
-      customLogoUrl: (!isPremium || isPreview || countAsDownload) ? defaultLogoUrl : null,
+      customLogoUrl:
+        (!isPremium || isPreview || countAsDownload) ? defaultLogoUrl : null,
       showChart: isPremium && !isPreview && !countAsDownload,
-      showWatermark: !isPremium || isPreview || countAsDownload,
-
+      showWatermark:
+        process.env.NODE_ENV !== "production" || !isPremium || isPreview || countAsDownload,
     };
 
     const html = generateRecipeHTML(payload);
