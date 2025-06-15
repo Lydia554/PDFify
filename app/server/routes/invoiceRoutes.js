@@ -318,131 +318,100 @@ function generateInvoiceHTML(data) {
 }
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
+  const { data, isPreview } = req.body;
+
+  if (!data || !data.customerName) {
+    return res.status(400).json({ error: "Missing invoice data" });
+  }
+
+  const pdfDir = path.join(__dirname, "../pdfs");
+  if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
+  const pdfPath = path.join(pdfDir, `invoice_${Date.now()}.pdf`);
+
   try {
-    let { data, isPreview } = req.body;
-    if (!data || typeof data !== "object") {
-      return res.status(400).json({ error: "Invalid or missing data" });
-    }
-
-    let invoiceData = { ...data };
-
-    if (typeof invoiceData.items === "string") {
-      try {
-        invoiceData.items = JSON.parse(invoiceData.items);
-      } catch (err) {
-        invoiceData.items = [];
-      }
-    }
-
-    if (!Array.isArray(invoiceData.items)) {
-      invoiceData.items = [];
-    }
-
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Monthly resets for previewCount and usageCount
     const now = new Date();
-    if (
-      !user.previewLastReset ||
-      now.getMonth() !== user.previewLastReset.getMonth() ||
-      now.getFullYear() !== user.previewLastReset.getFullYear()
-    ) {
-      user.previewCount = 0;
-      user.previewLastReset = now;
-    }
-
-    if (
-      !user.usageLastReset ||
-      now.getMonth() !== user.usageLastReset.getMonth() ||
-      now.getFullYear() !== user.usageLastReset.getFullYear()
-    ) {
-      user.usageCount = 0;
+    if (!user.usageLastReset) {
       user.usageLastReset = now;
-    }
-
-    // Determine watermark flag: basic users get watermark only on previews
-    invoiceData.isBasicUser = !user.isPremium;
-    invoiceData.showWatermark = invoiceData.isBasicUser && isPreview;
-
-    // Clean premium features for non-premium users
-    if (!user.isPremium) {
-      invoiceData.customLogoUrl = null;
-      invoiceData.showChart = false;
-    }
-
-    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir);
-    }
-
-    // Check user limits
-    if (isPreview) {
-      if (user.previewCount >= 3) {
-        return res.status(403).json({ error: "Preview limit reached for this month" });
-      }
-      user.previewCount++;
+      user.usageCount = 0;
+      user.previewCount = 0;
+      await user.save();
     } else {
-      if (user.usageCount >= 10) {
-        return res.status(403).json({ error: "Invoice generation limit reached for this month" });
+      const lastReset = new Date(user.usageLastReset);
+      if (
+        now.getFullYear() > lastReset.getFullYear() ||
+        now.getMonth() > lastReset.getMonth()
+      ) {
+        user.usageCount = 0;
+        user.previewCount = 0;
+        user.usageLastReset = now;
+        await user.save();
       }
-      user.usageCount++;
     }
 
-    await user.save();
+    // Decide if watermark is needed (non-premium + preview count >= 3)
+    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
 
-    const htmlContent = generateInvoiceHTML(invoiceData);
+    // Generate HTML for invoice with watermark flag
+    const rawHtml = generateInvoiceHTML(data);
+    const wrappedHtml = wrapHtmlInvoice(rawHtml, user.isPremium, addWatermark);
 
-    // Launch Puppeteer and generate PDF
     const browser = await puppeteer.launch({
+      headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-
-    // PDF options - add footer with page numbers
-    const pdfOptions = {
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "30px",
-        right: "30px",
-        bottom: "80px",
-        left: "30px",
-      },
-      displayHeaderFooter: true,
-      footerTemplate: `
-        <div style="font-size:10px; color:#999; width:100%; text-align:center; margin-bottom:10px;">
-          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-        </div>`,
-      headerTemplate: '<div></div>', // empty header
-    };
-
-    // Save PDF file
-    const fileName = `invoice-${safeOrderId}-${isPreview ? "preview" : "final"}.pdf`;
-    const filePath = path.join(pdfDir, fileName);
-
-    await page.pdf({ path: filePath, ...pdfOptions });
-
+    await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
-    // Read PDF for sending back
-    const fileBuffer = fs.readFileSync(filePath);
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
 
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `${isPreview ? "inline" : "attachment"}; filename=${fileName}`,
-      "Content-Length": fileBuffer.length,
+    if (isPreview && !user.isPremium) {
+      if (user.previewCount < 3) {
+        // Still have free preview quota
+        user.previewCount++;
+        await user.save();
+      } else {
+        // Preview count exceeded 3, count pages as usage
+        if (user.usageCount + pageCount > user.maxUsage) {
+          fs.unlinkSync(pdfPath);
+          return res.status(403).json({
+            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
+          });
+        }
+        user.usageCount += pageCount;
+        await user.save();
+      }
+    }
+
+    if (!isPreview) {
+      // Downloads always count as usage
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more downloads.",
+        });
+      }
+      user.usageCount += pageCount;
+      await user.save();
+    }
+
+    res.download(pdfPath, () => {
+      fs.unlinkSync(pdfPath);
     });
-
-    return res.send(fileBuffer);
   } catch (error) {
-    console.error("Error generating invoice PDF:", error);
-    return res.status(500).json({ error: "Failed to generate invoice PDF" });
+    console.error("Invoice PDF generation error:", error);
+    res.status(500).json({ error: "Invoice PDF generation failed" });
   }
 });
+
 
 module.exports = router;
