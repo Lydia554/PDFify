@@ -265,6 +265,8 @@ function generateTherapyReportHTML(data, isPremiumUser) {
   return innerHtml;
 }
 
+
+
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview = false } = req.body;
 
@@ -292,10 +294,18 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       return res.status(404).json({ error: "User not found" });
     }
 
-    await resetMonthlyUsageIfNeeded(user);
+    // Reset monthly usage & preview if needed
+    const now = new Date();
+    if (!user.usageLastReset || user.usageLastReset.getMonth() !== now.getMonth() || user.usageLastReset.getFullYear() !== now.getFullYear()) {
+      user.usageCount = 0;
+      user.usageLastReset = now;
+    }
+    if (!user.previewLastReset || user.previewLastReset.getMonth() !== now.getMonth() || user.previewLastReset.getFullYear() !== now.getFullYear()) {
+      user.previewCount = 0;
+      user.previewLastReset = now;
+    }
 
     const isPremiumUser = user.isPremium;
-
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
@@ -314,46 +324,61 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       wrapHtmlWithBranding(
         generateTherapyReportHTML(cleanedData, isPremiumUser),
         isPremiumUser,
-        isPreview && !isPremiumUser
+        isPreview && !isPremiumUser // watermark for basic preview
       ),
-      {
-        waitUntil: "networkidle0",
-      }
+      { waitUntil: "networkidle0" }
     );
 
- await page.pdf({
-  path: pdfPath,
-  format: "A4",
-  printBackground: true,
-  displayHeaderFooter: true,
-  margin: {
-    top: "30mm",
-    bottom: "30mm",
-    left: "15mm",
-    right: "15mm",
-  },
-  footerTemplate: `
-    <div style="font-size:10px; width:100%; text-align:center; color: #999;">
-      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-    </div>`,
-  headerTemplate: `<div></div>`,
-});
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      displayHeaderFooter: true,
+      margin: {
+        top: "30mm",
+        bottom: "30mm",
+        left: "15mm",
+        right: "15mm",
+      },
+      footerTemplate: `
+        <div style="font-size:10px; width:100%; text-align:center; color: #999;">
+          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+        </div>`,
+      headerTemplate: `<div></div>`,
+    });
 
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
 
-    // Track usage only if not preview
-    if (!isPreview) {
-      user.usageCount = (user.usageCount || 0) + 1;
-      await user.save();
-    } else {
-      // preview count tracking for basic users
-      if (!isPremiumUser) {
-        user.previewCount = (user.previewCount || 0) + 1;
-        await user.save();
+    // === PAGE COUNT LOGIC ===
+    if (isPreview) {
+      if (!user.isPremium) {
+        if (user.previewCount < 3) {
+          user.previewCount += 1;
+        } else {
+          if (user.usageCount + pageCount > user.maxUsage) {
+            fs.unlinkSync(pdfPath);
+            return res.status(403).json({
+              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+            });
+          }
+          user.usageCount += pageCount;
+        }
       }
+    } else {
+      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+      user.usageCount += pageCount;
     }
+
+    await user.save();
 
     res.set({
       "Content-Type": "application/pdf",
@@ -362,7 +387,6 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     });
 
     return res.send(pdfBuffer);
-
   } catch (error) {
     console.error("Error generating therapy report PDF:", error);
     return res.status(500).json({ error: "Failed to generate therapy report" });
