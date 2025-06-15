@@ -80,33 +80,39 @@ function generateInvoiceHTML(data) {
       }
 
       /* Table styles for PREMIUM users */
-    .premium  .table {
+      .premium .table {
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 20px;
       }
-      .premium  .table th,
-      .premium  .table td {
+      .premium .table th,
+      .premium .table td {
         padding: 14px;
-        border: 1px solid #ccc;
+        border: 1px solid #dee2ef;
         text-align: left;
       }
       .premium .table th {
-        background-color: #fff;
-        color: #333;
+        background-color: #dbe7ff;
+        color: #2a3d66;
         font-weight: 600;
       }
-      .premium  .table td {
+      .premium .table td {
         color: #444;
-        background-color: #fff;
+        background-color: #fdfdff;
       }
       .premium .table tr:nth-child(even) td {
-        background-color: #f9f9f9;
+        background-color: #f6f9fe;
       }
-      .premium .table tfoot td {
-        background-color: #fff;
-        font-weight: bold;
-      }
+   .premium .table tfoot td {
+  background-color: #dbe7ff;
+  font-weight: bold;
+  color: #2a3d66; 
+}
+        
+.premium .total p {
+  font-weight: bold;
+  color: #2a3d66;
+}
 
       /* Table styles for BASIC users */
       .basic .table {
@@ -136,6 +142,10 @@ function generateInvoiceHTML(data) {
         background-color: #fff;
         font-weight: bold;
       }
+        .basic .total p {
+  font-weight: normal;
+  color: #333;
+}
 
       /* Watermark styles */
       .watermark {

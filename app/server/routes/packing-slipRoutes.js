@@ -247,28 +247,26 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
 
     await resetMonthlyUsageIfNeeded(user);
 
-    // Should we add watermark?
-    // Only on previews for basic users after 3 previews used
+
     const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
 
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
-          // Free previews allowed for basic users (first 3)
+        
           user.previewCount++;
           await user.save();
         } else {
-          // After 3 previews, previews count as usage (like downloads)
+    
           if (user.usageCount >= user.maxUsage) {
             return res.status(403).json({
               error: "Monthly usage limit reached. Upgrade to premium for more previews.",
             });
           }
-          // usageCount increments by number of pages after PDF generation below
-          // so just flag addWatermark here, and usageCount will be updated after PDF generation
+         
         }
       }
-      // Premium users do NOT count previews towards usage - no changes needed here
+     
     }
 
     const safeOrderId = data.orderId || `preview-${Date.now()}`;
@@ -296,9 +294,9 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // Now update usage counts after PDF is generated and pageCount known
+
     if (!isPreview) {
-      // Downloads always count for all users
+      
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -308,7 +306,7 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
       user.usageCount += pageCount;
       await user.save();
     } else if (addWatermark) {
-      // This means basic user past previews limit, previews count as downloads
+   
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -318,7 +316,7 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
       user.usageCount += pageCount;
       await user.save();
     }
-    // For previews within free limit or premium previews - no usageCount increment
+    
 
     res.download(pdfPath, (err) => {
       if (err) {
