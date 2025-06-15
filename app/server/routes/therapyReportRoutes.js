@@ -14,26 +14,97 @@ if (typeof ReadableStream === "undefined") {
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-function generateTherapyReportHTML(data, isPremiumUser, isPreview) {
-  const isBasicUser = !isPremiumUser;
+async function resetMonthlyUsageIfNeeded(user) {
+  const now = new Date();
+  if (!user.usageLastReset) {
+    user.usageLastReset = now;
+    user.usageCount = 0;
+    user.previewCount = 0;
+    await user.save();
+    return;
+  }
 
-  // Logo only for basic preview
-  const logo = (isBasicUser && isPreview)
-    ? `<img src="${logoUrl}" alt="Logo" class="logo" />`
-    : '';
+  const lastReset = new Date(user.usageLastReset);
+  if (
+    now.getFullYear() > lastReset.getFullYear() ||
+    now.getMonth() > lastReset.getMonth()
+  ) {
+    user.usageCount = 0;
+    user.previewCount = 0;
+    user.usageLastReset = now;
+    await user.save();
+  }
+}
 
-  // Confidential watermark always present
-  const confidentialWatermark = `<div class="watermark">Confidential</div>`;
+function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
+  // Always add "Confidential" watermark
+  // Add "FOR PRODUCTION ONLY..." only if addPreviewWatermark === true (basic user preview)
+  const watermarkHtml = `
+    <div class="watermark-confidential">Confidential</div>
+    ${addPreviewWatermark ? `<div class="watermark-preview">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>` : ''}
+  `;
 
-  // Extra watermark only for basic preview
-  const extraWatermark = (isBasicUser && isPreview)
-    ? `<div class="watermark-extra">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
-    : '';
+  return `
+  <html>
+    <head>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap');
 
+        body {
+          font-family: Arial, sans-serif;
+          margin: 40px;
+          background: #f9f9f9;
+          color: #333;
+        }
+        .logo {
+          width: 120px;
+          display: block;
+          margin: 0 auto 30px;
+        }
+        .watermark-confidential {
+          position: fixed;
+          top: 40%;
+          left: 50%;
+          font-size: 6rem;
+          font-weight: 700;
+          color: #5e60ce;
+          opacity: 0.05;
+          transform: translate(-50%, -50%) rotate(-30deg);
+          pointer-events: none;
+          user-select: none;
+          z-index: 0;
+          font-family: 'Playfair Display', serif;
+        }
+        .watermark-preview {
+          position: fixed;
+          top: 55%;
+          left: 50%;
+          font-size: 2.5rem;
+          font-weight: 600;
+          color: #5e60ce;
+          opacity: 0.1;
+          transform: translate(-50%, -50%) rotate(-15deg);
+          pointer-events: none;
+          user-select: none;
+          z-index: 0;
+          font-family: 'Arial', sans-serif;
+        }
+      </style>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
+      ${!isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
+      ${watermarkHtml}
+      <div id="content">
+        ${htmlContent}
+      </div>
+    </body>
+  </html>
+  `;
+}
+
+function generateTherapyReportHTML(data) {
   const innerHtml = `
-    ${logo}
-    ${confidentialWatermark}
-    ${extraWatermark}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -91,193 +162,53 @@ function generateTherapyReportHTML(data, isPremiumUser, isPreview) {
         }
       });
     </script>
+
+    <style>
+      .section {
+        margin-bottom: 25px;
+      }
+      .label {
+        font-weight: bold;
+        color: #444;
+      }
+      .content {
+        margin-top: 10px;
+        color: #555;
+      }
+      .section-title {
+        margin-top: 20px;
+        font-size: 18px;
+        font-weight: bold;
+        color: #5e60ce;
+      }
+      .multi-column {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      .table th, .table td {
+        padding: 10px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+      .table th {
+        background-color: #5e60ce;
+        color: white;
+      }
+      .chart-container {
+        width: 100%;
+        height: 400px;
+        margin: 30px 0;
+      }
+    </style>
   `;
 
-  return `
-    <html>
-      <head>
-        <style>
-          html, body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: #f9f9f9;
-            color: #333;
-          }
-          .page-wrapper {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            padding: 40px;
-            box-sizing: border-box;
-          }
-          .content-wrapper {
-            flex-grow: 1;
-          }
-          h1 {
-            text-align: center;
-            color: #5e60ce;
-            font-size: 24px;
-            margin-bottom: 30px;
-          }
-          p {
-            line-height: 1.8;
-            font-size: 16px;
-          }
-          .section {
-            margin-bottom: 25px;
-          }
-          .label {
-            font-weight: bold;
-            color: #444;
-          }
-          .content {
-            margin-top: 10px;
-            color: #555;
-          }
-          .section-title {
-            margin-top: 20px;
-            font-size: 18px;
-            font-weight: bold;
-            color: #5e60ce;
-          }
-          .chart-container {
-            width: 100%;
-            height: 400px;
-            margin: 30px 0;
-          }
-          .logo {
-            width: 120px;
-            display: block;
-            margin: 0 auto 30px;
-          }
-          .watermark {
-            content: "Confidential";
-            position: fixed;
-            top: 40%;
-            left: 50%;
-            font-size: 6rem;
-            font-weight: 700;
-            color: #5e60ce;
-            opacity: 0.05;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            pointer-events: none;
-            user-select: none;
-            z-index: 0;
-            font-family: 'Playfair Display', serif;
-          }
-          .watermark-extra {
-            content: "FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION";
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            font-size: 2rem;
-            font-weight: 700;
-            color: #d9534f;
-            opacity: 0.2;
-            transform: translate(-50%, -50%) rotate(-15deg);
-            pointer-events: none;
-            user-select: none;
-            z-index: 1;
-            font-family: 'Arial', sans-serif;
-          }
-          .multi-column {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-          }
-          .table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-          }
-          .table th, .table td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-          }
-          .table th {
-            background-color: #5e60ce;
-            color: white;
-          }
-          .footer {
-            background-color: #f9f9f9;
-            color: #444;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            padding: 10px 20px;
-            margin-top: auto;
-          }
-          .footer p {
-            font-size: 11px;
-            line-height: 1.0;
-          }
-          .footer a {
-            color: #0073e6;
-            text-decoration: none;
-          }
-          .footer a:hover {
-            text-decoration: underline;
-          }
-          @media (max-width: 600px) {
-            .page-wrapper {
-              padding: 20px;
-            }
-            h1 {
-              font-size: 20px;
-            }
-            .section-title {
-              font-size: 16px;
-            }
-            p {
-              font-size: 14px;
-            }
-            .multi-column {
-              grid-template-columns: 1fr;
-            }
-            .logo {
-              width: 90px;
-            }
-            .chart-container {
-              height: 300px;
-            }
-            .table th, .table td {
-              padding: 8px;
-              font-size: 13px;
-            }
-            .footer {
-              font-size: 11px;
-              padding: 15px 10px;
-              line-height: 1.4;
-            }
-            .footer p {
-              margin: 6px 0;
-            }
-            .footer a {
-              word-break: break-word;
-            }
-          }
-        </style>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-      </head>
-      <body>
-        <div class="page-wrapper">
-          <div class="content-wrapper">
-            ${innerHtml}
-          </div>
-          <div class="footer">
-            <p>Thanks for using our service!</p>
-            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-            <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-            <p>
-              Generated using <strong>PDFify</strong>. Visit 
-              <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-            </p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
+  return innerHtml;
 }
 
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
@@ -301,94 +232,83 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       : [2, 3, 4, 4]
   };
 
-  const pdfDir = path.join(__dirname, "../pdfs");
-  if (!fs.existsSync(pdfDir)) {
-    fs.mkdirSync(pdfDir, { recursive: true });
-  }
-
-  const fileName = `therapy_report_${Date.now()}.pdf`;
-  const pdfPath = path.join(pdfDir, fileName);
-
   try {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-
-    const page = await browser.newPage();
-
     const user = await User.findById(req.user.userId);
     if (!user) {
-      await browser.close();
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isPremiumUser = user.plan === "premium";
+    await resetMonthlyUsageIfNeeded(user);
 
-    const html = generateTherapyReportHTML(cleanedData, isPremiumUser, isPreview);
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      displayHeaderFooter: true,
-      headerTemplate: `<div></div>`,
-      footerTemplate: `
-        <div style="font-size:10px;width:100%;text-align:center;color:#999;padding:5px 0;">
-          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-        </div>
-      `,
-      margin: {
-        top: '40px',
-        bottom: '60px'
+    if (isPreview && !user.isPremium) {
+      if (user.previewCount >= 3) {
+        if (user.usageCount >= user.maxUsage) {
+          return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more previews." });
+        }
+      } else {
+        user.previewCount++;
+        await user.save();
       }
+    }
+
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
+    const safeId = `therapyReport_${Date.now()}`;
+    const pdfPath = path.join(pdfDir, `${safeId}.pdf`);
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
+    const page = await browser.newPage();
+    
+    await page.emulateMediaType("screen");
+
+    const reportHtml = generateTherapyReportHTML(cleanedData);
+
+    // Add watermark only for basic user previews when preview count >=3
+    const addPreviewWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
+
+    const fullHtml = wrapHtmlWithBranding(reportHtml, user.isPremium, addPreviewWatermark);
+
+    await page.setContent(fullHtml, { waitUntil: "networkidle0" });
+    await page.waitForTimeout(1000); // wait 1 second to ensure fonts/scripts load
+
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // Usage count logic:
-    // For preview, allow up to 3 free previews for basic users (not increasing usageCount)
-    // After 3 previews, any further preview counts as usage (like download)
-    if (!isPremiumUser) {
-      if (isPreview) {
-        if (user.previewCount >= 3) {
-          // count as usage after 3 previews
-          if (user.usageCount + pageCount > user.maxUsage) {
-            fs.unlinkSync(pdfPath);
-            return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-          }
-          user.usageCount += pageCount;
-        } else {
-          // increment preview count only
-          user.previewCount = (user.previewCount || 0) + 1;
-        }
-      } else {
-        // Downloads always count as usage
-        if (user.usageCount + pageCount > user.maxUsage) {
-          fs.unlinkSync(pdfPath);
-          return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-        }
-        user.usageCount += pageCount;
+    // Usage count logic
+    if (!isPreview) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
+      user.usageCount += pageCount;
+      await user.save();
+    } else if (isPreview && user.previewCount >= 3 && !user.isPremium) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+      }
+      user.usageCount += pageCount;
       await user.save();
     }
 
-    // Send PDF buffer as base64 to client
-    res.status(200).json({
-      pdfBase64: pdfBuffer.toString("base64"),
-      pageCount
+    res.download(pdfPath, (err) => {
+      if (err) console.error("Error sending file:", err);
+      if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
     });
-
-    // Clean up file after sending
-    fs.unlinkSync(pdfPath);
   } catch (error) {
-    console.error("Error generating PDF:", error);
-    res.status(500).json({ error: "Internal server error generating PDF." });
+    console.error("PDF generation error:", error);
+    res.status(500).json({ error: "PDF generation failed" });
   }
 });
 
