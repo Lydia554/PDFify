@@ -20,25 +20,31 @@ if (typeof ReadableStream === 'undefined') {
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-// Watermark HTML for basic user previews
-const watermarkHtml = `
-  <div style="
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-30deg);
-    color: rgba(200, 0, 0, 0.15);
-    font-size: 48px;
-    font-weight: 900;
-    z-index: 9999;
-    pointer-events: none;
-    white-space: nowrap;
-  ">
-    PREVIEW ONLY – NOT FOR PRODUCTION USE
-  </div>
-`;
+// Helper to reset monthly counters if it's a new month
+async function resetMonthlyUsageIfNeeded(user) {
+  const now = new Date();
+  if (!user.usageLastReset) {
+    user.usageLastReset = now;
+    user.usageCount = 0;
+    user.previewCount = 0;
+    await user.save();
+    return;
+  }
 
-function wrapHtmlWithBranding(htmlContent, isPremium, showWatermark) {
+  const lastReset = new Date(user.usageLastReset);
+  if (
+    now.getFullYear() > lastReset.getFullYear() ||
+    now.getMonth() > lastReset.getMonth()
+  ) {
+    // New month — reset counters
+    user.usageCount = 0;
+    user.previewCount = 0;
+    user.usageLastReset = now;
+    await user.save();
+  }
+}
+
+function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
   return `
     <html>
       <head>
@@ -50,7 +56,6 @@ function wrapHtmlWithBranding(htmlContent, isPremium, showWatermark) {
             color: #333;
             position: relative;
             min-height: 100vh;
-            box-sizing: border-box;
           }
           .logo {
             display: block;
@@ -81,6 +86,27 @@ function wrapHtmlWithBranding(htmlContent, isPremium, showWatermark) {
             text-decoration: underline;
           }
 
+          /* Watermark styles */
+          ${
+            addWatermark
+              ? `
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-45deg);
+              font-size: 5rem;
+              color: rgba(255, 0, 0, 0.1);
+              user-select: none;
+              pointer-events: none;
+              z-index: 9999;
+              white-space: nowrap;
+              font-weight: bold;
+            }
+          `
+              : ''
+          }
+
           @media (max-width: 600px) {
             body {
               padding: 20px;
@@ -106,8 +132,8 @@ function wrapHtmlWithBranding(htmlContent, isPremium, showWatermark) {
         </style>
       </head>
       <body>
-        ${!isPremium ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
-        ${showWatermark ? watermarkHtml : ''}
+        ${isPremium ? '' : `<img src="${logoUrl}" alt="Logo" class="logo" />`}
+        ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
         <div class="content">
           ${htmlContent}
         </div>
@@ -138,34 +164,29 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
       return res.status(404).json({ error: "User not found" });
     }
 
-    const isBasicUser = !user.isPremium;
+    // Reset usage and preview counts monthly if needed
+    await resetMonthlyUsageIfNeeded(user);
 
-    // Initialize tracking fields if missing
-    user.previewCount = user.previewCount || 0;
-    user.lastPreviewReset = user.lastPreviewReset || new Date(0);
-    user.usageCount = user.usageCount || 0;
-    user.maxUsage = user.maxUsage || 1000; // adjust as needed
-
-    const now = new Date();
-
-    // Reset preview count monthly
-    if (
-      now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
-      now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
-    ) {
-      user.previewCount = 0;
-      user.lastPreviewReset = now;
-      await user.save();
-    }
-
-    let addWatermark = false;
-
-    if (isBasicUser && isPreview) {
-      if (user.previewCount < 3) {
-        user.previewCount++;
-        addWatermark = true;
-        await user.save();
+    // Check preview / usage limits:
+    if (isPreview) {
+      if (!user.isPremium) {
+        // Allow up to 3 previews per month free, after that previews count as usage pages
+        if (user.previewCount < 3) {
+          user.previewCount++;
+          await user.save();
+        } else {
+          // If previews exhausted, count as usage pages - block if usage limit exceeded
+          if (user.usageCount >= user.maxUsage) {
+            return res.status(403).json({
+              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+            });
+          }
+        }
       }
+      // Premium users no limits on preview
+    } else {
+      // For actual PDF generation (not preview)
+      // We will check usage pages after PDF page count parsed below
     }
 
     const pdfDir = path.join(__dirname, "../pdfs");
@@ -183,8 +204,10 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
 
     const page = await browser.newPage();
 
-    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
+    // Add watermark only for non-premium users:
+    const addWatermark = !user.isPremium;
 
+    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
@@ -193,8 +216,8 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (!isPreview || (isBasicUser && user.previewCount >= 3)) {
-      if (user.usageCount + pageCount > user.maxUsage) {
+    if (!isPreview) {
+      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
@@ -212,7 +235,6 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
         fs.unlinkSync(pdfPath);
       }
     });
-
   } catch (error) {
     console.error("PDF generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
