@@ -309,9 +309,6 @@ return `
 `;
 }
 
-
-
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
