@@ -206,7 +206,50 @@ function generateTherapyReportHTML(data) {
         height: 400px;
         margin: 30px 0;
       }
+
+      .footer {
+  position: static;
+  max-width: 800px;
+  margin: 40px auto 10px auto;
+  padding: 10px 20px;
+  background-color: #f0f2f7;
+  color: #555;
+  border-top: 2px solid #cbd2e1;
+  text-align: center;
+  line-height: 1.6;
+  font-size: 11px;
+  border-radius: 0 0 16px 16px;
+  box-sizing: border-box;
+}
+
+.footer p {
+  margin: 6px 0;
+}
+
+.footer a {
+  color: #4a69bd;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.footer a:hover {
+  text-decoration: underline;
+}
+
     </style>
+
+
+<div class="footer">
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+  <p>
+    Generated using <strong>PDFify</strong>. Visit
+    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+  </p>
+</div>
+
+
   `;
 
   return innerHtml;
@@ -277,6 +320,24 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
       return await page.pdf({ format: "A4", printBackground: true });
     }
+
+
+    await page.pdf({
+  path: pdfPath,
+  format: "A4",
+  printBackground: true,
+  displayHeaderFooter: true,
+  footerTemplate: `
+    <div style="font-size:10px; width:100%; text-align:center; color:#999; padding-bottom:5px; font-family: Arial, sans-serif;">
+      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+    </div>`,
+  headerTemplate: `<div></div>`, // empty header
+  margin: {
+    top: '40px',
+    bottom: '80px' // leave room for footer + page number
+  }
+});
+
 
     if (isPreview && !isPremiumUser) {
       if (user.previewCount < 3) {
