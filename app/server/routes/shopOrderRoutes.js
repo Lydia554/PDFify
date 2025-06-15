@@ -12,30 +12,7 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-function generateShopOrderHTML(data, isBasicUser = true) {
-  // Logo only for basic (non-premium) users
-  const logoHtml = isBasicUser
-    ? `<img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Company Logo" class="logo" style="max-width:150px; display:block; margin: 0 auto 20px auto;" />`
-    : "";
-
-  // Watermark only for basic users (light gray rotated text)
-  const watermarkHtml = data.showWatermark
-    ? `<div style="
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-30deg);
-        color: rgba(200, 0, 0, 0.15);
-        font-size: 48px;
-        font-weight: 900;
-        z-index: 9999;
-        pointer-events: none;
-        white-space: nowrap;
-      ">
-        PREVIEW ONLY – NOT FOR PRODUCTION USE
-      </div>`
-    : "";
-
+function generateShopOrderHTML(data) {
   return `
     <html>
       <head>
@@ -47,7 +24,6 @@ function generateShopOrderHTML(data, isBasicUser = true) {
             background-color: #f9f9f9;
             margin: 0;
             box-sizing: border-box;
-            position: relative;
           }
           h1 {
             text-align: center;
@@ -111,6 +87,7 @@ function generateShopOrderHTML(data, isBasicUser = true) {
           .footer a:hover {
             text-decoration: underline;
           }
+
           @media (max-width: 600px) {
             body { padding: 20px; }
             h1 { font-size: 1.5em; }
@@ -129,8 +106,6 @@ function generateShopOrderHTML(data, isBasicUser = true) {
         </style>
       </head>
       <body>
-        ${watermarkHtml}
-        ${logoHtml}
         <h1>Shop Order: ${data.shopName}</h1>
 
         <div class="section">
@@ -163,106 +138,52 @@ function generateShopOrderHTML(data, isBasicUser = true) {
   `;
 }
 
-
-
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
+  const { data, isPreview } = req.body;
+  if (!data || !data.shopName) {
+    return res.status(400).json({ error: "Missing shop order data" });
+  }
+
+  const pdfDir = path.join(__dirname, "../pdfs");
+  if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
+  const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
+
   try {
-    const { data, isPreview } = req.body;
-
-    if (!data || typeof data !== "object" || !data.shopName) {
-      return res.status(400).json({ error: "Missing or invalid shop order data" });
-    }
-
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    // Monthly reset logic
-    const now = new Date();
-    const lastReset = user.lastPreviewReset || new Date(0);
-
-    if (
-      now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
-      now.getUTCMonth() !== lastReset.getUTCMonth()
-    ) {
-      user.previewCount = 0;
-      user.usageCount = 0;
-      user.lastPreviewReset = now;
-      await user.save();
-    }
-
-    user.usageCount = user.usageCount || 0;
-    user.previewCount = user.previewCount || 0;
-    user.maxUsage = user.maxUsage || 1000;
-
-    const orderData = { ...data };
-
-    // Basic users: no charts
-    if (!user.isPremium) {
-      orderData.showChart = false;
-    }
-
-    // Show watermark only if it's a preview and the user is basic and still under 3 free previews
-    orderData.showWatermark = isPreview && !user.isPremium && user.previewCount < 3;
-
-    const safeOrderId = orderData.orderId || `preview-${Date.now()}`;
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-
-    const pdfPath = path.join(pdfDir, `shop_order_${safeOrderId}.pdf`);
-
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
     const page = await browser.newPage();
-
-    const html = generateShopOrderHTML(orderData, user.isPremium, orderData.showWatermark);
+    const html = generateShopOrderHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+    await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (isPreview && !user.isPremium) {
-      if (user.previewCount < 3) {
-        user.previewCount += 1;
-        await user.save();
-      } else {
-        if (user.usageCount + pageCount > user.maxUsage) {
-          fs.unlinkSync(pdfPath);
-          return res.status(403).json({
-            error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-          });
-        }
-        user.usageCount += pageCount;
-        await user.save();
-      }
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      fs.unlinkSync(pdfPath);
+      return res.status(404).json({ error: "User not found" });
     }
 
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
       user.usageCount += pageCount;
       await user.save();
     }
 
-    res.download(pdfPath, (err) => {
-      fs.unlinkSync(pdfPath);
-    });
-
+    res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
-    console.error("Error generating shop order PDF:", error);
-    res.status(500).json({ error: "Failed to generate PDF" });
+    console.error("PDF generation error:", error);
+    res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 module.exports = router;
