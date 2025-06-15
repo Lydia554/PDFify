@@ -163,21 +163,18 @@ function generateShopOrderHTML(data, isBasicUser = true, showWatermark = false) 
   `;
 }
 
-
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
 
-  if (!data || !data.shopName) {
-    return res.status(400).json({ error: "Missing shop order data" });
+  if (!data || typeof data !== "object" || !data.shopName) {
+    return res.status(400).json({ error: "Missing or invalid shop order data" });
   }
 
   try {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isBasicUser = !user.isPremium;
-
-    // Initialize usage tracking fields
+    // Ensure usage tracking fields are initialized
     user.previewCount = user.previewCount || 0;
     user.lastPreviewReset = user.lastPreviewReset || new Date(0);
     user.usageCount = user.usageCount || 0;
@@ -185,7 +182,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
     const now = new Date();
 
-    // ✅ Monthly reset of preview count
+    // Monthly preview count reset
     if (
       now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
       now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
@@ -195,28 +192,32 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       await user.save();
     }
 
-    // ✅ Watermark and preview logic
+    const isBasicUser = !user.isPremium;
     let addWatermark = false;
-    let overFreePreviewLimit = false;
+    let countAsUsage = false;
 
-    if (isPreview && isBasicUser) {
-      if (user.previewCount < 3) {
-        user.previewCount++;
-        addWatermark = true;
-        await user.save();
-      } else {
-        overFreePreviewLimit = true;
+    if (isPreview) {
+      // For previews, allow 3 with watermark, then count as usage
+      if (isBasicUser) {
+        if (user.previewCount < 3) {
+          user.previewCount += 1;
+          addWatermark = true;
+          await user.save();
+        } else {
+          countAsUsage = true;
+        }
       }
+    } else {
+      countAsUsage = true;
     }
 
     data.showWatermark = addWatermark;
 
-    // ✅ PDF generation setup
+    // Generate PDF
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
     const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
-
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -224,7 +225,6 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
     const page = await browser.newPage();
     const html = generateShopOrderHTML(data, user.isPremium, addWatermark);
-
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
@@ -233,11 +233,8 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // ✅ Usage tracking
-    const shouldCountAsUsage =
-      !isPreview || (isPreview && isBasicUser && overFreePreviewLimit);
-
-    if (shouldCountAsUsage) {
+    // Track usage if needed
+    if (countAsUsage) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -248,7 +245,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       await user.save();
     }
 
-    // ✅ Download and cleanup
+    // Serve PDF and clean up
     res.download(pdfPath, (err) => {
       if (err) console.error("File send error:", err);
       if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
@@ -259,5 +256,6 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
