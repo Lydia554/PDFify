@@ -151,6 +151,8 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
   `;
 }
 
+
+
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
   const { html, isPreview } = req.body;
 
@@ -164,29 +166,27 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Reset usage and preview counts monthly if needed
-    await resetMonthlyUsageIfNeeded(user);
+    // Monthly reset for previewCount
+    const now = new Date();
+    if (!user.previewLastReset || (now - user.previewLastReset) > 30 * 24 * 60 * 60 * 1000) {
+      user.previewCount = 0;
+      user.previewLastReset = now;
+      await user.save();
+    }
 
-    // Check preview / usage limits:
-    if (isPreview) {
-      if (!user.isPremium) {
-        // Allow up to 3 previews per month free, after that previews count as usage pages
-        if (user.previewCount < 3) {
-          user.previewCount++;
-          await user.save();
-        } else {
-          // If previews exhausted, count as usage pages - block if usage limit exceeded
-          if (user.usageCount >= user.maxUsage) {
-            return res.status(403).json({
-              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-            });
-          }
+    if (isPreview && !user.isPremium) {
+      if (user.previewCount >= 3) {
+        // After 3 free previews, previews count as usage
+        if (user.usageCount >= user.maxUsage) {
+          return res.status(403).json({
+            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
+          });
         }
+      } else {
+        // Under free preview limit, increment previewCount and save
+        user.previewCount++;
+        await user.save();
       }
-      // Premium users no limits on preview
-    } else {
-      // For actual PDF generation (not preview)
-      // We will check usage pages after PDF page count parsed below
     }
 
     const pdfDir = path.join(__dirname, "../pdfs");
@@ -203,11 +203,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     });
 
     const page = await browser.newPage();
-
-    // Add watermark only for non-premium users:
-    const addWatermark = !user.isPremium;
-
-    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
+    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium);
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
@@ -217,7 +213,18 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     const pageCount = parsed.numpages;
 
     if (!isPreview) {
-      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
+      // Normal PDF download usage counting
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+      user.usageCount += pageCount;
+      await user.save();
+    } else if (isPreview && user.previewCount >= 3 && !user.isPremium) {
+      // After free previews, count preview pages as usage
+      if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
