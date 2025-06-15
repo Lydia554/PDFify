@@ -319,83 +319,120 @@ function generateInvoiceHTML(data) {
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
-    const { data, isPreview } = req.body;
-
+    let { data, isPreview } = req.body;
     if (!data || typeof data !== "object") {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
-    const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    let invoiceData = { ...data };
 
-    // Monthly reset logic for previewCount and usageCount
-    const currentMonth = new Date().getMonth();
-    if (user.lastResetMonth !== currentMonth) {
-      user.previewCount = 0;
-      user.usageCount = 0;
-      user.lastResetMonth = currentMonth;
-      await user.save();
-    }
-
-    // Increase previewCount if this is a preview request by a basic user
-    if (isPreview && !user.isPremium) {
-      if (user.previewCount < 3) {
-        user.previewCount++;
-        await user.save();
-      } else {
-        // If previewCount >= 3, check usageCount limit
-        if (user.usageCount >= user.maxUsage) {
-          return res.status(403).json({
-            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
-          });
-        }
+    if (typeof invoiceData.items === "string") {
+      try {
+        invoiceData.items = JSON.parse(invoiceData.items);
+      } catch (err) {
+        invoiceData.items = [];
       }
     }
 
-    // Decide whether to add watermark:
-    // Only add watermark if preview, basic user, and previewCount >= 3
-    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
+    if (!Array.isArray(invoiceData.items)) {
+      invoiceData.items = [];
+    }
 
-    // Generate invoice HTML with watermark flag
-    const html = generateInvoiceHTML({ ...data, isBasicUser: addWatermark });
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
+    // Monthly resets
+    const now = new Date();
+    if (
+      !user.previewLastReset ||
+      now.getMonth() !== user.previewLastReset.getMonth() ||
+      now.getFullYear() !== user.previewLastReset.getFullYear()
+    ) {
+      user.previewCount = 0;
+      user.previewLastReset = now;
+    }
+
+    if (
+      !user.usageLastReset ||
+      now.getMonth() !== user.usageLastReset.getMonth() ||
+      now.getFullYear() !== user.usageLastReset.getFullYear()
+    ) {
+      user.usageCount = 0;
+      user.usageLastReset = now;
+    }
+
+    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
+    }
+
+    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
-    await page.setContent(html, { waitUntil: "networkidle0" });
+    // Remove premium features if not premium
+    if (!user.isPremium) {
+      invoiceData.customLogoUrl = null;
+      invoiceData.showChart = false;
+      invoiceData.isBasicUser = true;  // <-- flag to add watermark
+    } else {
+      invoiceData.isBasicUser = false;
+    }
 
-    const pdfPath = path.join(__dirname, "../pdfs", `invoice_${Date.now()}.pdf`);
-    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+    const html = generateInvoiceHTML(invoiceData);
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // Update usageCount for final downloads and previews above limit
-    if (
-      !isPreview || 
-      (isPreview && user.previewCount >= 3 && !user.isPremium)
-    ) {
-      if (user.usageCount + pageCount > user.maxUsage) {
+    // Handle preview vs download
+    if (isPreview) {
+      if (!user.isPremium) {
+        if (user.previewCount < 3) {
+          user.previewCount += 1;
+        } else {
+          // After 3 previews, treat it like a download
+          if (user.usageCount + pageCount > user.maxUsage) {
+            fs.unlinkSync(pdfPath);
+            return res.status(403).json({
+              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+            });
+          }
+          user.usageCount += pageCount;
+        }
+      }
+    } else {
+      // It's a real download
+      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
       }
       user.usageCount += pageCount;
-      await user.save();
     }
 
-    res.download(pdfPath, () => fs.unlinkSync(pdfPath));
+    await user.save();
+
+    res.download(pdfPath, (err) => {
+      if (err) {
+        console.error("Download error:", err);
+      }
+      fs.unlinkSync(pdfPath);
+    });
   } catch (error) {
-    console.error("PDF generation error:", error);
+    console.error("PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 module.exports = router;
