@@ -161,27 +161,29 @@ function generateTherapyReportHTML(data, isPremiumUser, isPreview, previewCountE
       <canvas id="progressChart" width="800" height="400"></canvas>
     </div>
 
-    <script>
-      const ctx = document.getElementById('progressChart').getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: ${JSON.stringify(milestoneLabels)},
-          datasets: [{
-            label: 'Milestone Progress',
-            data: ${JSON.stringify(milestoneScores)},
-            backgroundColor: ${JSON.stringify(milestoneScores.map(() => 'rgba(94, 96, 206, 0.5)'))},
-            borderColor: ${JSON.stringify(milestoneScores.map(() => 'rgba(94, 96, 206, 1)'))},
-            borderWidth: 1
-          }]
-        },
-        options: {
-          scales: {
-            y: { beginAtZero: true, max: 5 }
-          }
-        }
-      });
-    </script>
+<script>
+  const ctx = document.getElementById('progressChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ${JSON.stringify(milestoneLabels)},
+      datasets: [{
+        label: 'Milestone Progress',
+        data: ${JSON.stringify(milestoneScores)},
+        backgroundColor: ${JSON.stringify(milestoneScores.map(() => 'rgba(94, 96, 206, 0.5)'))},
+        borderColor: ${JSON.stringify(milestoneScores.map(() => 'rgba(94, 96, 206, 1)'))},
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: { beginAtZero: true, max: 5 }
+      }
+    }
+  });
+  window.chartRendered = true;
+</script>
+
 
     <style>
       .section {
@@ -259,7 +261,7 @@ function generateTherapyReportHTML(data, isPremiumUser, isPreview, previewCountE
     </style>
 
  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- 
+
     <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
