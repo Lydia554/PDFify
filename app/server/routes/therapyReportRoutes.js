@@ -14,9 +14,26 @@ if (typeof ReadableStream === "undefined") {
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-function generateTherapyReportHTML(data, isPremiumUser) {
+function generateTherapyReportHTML(data, isPremiumUser, isPreview) {
+  const isBasicUser = !isPremiumUser;
+
+  // Logo only for basic preview
+  const logo = (isBasicUser && isPreview)
+    ? `<img src="${logoUrl}" alt="Logo" class="logo" />`
+    : '';
+
+  // Confidential watermark always present
+  const confidentialWatermark = `<div class="watermark">Confidential</div>`;
+
+  // Extra watermark only for basic preview
+  const extraWatermark = (isBasicUser && isPreview)
+    ? `<div class="watermark-extra">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
+    : '';
+
   const innerHtml = `
-    ${!isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" /><div class="watermark">Confidential</div>` : ''}
+    ${logo}
+    ${confidentialWatermark}
+    ${extraWatermark}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -148,6 +165,21 @@ function generateTherapyReportHTML(data, isPremiumUser) {
             user-select: none;
             z-index: 0;
             font-family: 'Playfair Display', serif;
+          }
+          .watermark-extra {
+            content: "FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION";
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #d9534f;
+            opacity: 0.2;
+            transform: translate(-50%, -50%) rotate(-15deg);
+            pointer-events: none;
+            user-select: none;
+            z-index: 1;
+            font-family: 'Arial', sans-serif;
           }
           .multi-column {
             display: grid;
@@ -292,7 +324,8 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     }
 
     const isPremiumUser = user.plan === "premium";
-    const html = generateTherapyReportHTML(cleanedData, isPremiumUser);
+
+    const html = generateTherapyReportHTML(cleanedData, isPremiumUser, isPreview);
     await page.setContent(html, { waitUntil: "networkidle0" });
 
     await page.pdf({
@@ -318,31 +351,44 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+    // Usage count logic:
+    // For preview, allow up to 3 free previews for basic users (not increasing usageCount)
+    // After 3 previews, any further preview counts as usage (like download)
+    if (!isPremiumUser) {
+      if (isPreview) {
+        if (user.previewCount >= 3) {
+          // count as usage after 3 previews
+          if (user.usageCount + pageCount > user.maxUsage) {
+            fs.unlinkSync(pdfPath);
+            return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+          }
+          user.usageCount += pageCount;
+        } else {
+          // increment preview count only
+          user.previewCount = (user.previewCount || 0) + 1;
+        }
+      } else {
+        // Downloads always count as usage
+        if (user.usageCount + pageCount > user.maxUsage) {
+          fs.unlinkSync(pdfPath);
+          return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+        }
+        user.usageCount += pageCount;
       }
-
-      user.usageCount += pageCount;
       await user.save();
     }
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `${isPreview ? "inline" : "attachment"}; filename=${fileName}`);
-
-    const fileStream = fs.createReadStream(pdfPath);
-    fileStream.pipe(res);
-
-    fileStream.on("end", () => {
-      if (!isPreview && fs.existsSync(pdfPath)) {
-        fs.unlinkSync(pdfPath);
-      }
+    // Send PDF buffer as base64 to client
+    res.status(200).json({
+      pdfBase64: pdfBuffer.toString("base64"),
+      pageCount
     });
 
+    // Clean up file after sending
+    fs.unlinkSync(pdfPath);
   } catch (error) {
-    console.error("Therapy report PDF generation failed:", error);
-    res.status(500).json({ error: "PDF generation failed" });
+    console.error("Error generating PDF:", error);
+    res.status(500).json({ error: "Internal server error generating PDF." });
   }
 });
 
