@@ -14,6 +14,36 @@ if (typeof ReadableStream === "undefined") {
 
 function generateShopOrderHTML(data) {
   return `
+    <div>
+      <h1>Shop Order: ${data.shopName}</h1>
+
+      <div class="section">
+        <p><span class="label">Customer:</span> ${data.customer.name}</p>
+        <p><span class="label">Email:</span> ${data.customer.email}</p>
+        <p><span class="label">Order ID:</span> ${data.orderId}</p>
+        <p><span class="label">Date:</span> ${data.date}</p>
+      </div>
+
+      <div class="section">
+        <h2>Products</h2>
+        <ul class="products-list">
+          ${data.products.map(product => `
+            <li>${product.name} (x${product.quantity}) - ${product.price}</li>
+          `).join('')}
+        </ul>
+      </div>
+
+      <div class="order-details">
+        <p class="total"><span class="label">Total:</span> ${data.total}</p>
+      </div>
+    </div>
+  `;
+}
+
+function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
+  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
+  return `
     <html>
       <head>
         <style>
@@ -25,6 +55,12 @@ function generateShopOrderHTML(data) {
             margin: 0;
             box-sizing: border-box;
             position: relative;
+            min-height: 100vh;
+          }
+          .logo {
+            display: block;
+            margin: 0 auto 20px;
+            max-width: 120px;
           }
           h1 {
             text-align: center;
@@ -88,60 +124,29 @@ function generateShopOrderHTML(data) {
           .footer a:hover {
             text-decoration: underline;
           }
-
-          .watermark {
-            position: fixed;
-            top: 40%;
-            left: 20%;
-            font-size: 50px;
-            color: rgba(0, 0, 0, 0.1);
-            transform: rotate(-30deg);
-            z-index: 9999;
-            pointer-events: none;
-            user-select: none;
-          }
-
-          @media (max-width: 600px) {
-            body { padding: 20px; }
-            h1 { font-size: 1.5em; }
-            h2 { font-size: 1.2em; }
-            .section { padding: 15px; }
-            .products-list { padding: 8px; }
-            .total { font-size: 1em; }
-            .footer {
-              font-size: 11px;
-              padding: 15px 10px;
-              line-height: 1.4;
+          ${addWatermark ? `
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-45deg);
+              font-size: 5rem;
+              color: rgba(255, 0, 0, 0.1);
+              user-select: none;
+              pointer-events: none;
+              z-index: 9999;
+              white-space: nowrap;
+              font-weight: bold;
             }
-            .footer p { margin: 6px 0; }
-            .footer a { word-break: break-word; }
-          }
+          ` : ''}
         </style>
       </head>
       <body>
-        ${data.showWatermark ? `<div class="watermark">PREVIEW</div>` : ""}
-        <h1>Shop Order: ${data.shopName}</h1>
-
-        <div class="section">
-          <p><span class="label">Customer:</span> ${data.customer.name}</p>
-          <p><span class="label">Email:</span> ${data.customer.email}</p>
-          <p><span class="label">Order ID:</span> ${data.orderId}</p>
-          <p><span class="label">Date:</span> ${data.date}</p>
+        ${isPremium ? '' : `<img src="${logoUrl}" alt="Logo" class="logo" />`}
+        ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
+        <div class="content">
+          ${htmlContent}
         </div>
-
-        <div class="section">
-          <h2>Products</h2>
-          <ul class="products-list">
-            ${data.products.map(product => `
-              <li>${product.name} (x${product.quantity}) - ${product.price}</li>
-            `).join('')}
-          </ul>
-        </div>
-
-        <div class="order-details">
-          <p class="total"><span class="label">Total:</span> ${data.total}</p>
-        </div>
-
         <div class="footer">
           <p>Thanks for using our service!</p>
           <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
@@ -154,7 +159,6 @@ function generateShopOrderHTML(data) {
 
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
-
   if (!data || !data.shopName) {
     return res.status(400).json({ error: "Missing shop order data" });
   }
@@ -170,11 +174,41 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Inject flags for consistent logic
-    const isBasic = !user.isPremium;
-    const showWatermark = isPreview && isBasic;
-    data.showExtras = !isBasic;
-    data.showWatermark = showWatermark;
+    // Reset usage each month
+    const now = new Date();
+    if (!user.usageLastReset) {
+      user.usageLastReset = now;
+      user.usageCount = 0;
+      user.previewCount = 0;
+      await user.save();
+    } else {
+      const lastReset = new Date(user.usageLastReset);
+      if (
+        now.getFullYear() > lastReset.getFullYear() ||
+        now.getMonth() > lastReset.getMonth()
+      ) {
+        user.usageCount = 0;
+        user.previewCount = 0;
+        user.usageLastReset = now;
+        await user.save();
+      }
+    }
+
+    // Handle preview logic
+    if (isPreview && !user.isPremium) {
+      if (user.previewCount >= 3) {
+        if (user.usageCount >= user.maxUsage) {
+          return res.status(403).json({
+            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
+          });
+        }
+      } else {
+        user.previewCount++;
+        await user.save();
+      }
+    }
+
+    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -182,21 +216,25 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     });
 
     const page = await browser.newPage();
-    const html = generateShopOrderHTML(data);
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+    const rawHtml = generateShopOrderHTML(data);
+    const wrappedHtml = wrapHtmlShopOrder(rawHtml, user.isPremium, addWatermark);
+
+    await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (!isPreview) {
+    // Usage count logic
+    if (!isPreview || (isPreview && user.previewCount >= 3 && !user.isPremium)) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
       }
-
       user.usageCount += pageCount;
       await user.save();
     }
@@ -204,7 +242,6 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
     console.error("PDF generation error:", error);
-    if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
