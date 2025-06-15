@@ -318,100 +318,120 @@ function generateInvoiceHTML(data) {
 }
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
-  const { data, isPreview } = req.body;
-
-  if (!data || !data.customerName) {
-    return res.status(400).json({ error: "Missing invoice data" });
-  }
-
-  const pdfDir = path.join(__dirname, "../pdfs");
-  if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-
-  const pdfPath = path.join(pdfDir, `invoice_${Date.now()}.pdf`);
-
   try {
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    let { data, isPreview } = req.body;
+    if (!data || typeof data !== "object") {
+      return res.status(400).json({ error: "Invalid or missing data" });
     }
 
-    const now = new Date();
-    if (!user.usageLastReset) {
-      user.usageLastReset = now;
-      user.usageCount = 0;
-      user.previewCount = 0;
-      await user.save();
-    } else {
-      const lastReset = new Date(user.usageLastReset);
-      if (
-        now.getFullYear() > lastReset.getFullYear() ||
-        now.getMonth() > lastReset.getMonth()
-      ) {
-        user.usageCount = 0;
-        user.previewCount = 0;
-        user.usageLastReset = now;
-        await user.save();
+    // Parse items if sent as JSON string
+    let invoiceData = { ...data };
+    if (typeof invoiceData.items === "string") {
+      try {
+        invoiceData.items = JSON.parse(invoiceData.items);
+      } catch (err) {
+        invoiceData.items = [];
       }
     }
+    if (!Array.isArray(invoiceData.items)) {
+      invoiceData.items = [];
+    }
 
-    // Decide if watermark is needed (non-premium + preview count >= 3)
-    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
+    // Fetch user and check existence
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(401).json({ error: "User not found" });
+    }
 
-    // Generate HTML for invoice with watermark flag
-    const rawHtml = generateInvoiceHTML(data);
-    const wrappedHtml = wrapHtmlInvoice(rawHtml, user.isPremium, addWatermark);
+    // Initialize usage tracking
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
+    if (
+      !user.usage ||
+      !user.usage.monthly ||
+      user.usage.monthlyYear !== currentYear ||
+      user.usage.monthlyMonth !== currentMonth
+    ) {
+      // Reset usage counters for new month
+      user.usage = {
+        monthlyCount: 0,
+        previewCount: 0,
+        monthlyYear: currentYear,
+        monthlyMonth: currentMonth,
+      };
+    }
+
+    // Define limits for Basic users
+    const isBasicUser = user.role === "Basic";
+    const MAX_PREVIEWS_PER_MONTH = 20;
+    const MAX_MONTHLY_GENERATIONS = 2000;
+
+    // Usage enforcement
+    if (isBasicUser) {
+      if (isPreview) {
+        if (user.usage.previewCount >= MAX_PREVIEWS_PER_MONTH) {
+          return res.status(429).json({
+            error: "Preview limit reached for this month. Upgrade to Premium to continue.",
+          });
+        }
+        // Increment preview count
+        user.usage.previewCount += 1;
+      } else {
+        if (user.usage.monthlyCount >= MAX_MONTHLY_GENERATIONS) {
+          return res.status(429).json({
+            error: "Monthly generation limit reached. Upgrade to Premium to continue.",
+          });
+        }
+        // Increment monthly generation count
+        user.usage.monthlyCount += 1;
+      }
+    } else {
+      // Premium users: track monthlyCount only (optional)
+      if (!user.usage.monthlyCount) user.usage.monthlyCount = 0;
+      user.usage.monthlyCount += 1;
+    }
+
+    // Save usage update
+    await user.save();
+
+    // Prepare data for HTML generation
+    // Show watermark only for basic users in preview mode
+    invoiceData.showWatermark = isBasicUser && isPreview;
+
+    const html = generateInvoiceHTML(invoiceData);
+
+    // Launch Puppeteer to generate PDF
     const browser = await puppeteer.launch({
-      headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
-    await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+
+    // Set content with waitUntil networkidle0 for better load stability
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    // Optionally set PDF options
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
+    });
+
     await browser.close();
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-
-    if (isPreview && !user.isPremium) {
-      if (user.previewCount < 3) {
-        // Still have free preview quota
-        user.previewCount++;
-        await user.save();
-      } else {
-        // Preview count exceeded 3, count pages as usage
-        if (user.usageCount + pageCount > user.maxUsage) {
-          fs.unlinkSync(pdfPath);
-          return res.status(403).json({
-            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
-          });
-        }
-        user.usageCount += pageCount;
-        await user.save();
-      }
-    }
-
-    if (!isPreview) {
-      // Downloads always count as usage
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more downloads.",
-        });
-      }
-      user.usageCount += pageCount;
-      await user.save();
-    }
-
-    res.download(pdfPath, () => {
-      fs.unlinkSync(pdfPath);
+    // Send PDF as response
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=invoice_${invoiceData.orderId || "output"}.pdf`,
+      "Content-Length": pdfBuffer.length,
     });
-  } catch (error) {
-    console.error("Invoice PDF generation error:", error);
-    res.status(500).json({ error: "Invoice PDF generation failed" });
+
+    return res.send(pdfBuffer);
+  } catch (err) {
+    console.error("Error generating invoice PDF:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 module.exports = router;
