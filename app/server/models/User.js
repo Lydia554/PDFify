@@ -34,6 +34,8 @@ function decrypt(text) {
   decrypted = Buffer.concat([decrypted, decipher.final()]);
   return decrypted.toString("utf8");
 }
+
+
 const userSchema = new mongoose.Schema(
   {
     email: { type: String, required: true, unique: true },
@@ -52,10 +54,13 @@ const userSchema = new mongoose.Schema(
     resetTokenExpiry: { type: Date },
 
     previewCount: { type: Number, default: 0 },
-    previewLastReset: { type: Date, default: Date.now }
+    previewLastReset: { type: Date, default: Date.now },
+    usageLastReset: { type: Date, default: Date.now },
+
   },
   { timestamps: true }
 );
+
 
 userSchema.pre("save", function (next) {
   if (this.connectedShopDomain) {

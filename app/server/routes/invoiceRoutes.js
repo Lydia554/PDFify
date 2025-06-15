@@ -303,91 +303,112 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
-    let invoiceData = { ...data }; 
-   
+    let invoiceData = { ...data };
+
     if (typeof invoiceData.items === "string") {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
-      } catch (err) { 
+      } catch (err) {
         invoiceData.items = [];
       }
     }
-    
 
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
     }
- 
+
     const user = await User.findById(req.user.userId);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-
-    // Force premium for test
-//user.isPremium = true;
-
-    if (!user.isPremium) {
-      invoiceData.customLogoUrl = null;
-      invoiceData.showChart = false;
+    // Monthly resets
+    const now = new Date();
+    if (
+      !user.previewLastReset ||
+      now.getMonth() !== user.previewLastReset.getMonth() ||
+      now.getFullYear() !== user.previewLastReset.getFullYear()
+    ) {
+      user.previewCount = 0;
+      user.previewLastReset = now;
     }
 
-   
-    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
+    if (
+      !user.usageLastReset ||
+      now.getMonth() !== user.usageLastReset.getMonth() ||
+      now.getFullYear() !== user.usageLastReset.getFullYear()
+    ) {
+      user.usageCount = 0;
+      user.usageLastReset = now;
+    }
 
+    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-   
- 
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
-    const html = generateInvoiceHTML(invoiceData);
+    // Remove premium features if not premium
+    if (!user.isPremium) {
+      invoiceData.customLogoUrl = null;
+      invoiceData.showChart = false;
+    }
 
+    const html = generateInvoiceHTML(invoiceData);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
-  
-    if (!isPreview) {
-  
-      if (user.usageCount + pageCount > user.maxUsage) {
+
+    // Handle preview vs download
+    if (isPreview) {
+      if (!user.isPremium) {
+        if (user.previewCount < 3) {
+          user.previewCount += 1;
+        } else {
+          // After 3 previews, treat it like a download
+          if (user.usageCount + pageCount > user.maxUsage) {
+            fs.unlinkSync(pdfPath);
+            return res.status(403).json({
+              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+            });
+          }
+          user.usageCount += pageCount;
+        }
+      }
+    } else {
+      // It's a real download
+      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
       }
-
       user.usageCount += pageCount;
-      await user.save();
-    } else {
-      
-     }
+    }
 
+    await user.save();
 
     res.download(pdfPath, (err) => {
       if (err) {
-      } else {
+        console.error("Download error:", err);
       }
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
+    console.error("PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-
 
 module.exports = router;
