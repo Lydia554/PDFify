@@ -23,14 +23,14 @@ function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-  // Add a class for premium vs basic
+
   const userClass = data.isBasicUser ? "basic" : "premium";
 
   const watermarkHTML = data.isBasicUser
     ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
     : "";
 
-  // Prepare chart config as a JS object
+
   const chartConfig = {
     type: "pie",
     data: {
@@ -46,7 +46,7 @@ function generateInvoiceHTML(data) {
     },
   };
 
-  // Stringify and URL encode the config
+
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
   return `
@@ -348,13 +348,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   path: pdfPath,
   format: "A4",
   printBackground: true,
-  displayHeaderFooter: true,      // <-- enable header/footer display
-  headerTemplate: `<div></div>`,  // <-- empty header, no content
+  displayHeaderFooter: true,     
+  headerTemplate: `<div></div>`,  
   footerTemplate: `              // <-- footer with page count
     <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
       Page <span class="pageNumber"></span> of <span class="totalPages"></span>
     </div>`,
-  margin: {                       // <-- add margins for header/footer
+  margin: {                       
     top: "20mm",
     bottom: "20mm",
     left: "10mm",
