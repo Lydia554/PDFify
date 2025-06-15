@@ -24,6 +24,7 @@ function generateShopOrderHTML(data) {
             background-color: #f9f9f9;
             margin: 0;
             box-sizing: border-box;
+            position: relative;
           }
           h1 {
             text-align: center;
@@ -88,6 +89,18 @@ function generateShopOrderHTML(data) {
             text-decoration: underline;
           }
 
+          .watermark {
+            position: fixed;
+            top: 40%;
+            left: 20%;
+            font-size: 50px;
+            color: rgba(0, 0, 0, 0.1);
+            transform: rotate(-30deg);
+            z-index: 9999;
+            pointer-events: none;
+            user-select: none;
+          }
+
           @media (max-width: 600px) {
             body { padding: 20px; }
             h1 { font-size: 1.5em; }
@@ -106,6 +119,7 @@ function generateShopOrderHTML(data) {
         </style>
       </head>
       <body>
+        ${data.isPreview ? `<div class="watermark">PREVIEW</div>` : ""}
         <h1>Shop Order: ${data.shopName}</h1>
 
         <div class="section">
@@ -140,6 +154,7 @@ function generateShopOrderHTML(data) {
 
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
+
   if (!data || !data.shopName) {
     return res.status(400).json({ error: "Missing shop order data" });
   }
@@ -150,10 +165,20 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
   const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
 
   try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Inject user access flags into data
+    data.showExtras = user.isPremium;
+    data.isPreview = isPreview && !user.isPremium; // show watermark only for basic users previewing
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
+
     const page = await browser.newPage();
     const html = generateShopOrderHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -164,17 +189,12 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      fs.unlinkSync(pdfPath);
-      return res.status(404).json({ error: "User not found" });
-    }
-
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
+
       user.usageCount += pageCount;
       await user.save();
     }
@@ -182,6 +202,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
     console.error("PDF generation error:", error);
+    if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
