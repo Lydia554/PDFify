@@ -19,18 +19,21 @@ function generateShopOrderHTML(data, isBasicUser = true) {
     : "";
 
   // Watermark only for basic users (light gray rotated text)
-  const watermarkHtml = isBasicUser
+  const watermarkHtml = data.showWatermark
     ? `<div style="
-          position: fixed;
-          top: 40%;
-          left: 10%;
-          font-size: 60px;
-          color: rgba(200, 200, 200, 0.25);
-          transform: rotate(-30deg);
-          z-index: 9999;
-          pointer-events: none;
-          user-select: none;
-        ">PDFIFY BASIC</div>`
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        color: rgba(200, 0, 0, 0.15);
+        font-size: 48px;
+        font-weight: 900;
+        z-index: 9999;
+        pointer-events: none;
+        white-space: nowrap;
+      ">
+        PREVIEW ONLY – NOT FOR PRODUCTION USE
+      </div>`
     : "";
 
   return `
@@ -160,6 +163,8 @@ function generateShopOrderHTML(data, isBasicUser = true) {
   `;
 }
 
+
+
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
   if (!data || !data.shopName) {
@@ -170,6 +175,39 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
   if (!user) return res.status(404).json({ error: "User not found" });
 
   const isBasicUser = !user.isPremium;
+
+  // Initialize usage tracking fields if not present
+  user.previewCount = user.previewCount || 0;
+  user.lastPreviewReset = user.lastPreviewReset || new Date(0);
+  user.usageCount = user.usageCount || 0;
+  user.maxUsage = user.maxUsage || 1000; // adjust as needed
+
+  const now = new Date();
+
+  // Reset previewCount monthly if needed
+  if (
+    now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
+    now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
+  ) {
+    user.previewCount = 0;
+    user.lastPreviewReset = now;
+    await user.save();
+  }
+
+  // Decide on watermark based on preview and user type
+  let addWatermark = false;
+
+  if (isBasicUser && isPreview) {
+    if (user.previewCount < 3) {
+      user.previewCount++;
+      addWatermark = true;
+      await user.save();
+    } else {
+      // After 3 previews, count pages as usage
+      addWatermark = false;
+    }
+  }
+
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
@@ -178,12 +216,12 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
-    // Pass isBasicUser to generateShopOrderHTML so logo + watermark show properly
-    const html = generateShopOrderHTML(data, isBasicUser);
+    // Pass addWatermark and isBasicUser to control logo and watermark
+    const html = generateShopOrderHTML(data, isBasicUser, addWatermark);
 
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
@@ -193,12 +231,12 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (!isPreview) {
-      // Check usage limit: user.maxUsage and user.usageCount should be defined on user model
+    if (!isPreview || (isBasicUser && user.previewCount >= 3)) {
+      // Check usage limit on full download or previews beyond limit
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages."
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
       }
       user.usageCount += pageCount;
