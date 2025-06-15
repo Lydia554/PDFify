@@ -258,9 +258,7 @@ function generateTherapyReportHTML(data, isPremiumUser) {
       </p>
     </div>
 
-    <div style="font-size:10px;width:100%;text-align:center;color:#999;padding:5px 0;">
-  Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-</div>
+   
 
   `;
 
