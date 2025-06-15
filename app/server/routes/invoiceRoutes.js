@@ -22,8 +22,8 @@ function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-  // Watermark HTML for preview users with watermark flag set:
-  const watermarkHTML = data.addWatermark
+  // Watermark HTML for basic users:
+  const watermarkHTML = data.isBasicUser
     ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
     : "";
 
@@ -213,18 +213,18 @@ function generateInvoiceHTML(data) {
 
       /* Watermark styles */
      .watermark {
-      position: fixed;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-45deg);
-      font-size: 60px;
-      color: rgba(255, 0, 0, 0.1); /* lighter red with transparency */
-      font-weight: 900;
-      pointer-events: none;
-      user-select: none;
-      z-index: 9999;
-      white-space: nowrap;
-    }
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 60px;
+  color: rgba(255, 0, 0, 0.1); /* lighter red with transparency */
+  font-weight: 900;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
     </style>
   </head>
   <body>
@@ -255,7 +255,7 @@ function generateInvoiceHTML(data) {
         </thead>
         <tbody>
           ${
-            items.length > 0
+            Array.isArray(items)
               ? items.map(item => `
                   <tr>
                     <td>${item.name || ''}</td>
@@ -319,111 +319,83 @@ function generateInvoiceHTML(data) {
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
-    let { data, isPreview } = req.body;
+    const { data, isPreview } = req.body;
+
     if (!data || typeof data !== "object") {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
-    let invoiceData = { ...data };
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (typeof invoiceData.items === "string") {
-      try {
-        invoiceData.items = JSON.parse(invoiceData.items);
-      } catch (err) {
-        invoiceData.items = [];
+    // Monthly reset logic for previewCount and usageCount
+    const currentMonth = new Date().getMonth();
+    if (user.lastResetMonth !== currentMonth) {
+      user.previewCount = 0;
+      user.usageCount = 0;
+      user.lastResetMonth = currentMonth;
+      await user.save();
+    }
+
+    // Increase previewCount if this is a preview request by a basic user
+    if (isPreview && !user.isPremium) {
+      if (user.previewCount < 3) {
+        user.previewCount++;
+        await user.save();
+      } else {
+        // If previewCount >= 3, check usageCount limit
+        if (user.usageCount >= user.maxUsage) {
+          return res.status(403).json({
+            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
+          });
+        }
       }
     }
 
-    if (!Array.isArray(invoiceData.items)) {
-      invoiceData.items = [];
-    }
-
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const now = new Date();
-
-    // Reset preview count monthly
-    if (
-      !user.previewLastReset ||
-      now.getMonth() !== user.previewLastReset.getMonth() ||
-      now.getFullYear() !== user.previewLastReset.getFullYear()
-    ) {
-      user.previewCount = 0;
-      user.previewLastReset = now;
-    }
-
-    // Reset usage count monthly
-    if (
-      !user.usageLastReset ||
-      now.getMonth() !== user.usageLastReset.getMonth() ||
-      now.getFullYear() !== user.usageLastReset.getFullYear()
-    ) {
-      user.usageCount = 0;
-      user.usageLastReset = now;
-    }
-
-    // Show watermark only if it's a preview, user is basic, and previewCount >= 3
+    // Decide whether to add watermark:
+    // Only add watermark if preview, basic user, and previewCount >= 3
     const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
 
-    invoiceData.isBasicUser = !user.isPremium;
-    invoiceData.addWatermark = addWatermark;
+    // Generate invoice HTML with watermark flag
+    const html = generateInvoiceHTML({ ...data, isBasicUser: addWatermark });
 
-    // For basic users, reset logo and chart options
-    if (!user.isPremium) {
-      invoiceData.customLogoUrl = null;
-      invoiceData.showChart = false;
-    }
-
-    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
-
-    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
-    const html = generateInvoiceHTML(invoiceData);
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20px", right: "15px", bottom: "140px", left: "15px" },
-    });
-
+    const pdfPath = path.join(__dirname, "../pdfs", `invoice_${Date.now()}.pdf`);
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
-    // Save user usage/preview counts
-    if (isPreview) {
-      user.previewCount++;
-    } else {
-      user.usageCount++;
-    }
-    await user.save();
-
-    // Read generated PDF and send as base64 string
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const pdfBase64 = pdfBuffer.toString("base64");
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
 
-    return res.json({
-      success: true,
-      pdfBase64,
-      previewCount: user.previewCount,
-      usageCount: user.usageCount,
-    });
+    // Update usageCount for final downloads and previews above limit
+    if (
+      !isPreview || 
+      (isPreview && user.previewCount >= 3 && !user.isPremium)
+    ) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+      user.usageCount += pageCount;
+      await user.save();
+    }
+
+    res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
-    console.error("Error generating invoice:", error);
-    return res.status(500).json({ error: "Failed to generate invoice" });
+    console.error("PDF generation error:", error);
+    res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
