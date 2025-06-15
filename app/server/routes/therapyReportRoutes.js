@@ -76,18 +76,19 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
           font-family: 'Playfair Display', serif;
         }
         .watermark-preview {
-          position: fixed;
-          top: 55%;
-          left: 50%;
-          font-size: 2.5rem;
-          font-weight: 600;
-          color: #5e60ce;
-          opacity: 0.1;
-          transform: translate(-50%, -50%) rotate(-15deg);
-          pointer-events: none;
-          user-select: none;
-          z-index: 0;
-          font-family: 'Arial', sans-serif;
+       
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 60px;
+        color: rgba(255, 0, 0, 0.1);
+        font-weight: 900;
+        pointer-events: none;
+        user-select: none;
+        z-index: 9999;
+        white-space: nowrap;
+      
         }
       </style>
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
