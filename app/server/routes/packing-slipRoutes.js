@@ -8,15 +8,37 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
+const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
   }
 };
 
-function generatePackingSlipHTML(data) {
-  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+async function resetMonthlyUsageIfNeeded(user) {
+  const now = new Date();
+  if (!user.usageLastReset) {
+    user.usageLastReset = now;
+    user.usageCount = 0;
+    user.previewCount = 0;
+    await user.save();
+    return;
+  }
 
+  const lastReset = new Date(user.usageLastReset);
+  if (
+    now.getFullYear() > lastReset.getFullYear() ||
+    now.getMonth() > lastReset.getMonth()
+  ) {
+    user.usageCount = 0;
+    user.previewCount = 0;
+    user.usageLastReset = now;
+    await user.save();
+  }
+}
+
+function generatePackingSlipHTML(data, addWatermark = false) {
   return `
     <html>
       <head>
@@ -26,6 +48,7 @@ function generatePackingSlipHTML(data) {
             padding: 40px;
             background-color: #f7f9fc;
             color: #333;
+            position: relative;
           }
 
           .container {
@@ -84,76 +107,91 @@ function generatePackingSlipHTML(data) {
             background-color: #f9f9f9;
           }
 
-       .footer {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 20px;
-    font-size: 12px;
-    background-color: #f9f9f9;
-    color: #444;
-    border-top: 1px solid #ccc;
-    text-align: center;
-    line-height: 1.6;
-  }
-  .footer a {
-    color: #0073e6;
-    text-decoration: none;
-  }
-  .footer a:hover {
-    text-decoration: underline;
-  }
-
- /* MOBILE STYLES */
-  @media (max-width: 600px) {
-    body {
-      padding: 20px;
-    }
-
-    .container {
-      padding: 20px;
-    }
-
-    .header {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-
-    h1 {
-      font-size: 20px;
-      text-align: left;
-    }
-
-    .info p {
-      font-size: 15px;
-    }
-
-    table th,
-    table td {
-      font-size: 14px;
-      padding: 10px;
-    }
-
           .footer {
-      font-size: 11px;
-      padding: 15px 10px;
-      line-height: 1.4;
-    }
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            font-size: 12px;
+            background-color: #f9f9f9;
+            color: #444;
+            border-top: 1px solid #ccc;
+            text-align: center;
+            line-height: 1.6;
+          }
 
-    .footer p {
-      margin: 6px 0;
-    }
+          .footer a {
+            color: #0073e6;
+            text-decoration: none;
+          }
 
-    .footer a {
-      word-break: break-word;
-    }
-  }
+          .footer a:hover {
+            text-decoration: underline;
+          }
 
+          ${addWatermark ? `
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-45deg);
+              font-size: 5rem;
+              color: rgba(255, 0, 0, 0.1);
+              user-select: none;
+              pointer-events: none;
+              z-index: 9999;
+              white-space: nowrap;
+              font-weight: bold;
+            }
+          ` : ''}
 
+          @media (max-width: 600px) {
+            body {
+              padding: 20px;
+            }
+
+            .container {
+              padding: 20px;
+            }
+
+            .header {
+              flex-direction: column;
+              align-items: flex-start;
+            }
+
+            h1 {
+              font-size: 20px;
+              text-align: left;
+            }
+
+            .info p {
+              font-size: 15px;
+            }
+
+            table th, table td {
+              font-size: 14px;
+              padding: 10px;
+            }
+
+            .footer {
+              font-size: 11px;
+              padding: 15px 10px;
+              line-height: 1.4;
+            }
+
+            .footer p {
+              margin: 6px 0;
+            }
+
+            .footer a {
+              word-break: break-word;
+            }
+          }
         </style>
       </head>
       <body>
+        ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
         <div class="container">
           <div class="header">
             <img src="${logoUrl}" alt="Company Logo" class="logo" />
@@ -186,15 +224,15 @@ function generatePackingSlipHTML(data) {
             </tbody>
           </table>
 
-           <div class="footer">
-  <p>Thanks for using our service!</p>
-  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
-  <p>
-    Generated using <strong>PDFify</strong>. Visit 
-    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-  </p>
-</div>
+          <div class="footer">
+            <p>Thanks for using our service!</p>
+            <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+            <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+            <p>Generated using <strong>PDFify</strong>. Visit 
+              <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+            </p>
+          </div>
+        </div>
       </body>
     </html>
   `;
@@ -205,14 +243,23 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
 
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
+    await resetMonthlyUsageIfNeeded(user);
 
-    if (!user.isPremium) {
-      data.customLogoUrl = null;
-      data.showExtras = false;
+    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
+
+    if (isPreview && !user.isPremium) {
+      if (user.previewCount >= 3) {
+        if (user.usageCount >= user.maxUsage) {
+          return res.status(403).json({
+            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
+          });
+        }
+      } else {
+        user.previewCount++;
+        await user.save();
+      }
     }
 
     const safeOrderId = data.orderId || `preview-${Date.now()}`;
@@ -230,9 +277,9 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
     });
 
     const page = await browser.newPage();
-    const html = generatePackingSlipHTML(data);
+    const html = generatePackingSlipHTML(data, addWatermark);
+
     await page.setContent(html, { waitUntil: "networkidle0" });
-    
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
@@ -241,19 +288,25 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
     const pageCount = parsed.numpages;
 
     if (!isPreview) {
-    
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
       }
-
+      user.usageCount += pageCount;
+      await user.save();
+    } else if (addWatermark) {
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
       user.usageCount += pageCount;
       await user.save();
     }
 
-   
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Error sending file:", err);
@@ -265,7 +318,5 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-
 
 module.exports = router;
