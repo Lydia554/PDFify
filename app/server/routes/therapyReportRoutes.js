@@ -255,6 +255,8 @@ function generateTherapyReportHTML(data) {
   return innerHtml;
 }
 
+
+
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview = false } = req.body;
 
@@ -300,7 +302,6 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     });
 
     const page = await browser.newPage();
-
     await page.emulateMediaType("screen");
 
     // Helper to generate the final wrapped HTML with branding and watermark
@@ -311,82 +312,61 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     // Generate base report HTML
     const reportHtml = generateTherapyReportHTML(cleanedData);
 
-    // Logic to decide watermark for preview
+    // Logic to decide watermark for preview after 3 previews
     const addPreviewWatermark = isPreview && !isPremiumUser && user.previewCount >= 3;
 
-    // Function to generate PDF buffer for page count calculation
-    async function generatePdfBuffer() {
-      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, addPreviewWatermark);
-      await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
+    // Generate PDF buffer for counting pages, no footer needed
+    async function generatePdfBuffer(html) {
+      await page.setContent(html, { waitUntil: "networkidle0" });
       return await page.pdf({ format: "A4", printBackground: true });
     }
 
+    // Save final PDF with footer and page count
+    async function saveFinalPdf(html, outputPath) {
+      await page.setContent(html, { waitUntil: "networkidle0" });
+      await page.pdf({
+        path: outputPath,
+        format: "A4",
+        printBackground: true,
+        displayHeaderFooter: true,
+        footerTemplate: `
+          <div style="font-size:10px; width:100%; text-align:center; color:#999; padding-bottom:5px; font-family: Arial, sans-serif;">
+            Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+          </div>`,
+        headerTemplate: `<div></div>`,
+        margin: { top: '40px', bottom: '80px' }
+      });
+    }
 
-    await page.pdf({
-  path: pdfPath,
-  format: "A4",
-  printBackground: true,
-  displayHeaderFooter: true,
-  footerTemplate: `
-    <div style="font-size:10px; width:100%; text-align:center; color:#999; padding-bottom:5px; font-family: Arial, sans-serif;">
-      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-    </div>`,
-  headerTemplate: `<div></div>`, // empty header
-  margin: {
-    top: '40px',
-    bottom: '80px' // leave room for footer + page number
-  }
-});
+    if (isPreview && !isPremiumUser && user.previewCount < 3) {
+      // First 3 previews free, increment previewCount but no usageCount increment
+      user.previewCount++;
+      await user.save();
 
+      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, false);
+      await saveFinalPdf(wrappedHtml, pdfPath);
+    } else {
+      // Either download or previews after 3rd count as usage
+      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, addPreviewWatermark);
 
-    if (isPreview && !isPremiumUser) {
-      if (user.previewCount < 3) {
-        // First 3 previews are free, increment previewCount only
-        user.previewCount++;
-        await user.save();
-
-        // Generate PDF without usage count increment
-        const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, false);
-        await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
-        await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
-      } else {
-        // After 3 previews, previews count as usage
-        const pdfBuffer = await generatePdfBuffer();
-        const parsed = await pdfParse(pdfBuffer);
-        const pageCount = parsed.numpages;
-
-        if (user.usageCount + pageCount > user.maxUsage) {
-          await browser.close();
-          return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-        }
-
-        user.usageCount += pageCount;
-        await user.save();
-
-        // Save the PDF file for download
-        await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
-      }
-    } else if (!isPreview) {
-      // Downloads always count as usage
-      const pdfBuffer = await generatePdfBuffer();
+      const pdfBuffer = await generatePdfBuffer(wrappedHtml);
       const parsed = await pdfParse(pdfBuffer);
       const pageCount = parsed.numpages;
 
       if (user.usageCount + pageCount > user.maxUsage) {
         await browser.close();
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages."
+        });
       }
 
       user.usageCount += pageCount;
+      if (isPreview && !isPremiumUser) {
+        user.previewCount++; // count previews beyond first 3 as usage + preview
+      }
       await user.save();
 
-      // Save the PDF file for download
-      await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
-    } else {
-      // For premium user previews (or other cases), just generate PDF normally
-      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, false);
-      await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
-      await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+      await saveFinalPdf(wrappedHtml, pdfPath);
     }
 
     await browser.close();
