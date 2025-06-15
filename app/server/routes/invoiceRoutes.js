@@ -308,6 +308,10 @@ return `
 </html>
 `;
 }
+
+
+
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
@@ -334,7 +338,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
- 
+   
+    const now = new Date();
+    const lastReset = user.lastPreviewReset || new Date(0);
+    if (
+      now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
+      now.getUTCMonth() !== lastReset.getUTCMonth()
+    ) {
+      user.previewCount = 0;
+      user.lastPreviewReset = now;
+      await user.save();
+    }
+
     user.usageCount = user.usageCount || 0;
     user.previewCount = user.previewCount || 0;
 
@@ -367,12 +382,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const pageCount = parsed.numpages;
 
     if (isPreview && !user.isPremium) {
-   
       if (user.previewCount < 3) {
         user.previewCount += 1;
         await user.save();
       } else {
-        
         if (user.usageCount + pageCount > user.maxUsage) {
           fs.unlinkSync(pdfPath);
           return res.status(403).json({
@@ -404,6 +417,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 
 module.exports = router;
