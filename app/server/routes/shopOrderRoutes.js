@@ -119,7 +119,7 @@ function generateShopOrderHTML(data) {
         </style>
       </head>
       <body>
-        ${data.isPreview ? `<div class="watermark">PREVIEW</div>` : ""}
+        ${data.showWatermark ? `<div class="watermark">PREVIEW</div>` : ""}
         <h1>Shop Order: ${data.shopName}</h1>
 
         <div class="section">
@@ -170,9 +170,11 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Inject user access flags into data
-    data.showExtras = user.isPremium;
-    data.isPreview = isPreview && !user.isPremium; // show watermark only for basic users previewing
+    // Inject flags for consistent logic
+    const isBasic = !user.isPremium;
+    const showWatermark = isPreview && isBasic;
+    data.showExtras = !isBasic;
+    data.showWatermark = showWatermark;
 
     const browser = await puppeteer.launch({
       headless: true,
