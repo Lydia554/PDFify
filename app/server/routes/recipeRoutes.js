@@ -22,25 +22,26 @@ const log = (message, data = null) => {
 
 
 function generateRecipeHTML(data) {
-  const watermarkCSS = process.env.NODE_ENV === "production" && data.showWatermark
-    ? `
-      body::before {
-        content: "Food Trek";
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        font-size: 6rem;
-        font-weight: 700;
-        color: #eee;
-        opacity: 0.05;
-        transform: translate(-50%, -50%) rotate(-30deg);
-        pointer-events: none;
-        user-select: none;
-        z-index: 0;
-        font-family: 'Playfair Display', serif;
-      }
-    `
-    : '';
+const watermarkCSS = data.showWatermark
+  ? `
+    body::before {
+      content: "Food Trek";
+      position: fixed;
+      top: 40%;
+      left: 50%;
+      font-size: 6rem;
+      font-weight: 700;
+      color: #eee;
+      opacity: 0.05;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+      font-family: 'Playfair Display', serif;
+    }
+  `
+  : '';
+
 
   const logoHtml = data.customLogoUrl
     ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
