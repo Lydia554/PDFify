@@ -248,10 +248,10 @@ function generateTherapyReportHTML(data, isPremiumUser) {
     </html>
   `;
 }
-
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview = false } = req.body;
 
+  // Clean input data with defaults
   const cleanedData = {
     childName: data?.childName ?? "John Doe",
     birthDate: data?.birthDate ?? "2017-08-16",
@@ -288,6 +288,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
 
     const user = await User.findById(req.user.userId);
     if (!user) {
+      await browser.close();
       return res.status(404).json({ error: "User not found" });
     }
 
@@ -319,11 +320,11 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const pageCount = parsed.numpages;
 
     if (!isPreview) {
+      // Check usage and update for real generation (not preview)
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
-
       user.usageCount += pageCount;
       await user.save();
     }
@@ -335,6 +336,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     fileStream.pipe(res);
 
     fileStream.on("end", () => {
+      // Delete PDF only if NOT preview
       if (!isPreview && fs.existsSync(pdfPath)) {
         fs.unlinkSync(pdfPath);
       }
