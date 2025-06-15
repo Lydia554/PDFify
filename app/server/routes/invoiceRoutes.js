@@ -135,6 +135,31 @@ function generateInvoiceHTML(data) {
 
       /* Responsive and other styles unchanged ... */
 
+      .footer {
+  text-align: center;
+  font-size: 14px;
+  color: #888;
+  margin-top: 30px;
+  padding: 15px 20px;
+  background: #f8faff;
+  border-top: 1px solid #dfe4f2;
+  font-family: 'Open Sans', sans-serif;
+  border-radius: 0 0 16px 16px;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative; /* default static flow */
+  z-index: 1;
+}
+.footer a {
+  color: #4a90e2;
+  text-decoration: none;
+}
+.footer a:hover {
+  text-decoration: underline;
+}
+
+
     </style>
   </head>
   <body class="${userClass}">
