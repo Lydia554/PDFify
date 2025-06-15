@@ -292,8 +292,8 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Monthly reset logic for previewCount and usageCount
     const now = new Date();
+    // Reset previewCount monthly for basic users
     if (
       !user.previewLastReset ||
       now.getMonth() !== user.previewLastReset.getMonth() ||
@@ -302,6 +302,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       user.previewCount = 0;
       user.previewLastReset = now;
     }
+    // Reset usageCount monthly
     if (
       !user.usageLastReset ||
       now.getMonth() !== user.usageLastReset.getMonth() ||
@@ -338,30 +339,35 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (isPreview) {
-      if (!isPremiumUser) {
+    if (!isPremiumUser) {
+      if (isPreview) {
         if (user.previewCount < 3) {
+          // Free preview
           user.previewCount += 1;
         } else {
-          // Block previews beyond 3 for non-premium users
+          // Previews after 3 count as usage pages
+          if (user.usageCount + pageCount > user.maxUsage) {
+            fs.unlinkSync(pdfPath);
+            return res.status(403).json({
+              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+            });
+          }
+          user.usageCount += pageCount;
+        }
+      } else {
+        // Downloads count as usage pages
+        if (user.usageCount + pageCount > user.maxUsage) {
           fs.unlinkSync(pdfPath);
           return res.status(403).json({
-            error: "Preview limit reached. Upgrade to premium for more previews.",
+            error: "Monthly usage limit reached. Upgrade to premium for more pages.",
           });
         }
+        user.usageCount += pageCount;
       }
-    } else {
-      // Downloads count toward usage limit for non-premium
-      if (!isPremiumUser && user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-      user.usageCount += pageCount;
+      await user.save();
     }
 
-    await user.save();
+    // For premium users, no increments for preview or usage needed
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
