@@ -143,7 +143,6 @@ function generateRecipeHTML(data) {
     </html>
   `;
 }
-
 router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
 
@@ -158,16 +157,28 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     const isPremium = user.isPremium;
 
     
+    const now = new Date();
+    const lastReset = user.previewLastReset || new Date(0);
+    const sameMonth = now.getFullYear() === lastReset.getFullYear() &&
+                      now.getMonth() === lastReset.getMonth();
+
+    if (!sameMonth) {
+      user.previewCount = 0;
+      user.previewLastReset = now;
+      await user.save();
+    }
+
     let countAsDownload = false;
     if (isPreview) {
       if (user.previewCount < 3) {
         user.previewCount += 1;
         await user.save();
       } else {
-        countAsDownload = true; 
+        countAsDownload = true;
       }
     }
 
+ 
     const cleanedData = { ...data };
     if ((!isPremium && !isPreview) || countAsDownload) {
       delete cleanedData.ingredientBreakdown;
@@ -177,7 +188,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       ...cleanedData,
       customLogoUrl: (!isPremium || isPreview || countAsDownload) ? defaultLogoUrl : null,
       showChart: isPremium && !isPreview && !countAsDownload,
-      showWatermark: (!isPremium || isPreview || countAsDownload),
+      showWatermark: process.env.NODE_ENV === "production" && (!isPremium || isPreview || countAsDownload),
     };
 
     const html = generateRecipeHTML(payload);
@@ -208,6 +219,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
+
       user.usageCount += pageCount;
       await user.save();
 
