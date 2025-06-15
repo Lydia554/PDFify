@@ -212,24 +212,19 @@ function generateInvoiceHTML(data) {
       }
 
       /* Watermark styles */
-      .watermark {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 48px;
-        color: rgba(255, 0, 0, 0.15);
-        font-weight: 900;
-        pointer-events: none;
-        user-select: none;
-        white-space: nowrap;
-        z-index: 9999;
-        text-shadow:
-          -1px -1px 0 #ff0000,
-          1px -1px 0 #ff0000,
-          -1px 1px 0 #ff0000,
-          1px 1px 0 #ff0000;
-      }
+     .watermark {
+  position: fixed;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 60px;
+  color: rgba(255, 0, 0, 0.1); /* lighter red with transparency */
+  font-weight: 900;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
     </style>
   </head>
   <body>
