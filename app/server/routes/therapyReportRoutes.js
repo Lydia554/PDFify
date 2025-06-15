@@ -16,8 +16,7 @@ const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 function generateTherapyReportHTML(data, isPremiumUser) {
   const innerHtml = `
-    ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
-    ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
+    ${!isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" /><div class="watermark">Confidential</div>` : ''}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -248,10 +247,10 @@ function generateTherapyReportHTML(data, isPremiumUser) {
     </html>
   `;
 }
+
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview = false } = req.body;
 
-  // Clean input data with defaults
   const cleanedData = {
     childName: data?.childName ?? "John Doe",
     birthDate: data?.birthDate ?? "2017-08-16",
@@ -320,11 +319,11 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const pageCount = parsed.numpages;
 
     if (!isPreview) {
-      // Check usage and update for real generation (not preview)
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
       }
+
       user.usageCount += pageCount;
       await user.save();
     }
@@ -336,7 +335,6 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     fileStream.pipe(res);
 
     fileStream.on("end", () => {
-      // Delete PDF only if NOT preview
       if (!isPreview && fs.existsSync(pdfPath)) {
         fs.unlinkSync(pdfPath);
       }
