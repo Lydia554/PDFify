@@ -165,8 +165,9 @@ function generateShopOrderHTML(data, isBasicUser = true, showWatermark = false) 
 
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
-  if (!data || !data.shopName) {
-    return res.status(400).json({ error: "Missing shop order data" });
+
+  if (!data || typeof data !== "object" || !data.shopName) {
+    return res.status(400).json({ error: "Missing or invalid shop order data" });
   }
 
   try {
@@ -175,26 +176,28 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
     const isBasicUser = !user.isPremium;
 
-    // Initialize usage tracking fields if not present
+    // Initialize tracking fields if missing
     user.previewCount = user.previewCount || 0;
-    user.lastPreviewReset = user.lastPreviewReset || new Date(0);
     user.usageCount = user.usageCount || 0;
-    user.maxUsage = user.maxUsage || 1000; // adjust as needed
+    user.maxUsage = user.maxUsage || 1000;
+    user.lastPreviewReset = user.lastPreviewReset || new Date(0);
 
     const now = new Date();
+    const lastReset = new Date(user.lastPreviewReset);
 
-    // Reset previewCount monthly if needed
+    // Reset preview count monthly
     if (
-      now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
-      now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
+      now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
+      now.getUTCMonth() !== lastReset.getUTCMonth()
     ) {
       user.previewCount = 0;
       user.lastPreviewReset = now;
       await user.save();
     }
 
-    // Decide on watermark based on preview and user type
+    // Decide watermark and usage logic
     let addWatermark = false;
+    let shouldCountAsUsage = false;
 
     if (isBasicUser && isPreview) {
       if (user.previewCount < 3) {
@@ -202,36 +205,40 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
         addWatermark = true;
         await user.save();
       } else {
-        addWatermark = false;
+        shouldCountAsUsage = true;
       }
+    } else if (!isPreview) {
+      shouldCountAsUsage = true;
     }
 
-    // Set watermark flag on data so generateShopOrderHTML uses it
+    // Prepare data for HTML generator
     data.showWatermark = addWatermark;
+
+    // Force default logo for basic users
+    if (isBasicUser) {
+      data.customLogoUrl = null;
+    }
 
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
     const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
-
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
+
     const page = await browser.newPage();
-
-    const html = generateShopOrderHTML(data, isBasicUser, addWatermark);
-
+    const html = generateShopOrderHTML(data, user.isPremium, addWatermark);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (!isPreview || (isBasicUser && user.previewCount >= 3)) {
-      // Check usage limit on full download or previews beyond limit
+    if (shouldCountAsUsage) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -242,12 +249,16 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       await user.save();
     }
 
-    res.download(pdfPath, () => fs.unlinkSync(pdfPath));
+    res.download(pdfPath, (err) => {
+      if (err) console.error("Error sending PDF:", err);
+      if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+    });
 
   } catch (error) {
-    console.error("PDF generation error:", error);
-    res.status(500).json({ error: "PDF generation failed" });
+    console.error("Error generating shop order PDF:", error);
+    res.status(500).json({ error: "Failed to generate PDF" });
   }
 });
+
 
 module.exports = router;
