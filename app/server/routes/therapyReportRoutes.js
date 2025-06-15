@@ -16,8 +16,7 @@ const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
 function generateTherapyReportHTML(data, isPremiumUser) {
   const innerHtml = `
-    ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
-    ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
+    ${!isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" /><div class="watermark">Confidential</div>` : ''}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -288,6 +287,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
 
     const user = await User.findById(req.user.userId);
     if (!user) {
+      await browser.close();
       return res.status(404).json({ error: "User not found" });
     }
 
