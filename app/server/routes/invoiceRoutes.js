@@ -9,22 +9,25 @@ const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
 const log = (message, data = null) => {
-  if (process.env.NODE_ENV !== "production") {
-    console.log(message, data);
-  }
+  if (process.env.NODE_ENV !== "production") {
+    console.log(message, data);
+  }
 };
-
 
 function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
   const logoUrl =
-  typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
-    ? data.customLogoUrl.trim()
-    : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+    typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
+      ? data.customLogoUrl.trim()
+      : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
+  // Watermark HTML for basic users:
+  const watermarkHTML = data.isBasicUser
+    ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
+    : "";
 
-return `
+  return `
 <html>
   <head>
     <style>
@@ -49,6 +52,8 @@ return `
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
         border-radius: 16px;
         border: 1px solid #e0e4ec;
+        position: relative;
+        z-index: 1;
       }
 
       .logo {
@@ -139,13 +144,13 @@ return `
         border-radius: 12px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         break-inside: avoid;
-  page-break-inside: avoid;
+        page-break-inside: avoid;
       }
 
       .chart-container h2 {
         font-size: 20px;
         color: #2a3d66;
-        margin-bottom: 105x;
+        margin-bottom: 10px;
       }
 
       @media (max-width: 768px) {
@@ -190,7 +195,6 @@ return `
         font-size: 11px;
         border-radius: 0 0 16px 16px;
         box-sizing: border-box;
-       
       }
 
       .footer p {
@@ -205,6 +209,26 @@ return `
 
       .footer a:hover {
         text-decoration: underline;
+      }
+
+      /* Watermark styles */
+      .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 48px;
+        color: rgba(255, 0, 0, 0.15);
+        font-weight: 900;
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+        z-index: 9999;
+        text-shadow:
+          -1px -1px 0 #ff0000,
+          1px -1px 0 #ff0000,
+          -1px 1px 0 #ff0000,
+          1px 1px 0 #ff0000;
       }
     </style>
   </head>
@@ -268,7 +292,8 @@ return `
         <p>Total Amount Due: ${data.total}</p>
       </div>
 
-      ${data.showChart ? `
+      ${
+        data.showChart ? `
         <div class="chart-container">
           <h2>Breakdown</h2>
           <img src="https://quickchart.io/chart?c={
@@ -277,8 +302,11 @@ return `
             ]}
           }" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
         </div>
-      ` : ''}
+      ` : ''
+      }
     </div>
+
+    ${watermarkHTML}
 
     <div class="footer">
       <p>Thanks for using our service!</p>
@@ -293,8 +321,6 @@ return `
 </html>
 `;
 }
-
-
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
@@ -359,6 +385,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
+      invoiceData.isBasicUser = true;  // <-- flag to add watermark
+    } else {
+      invoiceData.isBasicUser = false;
     }
 
     const html = generateInvoiceHTML(invoiceData);
