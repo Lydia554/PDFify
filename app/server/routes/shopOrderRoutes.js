@@ -174,7 +174,6 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Reset usage each month
     const now = new Date();
     if (!user.usageLastReset) {
       user.usageLastReset = now;
@@ -194,7 +193,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       }
     }
 
-    // Handle preview logic
+  
     if (isPreview && !user.isPremium) {
       if (user.previewCount >= 3) {
         if (user.usageCount >= user.maxUsage) {
@@ -227,7 +226,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // Usage count logic
+
     if (!isPreview || (isPreview && user.previewCount >= 3 && !user.isPremium)) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);

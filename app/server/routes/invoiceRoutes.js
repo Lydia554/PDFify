@@ -317,6 +317,7 @@ function generateInvoiceHTML(data) {
 `;
 }
 
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
@@ -343,7 +344,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Monthly resets
+    
     const now = new Date();
     if (
       !user.previewLastReset ||
@@ -363,6 +364,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       user.usageLastReset = now;
     }
 
+
+    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
+
+ 
+    invoiceData.isBasicUser = !user.isPremium;
+    invoiceData.addWatermark = addWatermark;
+
+    if (!user.isPremium) {
+      invoiceData.customLogoUrl = null;
+      invoiceData.showChart = false;
+    }
+
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
@@ -376,31 +389,22 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     const page = await browser.newPage();
 
-    // Remove premium features if not premium
-    if (!user.isPremium) {
-      invoiceData.customLogoUrl = null;
-      invoiceData.showChart = false;
-      invoiceData.isBasicUser = true;  // <-- flag to add watermark
-    } else {
-      invoiceData.isBasicUser = false;
-    }
-
     const html = generateInvoiceHTML(invoiceData);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // Handle preview vs download
+   
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
           user.previewCount += 1;
         } else {
-          // After 3 previews, treat it like a download
+   
           if (user.usageCount + pageCount > user.maxUsage) {
             fs.unlinkSync(pdfPath);
             return res.status(403).json({
@@ -411,7 +415,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         }
       }
     } else {
-      // It's a real download
+     
       if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
