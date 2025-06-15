@@ -241,16 +241,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
 
     await resetMonthlyUsageIfNeeded(user);
 
-    if (isPreview && !user.isPremium) {
-      if (user.previewCount >= 3) {
-        if (user.usageCount >= user.maxUsage) {
-          return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more previews." });
-        }
-      } else {
-        user.previewCount++;
-        await user.save();
-      }
-    }
+    const isPremiumUser = user.isPremium;
 
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) {
@@ -266,42 +257,78 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     });
 
     const page = await browser.newPage();
-    
+
     await page.emulateMediaType("screen");
 
+    // Helper to generate the final wrapped HTML with branding and watermark
+    function getWrappedHtml(html, isPremium, addWatermark) {
+      return wrapHtmlWithBranding(html, isPremium, addWatermark);
+    }
+
+    // Generate base report HTML
     const reportHtml = generateTherapyReportHTML(cleanedData);
 
-    // Add watermark only for basic user previews when preview count >=3
-    const addPreviewWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
+    // Logic to decide watermark for preview
+    const addPreviewWatermark = isPreview && !isPremiumUser && user.previewCount >= 3;
 
-    const fullHtml = wrapHtmlWithBranding(reportHtml, user.isPremium, addPreviewWatermark);
-
-    await page.setContent(fullHtml, { waitUntil: "networkidle0" });
-   
-
-    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
-    await browser.close();
-
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
-
-    // Usage count logic
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-      }
-      user.usageCount += pageCount;
-      await user.save();
-    } else if (isPreview && user.previewCount >= 3 && !user.isPremium) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-      }
-      user.usageCount += pageCount;
-      await user.save();
+    // Function to generate PDF buffer for page count calculation
+    async function generatePdfBuffer() {
+      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, addPreviewWatermark);
+      await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
+      return await page.pdf({ format: "A4", printBackground: true });
     }
+
+    if (isPreview && !isPremiumUser) {
+      if (user.previewCount < 3) {
+        // First 3 previews are free, increment previewCount only
+        user.previewCount++;
+        await user.save();
+
+        // Generate PDF without usage count increment
+        const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, false);
+        await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
+        await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+      } else {
+        // After 3 previews, previews count as usage
+        const pdfBuffer = await generatePdfBuffer();
+        const parsed = await pdfParse(pdfBuffer);
+        const pageCount = parsed.numpages;
+
+        if (user.usageCount + pageCount > user.maxUsage) {
+          await browser.close();
+          return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+        }
+
+        user.usageCount += pageCount;
+        await user.save();
+
+        // Save the PDF file for download
+        await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+      }
+    } else if (!isPreview) {
+      // Downloads always count as usage
+      const pdfBuffer = await generatePdfBuffer();
+      const parsed = await pdfParse(pdfBuffer);
+      const pageCount = parsed.numpages;
+
+      if (user.usageCount + pageCount > user.maxUsage) {
+        await browser.close();
+        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
+
+      // Save the PDF file for download
+      await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+    } else {
+      // For premium user previews (or other cases), just generate PDF normally
+      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, false);
+      await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
+      await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+    }
+
+    await browser.close();
 
     res.download(pdfPath, (err) => {
       if (err) console.error("Error sending file:", err);
