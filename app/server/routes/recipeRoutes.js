@@ -189,7 +189,8 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       ...cleanedData,
       customLogoUrl: (!isPremium || isPreview || countAsDownload) ? defaultLogoUrl : null,
       showChart: isPremium && !isPreview && !countAsDownload,
-      showWatermark: process.env.NODE_ENV === "production" && (!isPremium || isPreview || countAsDownload),
+      showWatermark: !isPremium || isPreview || countAsDownload,
+
     };
 
     const html = generateRecipeHTML(payload);
