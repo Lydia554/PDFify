@@ -38,7 +38,7 @@ async function resetMonthlyUsageIfNeeded(user) {
   }
 }
 
-function generatePackingSlipHTML(data, addWatermark = false) {
+function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = false) {
   return `
     <html>
       <head>
@@ -193,8 +193,8 @@ function generatePackingSlipHTML(data, addWatermark = false) {
       <body>
         ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
         <div class="container">
-          <div class="header">
-            <img src="${logoUrl}" alt="Company Logo" class="logo" />
+     <div class="header">
+            ${!isPremiumUser ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ''}
             <h1>Packing Slip</h1>
           </div>
 
@@ -284,7 +284,8 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
     });
 
     const page = await browser.newPage();
-    const html = generatePackingSlipHTML(data, addWatermark);
+    const html = generatePackingSlipHTML(data, addWatermark, user.isPremium);
+
 
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
