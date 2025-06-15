@@ -258,6 +258,11 @@ function generateTherapyReportHTML(data, isPremiumUser) {
         <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
       </p>
     </div>
+
+    <div style="font-size:10px;width:100%;text-align:center;color:#999;padding:5px 0;">
+  Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+</div>
+
   `;
 
   return innerHtml;
