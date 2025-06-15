@@ -12,14 +12,14 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-function generateShopOrderHTML(data, isBasicUser = true) {
+function generateShopOrderHTML(data, isBasicUser = true, showWatermark = false) {
   // Logo only for basic (non-premium) users
   const logoHtml = isBasicUser
     ? `<img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Company Logo" class="logo" style="max-width:150px; display:block; margin: 0 auto 20px auto;" />`
     : "";
 
-  // Watermark only for basic users (light gray rotated text)
-  const watermarkHtml = data.showWatermark
+  // Watermark only for basic users with showWatermark true (light gray rotated text)
+  const watermarkHtml = showWatermark
     ? `<div style="
         position: fixed;
         top: 40%;
@@ -163,64 +163,63 @@ function generateShopOrderHTML(data, isBasicUser = true) {
   `;
 }
 
-
-
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
   if (!data || !data.shopName) {
     return res.status(400).json({ error: "Missing shop order data" });
   }
 
-  const user = await User.findById(req.user.userId);
-  if (!user) return res.status(404).json({ error: "User not found" });
-
-  const isBasicUser = !user.isPremium;
-
-  // Initialize usage tracking fields if not present
-  user.previewCount = user.previewCount || 0;
-  user.lastPreviewReset = user.lastPreviewReset || new Date(0);
-  user.usageCount = user.usageCount || 0;
-  user.maxUsage = user.maxUsage || 1000; // adjust as needed
-
-  const now = new Date();
-
-  // Reset previewCount monthly if needed
-  if (
-    now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
-    now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
-  ) {
-    user.previewCount = 0;
-    user.lastPreviewReset = now;
-    await user.save();
-  }
-
-  // Decide on watermark based on preview and user type
-  let addWatermark = false;
-
-  if (isBasicUser && isPreview) {
-    if (user.previewCount < 3) {
-      user.previewCount++;
-      addWatermark = true;
-      await user.save();
-    } else {
-      // After 3 previews, count pages as usage
-      addWatermark = false;
-    }
-  }
-
-  const pdfDir = path.join(__dirname, "../pdfs");
-  if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-
-  const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
-
   try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isBasicUser = !user.isPremium;
+
+    // Initialize usage tracking fields if not present
+    user.previewCount = user.previewCount || 0;
+    user.lastPreviewReset = user.lastPreviewReset || new Date(0);
+    user.usageCount = user.usageCount || 0;
+    user.maxUsage = user.maxUsage || 1000; // adjust as needed
+
+    const now = new Date();
+
+    // Reset previewCount monthly if needed
+    if (
+      now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
+      now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
+    ) {
+      user.previewCount = 0;
+      user.lastPreviewReset = now;
+      await user.save();
+    }
+
+    // Decide on watermark based on preview and user type
+    let addWatermark = false;
+
+    if (isBasicUser && isPreview) {
+      if (user.previewCount < 3) {
+        user.previewCount++;
+        addWatermark = true;
+        await user.save();
+      } else {
+        addWatermark = false;
+      }
+    }
+
+    // Set watermark flag on data so generateShopOrderHTML uses it
+    data.showWatermark = addWatermark;
+
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
+    const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
+
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
-    // Pass addWatermark and isBasicUser to control logo and watermark
     const html = generateShopOrderHTML(data, isBasicUser, addWatermark);
 
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -244,9 +243,9 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     }
 
     res.download(pdfPath, () => fs.unlinkSync(pdfPath));
+
   } catch (error) {
     console.error("PDF generation error:", error);
-    if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
