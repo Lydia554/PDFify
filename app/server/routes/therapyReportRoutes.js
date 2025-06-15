@@ -76,19 +76,17 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
           font-family: 'Playfair Display', serif;
         }
         .watermark-preview {
-       
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 60px;
-        color: rgba(255, 0, 0, 0.1);
-        font-weight: 900;
-        pointer-events: none;
-        user-select: none;
-        z-index: 9999;
-        white-space: nowrap;
-      
+          position: fixed;
+          top: 40%;
+          left: 50%;
+          transform: translate(-50%, -50%) rotate(-45deg);
+          font-size: 60px;
+          color: rgba(255, 0, 0, 0.1);
+          font-weight: 900;
+          pointer-events: none;
+          user-select: none;
+          z-index: 9999;
+          white-space: nowrap;
         }
       </style>
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -104,8 +102,10 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
   `;
 }
 
-function generateTherapyReportHTML(data) {
+function generateTherapyReportHTML(data, isPremiumUser) {
   const innerHtml = `
+    ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
+    ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -125,9 +125,10 @@ function generateTherapyReportHTML(data) {
       <div class="multi-column">
         <table class="table">
           <tr><th>Milestone</th><th>Progress</th></tr>
-          ${data.milestones.length > 0
-            ? data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')
-            : `<tr><td colspan="2">No milestone data available.</td></tr>`
+          ${
+            data.milestones.length > 0
+              ? data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')
+              : `<tr><td colspan="2">No milestone data available.</td></tr>`
           }
         </table>
       </div>
@@ -141,6 +142,8 @@ function generateTherapyReportHTML(data) {
     <div class="chart-container">
       <canvas id="progressChart"></canvas>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
       const ctx = document.getElementById('progressChart').getContext('2d');
@@ -159,6 +162,15 @@ function generateTherapyReportHTML(data) {
         options: {
           scales: {
             y: { beginAtZero: true }
+          },
+          animation: {
+            onComplete: () => {
+              // Add a hidden marker div so Puppeteer can wait for chart completion
+              const marker = document.createElement('div');
+              marker.id = 'chart-rendered';
+              marker.style.display = 'none';
+              document.body.appendChild(marker);
+            }
           }
         }
       });
@@ -208,54 +220,48 @@ function generateTherapyReportHTML(data) {
       }
 
       .footer {
-  position: static;
-  max-width: 800px;
-  margin: 40px auto 10px auto;
-  padding: 10px 20px;
-  background-color: #f0f2f7;
-  color: #555;
-  border-top: 2px solid #cbd2e1;
-  text-align: center;
-  line-height: 1.6;
-  font-size: 11px;
-  border-radius: 0 0 16px 16px;
-  box-sizing: border-box;
-}
+        position: static;
+        max-width: 800px;
+        margin: 40px auto 10px auto;
+        padding: 10px 20px;
+        background-color: #f0f2f7;
+        color: #555;
+        border-top: 2px solid #cbd2e1;
+        text-align: center;
+        line-height: 1.6;
+        font-size: 11px;
+        border-radius: 0 0 16px 16px;
+        box-sizing: border-box;
+      }
 
-.footer p {
-  margin: 6px 0;
-}
+      .footer p {
+        margin: 6px 0;
+      }
 
-.footer a {
-  color: #4a69bd;
-  text-decoration: none;
-  word-break: break-word;
-}
+      .footer a {
+        color: #4a69bd;
+        text-decoration: none;
+        word-break: break-word;
+      }
 
-.footer a:hover {
-  text-decoration: underline;
-}
-
+      .footer a:hover {
+        text-decoration: underline;
+      }
     </style>
 
-
-<div class="footer">
-  <p>Thanks for using our service!</p>
-  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-  <p>
-    Generated using <strong>PDFify</strong>. Visit
-    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
-  </p>
-</div>
-
-
+    <div class="footer">
+      <p>Thanks for using our service!</p>
+      <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+      <p>
+        Generated using <strong>PDFify</strong>. Visit
+        <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+      </p>
+    </div>
   `;
 
   return innerHtml;
 }
-
-
 
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview = false } = req.body;
@@ -302,82 +308,61 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     });
 
     const page = await browser.newPage();
-    await page.emulateMediaType("screen");
-
-    // Helper to generate the final wrapped HTML with branding and watermark
-    function getWrappedHtml(html, isPremium, addWatermark) {
-      return wrapHtmlWithBranding(html, isPremium, addWatermark);
-    }
-
-    // Generate base report HTML
-    const reportHtml = generateTherapyReportHTML(cleanedData);
-
-    // Logic to decide watermark for preview after 3 previews
-    const addPreviewWatermark = isPreview && !isPremiumUser && user.previewCount >= 3;
-
-    // Generate PDF buffer for counting pages, no footer needed
-    async function generatePdfBuffer(html) {
-      await page.setContent(html, { waitUntil: "networkidle0" });
-      return await page.pdf({ format: "A4", printBackground: true });
-    }
-
-    // Save final PDF with footer and page count
-    async function saveFinalPdf(html, outputPath) {
-      await page.setContent(html, { waitUntil: "networkidle0" });
-      await page.pdf({
-        path: outputPath,
-        format: "A4",
-        printBackground: true,
-        displayHeaderFooter: true,
-        footerTemplate: `
-          <div style="font-size:10px; width:100%; text-align:center; color:#999; padding-bottom:5px; font-family: Arial, sans-serif;">
-            Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-          </div>`,
-        headerTemplate: `<div></div>`,
-        margin: { top: '40px', bottom: '80px' }
-      });
-    }
-
-    if (isPreview && !isPremiumUser && user.previewCount < 3) {
-      // First 3 previews free, increment previewCount but no usageCount increment
-      user.previewCount++;
-      await user.save();
-
-      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, false);
-      await saveFinalPdf(wrappedHtml, pdfPath);
-    } else {
-      // Either download or previews after 3rd count as usage
-      const wrappedHtml = getWrappedHtml(reportHtml, isPremiumUser, addPreviewWatermark);
-
-      const pdfBuffer = await generatePdfBuffer(wrappedHtml);
-      const parsed = await pdfParse(pdfBuffer);
-      const pageCount = parsed.numpages;
-
-      if (user.usageCount + pageCount > user.maxUsage) {
-        await browser.close();
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages."
-        });
+    await page.setContent(
+      wrapHtmlWithBranding(
+        generateTherapyReportHTML(cleanedData, isPremiumUser),
+        isPremiumUser,
+        isPreview && !isPremiumUser
+      ),
+      {
+        waitUntil: "networkidle0",
       }
+    );
 
-      user.usageCount += pageCount;
-      if (isPreview && !isPremiumUser) {
-        user.previewCount++; // count previews beyond first 3 as usage + preview
-      }
-      await user.save();
+    // Wait explicitly for chart-rendered marker (added after Chart.js animation)
+    await page.waitForSelector("#chart-rendered", { timeout: 5000 }).catch(() => {
+      console.warn("Chart rendering marker not found, proceeding anyway.");
+    });
 
-      await saveFinalPdf(wrappedHtml, pdfPath);
-    }
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "20mm",
+        bottom: "20mm",
+        left: "15mm",
+        right: "15mm",
+      },
+    });
 
     await browser.close();
 
-    res.download(pdfPath, (err) => {
-      if (err) console.error("Error sending file:", err);
-      if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+    const pdfBuffer = fs.readFileSync(pdfPath);
+
+    // Track usage only if not preview
+    if (!isPreview) {
+      user.usageCount = (user.usageCount || 0) + 1;
+      await user.save();
+    } else {
+      // preview count tracking for basic users
+      if (!isPremiumUser) {
+        user.previewCount = (user.previewCount || 0) + 1;
+        await user.save();
+      }
+    }
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="therapy_report_${safeId}.pdf"`,
+      "Content-Length": pdfBuffer.length,
     });
+
+    return res.send(pdfBuffer);
+
   } catch (error) {
-    console.error("PDF generation error:", error);
-    res.status(500).json({ error: "PDF generation failed" });
+    console.error("Error generating therapy report PDF:", error);
+    return res.status(500).json({ error: "Failed to generate therapy report" });
   }
 });
 
