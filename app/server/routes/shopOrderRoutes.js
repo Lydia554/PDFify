@@ -163,8 +163,10 @@ function generateShopOrderHTML(data, isBasicUser = true, showWatermark = false) 
   `;
 }
 
+
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
+
   if (!data || !data.shopName) {
     return res.status(400).json({ error: "Missing shop order data" });
   }
@@ -175,15 +177,15 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
     const isBasicUser = !user.isPremium;
 
-    // Initialize usage tracking fields if not present
+    // Initialize usage tracking fields
     user.previewCount = user.previewCount || 0;
     user.lastPreviewReset = user.lastPreviewReset || new Date(0);
     user.usageCount = user.usageCount || 0;
-    user.maxUsage = user.maxUsage || 1000; // adjust as needed
+    user.maxUsage = user.maxUsage || 1000;
 
     const now = new Date();
 
-    // Reset previewCount monthly if needed
+    // ✅ Monthly reset of preview count
     if (
       now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
       now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
@@ -193,22 +195,23 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       await user.save();
     }
 
-    // Decide on watermark based on preview and user type
+    // ✅ Watermark and preview logic
     let addWatermark = false;
+    let overFreePreviewLimit = false;
 
-    if (isBasicUser && isPreview) {
+    if (isPreview && isBasicUser) {
       if (user.previewCount < 3) {
         user.previewCount++;
         addWatermark = true;
         await user.save();
       } else {
-        addWatermark = false;
+        overFreePreviewLimit = true;
       }
     }
 
-    // Set watermark flag on data so generateShopOrderHTML uses it
     data.showWatermark = addWatermark;
 
+    // ✅ PDF generation setup
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
@@ -218,20 +221,23 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-    const page = await browser.newPage();
 
-    const html = generateShopOrderHTML(data, isBasicUser, addWatermark);
+    const page = await browser.newPage();
+    const html = generateShopOrderHTML(data, user.isPremium, addWatermark);
 
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (!isPreview || (isBasicUser && user.previewCount >= 3)) {
-      // Check usage limit on full download or previews beyond limit
+    // ✅ Usage tracking
+    const shouldCountAsUsage =
+      !isPreview || (isPreview && isBasicUser && overFreePreviewLimit);
+
+    if (shouldCountAsUsage) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -242,7 +248,11 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       await user.save();
     }
 
-    res.download(pdfPath, () => fs.unlinkSync(pdfPath));
+    // ✅ Download and cleanup
+    res.download(pdfPath, (err) => {
+      if (err) console.error("File send error:", err);
+      if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+    });
 
   } catch (error) {
     console.error("PDF generation error:", error);
