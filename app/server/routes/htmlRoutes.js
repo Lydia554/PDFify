@@ -21,7 +21,7 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
             background-color: #fff;
             color: #333;
             position: relative;
-            min-height: 100vh;
+            min-height: 90vh;
           }
           .logo {
             display: block;
@@ -31,7 +31,7 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
           .content {
             margin-top: 30px;
           }
-          .footer {
+            .footer {
             position: absolute;
             bottom: 0;
             left: 0;
@@ -44,10 +44,12 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
             text-align: center;
             line-height: 1.6;
           }
+
           .footer a {
             color: #0073e6;
             text-decoration: none;
           }
+
           .footer a:hover {
             text-decoration: underline;
           }
