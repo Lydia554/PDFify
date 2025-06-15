@@ -4,149 +4,225 @@ const path = require("path");
 const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
+const pdfParse = require("pdf-parse");
 
-if (typeof ReadableStream === "undefined") {
-  global.ReadableStream = require("web-streams-polyfill").ReadableStream;
-}
+const log = (message, data = null) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.log(message, data);
+  }
+};
 
-function generatePackingSlipHTML(data, addWatermark = false, isBasic = true) {
-  const logoHtml = isBasic
-    ? `<img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Company Logo" class="logo" />`
-    : "";
-
-  const watermark = addWatermark
-    ? `<div style="
-        position: fixed;
-        top: 40%;
-        left: 20%;
-        transform: rotate(-30deg);
-        font-size: 70px;
-        color: rgba(200, 200, 200, 0.3);
-        z-index: 9999;
-        pointer-events: none;
-      ">PDFIFY BASIC</div>`
-    : "";
+function generatePackingSlipHTML(data) {
+  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
   return `
     <html>
       <head>
         <style>
           body {
-            font-family: Arial, sans-serif;
-            margin: 0; padding: 0;
-            background: #fff;
+            font-family: 'Open Sans', sans-serif;
+            padding: 40px;
+            background-color: #f7f9fc;
             color: #333;
           }
+
           .container {
             max-width: 800px;
-            margin: 30px auto;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            position: relative;
-            z-index: 10;
+            margin: auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
           }
+
           .header {
-            text-align: center;
-            margin-bottom: 30px;
-          }
-          .logo {
-            max-width: 150px;
-            margin-bottom: 10px;
-          }
-          h1 {
-            font-weight: bold;
-            color: #5e60ce;
-            font-size: 2.5rem;
-            margin: 0;
-          }
-          .section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ccc;
+            padding-bottom: 15px;
             margin-bottom: 25px;
           }
-          .section h2 {
-            border-bottom: 2px solid #ddd;
-            padding-bottom: 5px;
+
+          .logo {
+            height: 60px;
+          }
+
+          h1 {
+            font-size: 24px;
+            margin: 0;
             color: #2a3d66;
           }
+
+          .info {
+            margin-bottom: 20px;
+          }
+
+          .info p {
+            margin: 5px 0;
+          }
+
           table {
             width: 100%;
             border-collapse: collapse;
           }
-          th, td {
-            border: 1px solid #ccc;
-            padding: 8px;
+
+          table th, table td {
+            border: 1px solid #ddd;
+            padding: 12px;
             text-align: left;
           }
-          th {
-            background: #f4f7fb;
+
+          table th {
+            background-color: #f0f4fa;
+            font-weight: 600;
           }
+
+          table tr:nth-child(even) td {
+            background-color: #f9f9f9;
+          }
+
+       .footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    font-size: 12px;
+    background-color: #f9f9f9;
+    color: #444;
+    border-top: 1px solid #ccc;
+    text-align: center;
+    line-height: 1.6;
+  }
+  .footer a {
+    color: #0073e6;
+    text-decoration: none;
+  }
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+ /* MOBILE STYLES */
+  @media (max-width: 600px) {
+    body {
+      padding: 20px;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    h1 {
+      font-size: 20px;
+      text-align: left;
+    }
+
+    .info p {
+      font-size: 15px;
+    }
+
+    table th,
+    table td {
+      font-size: 14px;
+      padding: 10px;
+    }
+
+          .footer {
+      font-size: 11px;
+      padding: 15px 10px;
+      line-height: 1.4;
+    }
+
+    .footer p {
+      margin: 6px 0;
+    }
+
+    .footer a {
+      word-break: break-word;
+    }
+  }
+
+
         </style>
       </head>
       <body>
-        ${watermark}
         <div class="container">
           <div class="header">
-            ${logoHtml}
+            <img src="${logoUrl}" alt="Company Logo" class="logo" />
             <h1>Packing Slip</h1>
           </div>
-          <div class="section">
-            <strong>Order Number:</strong> ${data.orderNumber || "N/A"}<br/>
-            <strong>Customer Name:</strong> ${data.customerName || "N/A"}<br/>
-            <strong>Date:</strong> ${data.date || new Date().toLocaleDateString()}<br/>
+
+          <div class="info">
+            <p><strong>Order ID:</strong> ${data.orderId}</p>
+            <p><strong>Customer:</strong> ${data.customerName}</p>
+            <p><strong>Address:</strong> ${data.shippingAddress}</p>
+            <p><strong>Date:</strong> ${data.date}</p>
           </div>
-          <div class="section">
-            <h2>Items</h2>
-            <table>
-              <thead>
-                <tr><th>Product</th><th>Quantity</th><th>SKU</th></tr>
-              </thead>
-              <tbody>
-                ${data.items && data.items.length
-                  ? data.items.map(item => `
-                    <tr>
-                      <td>${item.name || ""}</td>
-                      <td>${item.quantity || 0}</td>
-                      <td>${item.sku || ""}</td>
-                    </tr>
-                  `).join("")
-                  : "<tr><td colspan='3'>No items found</td></tr>"
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>SKU</th>
+                <th>Quantity</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.items.map(item => `
+                <tr>
+                  <td>${item.name}</td>
+                  <td>${item.sku || '-'}</td>
+                  <td>${item.quantity}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+           <div class="footer">
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+  <p>
+    Generated using <strong>PDFify</strong>. Visit 
+    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+  </p>
+</div>
       </body>
     </html>
   `;
 }
 
-router.post("/generate-packing-slip", authenticate, async (req, res) => {
-  try {
-    const { data } = req.body;
+router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) => {
+  const { data, isPreview } = req.body;
 
-    if (!data) {
-      return res.status(400).json({ error: "Missing data" });
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
     }
 
-    const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isPremium = user.isPremium;
-    const isBasic = !isPremium;
-    const isProd = process.env.NODE_ENV === "production";
+    if (!user.isPremium) {
+      data.customLogoUrl = null;
+      data.showExtras = false;
+    }
 
-  
-    const addWatermark = isBasic && isProd;
-
-    const html = generatePackingSlipHTML(data, addWatermark, isBasic);
-
+    const safeOrderId = data.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
+
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    const pdfPath = path.join(pdfDir, `packing-slip_${Date.now()}.pdf`);
+    const pdfPath = path.join(pdfDir, `PackingSlip_${safeOrderId}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -154,18 +230,42 @@ router.post("/generate-packing-slip", authenticate, async (req, res) => {
     });
 
     const page = await browser.newPage();
+    const html = generatePackingSlipHTML(data);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+    
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
+
+    if (!isPreview) {
+    
+      if (user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+
+      user.usageCount += pageCount;
+      await user.save();
+    }
+
+   
     res.download(pdfPath, (err) => {
-      if (err) console.error("Error sending file:", err);
+      if (err) {
+        console.error("Error sending file:", err);
+      }
       fs.unlinkSync(pdfPath);
     });
   } catch (error) {
-    console.error("Packing slip generation failed:", error);
+    console.error("Packing Slip PDF generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
+
 
 module.exports = router;

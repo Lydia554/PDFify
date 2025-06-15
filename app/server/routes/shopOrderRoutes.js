@@ -12,7 +12,27 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-function generateShopOrderHTML(data) {
+function generateShopOrderHTML(data, isBasicUser = true) {
+  // Logo only for basic (non-premium) users
+  const logoHtml = isBasicUser
+    ? `<img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Company Logo" class="logo" style="max-width:150px; display:block; margin: 0 auto 20px auto;" />`
+    : "";
+
+  // Watermark only for basic users (light gray rotated text)
+  const watermarkHtml = isBasicUser
+    ? `<div style="
+          position: fixed;
+          top: 40%;
+          left: 10%;
+          font-size: 60px;
+          color: rgba(200, 200, 200, 0.25);
+          transform: rotate(-30deg);
+          z-index: 9999;
+          pointer-events: none;
+          user-select: none;
+        ">PDFIFY BASIC</div>`
+    : "";
+
   return `
     <html>
       <head>
@@ -24,6 +44,7 @@ function generateShopOrderHTML(data) {
             background-color: #f9f9f9;
             margin: 0;
             box-sizing: border-box;
+            position: relative;
           }
           h1 {
             text-align: center;
@@ -87,7 +108,6 @@ function generateShopOrderHTML(data) {
           .footer a:hover {
             text-decoration: underline;
           }
-
           @media (max-width: 600px) {
             body { padding: 20px; }
             h1 { font-size: 1.5em; }
@@ -106,6 +126,8 @@ function generateShopOrderHTML(data) {
         </style>
       </head>
       <body>
+        ${watermarkHtml}
+        ${logoHtml}
         <h1>Shop Order: ${data.shopName}</h1>
 
         <div class="section">
@@ -144,6 +166,10 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     return res.status(400).json({ error: "Missing shop order data" });
   }
 
+  const user = await User.findById(req.user.userId);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const isBasicUser = !user.isPremium;
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
@@ -155,7 +181,10 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
     const page = await browser.newPage();
-    const html = generateShopOrderHTML(data);
+
+    // Pass isBasicUser to generateShopOrderHTML so logo + watermark show properly
+    const html = generateShopOrderHTML(data, isBasicUser);
+
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
@@ -164,16 +193,13 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      fs.unlinkSync(pdfPath);
-      return res.status(404).json({ error: "User not found" });
-    }
-
     if (!isPreview) {
+      // Check usage limit: user.maxUsage and user.usageCount should be defined on user model
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages."
+        });
       }
       user.usageCount += pageCount;
       await user.save();
@@ -182,6 +208,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
     console.error("PDF generation error:", error);
+    if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
