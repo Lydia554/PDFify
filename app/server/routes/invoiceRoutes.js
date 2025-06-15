@@ -226,17 +226,14 @@ function generateInvoiceHTML(data) {
         <p>Total Amount Due: ${data.total}</p>
       </div>
 
-      ${
-        data.showChart ? `
-        <div class="chart-container">
-          <h2>Breakdown</h2>
-          <img src="https://quickchart.io/chart?c={
-            type:'pie',
-            data:{labels:['Subtotal','Tax'],datasets:[{data:[${data.subtotal.replace('€','')},${data.tax.replace('€','')}]}
-            ]}
-          }" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
-        </div>` : ''
-      }
+   ${
+      data.showChart
+        ? `<div class="chart-container">
+            <h2>Breakdown</h2>
+            <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
+           </div>`
+        : ""
+    }
     </div>
 
     ${watermarkHTML}
