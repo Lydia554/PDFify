@@ -13,6 +13,8 @@ const log = (message, data = null) => {
     console.log(message, data);
   }
 };
+
+
 function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
@@ -27,6 +29,25 @@ function generateInvoiceHTML(data) {
   const watermarkHTML = data.isBasicUser
     ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
     : "";
+
+  // Prepare chart config as a JS object
+  const chartConfig = {
+    type: "pie",
+    data: {
+      labels: ["Subtotal", "Tax"],
+      datasets: [
+        {
+          data: [
+            Number(data.subtotal.replace(/[^\d.-]/g, '')) || 0,
+            Number(data.tax.replace(/[^\d.-]/g, '')) || 0,
+          ],
+        },
+      ],
+    },
+  };
+
+  // Stringify and URL encode the config
+  const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
   return `
 <html>
@@ -58,8 +79,6 @@ function generateInvoiceHTML(data) {
         z-index: 1;
       }
 
-      /* Logo, header, footer, watermark unchanged */
-
       /* Table styles for PREMIUM users */
       .premium .table {
         width: 100%;
@@ -73,7 +92,7 @@ function generateInvoiceHTML(data) {
         text-align: left;
       }
       .premium .table th {
-        background-color: #dbe7ff;  /* lighter blue */
+        background-color: #dbe7ff;
         color: #2a3d66;
         font-weight: 600;
       }
@@ -82,7 +101,7 @@ function generateInvoiceHTML(data) {
         background-color: #fdfdff;
       }
       .premium .table tr:nth-child(even) td {
-        background-color: #f6f9fe; /* light blue even rows */
+        background-color: #f6f9fe;
       }
       .premium .table tfoot td {
         background-color: #dbe7ff;
@@ -102,16 +121,16 @@ function generateInvoiceHTML(data) {
         text-align: left;
       }
       .basic .table th {
-        background-color: #fff;  /* white header for basic */
+        background-color: #fff;
         color: #333;
         font-weight: 600;
       }
       .basic .table td {
         color: #444;
-        background-color: #fff; /* white cells */
+        background-color: #fff;
       }
       .basic .table tr:nth-child(even) td {
-        background-color: #f9f9f9; /* very light gray for even rows */
+        background-color: #f9f9f9;
       }
       .basic .table tfoot td {
         background-color: #fff;
@@ -133,9 +152,7 @@ function generateInvoiceHTML(data) {
         white-space: nowrap;
       }
 
-      /* Responsive and other styles unchanged ... */
-
- .footer {
+      .footer {
         position: static;
         max-width: 800px;
         margin: 40px auto 10px auto;
@@ -163,7 +180,6 @@ function generateInvoiceHTML(data) {
       .footer a:hover {
         text-decoration: underline;
       }
-
 
     </style>
   </head>
@@ -196,13 +212,17 @@ function generateInvoiceHTML(data) {
         <tbody>
           ${
             items.length > 0
-              ? items.map(item => `
+              ? items
+                  .map(
+                    (item) => `
                   <tr>
-                    <td>${item.name || ''}</td>
-                    <td>${item.quantity || ''}</td>
-                    <td>${item.price || ''}</td>
-                    <td>${item.total || ''}</td>
-                  </tr>`).join('')
+                    <td>${item.name || ""}</td>
+                    <td>${item.quantity || ""}</td>
+                    <td>${item.price || ""}</td>
+                    <td>${item.total || ""}</td>
+                  </tr>`
+                  )
+                  .join("")
               : `<tr><td colspan="4">No items available</td></tr>`
           }
         </tbody>
@@ -226,14 +246,15 @@ function generateInvoiceHTML(data) {
         <p>Total Amount Due: ${data.total}</p>
       </div>
 
-   ${
-      data.showChart
-        ? `<div class="chart-container">
-            <h2>Breakdown</h2>
-            <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
-           </div>`
-        : ""
-    }
+      ${
+        data.showChart
+          ? `
+        <div class="chart-container">
+          <h2>Breakdown</h2>
+          <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
+        </div>`
+          : ""
+      }
     </div>
 
     ${watermarkHTML}
@@ -243,7 +264,7 @@ function generateInvoiceHTML(data) {
       <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
       <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
       <p>
-        Generated using <strong>PDFify</strong>. Visit 
+        Generated using <strong>PDFify</strong>. Visit
         <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
       </p>
     </div>
@@ -251,6 +272,7 @@ function generateInvoiceHTML(data) {
 </html>
 `;
 }
+
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
