@@ -12,14 +12,14 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-function generateShopOrderHTML(data, isBasicUser = true, showWatermark = false) {
+function generateShopOrderHTML(data, isBasicUser = true) {
   // Logo only for basic (non-premium) users
   const logoHtml = isBasicUser
     ? `<img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Company Logo" class="logo" style="max-width:150px; display:block; margin: 0 auto 20px auto;" />`
     : "";
 
-  // Watermark only for basic users with showWatermark true (light gray rotated text)
-  const watermarkHtml = showWatermark
+  // Watermark only for basic users (light gray rotated text)
+  const watermarkHtml = data.showWatermark
     ? `<div style="
         position: fixed;
         top: 40%;
@@ -163,79 +163,76 @@ function generateShopOrderHTML(data, isBasicUser = true, showWatermark = false) 
   `;
 }
 
+
+
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview } = req.body;
-
-  if (!data || typeof data !== "object" || !data.shopName) {
-    return res.status(400).json({ error: "Missing or invalid shop order data" });
+  if (!data || !data.shopName) {
+    return res.status(400).json({ error: "Missing shop order data" });
   }
 
-  try {
-    const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+  const user = await User.findById(req.user.userId);
+  if (!user) return res.status(404).json({ error: "User not found" });
 
-    const isBasicUser = !user.isPremium;
+  const isBasicUser = !user.isPremium;
 
-    // Ensure default tracking fields
-    user.previewCount = user.previewCount ?? 0;
-    user.usageCount = user.usageCount ?? 0;
-    user.maxUsage = user.maxUsage ?? 1000;
-    user.lastPreviewReset = user.lastPreviewReset ?? new Date(0);
+  // Initialize usage tracking fields if not present
+  user.previewCount = user.previewCount || 0;
+  user.lastPreviewReset = user.lastPreviewReset || new Date(0);
+  user.usageCount = user.usageCount || 0;
+  user.maxUsage = user.maxUsage || 1000; // adjust as needed
 
-    const now = new Date();
-    const lastReset = new Date(user.lastPreviewReset);
+  const now = new Date();
 
-    // Monthly reset
-    if (
-      now.getUTCFullYear() !== lastReset.getUTCFullYear() ||
-      now.getUTCMonth() !== lastReset.getUTCMonth()
-    ) {
-      user.previewCount = 0;
-      user.usageCount = 0;
-      user.lastPreviewReset = now;
+  // Reset previewCount monthly if needed
+  if (
+    now.getUTCFullYear() !== user.lastPreviewReset.getUTCFullYear() ||
+    now.getUTCMonth() !== user.lastPreviewReset.getUTCMonth()
+  ) {
+    user.previewCount = 0;
+    user.lastPreviewReset = now;
+    await user.save();
+  }
+
+  // Decide on watermark based on preview and user type
+  let addWatermark = false;
+
+  if (isBasicUser && isPreview) {
+    if (user.previewCount < 3) {
+      user.previewCount++;
+      addWatermark = true;
       await user.save();
+    } else {
+      // After 3 previews, count pages as usage
+      addWatermark = false;
     }
+  }
 
-    let addWatermark = false;
-    let shouldCountAsUsage = false;
+  const pdfDir = path.join(__dirname, "../pdfs");
+  if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-    if (isBasicUser && isPreview) {
-      if (user.previewCount < 3) {
-        addWatermark = true;
-        user.previewCount += 1;
-        await user.save();
-      } else {
-        // After 3 previews, preview counts toward usage
-        shouldCountAsUsage = true;
-      }
-    } else if (!isPreview) {
-      // Always count if it's a real download (not preview)
-      shouldCountAsUsage = true;
-    }
+  const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
 
-    // Prepare HTML input
-    data.showWatermark = addWatermark;
-
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-
-    const pdfPath = path.join(pdfDir, `shop_order_${Date.now()}.pdf`);
+  try {
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-
     const page = await browser.newPage();
-    const html = generateShopOrderHTML(data, user.isPremium, addWatermark);
+
+    // Pass addWatermark and isBasicUser to control logo and watermark
+    const html = generateShopOrderHTML(data, isBasicUser, addWatermark);
+
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
+    await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    if (shouldCountAsUsage) {
+    if (!isPreview || (isBasicUser && user.previewCount >= 3)) {
+      // Check usage limit on full download or previews beyond limit
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         return res.status(403).json({
@@ -246,16 +243,12 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
       await user.save();
     }
 
-    res.download(pdfPath, (err) => {
-      if (err) console.error("Error sending PDF:", err);
-      if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
-    });
-
+    res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
-    console.error("Error generating shop order PDF:", error);
-    res.status(500).json({ error: "Failed to generate PDF" });
+    console.error("PDF generation error:", error);
+    if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
+    res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 module.exports = router;
