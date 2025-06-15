@@ -130,7 +130,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Inline monthly usage reset logic
+
     const now = new Date();
     if (!user.usageLastReset) {
       user.usageLastReset = now;
