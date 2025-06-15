@@ -105,7 +105,6 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
 function generateTherapyReportHTML(data, isPremiumUser) {
   const innerHtml = `
     ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
-    ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -324,22 +323,23 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       }
     );
 
-    // Wait explicitly for chart-rendered marker (added after Chart.js animation)
-    await page.waitForSelector("#chart-rendered", { timeout: 5000 }).catch(() => {
-      console.warn("Chart rendering marker not found, proceeding anyway.");
-    });
-
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "20mm",
-        bottom: "20mm",
-        left: "15mm",
-        right: "15mm",
-      },
-    });
+ await page.pdf({
+  path: pdfPath,
+  format: "A4",
+  printBackground: true,
+  displayHeaderFooter: true,
+  margin: {
+    top: "30mm",
+    bottom: "30mm",
+    left: "15mm",
+    right: "15mm",
+  },
+  footerTemplate: `
+    <div style="font-size:10px; width:100%; text-align:center; color: #999;">
+      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+    </div>`,
+  headerTemplate: `<div></div>`,
+});
 
     await browser.close();
 
