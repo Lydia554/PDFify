@@ -102,10 +102,29 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
   `;
 }
 
-function generateTherapyReportHTML(data, isPremiumUser) {
+function generateTherapyReportHTML(data, isPremiumUser, isPreview, previewCountExceeded) {
+  const showLogo = !isPremiumUser;
+  const showWatermark = (!isPremiumUser && isPreview && previewCountExceeded);
+
+  // Convert progress strings to numeric values
+  const convertProgressToNumber = (progress) => {
+    switch (progress.toLowerCase()) {
+      case "excellent": return 5;
+      case "good": return 4;
+      case "average": return 3;
+      case "needs improvement": return 2;
+      case "poor": return 1;
+      default: return 0;
+    }
+  };
+
+  const milestoneLabels = data.milestones.map(m => m.name);
+  const milestoneScores = data.milestones.map(m => convertProgressToNumber(m.progress));
+
   const innerHtml = `
-    ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
-    ${isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
+    ${showLogo ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
+    ${showWatermark ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>` : ''}
+    ${!isPremiumUser ? `<div class="watermark confidential">Confidential</div>` : ''}
     <h1>Therapy Report</h1>
 
     <div class="section">
@@ -125,10 +144,9 @@ function generateTherapyReportHTML(data, isPremiumUser) {
       <div class="multi-column">
         <table class="table">
           <tr><th>Milestone</th><th>Progress</th></tr>
-          ${
-            data.milestones.length > 0
-              ? data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')
-              : `<tr><td colspan="2">No milestone data available.</td></tr>`
+          ${data.milestones.length > 0
+            ? data.milestones.map(m => `<tr><td>${m.name}</td><td>${m.progress}</td></tr>`).join('')
+            : `<tr><td colspan="2">No milestone data available.</td></tr>`
           }
         </table>
       </div>
@@ -140,37 +158,26 @@ function generateTherapyReportHTML(data, isPremiumUser) {
     </div>
 
     <div class="chart-container">
-      <canvas id="progressChart"></canvas>
+      <canvas id="progressChart" width="800" height="400"></canvas>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
       const ctx = document.getElementById('progressChart').getContext('2d');
       new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: ['Session 1', 'Session 2', 'Session 3', 'Session 4'],
+          labels: ${JSON.stringify(milestoneLabels)},
           datasets: [{
             label: 'Milestone Progress',
-            data: [${data.milestonesData.join(',')}],
-            backgroundColor: 'rgba(94, 96, 206, 0.5)',
-            borderColor: 'rgba(94, 96, 206, 1)',
+            data: ${JSON.stringify(milestoneScores)},
+            backgroundColor: ${JSON.stringify(milestoneScores.map(() => 'rgba(94, 96, 206, 0.5)'))},
+            borderColor: ${JSON.stringify(milestoneScores.map(() => 'rgba(94, 96, 206, 1)'))},
             borderWidth: 1
           }]
         },
         options: {
           scales: {
-            y: { beginAtZero: true }
-          },
-          animation: {
-            onComplete: () => {
-              // Add a hidden marker div so Puppeteer can wait for chart completion
-              const marker = document.createElement('div');
-              marker.id = 'chart-rendered';
-              marker.style.display = 'none';
-              document.body.appendChild(marker);
-            }
+            y: { beginAtZero: true, max: 5 }
           }
         }
       });
@@ -247,8 +254,12 @@ function generateTherapyReportHTML(data, isPremiumUser) {
       .footer a:hover {
         text-decoration: underline;
       }
+
+      
     </style>
 
+ <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+ 
     <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
