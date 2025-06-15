@@ -235,6 +235,24 @@ return `
           </tr>
         </thead>
         <tbody>
+${data.showWatermark ? `
+  <div style="
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    color: rgba(200, 0, 0, 0.15);
+    font-size: 48px;
+    font-weight: 900;
+    z-index: 9999;
+    pointer-events: none;
+    white-space: nowrap;
+  ">
+    PREVIEW ONLY – NOT FOR PRODUCTION USE
+  </div>
+` : ''}
+
+
           ${
             Array.isArray(items)
               ? items.map(item => `
@@ -331,6 +349,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
     }
+
+    invoiceData.showWatermark = isPreview && !user.isPremium;
 
    
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
