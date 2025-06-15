@@ -22,6 +22,7 @@ function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
+
   const watermarkHTML = data.isBasicUser
     ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
     : "";
@@ -342,6 +343,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+   
     const now = new Date();
     if (
       !user.previewLastReset ||
@@ -361,80 +363,75 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       user.usageLastReset = now;
     }
 
-    const isBasicUser = user.subscriptionPlan === "basic";
-
-    if (isPreview && user.previewCount >= 10) {
-      return res.status(403).json({ error: "Preview limit reached for this month." });
+    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) {
+      fs.mkdirSync(pdfDir, { recursive: true });
     }
 
-    if (!isPreview && user.usageCount >= 100) {
-      return res.status(403).json({ error: "Usage limit reached for this month." });
-    }
-
-    if (isPreview) {
-      user.previewCount++;
-    } else {
-      user.usageCount++;
-    }
-
-    await user.save();
-
-    invoiceData.isBasicUser = isBasicUser;
-
-    const html = generateInvoiceHTML(invoiceData);
-
+    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const browser = await puppeteer.launch({
+      headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
 
+   
+    if (!user.isPremium) {
+      invoiceData.customLogoUrl = null;
+      invoiceData.showChart = false;
+      invoiceData.isBasicUser = true;  
+    } else {
+      invoiceData.isBasicUser = false;
+    }
+
+    const html = generateInvoiceHTML(invoiceData);
     await page.setContent(html, { waitUntil: "networkidle0" });
-
-    // Updated PDF generation with footer and page numbering for all users
-    const pdfPath = path.join(__dirname, "/pdfs/invoice.pdf");
-
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      displayHeaderFooter: true,
-      headerTemplate: `<div></div>`, // empty header
-      footerTemplate: `
-        <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
-          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-        </div>`,
-      margin: {
-        top: "20mm",
-        bottom: "20mm",
-        left: "10mm",
-        right: "10mm",
-      },
-    });
-
+    await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
-    // Read the generated PDF and parse its page count (optional, since Puppeteer displays page numbers in footer)
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const pdfData = await pdfParse(pdfBuffer);
+    const parsed = await pdfParse(pdfBuffer);
+    const pageCount = parsed.numpages;
 
-    const pageCount = pdfData.numpages || 1;
-
+ 
     if (isPreview) {
-      res.status(200).json({
-        message: "Preview PDF generated successfully",
-        pageCount,
-        previewCount: user.previewCount,
-      });
+      if (!user.isPremium) {
+        if (user.previewCount < 3) {
+          user.previewCount += 1;
+        } else {
+      
+          if (user.usageCount + pageCount > user.maxUsage) {
+            fs.unlinkSync(pdfPath);
+            return res.status(403).json({
+              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+            });
+          }
+          user.usageCount += pageCount;
+        }
+      }
     } else {
-      res.status(200).json({
-        message: "Invoice PDF generated successfully",
-        pageCount,
-        usageCount: user.usageCount,
-      });
+ 
+      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
+        fs.unlinkSync(pdfPath);
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+        });
+      }
+      user.usageCount += pageCount;
     }
+
+    await user.save();
+
+    res.download(pdfPath, (err) => {
+      if (err) {
+        console.error("Download error:", err);
+      }
+      fs.unlinkSync(pdfPath);
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Server error generating invoice PDF" });
+    console.error("PDF generation failed:", error);
+    res.status(500).json({ error: "PDF generation failed" });
   }
 });
 
