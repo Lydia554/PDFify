@@ -7,7 +7,8 @@ let allSelectedFiles = [];
 let userAccessType = 'basic'; 
 
 function isValidYouTubeUrl(url) {
-  const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}$/;
+const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}(\S*)?$/;
+
   return regex.test(url.trim());
 }
 
