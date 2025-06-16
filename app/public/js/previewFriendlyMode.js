@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const userStatus = document.getElementById('userStatus')?.value || 'free';
 
+  // Assuming you already have logobase64 declared and assigned somewhere in your script
+  // For demo, I add a placeholder here (replace or remove this if you already have it)
+  const logobase64 = window.logobase64 || ""; 
+
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
     const apiKey = document.getElementById('apiKey').value.trim();
@@ -14,6 +18,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       const payload = JSON.parse(jsonData);
+
+      // Add logo field here
+      payload.logo = logobase64;
+
       const response = await fetch(`/api/${endpoint}`, {
         method: 'POST',
         headers: {
@@ -60,13 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
     payload.template = selectedTemplate;
     payload.isPreview = true;
 
-    
-    if (payload.logoUpload) {
-      payload.logo = payload.logoUpload;
-      delete payload.logoUpload;
-    } else {
-      payload.logo = "";
-    }
+    // Add logo field here as well
+    payload.logo = logobase64;
 
     if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
       alert('This is a premium template. Upgrade your plan to preview it.');
