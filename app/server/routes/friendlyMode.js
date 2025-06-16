@@ -42,9 +42,6 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
   }
 });
 
-console.log('Received logo base64:', formData.logo?.substring(0, 100));
-
-
 router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
 
@@ -60,8 +57,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-let isPremium = true; 
-    //let isPremium = user.plan === 'premium';
+    let isPremium = user.plan === 'premium';
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });

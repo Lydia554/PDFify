@@ -1,4 +1,7 @@
 
+
+
+
 function generateInvoicePremiumHtml(data) {
   console.log('generateInvoicePremiumHtml data:', data);
   const {
@@ -17,7 +20,7 @@ function generateInvoicePremiumHtml(data) {
     taxAmount = 0,
     total = 0,
     notes = '',
-    logo = ''
+    logo = '',
   } = data;
 
 
@@ -69,12 +72,11 @@ function generateInvoicePremiumHtml(data) {
           margin-bottom: 30px;
         }
   
- .logo {
+      .logo {
   height: 60px;
   width: auto;
   object-fit: contain;
 }
-
 
   
         .invoice-title {
@@ -184,14 +186,12 @@ function generateInvoicePremiumHtml(data) {
       </style>
     </head>
     <body>
-    
+      <div class="header">
+       ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" style="max-height: 60px; max-width: 200px;" />` : ''}
+        ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
+       
 
-<div class="header">
- ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" style="max-height: 60px; max-width: 200px;" />` : ''}
-
-  ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
-</div>
-
+      </div>
   
       <div class="info-grid">
         <div class="info-box">
