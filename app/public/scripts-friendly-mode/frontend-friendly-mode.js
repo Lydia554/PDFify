@@ -105,18 +105,18 @@ function renderForm(template) {
   // Inject form HTML
   formContainer.innerHTML = html;
 
-  // Reset file list and preview
-  allSelectedFiles = [];
-  updateImagePreview();
+allSelectedFiles = [];
+formContainer.innerHTML = html; // First update the DOM
 
-  // Attach image upload event listener AFTER HTML is added
-  if (template === 'recipe' && userAccessType === 'premium') {
-    const imageInput = document.getElementById('imageUpload');
-    if (imageInput) {
-      imageInput.addEventListener('change', onImagesSelected);
-    }
+updateImagePreview(); // Then run preview
+
+// Now attach image upload logic correctly
+if (template === 'recipe' && userAccessType === 'premium') {
+  const imageInput = document.getElementById('imageUpload');
+  if (imageInput) {
+    imageInput.addEventListener('change', onImagesSelected);
   }
-
+}
 
 
   formContainer.innerHTML = html;
