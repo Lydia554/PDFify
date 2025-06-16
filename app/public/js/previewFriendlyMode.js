@@ -3,14 +3,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewFriendlyBtn = document.getElementById('previewFriendlyBtn');
   const iframe = document.getElementById('previewFrame');
 
+  const premiumTemplates = ['invoice-premium', 'recipe-premium'];
 
+  const userStatus = document.getElementById('userStatus')?.value || 'free';
 
-const premiumTemplates = ['invoice-premium', 'recipe-premium'];
-
-
-const userStatus = document.getElementById('userStatus')?.value || 'free'; 
-
-
+  // Assuming you already have logobase64 declared and assigned somewhere in your script
+  // For demo, I add a placeholder here (replace or remove this if you already have it)
+  const logobase64 = window.logobase64 || ""; 
 
   previewDevBtn?.addEventListener('click', async () => {
     const endpoint = document.getElementById('endpoint').value;
@@ -19,6 +18,10 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
 
     try {
       const payload = JSON.parse(jsonData);
+
+      // Add logo field here
+      payload.logo = logobase64;
+
       const response = await fetch(`/api/${endpoint}`, {
         method: 'POST',
         headers: {
@@ -29,12 +32,11 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
         credentials: "include",
       });
 
-  if (response.status === 401 || response.status === 403) {
-  localStorage.removeItem("apiKey");
-  window.location.href = "/login.html";
-  return;
-}
-
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("apiKey");
+        window.location.href = "/login.html";
+        return;
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -58,21 +60,22 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
     }
   });
 
-
   previewFriendlyBtn?.addEventListener('click', async () => {
     const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
     const apiKey = document.getElementById('apiKey').value.trim();
     const payload = await getFriendlyFormData();
-  
+
     payload.template = selectedTemplate;
     payload.isPreview = true;
-  
-    
+
+    // Add logo field here as well
+    payload.logo = logobase64;
+
     if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
       alert('This is a premium template. Upgrade your plan to preview it.');
       return;
     }
-  
+
     try {
       const response = await fetch(`/api/friendly/generate`, {
         method: 'POST',
@@ -84,22 +87,21 @@ const userStatus = document.getElementById('userStatus')?.value || 'free';
         credentials: "include",
       });
 
-if (response.status === 401 || response.status === 403) {
-  localStorage.removeItem("apiKey");
-  window.location.href = "/login.html";
-  return;
-}
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("apiKey");
+        window.location.href = "/login.html";
+        return;
+      }
 
-  
       if (!response.ok) {
         const errorText = await response.text();
         alert('Error generating preview: ' + errorText);
         return;
       }
-  
+
       const blob = await response.blob();
       const pdfUrl = URL.createObjectURL(blob);
-  
+
       if (iframe) {
         iframe.src = pdfUrl;
         iframe.style.display = 'block';
@@ -112,36 +114,32 @@ if (response.status === 401 || response.status === 403) {
       alert('Error generating preview: ' + err.message);
     }
   });
-  
 
-  
   async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');
     if (!formContainer) {
-
       return {};
     }
-  
+
     const inputs = formContainer.querySelectorAll('input, textarea, select');
 
     const data = {};
     const items = [];
-    
+
     for (const input of inputs) {
       if (!input.name) continue;
-    
+
       if (input.type === 'file' && input.files.length > 0) {
         const file = input.files[0];
         const base64 = await fileToBase64(file);
         data[input.name] = base64;
       } else {
         const name = input.name;
-    
-        
+
         const arrayMatch = name.match(/^(\w+)\[(\d+)\]$/);
         const nestedMatch = name.match(/^(\w+)\[(\d+)\]\.(\w+)$/);
         const objectMatch = name.match(/^(\w+)\[(\w+)\]$/);
-    
+
         if (nestedMatch) {
           const [_, base, idx, key] = nestedMatch;
           if (!data[base]) data[base] = [];
@@ -160,15 +158,12 @@ if (response.status === 401 || response.status === 403) {
         }
       }
     }
-    
-  
+
     if (items.length > 0) data.items = items;
 
     return data;
   }
-  
-  
-  
+
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
