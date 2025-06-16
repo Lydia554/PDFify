@@ -223,7 +223,7 @@ function generatePremiumRecipeHtml(data) {
       }
 
       .qr-box img {
-        max-width: 150px;
+        max-width: 100px;
         border-radius: 12px;
         box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       }

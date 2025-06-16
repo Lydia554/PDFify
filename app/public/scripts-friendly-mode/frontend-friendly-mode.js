@@ -102,15 +102,15 @@ function renderForm(template) {
     html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
   }
 
-  // Inject form HTML
+  
   formContainer.innerHTML = html;
 
 allSelectedFiles = [];
-formContainer.innerHTML = html; // First update the DOM
+formContainer.innerHTML = html; 
 
-updateImagePreview(); // Then run preview
+updateImagePreview(); 
 
-// Now attach image upload logic correctly
+
 if (template === 'recipe' && userAccessType === 'premium') {
   const imageInput = document.getElementById('imageUpload');
   if (imageInput) {
