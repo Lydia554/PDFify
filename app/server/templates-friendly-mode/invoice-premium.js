@@ -20,7 +20,7 @@ function generateInvoicePremiumHtml(data) {
     taxAmount = 0,
     total = 0,
     notes = '',
-    logo = '',
+    logoBase64 = '',
   } = data;
 
 
@@ -187,7 +187,7 @@ function generateInvoicePremiumHtml(data) {
     </head>
     <body>
       <div class="header">
-       ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" style="max-height: 60px; max-width: 200px;" />` : ''}
+       ${logoBase64 ? `<img src="${logoBase64}" alt="Company Logo" class="logo" style="max-height: 60px; max-width: 200px;" />` : ''}
         ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
        
 

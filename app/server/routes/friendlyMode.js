@@ -67,7 +67,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     // IMPORTANT: Make sure logoBase64 stays here for premium users!
     // For example, if you want to force a fallback logo for non-premium users:
     if (!isPremium) {
-      formData.logo = null; // or some default logo or empty string
+      formData.logoBase64 = null; // or some default logo or empty string
     }
     // Otherwise keep whatever came from frontend, do not overwrite or delete it
 
