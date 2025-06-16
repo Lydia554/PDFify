@@ -158,10 +158,18 @@ function generateInvoicePremiumHtml(data) {
       </style>
     </head>
     <body>
-      <div class="header">
-        ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" />` : ''}
-        ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
-      </div>
+     
+
+    <div class="header">
+  ${logo
+    ? (logoType === 'svg' 
+        ? logo
+        : `<img src="${logo}" alt="Company Logo" class="logo" />`)
+    : ''
+  }
+  ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
+</div>
+
 
       <div class="info-grid">
         <div class="info-box">
