@@ -15,7 +15,7 @@ function generatePremiumRecipeHtml(data) {
     instructions = [],
     nutrition,
     videoUrl,
-    logoBase64
+
   } = data;
 
   const videoId = videoUrl ? extractYouTubeId(videoUrl) : null;
