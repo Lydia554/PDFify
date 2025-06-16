@@ -126,11 +126,21 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const input of inputs) {
       if (!input.name) continue;
 
-      if (input.type === 'file' && input.files.length > 0) {
-        const file = input.files[0];
-        const base64 = await fileToBase64(file);
-        data[input.name] = base64;
-      } else {
+     if (input.type === 'file' && input.files.length > 0) {
+  if (input.multiple) {
+    const base64Images = [];
+    for (const file of input.files) {
+      const base64 = await fileToBase64(file);
+      base64Images.push(base64);
+    }
+    data[input.name] = base64Images;
+  } else {
+    const file = input.files[0];
+    const base64 = await fileToBase64(file);
+    data[input.name] = base64;
+  }
+}
+else {
         const name = input.name;
 
         const arrayMatch = name.match(/^(\w+)\[(\d+)\]$/);
