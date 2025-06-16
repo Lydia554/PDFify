@@ -102,7 +102,8 @@ function renderForm(template) {
     html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
   }
 
-
+  // Inject form HTML
+  formContainer.innerHTML = html;
 
 allSelectedFiles = [];
 formContainer.innerHTML = html; // First update the DOM
@@ -118,7 +119,6 @@ if (template === 'recipe' && userAccessType === 'premium') {
 }
 
 
-  formContainer.innerHTML = html;
 
 
 }
