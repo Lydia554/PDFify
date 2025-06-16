@@ -73,7 +73,8 @@ function renderForm(template) {
       `;
     }
 
-   
+    
+    html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
 
   } else if (template === 'recipe') {
     html = `
@@ -114,8 +115,6 @@ function renderForm(template) {
     }
   
 
-
-    html += `<label><input type="checkbox" id="includeTitle" checked /> Include Title</label><br/>`;
   }
 
   formContainer.innerHTML = html;
