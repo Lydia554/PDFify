@@ -73,7 +73,6 @@ function renderForm(template) {
       `;
     }
 
-    
     html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
 
   } else if (template === 'recipe') {
@@ -103,19 +102,22 @@ function renderForm(template) {
     html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
   }
 
-  
+  // Inject form HTML
+  formContainer.innerHTML = html;
 
+  // Reset file list and preview
   allSelectedFiles = [];
   updateImagePreview();
 
+  // Attach image upload event listener AFTER HTML is added
   if (template === 'recipe' && userAccessType === 'premium') {
     const imageInput = document.getElementById('imageUpload');
     if (imageInput) {
       imageInput.addEventListener('change', onImagesSelected);
     }
-  
-
   }
+
+
 
   formContainer.innerHTML = html;
 
