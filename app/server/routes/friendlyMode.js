@@ -32,7 +32,7 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Uncomment the next line to simulate premium access during development:
-    return res.json({ accessType: 'premium' });
+    //return res.json({ accessType: 'premium' });
 
     const accessType = user.plan === 'premium' ? 'premium' : 'basic';
     res.json({ accessType });
@@ -57,21 +57,20 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     }
 
     // Uncomment and use real user plan check in production
-    let isPremium = true; 
-    // let isPremium = user.plan === 'premium';
+    //let isPremium = true; 
+    let isPremium = user.plan === 'premium';
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
-    // IMPORTANT: Make sure logoBase64 stays here for premium users!
-    // For example, if you want to force a fallback logo for non-premium users:
+    
     if (!isPremium) {
-      formData.logoBase64 = null; // or some default logo or empty string
+      formData.logoBase64 = null; 
     }
-    // Otherwise keep whatever came from frontend, do not overwrite or delete it
+    
 
-    // Parse and normalize items, ingredients, instructions as before
+  
     if (typeof formData.items === 'string') {
       const rows = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean);
       formData.items = rows.map(row => {
@@ -92,7 +91,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
     }
 
-    // Pass the full formData, including logoBase64, to your template
+
     const generateHtml = templateConfig.fn(isPremium);
     const html = generateHtml(formData);
 
@@ -127,7 +126,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     res.download(pdfPath, (err) => {
       if (err) {
-        // Handle error if needed
+     
       }
       fs.unlinkSync(pdfPath);
     });

@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     payload.template = selectedTemplate;
     payload.isPreview = true;
 
-    // Assign logo from logoUpload if present
+    
     if (payload.logoUpload) {
       payload.logo = payload.logoUpload;
       delete payload.logoUpload;
