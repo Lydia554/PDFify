@@ -114,11 +114,7 @@ function generatePremiumRecipeHtml(data) {
           margin-bottom: 40px;
         }
   
-        .logo {
-          max-width: 90px;
-          margin-bottom: 10px;
-        }
-  
+      
         h1 {
           font-family: 'Playfair Display', serif;
           font-size: 2.8rem;
@@ -295,7 +291,7 @@ function generatePremiumRecipeHtml(data) {
    <body>
     <div class="container">
       <div class="header">
-          <img src="${logoBase64 || 'https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png'}" alt="Logo" class="logo" />
+       
         <h1>${recipeName}</h1>
         <div class="tags">
           <div class="tag">⏰ Prep: ${prepTime || 'N/A'} min</div>
