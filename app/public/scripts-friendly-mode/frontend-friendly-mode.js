@@ -103,7 +103,7 @@ function renderForm(template) {
     html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
   }
 
-  formContainer.innerHTML = html;
+  
 
   allSelectedFiles = [];
   updateImagePreview();
@@ -121,15 +121,7 @@ function renderForm(template) {
 
   formContainer.innerHTML = html;
 
-  allSelectedFiles = [];
-  updateImagePreview();
 
-  if (template === 'recipe' && userAccessType === 'premium') {
-    const imageInput = document.getElementById('imageUpload');
-    if (imageInput) {
-      imageInput.addEventListener('change', onImagesSelected);
-    }
-  }
 }
 
 function updateImagePreview() {
