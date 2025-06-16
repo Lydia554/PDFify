@@ -57,7 +57,8 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    let isPremium = user.plan === 'premium';
+let isPremium = true; 
+    //let isPremium = user.plan === 'premium';
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });

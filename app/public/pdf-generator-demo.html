@@ -503,7 +503,7 @@ async function sendRequest(isPreview = false) {
     } else {
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = "Generated.pdf";
+       a.download = `${template}_${Date.now()}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
