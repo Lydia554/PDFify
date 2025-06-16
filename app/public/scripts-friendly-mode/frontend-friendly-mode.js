@@ -73,8 +73,7 @@ function renderForm(template) {
       `;
     }
 
-    
-    html += `<label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>`;
+   
 
   } else if (template === 'recipe') {
     html = `
@@ -237,7 +236,7 @@ if (formData.logoBase64) {
         ingredients: document.getElementById('ingredients')?.value.split(',').map(s => s.trim()),
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
         imageUrls: base64Images,
-      
+        includeTitle: document.getElementById('includeTitle')?.checked ?? false,
 
         videoUrl: videoUrl || undefined,
         nutrition: userAccessType === 'premium' ? {
