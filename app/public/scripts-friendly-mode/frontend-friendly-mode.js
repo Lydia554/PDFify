@@ -239,7 +239,8 @@ generatePdfBtn.addEventListener('click', async () => {
         ingredients: document.getElementById('ingredients')?.value.split(',').map(s => s.trim()),
         instructions: document.getElementById('instructions')?.value.split(';').map(s => s.trim()),
         imageUrls: base64Images,
-        includeTitle: includeTitle?.checked ?? false,
+        includeTitle: document.getElementById('includeTitle')?.checked ?? false,
+
         videoUrl: videoUrl || undefined,
         nutrition: userAccessType === 'premium' ? {
           Calories: document.getElementById('calories')?.value || undefined,
