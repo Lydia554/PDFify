@@ -14,31 +14,9 @@ if (typeof ReadableStream === "undefined") {
 
 const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
 
-async function resetMonthlyUsageIfNeeded(user) {
-  const now = new Date();
-  if (!user.usageLastReset) {
-    user.usageLastReset = now;
-    user.usageCount = 0;
-    user.previewCount = 0;
-    await user.save();
-    return;
-  }
-
-  const lastReset = new Date(user.usageLastReset);
-  if (
-    now.getFullYear() > lastReset.getFullYear() ||
-    now.getMonth() > lastReset.getMonth()
-  ) {
-    user.usageCount = 0;
-    user.previewCount = 0;
-    user.usageLastReset = now;
-    await user.save();
-  }
-}
 
 function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
-  // Always add "Confidential" watermark
-  // Add "FOR PRODUCTION ONLY..." only if addPreviewWatermark === true (basic user preview)
+
   const watermarkHtml = `
     <div class="watermark-confidential">Confidential</div>
     ${addPreviewWatermark ? `<div class="watermark-preview">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>` : ''}
@@ -294,7 +272,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Reset monthly usage & preview if needed
+
     const now = new Date();
     if (!user.usageLastReset || user.usageLastReset.getMonth() !== now.getMonth() || user.usageLastReset.getFullYear() !== now.getFullYear()) {
       user.usageCount = 0;
@@ -324,7 +302,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
       wrapHtmlWithBranding(
         generateTherapyReportHTML(cleanedData, isPremiumUser),
         isPremiumUser,
-        isPreview && !isPremiumUser // watermark for basic preview
+        isPreview && !isPremiumUser
       ),
       { waitUntil: "networkidle0" }
     );
@@ -353,7 +331,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
-    // === PAGE COUNT LOGIC ===
+
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
