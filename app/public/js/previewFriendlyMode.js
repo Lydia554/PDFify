@@ -7,8 +7,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const userStatus = document.getElementById('userStatus')?.value || 'free';
 
-  // Assuming you already have logobase64 declared and assigned somewhere in your script
-  // For demo, I add a placeholder here (replace or remove this if you already have it)
   const logobase64 = window.logobase64 || ""; 
 
   previewDevBtn?.addEventListener('click', async () => {
@@ -19,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const payload = JSON.parse(jsonData);
 
-      // Add logo field here
+     
       payload.logo = logobase64;
 
       const response = await fetch(`/api/${endpoint}`, {

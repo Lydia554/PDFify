@@ -1,8 +1,18 @@
 function extractYouTubeId(url) {
-  const regExp = /^.*(?:youtu\.be\/|v\/|u\/\w\/|embed\/|watch\?v=)([^#\&\?]{11}).*/;
-  const match = url.match(regExp);
-  return match && match[1] ? match[1] : null;
+  try {
+    const urlObj = new URL(url);
+    if (urlObj.hostname === 'youtu.be') {
+      return urlObj.pathname.slice(1, 12); 
+    }
+    if (urlObj.hostname.includes('youtube.com')) {
+      return urlObj.searchParams.get('v');
+    }
+  } catch {
+    return null;
+  }
+  return null;
 }
+
 
 function generatePremiumRecipeHtml(data) {
   const {
