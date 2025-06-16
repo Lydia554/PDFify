@@ -42,6 +42,9 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
   }
 });
 
+console.log('Received logo base64:', formData.logo?.substring(0, 100));
+
+
 router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
 
