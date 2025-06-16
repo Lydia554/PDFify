@@ -1,6 +1,4 @@
-const sharp = require('sharp');
-
-async function generateInvoicePremiumHtml(data) {
+function generateInvoicePremiumHtml(data) {
   console.log('generateInvoicePremiumHtml data:', data);
   const {
     customerName = 'Valued Customer',
@@ -18,21 +16,8 @@ async function generateInvoicePremiumHtml(data) {
     taxAmount = 0,
     total = 0,
     notes = '',
-    logo = ''
+    logo = '' 
   } = data;
-
-  let logoBase64Png = '';
-  try {
-    if (logo.startsWith('data:image/svg+xml;base64,')) {
-      const svgBuffer = Buffer.from(logo.replace(/^data:image\/svg\+xml;base64,/, ''), 'base64');
-      const pngBuffer = await sharp(svgBuffer).png().toBuffer();
-      logoBase64Png = `data:image/png;base64,${pngBuffer.toString('base64')}`;
-    } else if (logo.startsWith('http')) {
-      logoBase64Png = logo; // allow URL logos
-    }
-  } catch (err) {
-    console.error('Error converting SVG to PNG:', err);
-  }
 
   let itemsArray;
   if (typeof items === 'string') {
@@ -70,7 +55,6 @@ async function generateInvoicePremiumHtml(data) {
           color: #333;
           background: #f4f7fa;
         }
-
         .header {
           display: flex;
           justify-content: space-between;
@@ -79,32 +63,27 @@ async function generateInvoicePremiumHtml(data) {
           padding-bottom: 10px;
           margin-bottom: 30px;
         }
-
         .logo {
           height: 60px;
           object-fit: contain;
         }
-
         .invoice-title {
           font-size: 28px;
           color: #1565c0;
           font-weight: bold;
         }
-
         .info-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 20px;
           margin-bottom: 30px;
         }
-
         .info-box {
           background: #ffffff;
           padding: 20px;
           border-radius: 8px;
           box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
-
         table {
           width: 100%;
           border-collapse: collapse;
@@ -112,30 +91,25 @@ async function generateInvoicePremiumHtml(data) {
           background: white;
           box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
-
         th, td {
           border: 1px solid #e0e0e0;
           padding: 12px;
           font-size: 15px;
         }
-
         th {
           background-color: #e3f2fd;
           text-align: left;
         }
-
         tfoot td {
           font-weight: bold;
           background: #f1faff;
           border-top: 2px solid #1565c0;
         }
-
         .notes {
           margin-top: 30px;
           font-size: 14px;
           color: #555;
         }
-
         .footer {
           position: absolute;
           bottom: 0;
@@ -156,34 +130,27 @@ async function generateInvoicePremiumHtml(data) {
         .footer a:hover {
           text-decoration: underline;
         }
-
         @media screen and (max-width: 600px) {
           .info-grid {
             grid-template-columns: 1fr;
           }
-
           body {
             padding: 20px;
           }
-
           .invoice-title {
             font-size: 22px;
           }
-
           th, td {
             font-size: 14px;
           }
-
           .footer {
             font-size: 11px;
             padding: 15px 10px;
             line-height: 1.4;
           }
-
           .footer p {
             margin: 6px 0;
           }
-
           .footer a {
             word-break: break-word;
           }
@@ -191,9 +158,8 @@ async function generateInvoicePremiumHtml(data) {
       </style>
     </head>
     <body>
-
       <div class="header">
-        ${logoBase64Png ? `<img src="${logoBase64Png}" alt="Company Logo" class="logo" />` : ''}
+        ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" />` : ''}
         ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
       </div>
 
