@@ -1,13 +1,4 @@
-function sanitizeBase64Image(data) {
-  if (typeof data !== 'string') return '';
-  const prefixMatch = data.match(/^data:image\/[^;]+;base64,/);
-  return prefixMatch ? data : '';
-}
 
-
-if (formData.logo) {
-  formData.logo = sanitizeBase64Image(formData.logo);
-}
 function generateInvoicePremiumHtml(data) {
   console.log('generateInvoicePremiumHtml data:', data);
   const {
