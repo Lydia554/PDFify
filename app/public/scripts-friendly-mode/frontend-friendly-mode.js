@@ -177,7 +177,7 @@ generatePdfBtn.addEventListener('click', async () => {
           reader.readAsDataURL(file);
         });
 
-        formData.logo = base64Logo; 
+        
       }
     
       formData = {
