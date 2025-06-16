@@ -206,6 +206,10 @@ generatePdfBtn.addEventListener('click', async () => {
         notes: userAccessType === 'premium' ? document.getElementById('notes')?.value : undefined,
       };
     
+if (formData.logoBase64) {
+  formData.logo = formData.logoBase64;
+  delete formData.logoBase64;
+}
 
     
     } else if (template === 'recipe') {
