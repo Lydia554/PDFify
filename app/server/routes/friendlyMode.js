@@ -42,12 +42,10 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
   }
 });
 
-
 router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
 
   const templateConfig = templates[template];
-
   if (!templateConfig) {
     return res.status(400).json({ error: 'Invalid template' });
   }
@@ -58,15 +56,22 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-let isPremium = true; 
-    //let isPremium = user.plan === 'premium';
+    // Uncomment and use real user plan check in production
+    let isPremium = true; 
+    // let isPremium = user.plan === 'premium';
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
-    const generateHtml = templateConfig.fn(isPremium);
+    // IMPORTANT: Make sure logoBase64 stays here for premium users!
+    // For example, if you want to force a fallback logo for non-premium users:
+    if (!isPremium) {
+      formData.logo = null; // or some default logo or empty string
+    }
+    // Otherwise keep whatever came from frontend, do not overwrite or delete it
 
+    // Parse and normalize items, ingredients, instructions as before
     if (typeof formData.items === 'string') {
       const rows = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean);
       formData.items = rows.map(row => {
@@ -82,10 +87,13 @@ let isPremium = true;
     if (typeof formData.ingredients === 'string') {
       formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
     }
+
     if (typeof formData.instructions === 'string') {
       formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
     }
 
+    // Pass the full formData, including logoBase64, to your template
+    const generateHtml = templateConfig.fn(isPremium);
     const html = generateHtml(formData);
 
     const pdfDir = path.join(__dirname, '../../pdfs');
@@ -115,16 +123,17 @@ let isPremium = true;
 
       user.usageCount += pageCount;
       await user.save();
-    } else {
     }
 
     res.download(pdfPath, (err) => {
       if (err) {
+        // Handle error if needed
       }
       fs.unlinkSync(pdfPath);
     });
 
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
