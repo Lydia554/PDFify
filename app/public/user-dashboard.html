@@ -14,82 +14,82 @@
       <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
-    <!-- Nav -->
+    <!-- Navigation -->
     <nav class="bg-gray-700 shadow p-4 mb-8">
       <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 API Docs</a>
-        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 Shopify Guide</a>
-        <a href="/pdf-generator-demo" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 PDF Generator</a>
+        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 API Documentation</a>
+        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 Shopify Integration Guide</a>
+        <a href="/pdf-generator-demo" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 PDF Generator Demo</a>
         <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700">Logout</button>
       </div>
     </nav>
 
     <main class="max-w-3xl mx-auto px-4">
-      <h1 class="text-3xl font-bold mb-6 text-center">👋 Hello there</h1>
+      <h1 class="text-3xl font-bold mb-6 text-center">👋 Welcome Back!</h1>
 
       <section class="bg-gray-700 shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">🔐 API & Usage Info</h2>
+        <h2 class="text-xl font-semibold mb-4">🔐 Your Account Details</h2>
         <ul class="space-y-2 text-sm">
-          <li><strong>Email:</strong> <span id="email">Loading...</span></li>
-          <li><strong>API Key:</strong> <span id="apiKey">Loading...</span></li>
-          <li><strong>Usage Count:</strong> <span id="usageCount">Loading...</span></li>
-          <li><strong>Max Usage:</strong> <span id="maxUsage">Loading...</span></li>
-          <li><strong>Premium Status:</strong> <span id="premiumStatus">Loading...</span></li>
+          <li><strong>Email:</strong> <span id="email">Loading your email...</span></li>
+          <li><strong>API Key:</strong> <span id="apiKey">Loading your API key...</span></li>
+          <li><strong>Requests Made:</strong> <span id="usageCount">Loading usage count...</span></li>
+          <li><strong>Request Limit:</strong> <span id="maxUsage">Loading limit...</span></li>
+          <li><strong>Subscription Status:</strong> <span id="premiumStatus">Loading status...</span></li>
         </ul>
       </section>
 
       <section class="bg-gray-700 shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">💳 Manage Subscription</h2>
+        <h2 class="text-xl font-semibold mb-4">💳 Subscription Management</h2>
         <div class="flex flex-col gap-3 sm:flex-row">
           <button id="upgradeSubscriptionButton" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">Upgrade to Premium</button>
-          <button id="downgradeSubscriptionButton" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full">Downgrade to Free</button>
+          <button id="downgradeSubscriptionButton" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full">Switch to Free Plan</button>
         </div>
       </section>
 
       <section class="bg-gray-700 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">🛒 Shopify Integration</h2>
         <p class="text-sm mb-2">
-          <strong>Connected Store:</strong> <span id="connectedShopDomain">None</span>
+          <strong>Connected Store:</strong> <span id="connectedShopDomain">No store connected</span>
         </p>
         <label class="text-sm font-semibold">Shop Domain</label>
-        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="mystore.myshopify.com" />
+        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="yourstore.myshopify.com" />
 
         <label class="text-sm font-semibold">Access Token</label>
-        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" />
+        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter your Shopify access token" />
 
         <div class="flex flex-col sm:flex-row gap-3">
-          <button id="connectShopifyButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Connect</button>
-          <button id="disconnectShopifyButton" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 w-full">Disconnect</button>
+          <button id="connectShopifyButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Connect Store</button>
+          <button id="disconnectShopifyButton" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 w-full">Disconnect Store</button>
         </div>
         <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
       </section>
 
       <section class="bg-gray-700 shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">🛠 Update Info</h2>
+        <h2 class="text-xl font-semibold mb-4">🛠 Update Account Information</h2>
         <form id="updateUserForm">
           <label class="text-sm font-semibold">New Email</label>
-          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new email" />
+          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new email address" />
 
           <label class="text-sm font-semibold">New Password</label>
           <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new password" />
 
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Update Info</button>
+          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Changes</button>
         </form>
       </section>
 
       <section class="bg-gray-700 shadow rounded p-6 mb-10">
-        <h2 class="text-xl font-semibold mb-4">🗑 Delete Account</h2>
+        <h2 class="text-xl font-semibold mb-4">🗑 Delete Your Account</h2>
         <button id="deleteAccountButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Delete Account</button>
         <p id="result" class="text-sm mt-4 font-bold"></p>
       </section>
     </main>
-      <!-- Footer -->
-  <footer class="bg-gray-800 border-t border-gray-700 mt-12">
-    <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-      &copy; 2025 PDFify. Built with ❤️ for creators and developers.
-    </div>
-  </footer>
-    </body>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 border-t border-gray-700 mt-12">
+      <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
+        &copy; 2025 PDFify. Built with ❤️ for creators and developers.
+      </div>
+    </footer>
 
   <script>
     
