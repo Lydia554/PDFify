@@ -3,95 +3,73 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDFify</title>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>PDF API Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
   </head>
-  <body class="bg-gray-100 text-gray-800 font-sans">
-    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
-      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
+  <body class="bg-gray-100 text-gray-800 flex flex-col min-h-screen">
+    <header class="p-4 bg-blue-700 text-white text-center text-2xl font-semibold">
+      🧾 PDF API Dashboard
+    </header>
 
-    <!-- Nav -->
-    <nav class="bg-white shadow p-4 border-b border-gray-200 mb-6">
-      <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-4">
-        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">📘 API Guide</a>
-        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">🛒 Shopify Guide</a>
-        <a href="#" id="userDashboardLink" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">🧑‍💼 User Dashboard</a>
-        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600 transition">Logout</button>
-      </div>
-    </nav>
-
-    <main class="max-w-2xl mx-auto px-4">
-      <!-- Mode Toggle -->
-      <div id="modeToggle" class="flex justify-center gap-4 mb-6">
-        <button id="developerModeBtn" class="px-5 py-2 rounded-full bg-gray-800 text-white font-semibold hover:bg-gray-700 transition">🧑‍💻 Developer Mode</button>
-        <button id="friendlyModeBtn" class="px-5 py-2 rounded-full bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400 transition">😊 Friendly Mode</button>
+    <main class="flex-grow p-4">
+      <div class="flex justify-center space-x-4 mb-6">
+        <button id="developerModeBtn" class="px-4 py-2 border rounded hover:bg-blue-100">💻 Developer Mode</button>
+        <button id="friendlyModeBtn" class="px-4 py-2 border rounded hover:bg-green-100">🌼 Friendly Mode</button>
       </div>
 
-      <!-- Developer Mode Container -->
-      <div id="developerMode">
-        <label class="block mb-2 font-semibold" for="endpoint">Endpoint:</label>
-        <select id="endpoint" class="w-full p-3 border border-gray-300 rounded-md mb-4 text-base focus:outline-none focus:ring-2 focus:ring-indigo-400">
-          <option value="generate-invoice">Invoice</option>
-          <option value="generate-shop-order">Shop Order</option>
-          <option value="generate-therapy-report">Therapy Report</option>
-          <option value="generate-recipe">Recipe</option>
-          <option value="generate-pdf-from-html">Raw HTML</option>
-          <option value="generate-packing-slip">Packing Slip</option>
-        </select>
+      <section id="developerMode" style="display: block;">
+        <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-4xl mx-auto">
+          <label class="block mb-2">🔑 API Key</label>
+          <input type="text" id="apiKey" class="w-full border p-3 rounded mb-4" />
 
-        <label class="block mb-2 font-semibold" for="apiKey">Your API Key:</label>
-        <input type="text" id="apiKey" class="w-full p-3 text-base border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Paste your API key here" required />
+          <label class="block mb-2">📤 Endpoint</label>
+          <select id="endpoint" class="w-full border p-3 rounded mb-4">
+            <option value="orders">Orders</option>
+            <option value="invoices">Invoices</option>
+          </select>
 
-        <label class="block mb-2 font-semibold" for="json">Data (JSON):</label>
-        <textarea id="json" rows="14" class="w-full p-4 text-base border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Enter your JSON data here" required></textarea>
+          <label class="block mb-2">📝 JSON Data</label>
+          <textarea id="json" rows="10" class="w-full p-3 border rounded mb-4"></textarea>
 
-        <div class="flex gap-4 mb-4">
-          <button onclick="sendRequest(true)" class="px-5 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">👁️‍🗨️ Preview</button>
-          <button onclick="sendRequest(false)" class="px-5 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">📥 Download</button>
+          <div class="flex flex-wrap gap-4">
+            <button id="previewDevBtn" class="bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-2 px-4 rounded">🔍 Preview</button>
+            <button id="generateDevBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">📥 Generate PDF</button>
+          </div>
         </div>
+        <p id="result" class="text-center mt-4 text-red-600"></p>
+      </section>
 
-        <p id="result" class="text-sm font-bold text-indigo-700"></p>
-      </div>
+      <section id="friendlyMode" style="display: none;">
+        <div class="bg-white p-8 rounded-xl shadow-xl w-full max-w-4xl mx-auto">
+          <label class="block mb-2 friendly-label">🔑 API Key</label>
+          <input type="text" class="w-full border p-4 text-lg rounded mb-6" placeholder="Paste your API key here" />
 
-      <!-- Friendly Mode Container -->
-      <div id="friendlyMode" class="hidden bg-white shadow-lg rounded-xl p-6 mb-10">
-        <select id="friendly-endpoint-select" class="w-full p-3 border border-gray-300 rounded-md mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-base">
-          <option value="invoice">Invoice</option>
-          <option value="recipe">Recipe</option>
-        </select>
+          <label class="block mb-2 friendly-label">📄 Choose PDF Type</label>
+          <select class="w-full border p-4 text-lg rounded mb-6">
+            <option>🧾 Invoice</option>
+            <option>📦 Order Summary</option>
+          </select>
 
-        <!-- Example Friendly Input Fields -->
-        <div id="formContainer" class="space-y-4 mb-6">
-          <input type="text" placeholder="Customer Name" class="w-full p-4 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <input type="email" placeholder="Customer Email" class="w-full p-4 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <textarea rows="12" placeholder="Additional Notes..." class="w-full p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 text-base"></textarea>
+          <label class="block mb-2 friendly-label">📋 Fill in your data</label>
+          <textarea rows="8" class="w-full border p-4 text-lg rounded mb-6" placeholder='e.g. { "name": "John Doe", "order": 12345 }'></textarea>
+
+          <button class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded w-full text-lg">🚀 Generate PDF</button>
         </div>
-
-        <div class="flex gap-4 mb-4">
-          <button id="previewFriendlyBtn" class="px-5 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">👁️‍🗨️ Preview</button>
-          <button id="generateFriendlyBtn" class="px-5 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">🧾 Generate PDF</button>
-        </div>
-
-        <p id="friendlyResult" class="text-sm font-semibold text-indigo-700"></p>
-      </div>
-
-      <!-- Payment Section -->
-      <h3 class="text-xl font-semibold mt-10 mb-4">💎 Upgrade to Premium (More PDF Generations)</h3>
-      <button id="payment-button" class="px-5 py-3 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition">💳 Pay for Premium Access</button>
-      <p id="payment-result" class="text-sm mt-2"></p>
+      </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-20">
-      <div class="max-w-4xl mx-auto text-center py-6">
-        <p class="text-sm text-gray-500 mb-1">&copy; 2025 <span class="font-semibold text-indigo-600">PDFify</span>. Made with ❤️ for devs and creators.</p>
-        <p class="text-xs text-gray-400">All rights reserved. Unauthorized use or copying is prohibited.</p>
-      </div>
+    <footer class="bg-gray-800 text-white text-center p-4 mt-auto">
+      &copy; 2025 Food Trek PDF Generator API
     </footer>
 
+    <div id="loadingOverlay" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50" style="display:none">
+      <div class="text-xl font-semibold">⏳ Loading...</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="/script.js"></script>
 
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
@@ -610,7 +588,13 @@ async function sendRequest(isPreview = false) {
 
 
 <style>
-
+ .active {
+    background-color: #2563eb; /* Tailwind's bg-blue-600 */
+    color: white;
+  }
+  .friendly-label {
+    font-size: 1.25rem;
+  }
 
   @keyframes spin {
     to {
