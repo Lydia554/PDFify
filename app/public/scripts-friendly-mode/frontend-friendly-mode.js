@@ -47,7 +47,7 @@ function renderForm(template) {
       <label>Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" /></label><br/>
 
       <fieldset class="premium-only">
-        <legend>Business Details <span style="font-size: 0.8em; color: #999;">(Premium only)</span></legend>
+        <legend>Business Details <span style="font-size: 0.8em; color: #800000;"></span></legend>
         <label>Company Name: <input id="companyName" name="companyName" /></label><br/>
         <label>Company Address: <input id="companyAddress" name="companyAddress" /></label><br/>
         <label>Company Email: <input id="companyEmail" name="companyEmail" type="email" /></label><br/>
