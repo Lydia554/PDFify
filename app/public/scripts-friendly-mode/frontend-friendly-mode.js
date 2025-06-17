@@ -47,7 +47,7 @@ function renderForm(template) {
       <label>Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" /></label><br/>
 
       <fieldset class="premium-only">
-        <legend>Business Details <span style="font-size: 0.8em; color: #800000;"></span></legend>
+        <legend>Business Details <span style="font-size: 0.8em; color:rgb(0, 0, 0);"></span></legend>
         <label>Company Name: <input id="companyName" name="companyName" /></label><br/>
         <label>Company Address: <input id="companyAddress" name="companyAddress" /></label><br/>
         <label>Company Email: <input id="companyEmail" name="companyEmail" type="email" /></label><br/>
@@ -67,7 +67,7 @@ function renderForm(template) {
       <label>Instructions (semicolon separated): <input id="instructions" name="instructions" /></label><br/>
 
       <fieldset class="premium-only">
-        <legend>Media & Nutrition <span style="font-size: 0.8em; color: #800000;"></span></legend>
+        <legend>Media & Nutrition <span style="font-size: 0.8em; color:rgb(0, 0, 0);"></span></legend>
         <label>Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
         <fieldset>
           <legend>Nutrition Info (optional)</legend>
