@@ -8,32 +8,32 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-gradient-to-b from-blue-50 to-purple-100 text-gray-800 font-sans min-h-screen">
+  <body class="bg-gray-100 text-gray-800 font-sans">
     <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
-      <div class="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Nav -->
-    <nav class="bg-white shadow-md p-4 border-b border-gray-200 mb-6">
-      <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-center gap-4">
-        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition">📄 API Guide</a>
-        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition">📄 Shopify Guide</a>
-        <a href="#" id="userDashboardLink" class="text-sm font-semibold px-4 py-2 bg-indigo-500 text-white rounded-full hover:bg-indigo-600 transition">👤 User Dashboard</a>
-        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-500 text-white rounded-full hover:bg-pink-600 transition">Logout</button>
+    <nav class="bg-white shadow p-4 border-b border-gray-200 mb-6">
+      <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-4">
+        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">📘 API Guide</a>
+        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">🛒 Shopify Guide</a>
+        <a href="#" id="userDashboardLink" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">🧑‍💼 User Dashboard</a>
+        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600 transition">Logout</button>
       </div>
     </nav>
 
-    <main class="max-w-3xl mx-auto px-4">
+    <main class="max-w-2xl mx-auto px-4">
       <!-- Mode Toggle -->
-      <div id="modeToggle" class="flex justify-center gap-4 mb-8">
-        <button id="developerModeBtn" class="px-5 py-2 rounded-full bg-gray-800 text-white font-semibold hover:bg-gray-700 transition">👨‍💻 Developer Mode</button>
-        <button id="friendlyModeBtn" class="px-5 py-2 rounded-full bg-gray-200 text-gray-800 font-semibold hover:bg-gray-300 transition">👩 Friendly Mode</button>
+      <div id="modeToggle" class="flex justify-center gap-4 mb-6">
+        <button id="developerModeBtn" class="px-5 py-2 rounded-full bg-gray-800 text-white font-semibold hover:bg-gray-700 transition">🧑‍💻 Developer Mode</button>
+        <button id="friendlyModeBtn" class="px-5 py-2 rounded-full bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400 transition">😊 Friendly Mode</button>
       </div>
 
       <!-- Developer Mode Container -->
-      <div id="developerMode" class="bg-white shadow-lg rounded-xl p-6 mb-10">
+      <div id="developerMode">
         <label class="block mb-2 font-semibold" for="endpoint">Endpoint:</label>
-        <select id="endpoint" class="w-full p-3 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <select id="endpoint" class="w-full p-3 border border-gray-300 rounded-md mb-4 text-base focus:outline-none focus:ring-2 focus:ring-indigo-400">
           <option value="generate-invoice">Invoice</option>
           <option value="generate-shop-order">Shop Order</option>
           <option value="generate-therapy-report">Therapy Report</option>
@@ -43,50 +43,53 @@
         </select>
 
         <label class="block mb-2 font-semibold" for="apiKey">Your API Key:</label>
-        <input type="text" id="apiKey" class="w-full p-3 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Paste your API key here" required />
+        <input type="text" id="apiKey" class="w-full p-3 text-base border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Paste your API key here" required />
 
         <label class="block mb-2 font-semibold" for="json">Data (JSON):</label>
-        <textarea id="json" rows="14" class="w-full p-4 border border-gray-300 rounded-md mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm" placeholder="Enter your JSON data here" required></textarea>
+        <textarea id="json" rows="14" class="w-full p-4 text-base border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder="Enter your JSON data here" required></textarea>
 
         <div class="flex gap-4 mb-4">
-          <button onclick="sendRequest(true)" class="px-5 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">👁️ Preview</button>
-          <button onclick="sendRequest(false)" class="px-5 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">⬇️ Download</button>
+          <button onclick="sendRequest(true)" class="px-5 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">👁️‍🗨️ Preview</button>
+          <button onclick="sendRequest(false)" class="px-5 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">📥 Download</button>
         </div>
 
-        <p id="result" class="text-sm font-semibold text-indigo-700"></p>
+        <p id="result" class="text-sm font-bold text-indigo-700"></p>
       </div>
 
       <!-- Friendly Mode Container -->
       <div id="friendlyMode" class="hidden bg-white shadow-lg rounded-xl p-6 mb-10">
-        <select id="friendly-endpoint-select" class="w-full p-3 border border-gray-300 rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400">
+        <select id="friendly-endpoint-select" class="w-full p-3 border border-gray-300 rounded-md mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-base">
           <option value="invoice">Invoice</option>
           <option value="recipe">Recipe</option>
         </select>
 
-        <div id="formContainer" class="mb-6"></div>
-
-        <textarea rows="10" placeholder="Enter data here..." class="w-full p-4 border border-gray-300 rounded-md mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"></textarea>
+        <!-- Example Friendly Input Fields -->
+        <div id="formContainer" class="space-y-4 mb-6">
+          <input type="text" placeholder="Customer Name" class="w-full p-4 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <input type="email" placeholder="Customer Email" class="w-full p-4 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <textarea rows="12" placeholder="Additional Notes..." class="w-full p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 text-base"></textarea>
+        </div>
 
         <div class="flex gap-4 mb-4">
-          <button id="previewFriendlyBtn" class="px-5 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">👁️ Preview</button>
-          <button id="generateFriendlyBtn" class="px-5 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">📄 Generate PDF</button>
+          <button id="previewFriendlyBtn" class="px-5 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">👁️‍🗨️ Preview</button>
+          <button id="generateFriendlyBtn" class="px-5 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">🧾 Generate PDF</button>
         </div>
 
         <p id="friendlyResult" class="text-sm font-semibold text-indigo-700"></p>
       </div>
 
       <!-- Payment Section -->
-      <h3 class="text-2xl font-bold text-center text-purple-800 mb-4">💳 Upgrade to Premium</h3>
-      <p class="text-center text-sm mb-4 text-gray-700">Unlock more PDF generations and premium templates.</p>
-      <div class="text-center">
-        <button id="payment-button" class="px-6 py-3 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition">⭐ Pay for Premium Access</button>
-      </div>
-      <p id="payment-result" class="text-center text-sm mt-2 text-purple-700"></p>
+      <h3 class="text-xl font-semibold mt-10 mb-4">💎 Upgrade to Premium (More PDF Generations)</h3>
+      <button id="payment-button" class="px-5 py-3 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition">💳 Pay for Premium Access</button>
+      <p id="payment-result" class="text-sm mt-2"></p>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-900 border-t border-gray-700 text-center text-xs text-gray-400 py-6 mt-12">
-      &copy; 2025 PDFify. Made with ❤️. All rights reserved. Unauthorized use or copying is prohibited.
+    <footer class="bg-white border-t border-gray-200 mt-20">
+      <div class="max-w-4xl mx-auto text-center py-6">
+        <p class="text-sm text-gray-500 mb-1">&copy; 2025 <span class="font-semibold text-indigo-600">PDFify</span>. Made with ❤️ for devs and creators.</p>
+        <p class="text-xs text-gray-400">All rights reserved. Unauthorized use or copying is prohibited.</p>
+      </div>
     </footer>
 
 
