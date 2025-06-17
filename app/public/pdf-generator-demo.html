@@ -97,6 +97,10 @@
       </div>
     </main>
 
+    <footer class="bg-gray-900 border-t border-gray-700 text-center text-xs text-gray-400 p-4">
+      &copy; 2025 Pdfify. Made with ❤️. All rights reserved. Unauthorized use or copying is prohibited.
+    </footer>
+
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
   <script src="/js/previewFriendlyMode.js"></script>
@@ -126,6 +130,15 @@ friendlyBtn.addEventListener('click', () => {
         document.body.classList.toggle("dark");
       });
 
+      document.getElementById("developerModeBtn").addEventListener("click", function () {
+        document.getElementById("developerMode").classList.remove("hidden");
+        document.getElementById("friendlyMode").classList.add("hidden");
+      });
+
+      document.getElementById("friendlyModeBtn").addEventListener("click", function () {
+        document.getElementById("developerMode").classList.add("hidden");
+        document.getElementById("friendlyMode").classList.remove("hidden");
+      });
   
 
 
