@@ -149,38 +149,38 @@
       <!-- Friendly Mode Container -->
       <div
         id="friendlyMode"
-        class="bg-gray-800 p-6 rounded shadow mb-8 hidden space-y-6"
+        class="bg-gray-800 p-10 rounded shadow mb-8 hidden space-y-8"
       >
         <label
-          class="block text-sm font-semibold mb-2"
+          class="block text-lg font-semibold mb-4"
           for="friendly-endpoint-select"
           >Select Template:</label
         >
         <select
           id="friendly-endpoint-select"
-          class="w-full p-3 rounded bg-gray-900 text-white border border-gray-700"
+          class="w-full p-4 rounded bg-gray-900 text-white border border-gray-700 text-lg"
         >
           <option value="invoice">Invoice</option>
           <option value="recipe">Recipe</option>
         </select>
 
-        <div id="formContainer" class="space-y-6"></div>
+        <div id="formContainer" class="space-y-8"></div>
 
-        <div class="flex flex-wrap gap-4 justify-center">
+        <div class="flex flex-wrap gap-6 justify-center">
           <button
             id="previewFriendlyBtn"
-            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded text-white"
+            class="bg-green-600 hover:bg-green-700 px-8 py-4 rounded text-white text-lg"
           >
             Preview
           </button>
           <button
             id="generateFriendlyBtn"
-            class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded text-white"
+            class="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded text-white text-lg"
           >
             Generate PDF
           </button>
         </div>
-        <p id="friendlyResult" class="mt-4 text-sm font-medium text-center"></p>
+        <p id="friendlyResult" class="mt-6 text-base font-medium text-center"></p>
       </div>
 
       <div class="bg-gray-800 p-6 rounded shadow mb-8">
@@ -197,10 +197,14 @@
       </div>
     </main>
 
-       <footer class="bg-gray-900 border-t border-gray-700 text-center text-xs text-gray-400 p-4">
-      &copy; 2025 Pdfify. Made with ❤️. All rights reserved. Unauthorized use or copying is prohibited.
+    <footer
+      class="bg-gray-900 border-t border-gray-700 text-center text-xs text-gray-400 p-4"
+    >
+      &copy; 2025 Pdfify. Made with ❤️. All rights reserved. Unauthorized use or
+      copying is prohibited.
     </footer>
 
+    
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
   <script src="/js/previewFriendlyMode.js"></script>
