@@ -67,7 +67,7 @@ function renderForm(template) {
       <label>Instructions (semicolon separated): <input id="instructions" name="instructions" /></label><br/>
 
       <fieldset class="premium-only">
-        <legend>Media & Nutrition <span style="font-size: 0.8em; color: #999;"></span></legend>
+        <legend>Media & Nutrition <span style="font-size: 0.8em; color: #800000;"></span></legend>
         <label>Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
         <fieldset>
           <legend>Nutrition Info (optional)</legend>
