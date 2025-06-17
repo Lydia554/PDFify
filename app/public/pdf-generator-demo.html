@@ -2,50 +2,103 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>PDFify Interface</title>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
-        darkMode: 'class',
+        darkMode: "class",
       };
     </script>
   </head>
   <body class="dark bg-gray-900 text-white font-sans">
-    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    <div
+      id="loadingOverlay"
+      class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center"
+    >
+      <div
+        class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"
+      ></div>
     </div>
 
-    <nav class="bg-gray-800 border-b border-gray-700 py-4 px-6 flex flex-col sm:flex-row items-center justify-between">
-      <div class="flex justify-center space-x-4 w-full sm:w-auto mb-4 sm:mb-0">
-        <a href="/api-guide" class="text-sm font-medium bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">📄 API Guide</a>
-        <a href="/shopify-guide" class="text-sm font-medium bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">📄 Shopify Guide</a>
-        <a href="#" id="userDashboardLink" class="text-sm font-medium bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded">👤 User Dashboard</a>
-      </div>
-      <div class="flex items-center gap-3">
-        <label class="flex items-center text-sm gap-2">
-          <span>🌗 Theme</span>
-          <input id="themeToggle" type="checkbox" class="toggle-checkbox hidden" />
-          <div class="toggle-slot w-10 h-5 bg-gray-600 rounded-full p-1 flex items-center cursor-pointer">
-            <div class="toggle-button w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out"></div>
-          </div>
-        </label>
-        <button id="logoutButton" class="text-sm font-medium bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded">Logout</button>
+    <nav class="bg-gray-800 border-b border-gray-700 py-4 px-6">
+      <div
+        class="max-w-4xl mx-auto flex justify-between items-center flex-wrap gap-4"
+      >
+        <div class="flex flex-wrap gap-4">
+          <a
+            href="/api-guide"
+            class="text-sm font-medium bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+            >📄 API Guide</a
+          >
+          <a
+            href="/shopify-guide"
+            class="text-sm font-medium bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+            >📄 Shopify Guide</a
+          >
+          <a
+            href="#"
+            id="userDashboardLink"
+            class="text-sm font-medium bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+            >👤 User Dashboard</a
+          >
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="flex items-center text-sm gap-2 cursor-pointer">
+            <span>🌗 Theme</span>
+            <input
+              id="themeToggle"
+              type="checkbox"
+              class="toggle-checkbox hidden"
+            />
+            <div
+              class="toggle-slot w-10 h-5 bg-gray-600 rounded-full p-1 flex items-center cursor-pointer"
+            >
+              <div
+                class="toggle-button w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out"
+              ></div>
+            </div>
+          </label>
+          <button
+            id="logoutButton"
+            class="text-sm font-medium bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded"
+          >
+            Logout
+          </button>
+        </div>
       </div>
     </nav>
 
     <main class="max-w-3xl mx-auto p-6">
-      <div id="modeToggle" class="flex justify-center gap-4 mb-6">
-        <button id="developerModeBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow active">🛠 Developer Mode</button>
-        <button id="friendlyModeBtn" class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded shadow">😊 Friendly Mode</button>
+      <div id="modeToggle" class="flex justify-center gap-4 mb-6 flex-wrap">
+        <button
+          id="developerModeBtn"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded shadow active"
+        >
+          🛠 Developer Mode
+        </button>
+        <button
+          id="friendlyModeBtn"
+          class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded shadow"
+        >
+          😊 Friendly Mode
+        </button>
       </div>
 
       <!-- Developer Mode Container -->
-      <div id="developerMode" class="bg-gray-800 p-6 rounded shadow mb-8">
-        <label class="block text-sm font-semibold mb-2" for="endpoint">Endpoint:</label>
-        <select id="endpoint" class="w-full p-2 rounded bg-gray-900 text-white border border-gray-700 mb-4">
+      <div
+        id="developerMode"
+        class="bg-gray-800 p-6 rounded shadow mb-8"
+      >
+        <label class="block text-sm font-semibold mb-2" for="endpoint"
+          >Endpoint:</label
+        >
+        <select
+          id="endpoint"
+          class="w-full p-2 rounded bg-gray-900 text-white border border-gray-700 mb-4"
+        >
           <option value="generate-invoice">Invoice</option>
           <option value="generate-shop-order">Shop Order</option>
           <option value="generate-therapy-report">Therapy Report</option>
@@ -54,7 +107,9 @@
           <option value="generate-packing-slip">Packing Slip</option>
         </select>
 
-        <label class="block text-sm font-semibold mb-2" for="apiKey">Your API Key:</label>
+        <label class="block text-sm font-semibold mb-2" for="apiKey"
+          >Your API Key:</label
+        >
         <input
           type="text"
           id="apiKey"
@@ -63,40 +118,81 @@
           required
         />
 
-        <label class="block text-sm font-semibold mb-2" for="json">Data (JSON):</label>
+        <label class="block text-sm font-semibold mb-2" for="json"
+          >Data (JSON):</label
+        >
         <textarea
           id="json"
           rows="20"
-          class="w-full p-4 rounded bg-gray-900 text-white border border-gray-700 mb-4"
+          class="w-full p-4 rounded bg-gray-900 text-white border border-gray-700 mb-4 font-mono text-sm"
           placeholder="Paste your JSON data here"
           required
         ></textarea>
 
-        <div class="flex flex-wrap gap-4">
-          <button onclick="sendRequest(true)" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">Preview</button>
-          <button onclick="sendRequest(false)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">Download</button>
+        <div class="flex flex-wrap gap-4 justify-center">
+          <button
+            onclick="sendRequest(true)"
+            class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded text-white"
+          >
+            Preview
+          </button>
+          <button
+            onclick="sendRequest(false)"
+            class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded text-white"
+          >
+            Download
+          </button>
         </div>
-        <p id="result" class="mt-4 text-sm font-medium"></p>
+        <p id="result" class="mt-4 text-sm font-medium text-center"></p>
       </div>
 
       <!-- Friendly Mode Container -->
-      <div id="friendlyMode" class="bg-gray-800 p-6 rounded shadow mb-8 hidden">
-        <label class="block text-sm font-semibold mb-2" for="friendly-endpoint-select">Select Template:</label>
-        <select id="friendly-endpoint-select" class="w-full p-2 rounded bg-gray-900 text-white border border-gray-700 mb-4">
+      <div
+        id="friendlyMode"
+        class="bg-gray-800 p-6 rounded shadow mb-8 hidden space-y-6"
+      >
+        <label
+          class="block text-sm font-semibold mb-2"
+          for="friendly-endpoint-select"
+          >Select Template:</label
+        >
+        <select
+          id="friendly-endpoint-select"
+          class="w-full p-3 rounded bg-gray-900 text-white border border-gray-700"
+        >
           <option value="invoice">Invoice</option>
           <option value="recipe">Recipe</option>
         </select>
-        <div id="formContainer" class="mb-4"></div>
-        <div class="flex flex-wrap gap-4 mt-4">
-          <button id="previewFriendlyBtn" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">Preview</button>
-          <button id="generateFriendlyBtn" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white">Generate PDF</button>
+
+        <div id="formContainer" class="space-y-6"></div>
+
+        <div class="flex flex-wrap gap-4 justify-center">
+          <button
+            id="previewFriendlyBtn"
+            class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded text-white"
+          >
+            Preview
+          </button>
+          <button
+            id="generateFriendlyBtn"
+            class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded text-white"
+          >
+            Generate PDF
+          </button>
         </div>
-        <p id="friendlyResult" class="mt-4 text-sm font-medium"></p>
+        <p id="friendlyResult" class="mt-4 text-sm font-medium text-center"></p>
       </div>
 
       <div class="bg-gray-800 p-6 rounded shadow mb-8">
-        <h3 class="text-lg font-bold mb-4">🚀 Upgrade to Premium (More PDF Generations)</h3>
-        <button id="payment-button" class="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded text-white">Pay for Premium Access</button>
+        <h3 class="text-lg font-bold mb-4">
+          🚀 Upgrade to Premium (More PDF Generations)
+        </h3>
+        <button
+          id="payment-button"
+          class="bg-yellow-500 hover:bg-yellow-600 px-4 py-2 rounded text-white"
+        >
+          Pay for Premium Access
+        </button>
         <p id="payment-result" class="mt-4 text-sm font-medium"></p>
       </div>
     </main>
@@ -130,12 +226,17 @@ friendlyBtn.addEventListener('click', () => {
   devSection.style.display = 'none';
   friendlySection.style.display = 'block';
 
-
-
-
-
   
 });
+
+
+   // Theme toggle
+      document
+        .getElementById("themeToggle")
+        .addEventListener("change", function () {
+          document.body.classList.toggle("dark");
+        });
+
 
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
@@ -166,22 +267,8 @@ friendlyBtn.addEventListener('click', () => {
     });
     
 
-     document.getElementById("themeToggle").addEventListener("change", function () {
-        document.body.classList.toggle("dark");
-      });
-
-      document.getElementById("developerModeBtn").addEventListener("click", function () {
-        document.getElementById("developerMode").classList.remove("hidden");
-        document.getElementById("friendlyMode").classList.add("hidden");
-      });
-
-      document.getElementById("friendlyModeBtn").addEventListener("click", function () {
-        document.getElementById("developerMode").classList.add("hidden");
-        document.getElementById("friendlyMode").classList.remove("hidden");
-      });
 
 
-      
     async function sendRequest() {
       showProgressBar();
     
