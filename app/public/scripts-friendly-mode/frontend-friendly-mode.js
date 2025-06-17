@@ -82,6 +82,8 @@ function renderForm(template) {
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
   }
+
+  
   formContainer.innerHTML = html;
   allSelectedFiles = [];
   updateImagePreview();
