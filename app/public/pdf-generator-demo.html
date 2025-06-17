@@ -7,15 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @keyframes fadeInUp {
-      0% { opacity: 0; transform: translateY(20px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-    .fade-in-up {
-      animation: fadeInUp 0.6s ease-out both;
-    }
-  </style>
+
 </head>
 <body class="bg-gray-100 font-sans max-w-3xl mx-auto p-8">
 
@@ -25,14 +17,29 @@
   </div>
 
   <!-- Navigation -->
-  <nav class="flex justify-between items-center bg-white shadow-sm rounded-md p-4 mb-8 sticky top-0 z-40 fade-in-up">
-    <div class="space-x-4">
-      <a href="/api-guide" class="text-indigo-600 hover:underline font-medium transition-all hover:scale-105">📄 API Guide</a>
-      <a href="/shopify-guide" class="text-indigo-600 hover:underline font-medium transition-all hover:scale-105">📄 Shopify Guide</a>
-      <a href="#" id="userDashboardLink" class="text-indigo-600 hover:underline font-medium transition-all hover:scale-105">👤 User Dashboard</a>
-    </div>
-    <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105">Logout</button>
-  </nav>
+<nav class="flex justify-between items-center bg-white shadow-sm rounded-md p-4 mb-8 sticky top-0 z-40 fade-in-up">
+  <div class="flex gap-3">
+    <a href="/api-guide"
+       class="flex items-center gap-1 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
+       📄 <span>API Guide</span>
+    </a>
+    <a href="/shopify-guide"
+       class="flex items-center gap-1 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
+       📄 <span>Shopify Guide</span>
+    </a>
+    <a href="#"
+       id="userDashboardLink"
+       class="flex items-center gap-1 px-3 py-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
+       👤 <span>User Dashboard</span>
+    </a>
+  </div>
+
+  <button id="logoutButton"
+          class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md">
+    Logout
+  </button>
+</nav>
+
 
   <!-- Mode Toggle -->
   <div id="modeToggle" class="flex gap-4 mb-8 fade-in-up">
@@ -786,6 +793,14 @@ async function sendRequest(isPreview = false) {
       border: 1px solid #ccc;
       font-size: 14px;
       margin-top: 5px;
+    }
+
+        @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out both;
     }
 
   @keyframes spin {
