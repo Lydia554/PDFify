@@ -7,6 +7,15 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fadeInUp {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up {
+      animation: fadeInUp 0.6s ease-out both;
+    }
+  </style>
 </head>
 <body class="bg-gray-100 font-sans max-w-3xl mx-auto p-8">
 
@@ -16,26 +25,26 @@
   </div>
 
   <!-- Navigation -->
-  <nav class="flex justify-between items-center bg-white shadow-sm rounded-md p-4 mb-8 sticky top-0 z-40">
+  <nav class="flex justify-between items-center bg-white shadow-sm rounded-md p-4 mb-8 sticky top-0 z-40 fade-in-up">
     <div class="space-x-4">
-      <a href="/api-guide" class="text-indigo-600 hover:underline font-medium">📄 API Guide</a>
-      <a href="/shopify-guide" class="text-indigo-600 hover:underline font-medium">📄 Shopify Guide</a>
-      <a href="#" id="userDashboardLink" class="text-indigo-600 hover:underline font-medium">👤 User Dashboard</a>
+      <a href="/api-guide" class="text-indigo-600 hover:underline font-medium transition-all hover:scale-105">📄 API Guide</a>
+      <a href="/shopify-guide" class="text-indigo-600 hover:underline font-medium transition-all hover:scale-105">📄 Shopify Guide</a>
+      <a href="#" id="userDashboardLink" class="text-indigo-600 hover:underline font-medium transition-all hover:scale-105">👤 User Dashboard</a>
     </div>
-    <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition">Logout</button>
+    <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105">Logout</button>
   </nav>
 
   <!-- Mode Toggle -->
-  <div id="modeToggle" class="flex gap-4 mb-8">
-    <button id="developerModeBtn" class="flex-1 py-2 rounded-md bg-indigo-600 text-white font-semibold shadow-md hover:bg-indigo-700 transition">Developer Mode</button>
-    <button id="friendlyModeBtn" class="flex-1 py-2 rounded-md bg-pink-400 text-white font-semibold hover:bg-pink-500 transition">Friendly Mode</button>
+  <div id="modeToggle" class="flex gap-4 mb-8 fade-in-up">
+    <button id="developerModeBtn" class="flex-1 py-2 rounded-md bg-indigo-600 text-white font-semibold shadow-md hover:bg-indigo-700 transition-transform hover:scale-105">Developer Mode</button>
+    <button id="friendlyModeBtn" class="flex-1 py-2 rounded-md bg-pink-400 text-white font-semibold hover:bg-pink-500 transition-transform hover:scale-105">Friendly Mode</button>
   </div>
 
   <!-- Developer Mode Container -->
-  <div id="developerMode" class="space-y-6">
+  <div id="developerMode" class="space-y-6 fade-in-up">
     <div>
       <label for="endpoint" class="block mb-1 font-semibold text-gray-700">Endpoint:</label>
-      <select id="endpoint" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <select id="endpoint" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
         <option value="generate-invoice">Invoice</option>
         <option value="generate-shop-order">Shop Order</option>
         <option value="generate-therapy-report">Therapy Report</option>
@@ -48,22 +57,22 @@
     <div>
       <label for="apiKey" class="block mb-1 font-semibold text-gray-700">Your API Key:</label>
       <input type="text" id="apiKey" placeholder="Paste your API key here" required 
-        class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition" />
     </div>
 
     <div>
       <label for="json" class="block mb-1 font-semibold text-gray-700">Data (JSON):</label>
       <textarea id="json" rows="15" required
-        class="w-full border border-gray-300 rounded-md p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        class="w-full border border-gray-300 rounded-md p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"></textarea>
     </div>
 
     <div class="flex gap-4">
       <button onclick="sendRequest(true)" 
-        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition shadow-md">
+        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
         🔍 Preview
       </button>
       <button onclick="sendRequest(false)" 
-        class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition shadow-md">
+        class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
         ⬇️ Download
       </button>
     </div>
@@ -72,10 +81,10 @@
   </div>
 
   <!-- Friendly Mode Container -->
-  <div id="friendlyMode" class="hidden space-y-6">
+  <div id="friendlyMode" class="hidden space-y-6 fade-in-up">
     <div>
       <label for="friendly-endpoint-select" class="block mb-1 font-semibold text-gray-700">Select Template:</label>
-      <select id="friendly-endpoint-select" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <select id="friendly-endpoint-select" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
         <option value="invoice">Invoice</option>
         <option value="recipe">Recipe</option>
       </select>
@@ -84,11 +93,11 @@
 
     <div class="flex gap-4">
       <button id="previewFriendlyBtn" 
-        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition shadow-md">
+        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
         🔍 Preview
       </button>
       <button id="generateFriendlyBtn" 
-        class="flex-1 py-3 bg-teal-500 text-white rounded-md font-semibold hover:bg-teal-600 transition shadow-md">
+        class="flex-1 py-3 bg-teal-500 text-white rounded-md font-semibold hover:bg-teal-600 transition-transform hover:scale-105 shadow-md">
         📄 Generate PDF
       </button>
     </div>
@@ -96,23 +105,21 @@
   </div>
 
   <!-- Premium Upgrade -->
-  <section class="mt-12 text-center">
+  <section class="mt-12 text-center fade-in-up">
     <h3 class="text-xl font-semibold text-gray-800 mb-4">Upgrade to Premium (More PDF Generations)</h3>
     <button id="payment-button" 
-      class="inline-block bg-fuchsia-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-fuchsia-700 transition shadow-lg">
+      class="inline-block bg-fuchsia-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-fuchsia-700 transition-all shadow-lg animate-bounce">
       💎 Pay for Premium Access
     </button>
     <p id="payment-result" class="mt-4 text-gray-700"></p>
   </section>
 
+
+
   <!-- Footer -->
   <footer class="mt-16 border-t border-gray-300 pt-6 text-center text-sm text-gray-500">
     <p>&copy; 2025 PDFify. All rights reserved.</p>
-    <div class="mt-2 space-x-4">
-      <a href="/privacy" class="hover:text-indigo-600">Privacy</a>
-      <a href="/terms" class="hover:text-indigo-600">Terms</a>
-      <a href="mailto:support@pdfify.io" class="hover:text-indigo-600">Contact</a>
-    </div>
+    <p class="mt-2">Built with ❤️ for developers and creators.</p>
   </footer>
 
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
@@ -140,7 +147,13 @@ friendlyBtn.addEventListener('click', () => {
   devSection.style.display = 'none';
   friendlySection.style.display = 'block';
 
-
+  // Basic animation for on-load sections (optional enhancement)
+    document.addEventListener("DOMContentLoaded", () => {
+      document.querySelectorAll('.fade-in-up').forEach(el => {
+        el.classList.add('opacity-0');
+        setTimeout(() => el.classList.remove('opacity-0'), 50);
+      });
+    });
 
 
   
