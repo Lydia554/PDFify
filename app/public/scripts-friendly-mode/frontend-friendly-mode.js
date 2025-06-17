@@ -43,10 +43,10 @@ function renderForm(template) {
       <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Items (format: description,quantity,unitPrice per line):</label>
-      <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
+      <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-900 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
       <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" class="p-1 rounded border border-gray-900 text-black"/></label>
 
-      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+      <fieldset class="premium-only border border-gray-900 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Business Details</legend>
         <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
         <label class="block mb-1">Company Address: <input id="companyAddress" name="companyAddress" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
@@ -54,7 +54,7 @@ function renderForm(template) {
         <label class="block mb-1">Sender Address: <input id="senderAddress" name="senderAddress" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
         <label class="block mb-1">Recipient Address: <input id="recipientAddress" name="recipientAddress" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
         <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" class="w-full text-white"/></label>
-        <label class="block mb-1">Extra Notes: <textarea id="notes" name="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
+        <label class="block mb-1">Extra Notes: <textarea id="notes" name="notes" rows="3" class="w-full p-1 rounded border border-gray-900 text-black"></textarea></label>
       </fieldset>
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
