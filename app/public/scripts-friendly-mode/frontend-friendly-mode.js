@@ -259,3 +259,52 @@ templateSelect.addEventListener('change', () => {
   await fetchAccessType();
   renderForm(templateSelect.value);
 })();
+
+
+
+<style>
+
+.premium-only {
+  opacity: 1;
+  border: 1px dashed #ccc;
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  position: relative;
+}
+
+.premium-only legend {
+  font-weight: bold;
+  color: #555;
+}
+
+.premium-only input:disabled,
+.premium-only textarea:disabled,
+.premium-only select:disabled {
+  background-color: #eee;
+  cursor: not-allowed;
+  color: #888;
+}
+
+.premium-only input:disabled::placeholder,
+.premium-only textarea:disabled::placeholder {
+  color: #aaa;
+}
+
+.premium-only::after {
+  content: "Premium only";
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: #f0c040;
+  color: #000;
+  font-size: 0.7em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 0.85;
+}
+
+
+
+</style>
