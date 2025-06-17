@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,15 +7,15 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="js/theme.js"></script>
+     <script src="js/theme.js"></script>
   </head>
-  <body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 font-mono">
+  <body class="bg-gray-900 text-gray-100 font-mono">
     <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
       <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Nav -->
-    <nav class="bg-white dark:bg-gray-800 shadow p-4 mb-8">
+    <nav class="bg-gray-800 shadow p-4 mb-8">
       <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
         <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 API Docs</a>
         <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 Shopify Guide</a>
@@ -27,7 +27,7 @@
     <main class="max-w-3xl mx-auto px-4">
       <h1 class="text-3xl font-bold mb-6 text-center">👋 Hello there</h1>
 
-      <section class="bg-white dark:bg-gray-800 shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">🔐 API & Usage Info</h2>
         <ul class="space-y-2 text-sm">
           <li><strong>Email:</strong> <span id="email">Loading...</span></li>
@@ -38,7 +38,7 @@
         </ul>
       </section>
 
-      <section class="bg-white dark:bg-gray-800 shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">💳 Manage Subscription</h2>
         <div class="flex flex-col gap-3 sm:flex-row">
           <button id="upgradeSubscriptionButton" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">Upgrade to Premium</button>
@@ -46,16 +46,16 @@
         </div>
       </section>
 
-      <section class="bg-white dark:bg-gray-800 shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">🛒 Shopify Integration</h2>
         <p class="text-sm mb-2">
           <strong>Connected Store:</strong> <span id="connectedShopDomain">None</span>
         </p>
         <label class="text-sm font-semibold">Shop Domain</label>
-        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white" placeholder="mystore.myshopify.com" />
+        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" placeholder="mystore.myshopify.com" />
 
         <label class="text-sm font-semibold">Access Token</label>
-        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white" />
+        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" />
 
         <div class="flex flex-col sm:flex-row gap-3">
           <button id="connectShopifyButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Connect</button>
@@ -64,20 +64,20 @@
         <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
       </section>
 
-      <section class="bg-white dark:bg-gray-800 shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">🛠 Update Info</h2>
         <form id="updateUserForm">
           <label class="text-sm font-semibold">New Email</label>
-          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white" placeholder="Enter new email" />
+          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" placeholder="Enter new email" />
 
           <label class="text-sm font-semibold">New Password</label>
-          <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white" placeholder="Enter new password" />
+          <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" placeholder="Enter new password" />
 
           <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Update Info</button>
         </form>
       </section>
 
-      <section class="bg-white dark:bg-gray-800 shadow rounded p-6 mb-10">
+      <section class="bg-gray-800 shadow rounded p-6 mb-10">
         <h2 class="text-xl font-semibold mb-4">🗑 Delete Account</h2>
         <button id="deleteAccountButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Delete Account</button>
         <p id="result" class="text-sm mt-4 font-bold"></p>
@@ -85,8 +85,6 @@
     </main>
 
   <script>
-
-      applyInitialTheme();
     
     const api = axios.create({
       baseURL: "/api",
@@ -374,6 +372,7 @@ document.getElementById("disconnectShopifyButton").addEventListener("click", asy
   }
 });
 
+// Fetch Shopify connection info on load as well
 fetchShopifyConnection();
 
 
@@ -387,18 +386,6 @@ fetchShopifyConnection();
 
 
   <style>
-body.dark-mode {
-  background-color: #121212;
-  color: #f0f0f0;
-}
-
-body.dark-mode input,
-body.dark-mode textarea,
-body.dark-mode select {
-  background-color: #1e1e1e;
-  color: #f0f0f0;
-  border: 1px solid #444;
-}
 
 
 

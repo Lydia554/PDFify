@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Shopify Guide - PDFify</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="/js/theme.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -135,17 +134,14 @@
 
 
   <script>
-
-  applyInitialTheme();
-
-    // Optional: simple script to collapse/expand steps if you want
+ 
     document.querySelectorAll("section.step h2").forEach(header => {
       header.style.cursor = "pointer";
       header.addEventListener("click", () => {
         const nextEl = header.nextElementSibling;
         if (!nextEl) return;
         const isVisible = nextEl.style.display !== "none";
-        // toggle all siblings until next h2 or section end
+    
         let el = nextEl;
         while(el && el.tagName !== "H2") {
           el.style.display = isVisible ? "none" : "";
@@ -171,7 +167,7 @@
       max-width: 720px;
       margin: 0 auto;
       line-height: 1.6;
-      padding: 6rem 1rem 2rem; /* top padding to offset fixed header */
+      padding: 6rem 1rem 2rem; 
       background-color: #f9f9f9;
       color: #333;
     }
@@ -206,20 +202,6 @@
       margin-left: 1.5rem;
       margin-bottom: 1rem;
     }
-    body.dark-mode {
-  background-color: #121212;
-  color: #f0f0f0;
-}
-
-
-body.dark-mode input,
-body.dark-mode textarea,
-body.dark-mode select {
-  background-color: #1e1e1e;
-  color: #f0f0f0;
-  border: 1px solid #444;
-}
-
 
     code {
       background-color: #eef3fc;
@@ -243,7 +225,6 @@ body.dark-mode select {
       border-radius: 4px;
     }
 
-    /* Header styles */
     header.bg-white {
       position: fixed;
       top: 0;
