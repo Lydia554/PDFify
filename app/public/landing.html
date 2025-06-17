@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PDFify Landing Page</title>
+   <script src="js/theme.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="font-sans antialiased text-gray-800">
@@ -116,6 +117,7 @@
 
 <script>
  
+  applyInitialTheme();
 
 document.getElementById("signUpButton").addEventListener("click", (event) => {
   event.preventDefault();
@@ -186,6 +188,19 @@ window.addEventListener("pageshow", () => {
 <style>
 
 
+body.dark-mode {
+  background-color: #121212;
+  color: #f0f0f0;
+}
+
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  border: 1px solid #444;
+}
 
 
   @keyframes spin {

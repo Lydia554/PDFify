@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Shopify Guide - PDFify</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/js/theme.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -134,6 +135,9 @@
 
 
   <script>
+
+  applyInitialTheme();
+
     // Optional: simple script to collapse/expand steps if you want
     document.querySelectorAll("section.step h2").forEach(header => {
       header.style.cursor = "pointer";
@@ -202,6 +206,20 @@
       margin-left: 1.5rem;
       margin-bottom: 1rem;
     }
+    body.dark-mode {
+  background-color: #121212;
+  color: #f0f0f0;
+}
+
+
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  border: 1px solid #444;
+}
+
 
     code {
       background-color: #eef3fc;
