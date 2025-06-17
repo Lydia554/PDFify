@@ -1,79 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
- 
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDFify</title>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://js.stripe.com/v3/"></script>
- 
-</head>
-<body style="font-family: sans-serif; max-width: 600px; margin: 40px auto;">
-  
-  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
-  </div>
-  <nav style="background-color: #f4f7fb; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
-    <div>
-      <a href="/api-guide" class="api-docs-button" style="margin-right: 10px;">📄 API Guide</a>
-        <a href="/shopify-guide" class="api-docs-button" style="margin-right: 10px;">📄 Shopify Guide</a>
-      <a href="#" id="userDashboardLink" class="api-docs-button">👤 User Dashboard</a>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDFify</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 text-gray-800 font-sans">
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
+      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
-    <button id="logoutButton">Logout</button>
-  </nav>
- 
-  <div id="modeToggle" class="toggle-container">
-    <button id="developerModeBtn" class="active">Developer Mode</button>
-    <button id="friendlyModeBtn">Friendly Mode</button>
-  </div>
-  <!-- Developer Mode Container -->
-  <div id="developerMode">
-    <label for="endpoint">Endpoint:</label>
-    <select id="endpoint">
-      <option value="generate-invoice">Invoice</option>
-      <option value="generate-shop-order">Shop Order</option>
-      <option value="generate-therapy-report">Therapy Report</option>
-      <option value="generate-recipe">Recipe</option>
-      <option value="generate-pdf-from-html">Raw HTML</option>
-      <option value="generate-packing-slip">Packing Slip</option>
-    </select>
 
-    <br />
+    <!-- Nav -->
+    <nav class="bg-gray-200 shadow p-4 border-b border-gray-300 mb-6">
+      <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-4">
+        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">📄 API Guide</a>
+        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">📄 Shopify Guide</a>
+        <a href="#" id="userDashboardLink" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">👤 User Dashboard</a>
+        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600">Logout</button>
+      </div>
+    </nav>
 
-    <label for="apiKey">Your API Key:</label>
-    <input type="text" id="apiKey" placeholder="Paste your API key here" required />
+    <main class="max-w-2xl mx-auto px-4">
+      <!-- Mode Toggle -->
+      <div id="modeToggle" class="flex justify-center gap-4 mb-6">
+        <button id="developerModeBtn" class="px-4 py-2 rounded bg-gray-800 text-white font-semibold hover:bg-gray-700">Developer Mode</button>
+        <button id="friendlyModeBtn" class="px-4 py-2 rounded bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400">Friendly Mode</button>
+      </div>
 
-    <br />
+      <!-- Developer Mode Container -->
+      <div id="developerMode">
+        <label class="block mb-2 font-semibold" for="endpoint">Endpoint:</label>
+        <select id="endpoint" class="w-full p-2 border rounded mb-4">
+          <option value="generate-invoice">Invoice</option>
+          <option value="generate-shop-order">Shop Order</option>
+          <option value="generate-therapy-report">Therapy Report</option>
+          <option value="generate-recipe">Recipe</option>
+          <option value="generate-pdf-from-html">Raw HTML</option>
+          <option value="generate-packing-slip">Packing Slip</option>
+        </select>
 
-    <label for="json">Data (JSON):</label>
-    <textarea id="json" rows="15" required></textarea>
+        <label class="block mb-2 font-semibold" for="apiKey">Your API Key:</label>
+        <input type="text" id="apiKey" class="w-full p-2 border rounded mb-4" placeholder="Paste your API key here" required />
 
-    <br />
-    <button onclick="sendRequest(true)">Preview</button>
-    <button onclick="sendRequest(false)">Download</button>
+        <label class="block mb-2 font-semibold" for="json">Data (JSON):</label>
+        <textarea id="json" rows="10" class="w-full p-2 border rounded mb-4" placeholder="Enter your JSON data here" required></textarea>
+
+        <div class="flex gap-4 mb-4">
+          <button onclick="sendRequest(true)" class="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Preview</button>
+          <button onclick="sendRequest(false)" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Download</button>
+        </div>
+
+        <p id="result" class="text-sm font-bold"></p>
+      </div>
+
+      <!-- Friendly Mode Container -->
+      <div id="friendlyMode" class="hidden">
+        <select id="friendly-endpoint-select" class="w-full p-2 border rounded mb-4">
+          <option value="invoice">Invoice</option>
+          <option value="recipe">Recipe</option>
+        </select>
+
+        <div id="formContainer" class="mb-4"></div>
+
+        <div class="flex gap-4 mb-4">
+          <button id="previewFriendlyBtn" class="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700">Preview</button>
+          <button id="generateFriendlyBtn" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Generate PDF</button>
+        </div>
+
+        <p id="friendlyResult" class="text-sm font-bold"></p>
+      </div>
+
+      <!-- Payment Section -->
+      <h3 class="text-xl font-semibold mt-10 mb-4">💳 Upgrade to Premium (More PDF Generations)</h3>
+      <button id="payment-button" class="px-4 py-2 rounded bg-purple-600 text-white hover:bg-purple-700">Pay for Premium Access</button>
+      <p id="payment-result" class="text-sm mt-2"></p>
+    </main>
+
     
-    <p id="result"></p>
-  </div>
-
-  <!-- Friendly Mode Container -->
-  <div id="friendlyMode" style="display:none;">
-    <select id="friendly-endpoint-select">
-      <option value="invoice">Invoice</option>
-      <option value="recipe">Recipe</option>
-    </select>
-    <div id="formContainer"></div>
-    <button id="previewFriendlyBtn">Preview</button>
-    <button id="generateFriendlyBtn">Generate PDF</button>
-    <p id="friendlyResult"></p>
-  </div>
- 
- 
-
-  <h3>Upgrade to Premium (More PDF Generations)</h3>
-  <button id="payment-button">Pay for Premium Access</button>
-  <p id="payment-result"></p>
-
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
   <script src="/js/previewFriendlyMode.js"></script>
@@ -591,148 +597,7 @@ async function sendRequest(isPreview = false) {
 
 
 <style>
-  body {
-    font-family: 'Arial', sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f7fb;
-    color: #333;
-  }
 
-
-  h1 {
-    text-align: center;
-    color: #333;
-    margin-bottom: 20px;
-    font-size: 24px;
-  }
-
-  button {
-    background-color: #2196f3;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    cursor: pointer;
-    border-radius: 5px;
-    font-size: 16px;
-    width: 100%;
-    margin-top: 10px;
-    transition: background-color 0.3s;
-  }
-
-  button:hover {
-    background-color: #1976d2;
-  }
-
-  label {
-    font-size: 14px;
-    margin-bottom: 5px;
-    display: block;
-  }
-
-  select, input, textarea {
-    width: 100%;
-    padding: 12px;
-    border-radius: 5px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-    margin-bottom: 15px;
-  }
-
-  textarea {
-    resize: vertical;
-    min-height: 150px;
-  }
-
-  #logoutButton {
-    background-color: #ff4081;
-    padding: 10px 20px;
-    font-size: 16px;
-    width: auto;
-    cursor: pointer;
-    border-radius: 5px;
-    margin-bottom: 20px;
-  }
-
-  #logoutButton:hover {
-    background-color: #f50057;
-  }
-
-  #payment-button {
-    background-color: #4caf50;
-    margin-top: 20px;
-  }
-
-  #payment-button:hover {
-    background-color: #45a049;
-  }
-
-  #result {
-    margin-top: 15px;
-    font-size: 16px;
-    color: #333;
-    font-weight: bold;
-  }
-
-  #payment-result {
-    margin-top: 15px;
-    font-size: 16px;
-    color: #2196f3;
-  }
-
-  .api-docs-button {
-    display: inline-block;
-    margin: 10px 0;
-    padding: 10px 16px;
-    background-color: #5e72e4;
-    color: white;
-    border-radius: 6px;
-    text-decoration: none;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
-  }
-
-  .api-docs-button:hover {
-    background-color: #324cdd;
-  }
-
-
-  .toggle-container {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    gap: 1rem;
-  }
-
-  #modeToggle button {
-    flex: 1;
-    padding: 0.75rem;
-    font-size: 1rem;
-    cursor: pointer;
-  }
-
-  #modeToggle .active {
-    background-color: #2415aa;
-    color: white;
-  }
-
-   
-    #friendlyForm {
-      display: none;
-    }
-    #friendlyForm label {
-      margin-top: 10px;
-    }
-    #friendlyForm input,
-    #friendlyForm textarea,
-    #friendlyForm select {
-      width: 100%;
-      padding: 8px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-      margin-top: 5px;
-    }
 
   @keyframes spin {
     to {
@@ -740,33 +605,6 @@ async function sendRequest(isPreview = false) {
     }
   }
 
-  /* Responsive styles */
-  @media (max-width: 600px) {
-    body {
-      padding: 10px;
-    }
-
-    h1 {
-      font-size: 20px;
-    }
-
-    button {
-      font-size: 14px;
-      padding: 10px;
-    }
-
-    label, select, input, textarea {
-      font-size: 14px;
-    }
-
-    textarea {
-      min-height: 100px;
-    }
-
-    #logoutButton, #payment-button, #payment-result {
-      width: 100%;
-    }
-  }
 </style>
 
 
