@@ -41,18 +41,18 @@ function renderForm(template) {
     html = `
       <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Items (format: description,quantity,unitPrice per line):</label>
       <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
-      <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" class="p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" class="p-1 rounded border border-gray-900 text-black"/></label>
 
       <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Business Details</legend>
-        <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Company Address: <input id="companyAddress" name="companyAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Company Email: <input id="companyEmail" name="companyEmail" type="email" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Sender Address: <input id="senderAddress" name="senderAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Recipient Address: <input id="recipientAddress" name="recipientAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+        <label class="block mb-1">Company Address: <input id="companyAddress" name="companyAddress" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+        <label class="block mb-1">Company Email: <input id="companyEmail" name="companyEmail" type="email" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+        <label class="block mb-1">Sender Address: <input id="senderAddress" name="senderAddress" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+        <label class="block mb-1">Recipient Address: <input id="recipientAddress" name="recipientAddress" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
         <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" class="w-full text-white"/></label>
         <label class="block mb-1">Extra Notes: <textarea id="notes" name="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
       </fieldset>
@@ -60,21 +60,21 @@ function renderForm(template) {
     `;
   } else if (template === 'recipe') {
     html = `
-      <label class="block text-white mb-1 font-semibold">Recipe Name: <input id="recipeName" name="recipeName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" name="prepTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" name="cookTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Ingredients (comma separated): <input id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Instructions (semicolon separated): <input id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Recipe Name: <input id="recipeName" name="recipeName" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" name="prepTime" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" name="cookTime" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Ingredients (comma separated): <input id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Instructions (semicolon separated): <input id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
 
-      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+      <fieldset class="premium-only border border-gray-900 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Media & Nutrition</legend>
-        <label class="block mb-1">Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <fieldset class="border border-gray-600 p-2 rounded mb-3">
+        <label class="block mb-1">Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+        <fieldset class="border border-gray-900 p-2 rounded mb-3">
           <legend class="font-semibold mb-1">Nutrition Info (optional)</legend>
-          <label class="block mb-1">Calories: <input id="calories" name="calories" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Calories: <input id="calories" name="calories" class="p-1 rounded border border-gray-900 text-black"/></label>
           <label class="block mb-1">Protein: <input id="protein" name="protein" class="p-1 rounded border border-gray-900 text-black"/></label>
-          <label class="block mb-1">Fat: <input id="fat" name="fat" class="p-1 rounded border border-gray-400 text-black"/></label>
-          <label class="block mb-1">Carbs: <input id="carbs" name="carbs" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Fat: <input id="fat" name="fat" class="p-1 rounded border border-gray-900 text-black"/></label>
+          <label class="block mb-1">Carbs: <input id="carbs" name="carbs" class="p-1 rounded border border-gray-900 text-black"/></label>
         </fieldset>
         <label class="block mb-1">Upload Images: <input type="file" id="imageUpload" name="imageUpload" accept="image/*" multiple class="w-full text-white"/></label>
         <div id="imagePreviewContainer" class="flex gap-2 flex-wrap mb-2"></div>
