@@ -39,8 +39,8 @@ function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
     html = `
-      <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-900 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Items (format: description,quantity,unitPrice per line):</label>
       <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
@@ -72,7 +72,7 @@ function renderForm(template) {
         <fieldset class="border border-gray-600 p-2 rounded mb-3">
           <legend class="font-semibold mb-1">Nutrition Info (optional)</legend>
           <label class="block mb-1">Calories: <input id="calories" name="calories" class="p-1 rounded border border-gray-400 text-black"/></label>
-          <label class="block mb-1">Protein: <input id="protein" name="protein" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Protein: <input id="protein" name="protein" class="p-1 rounded border border-gray-900 text-black"/></label>
           <label class="block mb-1">Fat: <input id="fat" name="fat" class="p-1 rounded border border-gray-400 text-black"/></label>
           <label class="block mb-1">Carbs: <input id="carbs" name="carbs" class="p-1 rounded border border-gray-400 text-black"/></label>
         </fieldset>
