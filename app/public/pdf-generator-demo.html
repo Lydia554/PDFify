@@ -43,8 +43,8 @@
 
   <!-- Mode Toggle -->
   <div id="modeToggle" class="flex gap-4 mb-8 fade-in-up">
-    <button id="developerModeBtn" class="flex-1 py-2 rounded-md bg-indigo-600 text-white font-semibold shadow-md hover:bg-indigo-700 transition-transform hover:scale-105">Developer Mode</button>
-    <button id="friendlyModeBtn" class="flex-1 py-2 rounded-md bg-pink-400 text-white font-semibold hover:bg-pink-500 transition-transform hover:scale-105">Friendly Mode</button>
+    <button id="developerModeBtn" class="flex-1 py-2 rounded-md bg-indigo-600 text-white font-semibold shadow-md hover:bg-indigo-700 transition-transform hover:scale-105">💻 Developer Mode</button>
+    <button id="friendlyModeBtn" class="flex-1 py-2 rounded-md bg-pink-400 text-white font-semibold hover:bg-pink-500 transition-transform hover:scale-105">😊 Friendly Mode</button>
   </div>
 
   <!-- Developer Mode Container -->
@@ -703,6 +703,20 @@ async function sendRequest(isPreview = false) {
   textarea {
     resize: vertical;
     min-height: 150px;
+  }
+
+  #logoutButton {
+    background-color: #ff4081;
+    padding: 10px 20px;
+    font-size: 16px;
+    width: auto;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+
+  #logoutButton:hover {
+    background-color: #f50057;
   }
 
 
