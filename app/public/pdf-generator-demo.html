@@ -8,7 +8,7 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-gray-100 text-gray-800 font-sans">
+  <body class="bg-gray-100 text-gray-800 font-sans min-h-screen flex flex-col">
     <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
       <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
@@ -16,18 +16,18 @@
     <!-- Nav -->
     <nav class="bg-white shadow p-4 border-b border-gray-200 mb-6">
       <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-4">
-        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">📘 API Guide</a>
-        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">🛒 Shopify Guide</a>
-        <a href="#" id="userDashboardLink" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">🧑‍💼 User Dashboard</a>
-        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600 transition">Logout</button>
+        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">📚 API Guide</a>
+        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">🛍️ Shopify Guide</a>
+        <a href="#" id="userDashboardLink" class="text-sm font-semibold px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">👤 Dashboard</a>
+        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-500 text-white rounded hover:bg-pink-600 transition">🚪 Logout</button>
       </div>
     </nav>
 
-    <main class="max-w-2xl mx-auto px-4">
+    <main class="flex-1 max-w-2xl mx-auto px-4">
       <!-- Mode Toggle -->
       <div id="modeToggle" class="flex justify-center gap-4 mb-6">
-        <button id="developerModeBtn" class="px-5 py-2 rounded-full bg-gray-800 text-white font-semibold hover:bg-gray-700 transition">🧑‍💻 Developer Mode</button>
-        <button id="friendlyModeBtn" class="px-5 py-2 rounded-full bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400 transition">😊 Friendly Mode</button>
+        <button id="developerModeBtn" class="px-5 py-2 rounded-full bg-gray-800 text-white font-semibold hover:bg-gray-700 transition">💻 Dev Mode</button>
+        <button id="friendlyModeBtn" class="px-5 py-2 rounded-full bg-gray-300 text-gray-800 font-semibold hover:bg-gray-400 transition">🌼 Friendly Mode</button>
       </div>
 
       <!-- Developer Mode Container -->
@@ -58,37 +58,37 @@
 
       <!-- Friendly Mode Container -->
       <div id="friendlyMode" class="hidden bg-white shadow-lg rounded-xl p-6 mb-10">
-        <select id="friendly-endpoint-select" class="w-full p-3 border border-gray-300 rounded-md mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-base">
-          <option value="invoice">Invoice</option>
-          <option value="recipe">Recipe</option>
+        <select id="friendly-endpoint-select" class="w-full p-4 border border-gray-300 rounded-md mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-lg">
+          <option value="invoice">🧾 Invoice</option>
+          <option value="recipe">🍲 Recipe</option>
         </select>
 
         <!-- Example Friendly Input Fields -->
-        <div id="formContainer" class="space-y-4 mb-6">
-          <input type="text" placeholder="Customer Name" class="w-full p-4 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <input type="email" placeholder="Customer Email" class="w-full p-4 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <textarea rows="12" placeholder="Additional Notes..." class="w-full p-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-400 text-base"></textarea>
+        <div id="formContainer" class="space-y-5 mb-6">
+          <input type="text" placeholder="🧑 Customer Name" class="w-full p-5 text-lg border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <input type="email" placeholder="📧 Customer Email" class="w-full p-5 text-lg border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <textarea rows="12" placeholder="📝 Additional Notes..." class="w-full p-5 border border-gray-300 rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-lg"></textarea>
         </div>
 
         <div class="flex gap-4 mb-4">
-          <button id="previewFriendlyBtn" class="px-5 py-2 rounded-full bg-green-600 text-white hover:bg-green-700 transition">👁️‍🗨️ Preview</button>
-          <button id="generateFriendlyBtn" class="px-5 py-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">🧾 Generate PDF</button>
+          <button id="previewFriendlyBtn" class="px-5 py-3 rounded-full bg-green-600 text-white hover:bg-green-700 transition">🔍 Preview</button>
+          <button id="generateFriendlyBtn" class="px-5 py-3 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">📄 Generate PDF</button>
         </div>
 
-        <p id="friendlyResult" class="text-sm font-semibold text-indigo-700"></p>
+        <p id="friendlyResult" class="text-base font-semibold text-indigo-700"></p>
       </div>
 
       <!-- Payment Section -->
-      <h3 class="text-xl font-semibold mt-10 mb-4">💎 Upgrade to Premium (More PDF Generations)</h3>
-      <button id="payment-button" class="px-5 py-3 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition">💳 Pay for Premium Access</button>
-      <p id="payment-result" class="text-sm mt-2"></p>
+      <h3 class="text-2xl font-semibold mt-10 mb-4">💎 Upgrade to Premium</h3>
+      <button id="payment-button" class="px-6 py-4 rounded-full bg-purple-600 text-white hover:bg-purple-700 transition text-lg">💸 Pay for Premium</button>
+      <p id="payment-result" class="text-base mt-3"></p>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 mt-20">
+    <footer class="bg-white border-t border-gray-200">
       <div class="max-w-4xl mx-auto text-center py-6">
-        <p class="text-sm text-gray-500 mb-1">&copy; 2025 <span class="font-semibold text-indigo-600">PDFify</span>. Made with ❤️ for devs and creators.</p>
-        <p class="text-xs text-gray-400">All rights reserved. Unauthorized use or copying is prohibited.</p>
+        <p class="text-sm text-gray-500 mb-1">&copy; 2025 <span class="font-semibold text-indigo-600">PDFify</span>. Made with 💜 for devs & dreamers.</p>
+        <p class="text-xs text-gray-400">All rights reserved. 🚫 Unauthorized use is prohibited.</p>
       </div>
     </footer>
 
