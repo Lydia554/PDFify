@@ -39,50 +39,49 @@ function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
     html = `
-      <label>Customer Name: <input id="customerName" name="customerName" /></label><br/>
-      <label>Date: <input type="date" id="date" name="date" /></label><br/>
-      <label>Invoice Number: <input id="invoiceNumber" name="invoiceNumber" /></label><br/>
-      <label>Items (format: description,quantity,unitPrice per line):</label><br/>
-      <textarea id="items" name="items" rows="5" cols="30" placeholder="e.g. Apple,2,1.50"></textarea><br/>
-      <label>Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" /></label><br/>
+      <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Items (format: description,quantity,unitPrice per line):</label>
+      <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
+      <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" class="p-1 rounded border border-gray-400 text-black"/></label>
 
-      <fieldset class="premium-only">
-        <legend>Business Details <span style="font-size: 0.8em; color:rgb(0, 0, 0);"></span></legend>
-        <label>Company Name: <input id="companyName" name="companyName" /></label><br/>
-        <label>Company Address: <input id="companyAddress" name="companyAddress" /></label><br/>
-        <label>Company Email: <input id="companyEmail" name="companyEmail" type="email" /></label><br/>
-        <label>Sender Address: <input id="senderAddress" name="senderAddress" /></label><br/>
-        <label>Recipient Address: <input id="recipientAddress" name="recipientAddress" /></label><br/>
-        <label>Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" /></label><br/>
-        <label>Extra Notes: <textarea id="notes" name="notes" rows="3" cols="30"></textarea></label><br/>
+      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+        <legend class="font-semibold mb-2">Business Details</legend>
+        <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Company Address: <input id="companyAddress" name="companyAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Company Email: <input id="companyEmail" name="companyEmail" type="email" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Sender Address: <input id="senderAddress" name="senderAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Recipient Address: <input id="recipientAddress" name="recipientAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" class="w-full text-white"/></label>
+        <label class="block mb-1">Extra Notes: <textarea id="notes" name="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
       </fieldset>
-      <label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>
+      <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
   } else if (template === 'recipe') {
     html = `
-      <label>Recipe Name: <input id="recipeName" name="recipeName" /></label><br/>
-      <label>Prep Time: <input id="prepTime" name="prepTime" /></label><br/>
-      <label>Cook Time: <input id="cookTime" name="cookTime" /></label><br/>
-      <label>Ingredients (comma separated): <input id="ingredients" name="ingredients" /></label><br/>
-      <label>Instructions (semicolon separated): <input id="instructions" name="instructions" /></label><br/>
+      <label class="block text-white mb-1 font-semibold">Recipe Name: <input id="recipeName" name="recipeName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" name="prepTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" name="cookTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Ingredients (comma separated): <input id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Instructions (semicolon separated): <input id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
 
-      <fieldset class="premium-only">
-        <legend>Media & Nutrition <span style="font-size: 0.8em; color:rgb(0, 0, 0);"></span></legend>
-        <label>Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." /></label><br/>
-        <fieldset>
-          <legend>Nutrition Info (optional)</legend>
-          <label>Calories: <input id="calories" name="calories" /></label><br/>
-          <label>Protein: <input id="protein" name="protein" /></label><br/>
-          <label>Fat: <input id="fat" name="fat" /></label><br/>
-          <label>Carbs: <input id="carbs" name="carbs" /></label><br/>
+      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+        <legend class="font-semibold mb-2">Media & Nutrition</legend>
+        <label class="block mb-1">Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <fieldset class="border border-gray-600 p-2 rounded mb-3">
+          <legend class="font-semibold mb-1">Nutrition Info (optional)</legend>
+          <label class="block mb-1">Calories: <input id="calories" name="calories" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Protein: <input id="protein" name="protein" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Fat: <input id="fat" name="fat" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Carbs: <input id="carbs" name="carbs" class="p-1 rounded border border-gray-400 text-black"/></label>
         </fieldset>
-        <label>Upload Images: <input type="file" id="imageUpload" name="imageUpload" accept="image/*" multiple /></label><br/>
-        <div id="imagePreviewContainer" style="display:flex; gap:10px; flex-wrap: wrap; margin-bottom: 10px;"></div>
+        <label class="block mb-1">Upload Images: <input type="file" id="imageUpload" name="imageUpload" accept="image/*" multiple class="w-full text-white"/></label>
+        <div id="imagePreviewContainer" class="flex gap-2 flex-wrap mb-2"></div>
       </fieldset>
-      <label><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label><br/>
+      <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
   }
-
   formContainer.innerHTML = html;
   allSelectedFiles = [];
   updateImagePreview();
