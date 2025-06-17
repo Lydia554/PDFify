@@ -1,143 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDFify</title>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-  </head>
-  <body class="bg-gray-900 text-gray-100 font-sans min-h-screen flex flex-col">
-    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 z-50 flex items-center justify-center">
-      <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+<head>
+ 
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDFify</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+ 
+</head>
+<body style="font-family: sans-serif; max-width: 600px; margin: 40px auto;">
+  
+  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+  </div>
+  <nav style="background-color: #f4f7fb; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
+    <div>
+      <a href="/api-guide" class="api-docs-button" style="margin-right: 10px;">📄 API Guide</a>
+        <a href="/shopify-guide" class="api-docs-button" style="margin-right: 10px;">📄 Shopify Guide</a>
+      <a href="#" id="userDashboardLink" class="api-docs-button">👤 User Dashboard</a>
     </div>
+    <button id="logoutButton">Logout</button>
+  </nav>
+ 
+  <div id="modeToggle" class="toggle-container">
+    <button id="developerModeBtn" class="active">Developer Mode</button>
+    <button id="friendlyModeBtn">Friendly Mode</button>
+  </div>
+  <!-- Developer Mode Container -->
+  <div id="developerMode">
+    <label for="endpoint">Endpoint:</label>
+    <select id="endpoint">
+      <option value="generate-invoice">Invoice</option>
+      <option value="generate-shop-order">Shop Order</option>
+      <option value="generate-therapy-report">Therapy Report</option>
+      <option value="generate-recipe">Recipe</option>
+      <option value="generate-pdf-from-html">Raw HTML</option>
+      <option value="generate-packing-slip">Packing Slip</option>
+    </select>
 
-    <!-- Nav -->
-    <nav class="bg-gray-800 shadow p-4 border-b border-gray-700 mb-6">
-      <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-center gap-4">
-        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">📚 API Guide</a>
-        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">🛍️ Shopify Guide</a>
-        <a href="#" id="userDashboardLink" class="text-sm font-semibold px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">👤 Dashboard</a>
-        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700 transition">🚪 Logout</button>
-      </div>
-    </nav>
+    <br />
 
-    <main class="flex-1 max-w-2xl mx-auto px-4">
-      <!-- Mode Toggle -->
-      <div id="modeToggle" class="flex justify-center gap-4 mb-6">
-        <button id="developerModeBtn" class="px-6 py-3 rounded-full bg-indigo-700 text-white font-semibold hover:bg-indigo-800 transition shadow-md">💻 Dev Mode</button>
-        <button id="friendlyModeBtn" class="px-6 py-3 rounded-full bg-gray-700 text-gray-200 font-semibold hover:bg-gray-600 transition shadow-md">🌼 Friendly Mode</button>
-      </div>
+    <label for="apiKey">Your API Key:</label>
+    <input type="text" id="apiKey" placeholder="Paste your API key here" required />
 
-      <!-- Developer Mode Container -->
-      <div id="developerMode">
-        <label class="block mb-2 font-semibold" for="endpoint">Endpoint:</label>
-        <select id="endpoint" class="w-full p-4 border border-gray-600 rounded-md mb-6 bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-lg">
-          <option value="generate-invoice">Invoice</option>
-          <option value="generate-shop-order">Shop Order</option>
-          <option value="generate-therapy-report">Therapy Report</option>
-          <option value="generate-recipe">Recipe</option>
-          <option value="generate-pdf-from-html">Raw HTML</option>
-          <option value="generate-packing-slip">Packing Slip</option>
-        </select>
+    <br />
 
-        <label class="block mb-2 font-semibold" for="apiKey">Your API Key:</label>
-        <input
-          type="text"
-          id="apiKey"
-          class="w-full p-4 text-lg border border-gray-600 rounded-md mb-6 bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          placeholder="Paste your API key here"
-          required
-        />
+    <label for="json">Data (JSON):</label>
+    <textarea id="json" rows="15" required></textarea>
 
-        <label class="block mb-2 font-semibold" for="json">Data (JSON):</label>
-        <textarea
-          id="json"
-          rows="18"
-          class="w-full p-6 text-lg border border-gray-600 rounded-md mb-6 bg-gray-800 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          placeholder="Enter your JSON data here"
-          required
-        ></textarea>
+    <br />
+    <button onclick="sendRequest(true)">Preview</button>
+    <button onclick="sendRequest(false)">Download</button>
+    
+    <p id="result"></p>
+  </div>
 
-        <div class="flex gap-6 mb-8">
-          <button onclick="sendRequest(true)" class="flex-1 px-6 py-4 rounded-full bg-green-600 text-white hover:bg-green-700 transition shadow-lg font-semibold text-lg flex items-center justify-center gap-2">
-            👁️‍🗨️ Preview
-          </button>
-          <button onclick="sendRequest(false)" class="flex-1 px-6 py-4 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition shadow-lg font-semibold text-lg flex items-center justify-center gap-2">
-            📥 Download
-          </button>
-        </div>
+  <!-- Friendly Mode Container -->
+  <div id="friendlyMode" style="display:none;">
+    <select id="friendly-endpoint-select">
+      <option value="invoice">Invoice</option>
+      <option value="recipe">Recipe</option>
+    </select>
+    <div id="formContainer"></div>
+    <button id="previewFriendlyBtn">Preview</button>
+    <button id="generateFriendlyBtn">Generate PDF</button>
+    <p id="friendlyResult"></p>
+  </div>
+ 
+ 
 
-        <p id="result" class="text-lg font-bold text-indigo-400"></p>
-      </div>
-
-      <!-- Friendly Mode Container -->
-      <div id="friendlyMode" class="hidden bg-gray-800 shadow-lg rounded-xl p-8 mb-14">
-        <select
-          id="friendly-endpoint-select"
-          class="w-full p-5 border border-gray-600 rounded-md mb-8 bg-gray-900 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xl"
-        >
-          <option value="invoice">🧾 Invoice</option>
-          <option value="recipe">🍲 Recipe</option>
-        </select>
-
-        <!-- Example Friendly Input Fields -->
-        <div id="formContainer" class="space-y-6 mb-8">
-          <input
-            type="text"
-            placeholder="🧑 Customer Name"
-            class="w-full p-6 text-xl border border-gray-600 rounded-md bg-gray-900 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="email"
-            placeholder="📧 Customer Email"
-            class="w-full p-6 text-xl border border-gray-600 rounded-md bg-gray-900 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <textarea
-            rows="16"
-            placeholder="📝 Additional Notes..."
-            class="w-full p-6 border border-gray-600 rounded-md bg-gray-900 text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xl resize-y"
-          ></textarea>
-        </div>
-
-        <div class="flex gap-6 mb-8">
-          <button
-            id="previewFriendlyBtn"
-            class="flex-1 px-6 py-4 rounded-full bg-green-600 text-white hover:bg-green-700 transition shadow-lg font-semibold text-lg flex items-center justify-center gap-2"
-          >
-            🔍 Preview
-          </button>
-          <button
-            id="generateFriendlyBtn"
-            class="flex-1 px-6 py-4 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition shadow-lg font-semibold text-lg flex items-center justify-center gap-2"
-          >
-            📄 Generate PDF
-          </button>
-        </div>
-
-        <p id="friendlyResult" class="text-lg font-semibold text-indigo-400"></p>
-      </div>
-
-      <!-- Payment Section -->
-      <h3 class="text-3xl font-bold mt-12 mb-6 text-indigo-400">💎 Upgrade to Premium</h3>
-      <button
-        id="payment-button"
-        class="w-full max-w-md mx-auto block px-8 py-5 rounded-full bg-purple-700 text-white hover:bg-purple-800 transition shadow-xl font-extrabold text-xl tracking-wide"
-      >
-        💸 Pay for Premium
-      </button>
-      <p id="payment-result" class="text-lg mt-4 text-indigo-400 text-center"></p>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 border-t border-gray-700 mt-auto">
-      <div class="max-w-4xl mx-auto text-center py-6">
-        <p class="text-sm text-gray-400 mb-1">&copy; 2025 <span class="font-semibold text-indigo-400">PDFify</span>. Made with 💜 for devs & dreamers.</p>
-        <p class="text-xs text-gray-500">All rights reserved. 🚫 Unauthorized use is prohibited.</p>
-      </div>
-    </footer>
-
+  <h3>Upgrade to Premium (More PDF Generations)</h3>
+  <button id="payment-button">Pay for Premium Access</button>
+  <p id="payment-result"></p>
 
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
@@ -656,7 +591,148 @@ async function sendRequest(isPreview = false) {
 
 
 <style>
+  body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f7fb;
+    color: #333;
+  }
 
+
+  h1 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 24px;
+  }
+
+  button {
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 16px;
+    width: 100%;
+    margin-top: 10px;
+    transition: background-color 0.3s;
+  }
+
+  button:hover {
+    background-color: #1976d2;
+  }
+
+  label {
+    font-size: 14px;
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  select, input, textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 150px;
+  }
+
+  #logoutButton {
+    background-color: #ff4081;
+    padding: 10px 20px;
+    font-size: 16px;
+    width: auto;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+
+  #logoutButton:hover {
+    background-color: #f50057;
+  }
+
+  #payment-button {
+    background-color: #4caf50;
+    margin-top: 20px;
+  }
+
+  #payment-button:hover {
+    background-color: #45a049;
+  }
+
+  #result {
+    margin-top: 15px;
+    font-size: 16px;
+    color: #333;
+    font-weight: bold;
+  }
+
+  #payment-result {
+    margin-top: 15px;
+    font-size: 16px;
+    color: #2196f3;
+  }
+
+  .api-docs-button {
+    display: inline-block;
+    margin: 10px 0;
+    padding: 10px 16px;
+    background-color: #5e72e4;
+    color: white;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+
+  .api-docs-button:hover {
+    background-color: #324cdd;
+  }
+
+
+  .toggle-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    gap: 1rem;
+  }
+
+  #modeToggle button {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  #modeToggle .active {
+    background-color: #2415aa;
+    color: white;
+  }
+
+   
+    #friendlyForm {
+      display: none;
+    }
+    #friendlyForm label {
+      margin-top: 10px;
+    }
+    #friendlyForm input,
+    #friendlyForm textarea,
+    #friendlyForm select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      margin-top: 5px;
+    }
 
   @keyframes spin {
     to {
@@ -664,6 +740,33 @@ async function sendRequest(isPreview = false) {
     }
   }
 
+  /* Responsive styles */
+  @media (max-width: 600px) {
+    body {
+      padding: 10px;
+    }
+
+    h1 {
+      font-size: 20px;
+    }
+
+    button {
+      font-size: 14px;
+      padding: 10px;
+    }
+
+    label, select, input, textarea {
+      font-size: 14px;
+    }
+
+    textarea {
+      min-height: 100px;
+    }
+
+    #logoutButton, #payment-button, #payment-result {
+      width: 100%;
+    }
+  }
 </style>
 
 
