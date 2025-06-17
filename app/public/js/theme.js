@@ -4,8 +4,11 @@ function isDarkModePreferred() {
 }
 
 function applyInitialTheme() {
-  const prefersDark = isDarkModePreferred();
-  document.body.classList.toggle('dark-mode', prefersDark);
+  if (localStorage.getItem("theme") === "dark") {
+    document.body.classList.add("dark-mode", "dark");
+  } else {
+    document.body.classList.remove("dark-mode", "dark");
+  }
 }
 
 function getTheme() {
