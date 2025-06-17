@@ -8,13 +8,13 @@
     <script src="https://js.stripe.com/v3/"></script>
     <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body class="bg-gray-100 text-gray-800 font-mono">
-    <div id="loadingOverlay" class="hidden fixed inset-0 bg-white bg-opacity-75 z-50 flex items-center justify-center">
+  <body class="bg-gray-900 text-gray-100 font-mono">
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
       <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
     </div>
 
     <!-- Nav -->
-    <nav class="bg-white shadow p-4 mb-8">
+    <nav class="bg-gray-800 shadow p-4 mb-8">
       <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
         <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 API Docs</a>
         <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 Shopify Guide</a>
@@ -24,9 +24,9 @@
     </nav>
 
     <main class="max-w-3xl mx-auto px-4">
-      <h1 class="text-3xl font-bold mb-6 text-center">👋 Welcome, Developer</h1>
+      <h1 class="text-3xl font-bold mb-6 text-center">👋 Hello there</h1>
 
-      <section class="bg-white shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">🔐 API & Usage Info</h2>
         <ul class="space-y-2 text-sm">
           <li><strong>Email:</strong> <span id="email">Loading...</span></li>
@@ -37,7 +37,7 @@
         </ul>
       </section>
 
-      <section class="bg-white shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">💳 Manage Subscription</h2>
         <div class="flex flex-col gap-3 sm:flex-row">
           <button id="upgradeSubscriptionButton" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">Upgrade to Premium</button>
@@ -45,16 +45,16 @@
         </div>
       </section>
 
-      <section class="bg-white shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">🛒 Shopify Integration</h2>
         <p class="text-sm mb-2">
           <strong>Connected Store:</strong> <span id="connectedShopDomain">None</span>
         </p>
         <label class="text-sm font-semibold">Shop Domain</label>
-        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4" placeholder="mystore.myshopify.com" />
+        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" placeholder="mystore.myshopify.com" />
 
         <label class="text-sm font-semibold">Access Token</label>
-        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4" />
+        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" />
 
         <div class="flex flex-col sm:flex-row gap-3">
           <button id="connectShopifyButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Connect</button>
@@ -63,26 +63,25 @@
         <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
       </section>
 
-      <section class="bg-white shadow rounded p-6 mb-6">
+      <section class="bg-gray-800 shadow rounded p-6 mb-6">
         <h2 class="text-xl font-semibold mb-4">🛠 Update Info</h2>
         <form id="updateUserForm">
           <label class="text-sm font-semibold">New Email</label>
-          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4" placeholder="Enter new email" />
+          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" placeholder="Enter new email" />
 
           <label class="text-sm font-semibold">New Password</label>
-          <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4" placeholder="Enter new password" />
+          <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4 bg-gray-900 border-gray-700 text-white" placeholder="Enter new password" />
 
           <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Update Info</button>
         </form>
       </section>
 
-      <section class="bg-white shadow rounded p-6 mb-10">
+      <section class="bg-gray-800 shadow rounded p-6 mb-10">
         <h2 class="text-xl font-semibold mb-4">🗑 Delete Account</h2>
         <button id="deleteAccountButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Delete Account</button>
         <p id="result" class="text-sm mt-4 font-bold"></p>
       </section>
     </main>
-
 
   <script>
     
@@ -386,90 +385,7 @@ fetchShopifyConnection();
 
 
   <style>
-    body {
-      font-family: 'Arial', sans-serif;
-      margin: 0;
-      padding: 0;
-      background-color: #f4f7fb;
-      color: #333;
-    }
 
-    h1 {
-      text-align: center;
-      color: #333;
-      margin-bottom: 20px;
-      font-size: 24px;
-    }
-
-    button {
-      background-color: #2196f3;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      cursor: pointer;
-      border-radius: 5px;
-      font-size: 16px;
-      width: 100%;
-      margin-top: 10px;
-      transition: background-color 0.3s;
-    }
-
-    button:hover {
-      background-color: #1976d2;
-    }
-
-    label {
-      font-size: 14px;
-      margin-bottom: 5px;
-      display: block;
-    }
-
-    input {
-      width: 100%;
-      padding: 12px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 14px;
-      margin-bottom: 15px;
-    }
-
-    #logoutButton {
-      background-color: #ff4081;
-      padding: 10px 20px;
-      font-size: 16px;
-      width: auto;
-      cursor: pointer;
-      border-radius: 5px;
-      margin-bottom: 20px;
-    }
-
-    #logoutButton:hover {
-      background-color: #f50057;
-    }
-
-    #result {
-      margin-top: 15px;
-      font-size: 16px;
-      color: #333;
-      font-weight: bold;
-    }
-
-    .api-docs-button,
-    .pdf-gen-button {
-      display: inline-block;
-      margin: 10px 0;
-      padding: 10px 16px;
-      background-color: #5e72e4;
-      color: white;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-      transition: background-color 0.3s ease;
-    }
-
-    .api-docs-button:hover {
-      background-color: #324cdd;
-    }
 
 
     @keyframes spin {
@@ -498,17 +414,5 @@ fetchShopifyConnection();
     }
 
 
-
-    button {
-      border: none;
-      border-radius: 4px;
-      font-size: 1em;
-      margin: 5px 0;
-      transition: background-color 0.3s ease;
-    }
-    button:disabled {
-      background-color: #bbb !important;
-      cursor: not-allowed;
-    }
   </style>
 
