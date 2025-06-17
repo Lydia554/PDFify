@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/theme.js"></script>
 
 </head>
 <body class="bg-gray-100 font-sans max-w-3xl mx-auto p-8">
@@ -132,11 +133,13 @@
 
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
-  <script src="/js/previewFriendlyMode.js"></script>
+  <script src="js/previewFriendlyMode.js"></script>
 
 
 
   <script >
+
+      applyInitialTheme();
 const devBtn = document.getElementById('developerModeBtn');
 const friendlyBtn = document.getElementById('friendlyModeBtn');
 const devSection = document.getElementById('developerMode');
@@ -838,6 +841,19 @@ async function sendRequest(isPreview = false) {
   opacity: 0.85;
 }
 
+body.dark-mode {
+  background-color: #121212;
+  color: #f0f0f0;
+}
+
+/* Style inputs, cards, buttons, etc. */
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select {
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+  border: 1px solid #444;
+}
 
 
 
