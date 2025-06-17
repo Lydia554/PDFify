@@ -6,77 +6,86 @@
   <title>User Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-<body style="font-family: sans-serif; max-width: 600px; margin: 40px auto;">
-  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+<body class="bg-gray-50 font-sans">
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50 hidden">
+    <div class="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-opacity-50"></div>
   </div>
 
-  <!-- Navigation Bar -->
-  <nav style="background-color: #f4f7fb; padding: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd;">
-    <div>
-      <a href="/api-guide" class="api-docs-button" style="margin-right: 10px;">📄 API Docs</a>
-       <a href="/shopify-guide" class="api-docs-button" style="margin-right: 10px;">📄 Shopify Guide</a>
-      <a href="/pdf-generator-demo" class="pdf-gen-button">📄 PDF Generator</a>
+  <!-- Navigation -->
+  <nav class="bg-white shadow px-6 py-4 flex justify-between items-center border-b border-gray-200">
+    <div class="space-x-4">
+      <a href="/api-guide" class="text-blue-600 hover:underline font-medium">📄 API Docs</a>
+      <a href="/shopify-guide" class="text-blue-600 hover:underline font-medium">📄 Shopify Guide</a>
+      <a href="/pdf-generator-demo" class="text-blue-600 hover:underline font-medium">📄 PDF Generator</a>
     </div>
-    <button id="logoutButton">Logout</button>
+    <button id="logoutButton" class="bg-pink-500 hover:bg-pink-600 text-white font-semibold px-4 py-2 rounded">Logout</button>
   </nav>
 
-  <h1>User Dashboard</h1>
+  <!-- Content Wrapper -->
+  <main class="max-w-3xl mx-auto py-10 px-6">
+    <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">User Dashboard</h1>
 
-  <div id="user-info">
-    <p><strong>Email:</strong> <span id="email">Loading...</span></p>
-    <p><strong>API Key:</strong> <span id="apiKey">Loading...</span></p>
-    <p><strong>Usage Count:</strong> <span id="usageCount">Loading...</span></p>
-    <p><strong>Max Usage:</strong> <span id="maxUsage">Loading...</span></p>
-    <p><strong>Premium Status:</strong> <span id="premiumStatus">Loading...</span></p>
-  </div>
+    <!-- User Info -->
+    <div id="user-info" class="bg-white shadow rounded p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">Your Account</h2>
+      <p><strong>Email:</strong> <span id="email">Loading...</span></p>
+      <p><strong>API Key:</strong> <span id="apiKey">Loading...</span></p>
+      <p><strong>Usage Count:</strong> <span id="usageCount">Loading...</span></p>
+      <p><strong>Max Usage:</strong> <span id="maxUsage">Loading...</span></p>
+      <p><strong>Premium Status:</strong> <span id="premiumStatus">Loading...</span></p>
+    </div>
 
-  <h2>Manage Subscription</h2>
-  <button id="upgradeSubscriptionButton" style="color: white; background-color: green; padding: 10px; cursor: pointer;">Upgrade to Premium</button>
-  <button id="downgradeSubscriptionButton" style="color: white; background-color: orange; padding: 10px; cursor: pointer;">Downgrade to Free</button>
+    <!-- Subscription Management -->
+    <div class="bg-white shadow rounded p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">Manage Subscription</h2>
+      <div class="flex flex-col sm:flex-row gap-4">
+        <button id="upgradeSubscriptionButton" class="bg-green-500 hover:bg-green-600 text-white font-medium px-4 py-2 rounded w-full">Upgrade to Premium</button>
+        <button id="downgradeSubscriptionButton" class="bg-yellow-500 hover:bg-yellow-600 text-white font-medium px-4 py-2 rounded w-full">Downgrade to Free</button>
+      </div>
+    </div>
+
+    <!-- Shopify Integration -->
+    <div class="bg-white shadow rounded p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">Shopify Store Integration</h2>
+      <p class="mb-2"><strong>Connected Shopify Store:</strong> <span id="connectedShopDomain">None</span></p>
+      <label for="shopDomainInput" class="block text-sm font-medium text-gray-700">Shop Domain</label>
+      <input id="shopDomainInput" type="text" class="mt-1 mb-4 w-full px-3 py-2 border rounded" placeholder="e.g. mystore.myshopify.com">
+      <label for="shopifyAccessToken" class="block text-sm font-medium text-gray-700">Shopify Access Token</label>
+      <input id="shopifyAccessToken" type="text" class="mt-1 mb-4 w-full px-3 py-2 border rounded">
+      <div class="flex flex-col sm:flex-row gap-4">
+        <button id="connectShopifyButton" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded w-full">Connect Shopify Store</button>
+        <button id="disconnectShopifyButton" class="bg-pink-500 hover:bg-pink-600 text-white font-medium px-4 py-2 rounded w-full">Disconnect</button>
+      </div>
+      <p id="shopifyResult" class="mt-4 text-sm font-semibold text-gray-700"></p>
+    </div>
+
+    <!-- Update Info -->
+    <div class="bg-white shadow rounded p-6 mb-8">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">Update Your Information</h2>
+      <form id="updateUserForm">
+        <label for="newEmail" class="block text-sm font-medium text-gray-700">New Email</label>
+        <input id="newEmail" type="email" class="mt-1 mb-4 w-full px-3 py-2 border rounded" placeholder="Enter new email">
+
+        <label for="newPassword" class="block text-sm font-medium text-gray-700">New Password</label>
+        <input id="newPassword" type="password" class="mt-1 mb-4 w-full px-3 py-2 border rounded" placeholder="Enter new password">
+
+        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded w-full">Update Info</button>
+      </form>
+    </div>
+
+    <!-- Delete Account -->
+    <div class="bg-white shadow rounded p-6">
+      <h2 class="text-xl font-semibold text-gray-700 mb-4">Delete Account</h2>
+      <button id="deleteAccountButton" class="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded w-full">Delete Account</button>
+      <p id="result" class="mt-4 text-sm font-semibold text-gray-700"></p>
+    </div>
+  </main>
 
 
-
-  <hr />
-
-<h2>Shopify Store Integration</h2>
-<div id="shopifyConnectionSection">
-  <p>
-    <strong>Connected Shopify Store:</strong>
-    <span id="connectedShopDomain">None</span>
-  </p>
-
-  <label for="shopDomainInput">Shop Domain (e.g. mystore.myshopify.com):</label>
-  <input type="text" id="shopDomainInput" placeholder="Enter your Shopify store domain" style="width: 100%; padding: 8px; margin-bottom: 10px;" />
-  <label for="shopifyAccessToken">Shopify Access Token:</label>
-<input type="text" id="shopifyAccessToken" name="shopifyAccessToken" />
   
-  <button id="connectShopifyButton" style="background-color: #5e72e4; color: white;">Connect Shopify Store</button>
-  <button id="disconnectShopifyButton" style="background-color: #ff4081; color: white; margin-left: 10px;">Disconnect Shopify Store</button>
-  
-  <p id="shopifyResult" style="margin-top: 10px; font-weight: bold;"></p>
-</div>
-
-
-  <h2>Update Your Information</h2>
-  <form id="updateUserForm">
-    <label for="newEmail">New Email:</label>
-    <input type="email" id="newEmail" placeholder="Enter new email" style="width: 100%; padding: 8px; margin-bottom: 20px;" />
-
-    <label for="newPassword">New Password:</label>
-    <input type="password" id="newPassword" placeholder="Enter new password" style="width: 100%; padding: 8px; margin-bottom: 20px;" />
-
-    <button type="submit">Update Info</button>
-  </form>
-
-  <hr />
-
-  <h2>Delete Account</h2>
-  <button id="deleteAccountButton" style="color: white; background-color: red; padding: 10px; cursor: pointer;">Delete Account</button>
-
-  <p id="result" style="margin-top: 20px; font-weight: bold; color: #333;"></p>
-
   <script>
     
     const api = axios.create({
@@ -504,5 +513,4 @@ fetchShopifyConnection();
       cursor: not-allowed;
     }
   </style>
-</body>
-</html>
+
