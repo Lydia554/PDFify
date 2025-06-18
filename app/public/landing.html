@@ -32,14 +32,22 @@ Authorization: Bearer YOUR_API_KEY
 Content-Type: application/json
 
 {
-  "invoiceNumber": "INV-2025-0423",
-  "date": "2025-05-14",
-  "billingAddress": "123 Business Rd, Commerce City, USA",
-  "items": [
-    { "description": "Web Design Services", "quantity": 1, "price": 1200 },
-    { "description": "Hosting (12 months)", "quantity": 1, "price": 240 }
-  ],
-  "total": 1440
+  "data": {
+    "customerName": "Anna Moore",
+    "customerEmail": "anna@example.com",
+    "orderId": "12345",
+    "date": "2025-03-25",
+    "items": [
+      { "name": "PDF Template", "quantity": 1, "price": "10.00€", "total": "10.00" },
+      { "name": "Extra Support", "quantity": 1, "price": "5.00€", "total": "5.00" }
+    ],
+    "subtotal": "15.00€",
+    "tax": "3.15€",
+    "total": "18.15€",
+    "customLogoUrl": "https://example.com/custom-logo.png",
+    "showChart": false,
+    "isPremium": false
+  }
 }
 
 </code></pre>
