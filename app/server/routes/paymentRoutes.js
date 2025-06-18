@@ -14,7 +14,7 @@ const log = (message, data = null) => {
 
 const PRICE_IDS = {
   premium: 'price_1RbKxxJqMBxMksyPbeeE33I9', 
-  mega: 'price_1RbKYnJqMBxMksyPjOLtaiBt',    
+  pro: 'price_1RbKYnJqMBxMksyPjOLtaiBt',    
 };
 
 router.post("/create-checkout-session", async (req, res) => {

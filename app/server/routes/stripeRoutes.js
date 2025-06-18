@@ -53,7 +53,7 @@ router.post(
             password: "temporaryPassword123",
             stripeSubscriptionId: session.subscription,
             isPremium: true,
-            maxUsage: planType === "mega" ? 10000 : 1000,
+            maxUsage: planType === "pro" ? 10000 : 1000,
             planType,
           });
 
@@ -72,7 +72,7 @@ router.post(
           user.isPremium = true;
           user.planType = planType;
 
-          if (planType === "mega") {
+          if (planType === "pro") {
             user.maxUsage += 10000;
           } else {
             user.maxUsage += 1000;

@@ -119,15 +119,13 @@
     <p id="payment-result" class="mt-4 text-gray-300"></p>
   </section>
 
-  <!-- Mega Upgrade -->
+  <!-- Pro Upgrade -->
   <section class="mt-12 text-center fade-in-up border-t border-gray-600 pt-8">
-    <h3 class="text-2xl font-bold text-indigo-300 mb-2">Go Mega: Ultimate Access & Custom Integrations</h3>
-    <p class="max-w-xl mx-auto text-gray-300 mb-6">
-      Get <strong>custom-made PDF templates upon request</strong> tailored specifically for your business needs. Plus, connect your own services and platforms seamlessly with our API — just like our Shopify integration! Enjoy unlimited PDF generations and dedicated support with the Mega plan.
-    </p>
-    <button id="mega-payment-button"
+    <h3 class="text-2xl font-bold text-indigo-300 mb-2">Go Pro: Ultimate Access</h3>
+ 
+    <button id="pro-payment-button"
       class="inline-block bg-indigo-600 text-white px-8 py-4 rounded-md font-bold hover:bg-indigo-700 transition-all shadow-lg animate-pulse">
-      🚀 Upgrade to Mega Plan
+      🚀 Upgrade to Pro Plan
     </button>
   </section>
 
@@ -646,7 +644,7 @@ fetch('/get-stripe-key')
     });
 
     
-    document.getElementById('mega-payment-button').addEventListener('click', async () => {
+    document.getElementById('pro-payment-button').addEventListener('click', async () => {
       const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
       if (!apiKey) {
         alert('Please provide your API key');
@@ -662,7 +660,7 @@ fetch('/get-stripe-key')
           },
           body: JSON.stringify({
             email: "user@example.com", 
-            plan_type: "mega"   
+            plan_type: "pro"   
           }),
           credentials: "include",
         });

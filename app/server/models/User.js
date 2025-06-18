@@ -46,7 +46,7 @@ const userSchema = new mongoose.Schema(
     // Stripe fields
     stripeCustomerId: { type: String },
     stripeSubscriptionId: { type: String },
-    planType: { type: String, enum: ["free", "premium", "mega"], default: "free" },
+    planType: { type: String, enum: ["free", "premium", "pro"], default: "free" },
 
     // Usage tracking
     usageCount: { type: Number, default: 0 },
