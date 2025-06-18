@@ -399,7 +399,7 @@ function generatePremiumRecipeHtml(data) {
 
       <div class="footer">
         <p>Thanks for using our service!</p>
-        <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+        <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
         <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
         <p>
           Generated using <strong>PDFify</strong>. Visit 

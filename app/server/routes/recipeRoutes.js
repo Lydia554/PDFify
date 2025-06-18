@@ -163,7 +163,7 @@ function generateRecipeHTML(data) {
           ${breakdownChart}
 
           <div class="footer">
-            <p>Enjoy your recipe! For questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
+            <p>Enjoy your recipe! For questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
             <p>&copy; 2025 Food Trek Recipes — All rights reserved.</p>
             <p>Generated using <strong>PDFify</strong>. Visit <a href="https://pdfify.pro/">our site</a> for more.</p>
             <p class="terms">
