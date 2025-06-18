@@ -111,13 +111,26 @@
 
   <!-- Premium Upgrade -->
   <section class="mt-12 text-center fade-in-up">
-    <h3 class="text-xl font-semibold text-gray-100 mb-4">Upgrade to Premium (More Generations More Templates)</h3>
+    <h3 class="text-xl font-semibold text-gray-100 mb-4">Upgrade to Premium (More Generations More Features)</h3>
     <button id="payment-button" 
       class="inline-block bg-fuchsia-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-fuchsia-700 transition-all shadow-lg animate-bounce">
       💎 Pay for Premium Access
     </button>
     <p id="payment-result" class="mt-4 text-gray-300"></p>
   </section>
+
+  <!-- Mega Upgrade -->
+  <section class="mt-12 text-center fade-in-up border-t border-gray-600 pt-8">
+    <h3 class="text-2xl font-bold text-indigo-300 mb-2">Go Mega: Ultimate Access & Custom Integrations</h3>
+    <p class="max-w-xl mx-auto text-gray-300 mb-6">
+      Unlock <strong>custom-made PDF templates</strong> tailored specifically for your business needs. Plus, connect your own services and platforms seamlessly with our API — just like our Shopify integration! Enjoy unlimited PDF generations and priority support with the Mega plan.
+    </p>
+    <button id="mega-payment-button"
+      class="inline-block bg-indigo-600 text-white px-8 py-4 rounded-md font-bold hover:bg-indigo-700 transition-all shadow-lg animate-pulse">
+      🚀 Upgrade to Mega Plan
+    </button>
+  </section>
+
 
   <!-- Footer -->
   <footer class="mt-16 border-t border-gray-600 pt-6 text-center text-sm text-gray-400">
@@ -579,59 +592,109 @@ async function sendRequest(isPreview = false) {
 
 
     
-    fetch('/get-stripe-key')
-      .then(response => response.json())
-      .then(data => {
-        const stripe = Stripe(data.stripePublishableKey);
-    
-        document.getElementById('payment-button').addEventListener('click', async () => {
-          const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
-          if (!apiKey) {
-            alert('Please provide your API key');
-            return;
-          }
-    
-          try {
-            const response = await fetch('/api/stripe/create-checkout-session', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-              },
-              body: JSON.stringify({
-                email: "user@example.com", 
-                plan: "premium" 
-              }),
-                credentials: "include",
-            });
-    
-            if (!response.ok) {
-              const error = await response.json();
-              console.error("Error creating checkout session:", error);
-              alert(`Error: ${error.error || "Failed to create checkout session"}`);
-              return;
-            }
-    
-            const session = await response.json();
-    
-            if (!session.id) {
-              alert('Error: No session ID returned from backend.');
-              console.log(session);
-              return;
-            }
-    
-            const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
-            if (error) {
-              console.log(error);
-              alert('Error during checkout');
-            }
-          } catch (err) {
-            console.error("Unexpected error:", err);
-            alert('An unexpected error occurred. Please try again.');
-          }
+fetch('/get-stripe-key')
+  .then(response => response.json())
+  .then(data => {
+    const stripe = Stripe(data.stripePublishableKey);
+
+    // Premium Plan Button Handler
+    document.getElementById('payment-button').addEventListener('click', async () => {
+      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
+      if (!apiKey) {
+        alert('Please provide your API key');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            email: "user@example.com", 
+            plan_type: "premium"   
+          }),
+          credentials: "include",
         });
-      })
-      .catch(error => console.error('Error fetching Stripe key:', error));
+
+        if (!response.ok) {
+          const error = await response.json();
+          console.error("Error creating checkout session:", error);
+          alert(`Error: ${error.error || "Failed to create checkout session"}`);
+          return;
+        }
+
+        const session = await response.json();
+
+        if (!session.id) {
+          alert('Error: No session ID returned from backend.');
+          console.log(session);
+          return;
+        }
+
+        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (error) {
+          console.log(error);
+          alert('Error during checkout');
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        alert('An unexpected error occurred. Please try again.');
+      }
+    });
+
+    
+    document.getElementById('mega-payment-button').addEventListener('click', async () => {
+      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
+      if (!apiKey) {
+        alert('Please provide your API key');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            email: "user@example.com", 
+            plan_type: "mega"   
+          }),
+          credentials: "include",
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          console.error("Error creating checkout session:", error);
+          alert(`Error: ${error.error || "Failed to create checkout session"}`);
+          return;
+        }
+
+        const session = await response.json();
+
+        if (!session.id) {
+          alert('Error: No session ID returned from backend.');
+          console.log(session);
+          return;
+        }
+
+        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (error) {
+          console.log(error);
+          alert('Error during checkout');
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        alert('An unexpected error occurred. Please try again.');
+      }
+    });
+
+  })
+  .catch(error => console.error('Error fetching Stripe key:', error));
 
 
 
