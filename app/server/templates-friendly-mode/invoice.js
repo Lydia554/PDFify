@@ -2,7 +2,7 @@ function generateInvoiceHtml(data) {
   const logoUrl =
     typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
       ? data.customLogoUrl.trim()
-      : "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+      : "https://pdfify.pro//images/Logo.png";
 
   return `
   <html>
@@ -208,7 +208,7 @@ function generateInvoiceHtml(data) {
       <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
       <p>
         Generated using <strong>PDFify</strong>. Visit 
-        <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+        <a href="https://pdfify.pro//" target="_blank">our site</a> for more.
       </p>
     </div>
   </body>

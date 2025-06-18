@@ -171,7 +171,7 @@ body::before {
     </style>
   </head>
   <body>
-    <img src="https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png" alt="Food Trek Logo" class="logo" />
+    <img src="https://pdfify.pro//images/Logo.png" alt="Food Trek Logo" class="logo" />
     <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
 
     ${
@@ -206,7 +206,7 @@ body::before {
   <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
   <p>
     Generated using <strong>PDFify</strong>. Visit 
-    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+    <a href="https://pdfify.pro//" target="_blank">our site</a> for more.
   </p>
 </div>
 

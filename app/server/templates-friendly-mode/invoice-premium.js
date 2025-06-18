@@ -238,7 +238,7 @@ function generateInvoicePremiumHtml(data) {
   <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
   <p>
     Generated using <strong>PDFify</strong>. Visit 
-    <a href="https://pdf-api.portfolio.lidija-jokic.com/" target="_blank">our site</a> for more.
+    <a href="https://pdfify.pro//" target="_blank">our site</a> for more.
   </p>
 </div>
     </body>

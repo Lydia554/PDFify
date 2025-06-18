@@ -41,7 +41,7 @@ function generateShopOrderHTML(data) {
 }
 
 function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
-  const logoUrl = "https://pdf-api.portfolio.lidija-jokic.com/images/Logo.png";
+  const logoUrl = "https://pdfify.pro//images/Logo.png";
 
   return `
     <html>
