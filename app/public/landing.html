@@ -24,10 +24,11 @@
 
 <!-- Developer Preview -->
 <section class="py-16 bg-white dark:bg-gray-900">
-  <div class="max-w-5xl mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
+  <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
     <div>
       <h2 class="text-2xl font-bold mb-4">Simple API Call</h2>
-      <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded text-sm overflow-x-auto"><code>POST /api/generate-invoice
+      <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-x-auto">
+        <pre class="text-sm whitespace-pre"><code>POST /api/generate-invoice
 Authorization: Bearer YOUR_API_KEY
 Content-Type: application/json
 
@@ -45,22 +46,22 @@ Content-Type: application/json
     "tax": "3.15€",
     "total": "18.15€",
     "customLogoUrl": "https://example.com/custom-logo.png",
-    "showChart": false,
-    "isPremium": false
+    "showChart": true,
+    "isPremium": true
   }
-}
-
-</code></pre>
+}</code></pre>
+      </div>
     </div>
     <div>
       <h2 class="text-2xl font-bold mb-4">PDF Output</h2>
-      <img src="/demo/invoice-thumbnail-premium-1.jpg" alt="Invoice Example" class="rounded shadow border border-gray-300 dark:border-gray-600" />
-      <a href="/demo/Invoice-Dev-Premium.pdf" target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-purple-700 dark:text-purple-400 hover:underline font-semibold text-sm">
+      <img src="/demo/invoice-thumbnail-premium-1.jpg" alt="Invoice Example" class="rounded shadow border border-gray-300 dark:border-gray-600 mb-2" />
+      <a href="/demo/Invoice-Dev-Premium.pdf" target="_blank" rel="noopener noreferrer" class="inline-block text-purple-700 dark:text-purple-400 hover:underline font-semibold text-sm">
         📄 Preview PDF
       </a>
     </div>
   </div>
 </section>
+
 
 <!-- Pricing Grid -->
 <section id="pricing" class="py-16 bg-gray-50 dark:bg-gray-800">
