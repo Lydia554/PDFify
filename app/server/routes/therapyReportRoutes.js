@@ -12,7 +12,7 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-const logoUrl = "https://pdfify.pro//images/Logo.png";
+const logoUrl = "https://pdfify.pro/images/Logo.png";
 
 
 function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
@@ -232,7 +232,7 @@ function generateTherapyReportHTML(data, isPremiumUser) {
       <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
       <p>
         Generated using <strong>PDFify</strong>. Visit
-        <a href="https://pdfify.pro//" target="_blank">our site</a> for more.
+        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
       </p>
     </div>
 

@@ -8,7 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 
-const logoUrl = "https://pdfify.pro//images/Logo.png";
+const logoUrl = "https://pdfify.pro/images/Logo.png";
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -229,7 +229,7 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
             <p>If you have questions, contact us at <a href="mailto:supportpdfifyapi@gmail.com">supportpdfifyapi@gmail.com</a>.</p>
             <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
             <p>Generated using <strong>PDFify</strong>. Visit 
-              <a href="https://pdfify.pro//" target="_blank">our site</a> for more.
+              <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
             </p>
           </div>
         </div>

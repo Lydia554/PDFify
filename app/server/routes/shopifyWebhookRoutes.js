@@ -101,7 +101,7 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
 
 
     const invoiceResponse = await axios.post(
-      "https://pdfify.pro//api/shopify/invoice",
+      "https://pdfify.pro/api/shopify/invoice",
       {
         orderId: order.id,
         order,
