@@ -27,14 +27,22 @@
   <div class="max-w-5xl mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
     <div>
       <h2 class="text-2xl font-bold mb-4">Simple API Call</h2>
-      <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded text-sm overflow-x-auto"><code>POST /generate
+      <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded text-sm overflow-x-auto"><code>POST /api/generate-invoice
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
 {
-  "template": "invoice",
-  "data": {
-    "name": "Acme Inc.",
-    "total": "$120.00"
-  }
-}</code></pre>
+  "invoiceNumber": "INV-2025-0423",
+  "date": "2025-05-14",
+  "billingAddress": "123 Business Rd, Commerce City, USA",
+  "items": [
+    { "description": "Web Design Services", "quantity": 1, "price": 1200 },
+    { "description": "Hosting (12 months)", "quantity": 1, "price": 240 }
+  ],
+  "total": 1440
+}
+
+</code></pre>
     </div>
     <div>
       <h2 class="text-2xl font-bold mb-4">PDF Output</h2>
