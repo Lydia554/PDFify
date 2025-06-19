@@ -26,9 +26,11 @@ function generateInvoiceHTML(data) {
 
   const userClass = data.isBasicUser ? "basic" : "premium";
 
-  const watermarkHTML = data.isBasicUser
+const watermarkHTML =
+  data.isBasicUser && data.isPreview
     ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
     : "";
+
 
 
   const chartConfig = {
@@ -352,7 +354,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
-    const html = generateInvoiceHTML(invoiceData);
+   const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({
   path: pdfPath,
