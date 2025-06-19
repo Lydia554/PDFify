@@ -183,20 +183,20 @@ function generateInvoiceHtml(data) {
             : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`
           }
         </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="text-align:right;">Subtotal:</td>
-            <td>${(Number(data.subtotal) || 0).toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colspan="3" style="text-align:right;">Tax (${Number(data.taxRate) || 0} %):</td>
-            <td>${(Number(data.taxAmount) || 0).toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colspan="3" style="text-align:right;">Total:</td>
-            <td>${(Number(data.total) || 0).toFixed(2)}</td>
-          </tr>
-        </tfoot>
+<tfoot>
+  <tr>
+    <td colspan="3" style="text-align:right;">Subtotal:</td>
+    <td>${computedSubtotal.toFixed(2)}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="text-align:right;">Tax (${Number(taxRate).toFixed(2)} %):</td>
+    <td>${computedTaxAmount.toFixed(2)}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="text-align:right;">Total:</td>
+    <td>${computedTotal.toFixed(2)}</td>
+  </tr>
+</tfoot>
       </table>
     </div>
 
