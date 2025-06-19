@@ -32,12 +32,12 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
             margin-top: 30px;
           }
             .footer {
-            position: absolute;
+            position: static;
             bottom: 0;
             left: 0;
             right: 0;
             padding: 20px;
-            font-size: 12px;
+            font-size: 11px;
             background-color: #f9f9f9;
             color: #444;
             border-top: 1px solid #ccc;

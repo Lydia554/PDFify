@@ -278,7 +278,7 @@ function generatePremiumRecipeHtml(data) {
       /* Footer stays below everything */
       .footer {
         padding: 20px 10px 10px;
-        font-size: 12px;
+        font-size: 11px;
         background-color: #f9f9f9;
         color: #444;
         border-top: 1px solid #ccc;

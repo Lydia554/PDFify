@@ -120,7 +120,7 @@ function generateRecipeHTML(data) {
           }
           .footer a { color: #2a3d66; text-decoration: none; }
           .footer a:hover { text-decoration: underline; }
-          .terms { margin-top: 15px; font-size: 12px; color: #aaa; }
+          .terms { margin-top: 15px; font-size: 11px; color: #aaa; }
           .logo { display: block; margin: 0 auto 30px; max-width: 100px; }
           .watermark { color: #c44; font-weight: bold; }
 
