@@ -88,7 +88,11 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     }
 
     if (typeof formData.instructions === 'string') {
-      formData.instructions = formData.instructions.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+      formData.instructions = formData.instructions
+  .split(';')       
+  .map(i => i.trim())
+  .filter(Boolean);
+
     }
 
 
