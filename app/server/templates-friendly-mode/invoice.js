@@ -4,6 +4,16 @@ function generateInvoiceHtml(data) {
       ? data.customLogoUrl.trim()
       : "https://pdfify.pro/images/Logo.png";
 
+
+  const computedSubtotal = (data.items || []).reduce((sum, item) => {
+    return sum + (Number(item.quantity) * Number(item.unitPrice) || 0);
+  }, 0);
+
+  const taxRate = Number(data.taxRate) || 0;
+  const computedTaxAmount = (computedSubtotal * taxRate) / 100;
+  const computedTotal = computedSubtotal + computedTaxAmount;
+
+
   return `
   <html>
   <head>
