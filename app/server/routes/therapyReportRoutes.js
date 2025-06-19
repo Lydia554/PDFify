@@ -226,7 +226,7 @@ function generateTherapyReportHTML(data, isPremiumUser) {
       }
     </style>
 
-    <div class="footer">
+  <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
       <p>&copy; 2025 🧾PDFify — All rights reserved.</p>

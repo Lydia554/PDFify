@@ -232,15 +232,15 @@ function generateInvoicePremiumHtml(data) {
   
       ${notes ? `<div class="notes"><strong>Notes:</strong> ${notes}</div>` : ''}
   
-         <div class="footer">
-  <p>Thanks for using our service!</p>
-  <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
-  <p>
-    Generated using <strong>PDFify</strong>. Visit 
-    <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
-  </p>
-</div>
+     <div class="footer">
+      <p>Thanks for using our service!</p>
+      <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+      <p>
+        Generated using <strong>PDFify</strong>. Visit
+        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
+      </p>
+    </div>
     </body>
     </html>
     `;

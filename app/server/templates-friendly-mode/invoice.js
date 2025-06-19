@@ -202,12 +202,12 @@ function generateInvoiceHtml(data) {
 
     ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ''}
 
-    <div class="footer">
+  <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-      <p>&copy; 2025 🧾PDFify — All rights reserved.</p> 
+      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
       <p>
-        Generated using <strong>PDFify</strong>. Visit 
+        Generated using <strong>PDFify</strong>. Visit
         <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
       </p>
     </div>
