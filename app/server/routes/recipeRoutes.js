@@ -179,6 +179,7 @@ function generateRecipeHTML(data) {
           </div>
 
           ${breakdownChart}
+          <div/>
 
       <div class="footer">
       <p>Thanks for using our service!</p>
