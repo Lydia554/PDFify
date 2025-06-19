@@ -64,10 +64,10 @@ function renderForm(template) {
       <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" name="prepTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" name="cookTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
      <label class="block text-white mb-1 font-semibold">Ingredients (comma separated):</label>
-<textarea id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[120px]" placeholder="e.g. Flour, Sugar, Eggs"></textarea>
+<textarea id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[200px]" placeholder="e.g. Flour, Sugar, Eggs"></textarea>
 
 <label class="block text-white mb-1 font-semibold">Instructions (semicolon separated):</label>
-<textarea id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[120px]" placeholder="e.g. Preheat oven; Mix ingredients; Bake for 30 minutes"></textarea>
+<textarea id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[200px]" placeholder="e.g. Preheat oven; Mix ingredients; Bake for 30 minutes"></textarea>
 
 
       <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
