@@ -111,7 +111,11 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
         <div class="content">
           ${htmlContent}
         </div>
-       <div class="footer">
+   
+      </body>
+    </html>
+
+    <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
       <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
@@ -120,8 +124,9 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
         <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
       </p>
     </div>
-      </body>
-    </html>
+
+
+
   `;
 }
 
