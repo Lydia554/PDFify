@@ -191,14 +191,14 @@ function generateInvoicePremiumHtml(data) {
       <div class="info-grid">
         <div class="info-box">
           <p><strong>Customer:</strong> ${customerName}</p>
-          ${recipientAddress ? `<p><strong>Address:</strong> ${recipientAddress}</p>` : ''}
+          ${recipientAddress ? `<p><strong>Recipient Address:</strong> ${recipientAddress}</p>` : ''}
           <p><strong>Date:</strong> ${date}</p>
           <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
         </div>
         <div class="info-box">
           <p><strong>Company:</strong> ${companyName}</p>
-          <p><strong>Address:</strong> ${senderAddress || companyAddress}</p>
-          <p><strong>Email:</strong> ${companyEmail}</p>
+          <p><strong>Sender Address:</strong> ${senderAddress || companyAddress}</p>
+          <p><strong>Company Email:</strong> ${companyEmail}</p>
         </div>
       </div>
   
