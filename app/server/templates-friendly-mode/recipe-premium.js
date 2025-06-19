@@ -284,7 +284,7 @@ function generatePremiumRecipeHtml(data) {
         border-top: 1px solid #ccc;
         text-align: center;
         line-height: 1.6;
-        position: relative;
+        position: static;
         margin-top: 60px;
       }
 

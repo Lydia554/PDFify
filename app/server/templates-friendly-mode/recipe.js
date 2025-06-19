@@ -112,6 +112,7 @@ body::before {
   padding: 20px 10px;
   margin-top: 100%; /* push it away from content */
   page-break-inside: avoid;
+  position: static;
 }
 
 

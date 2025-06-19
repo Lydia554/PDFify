@@ -91,6 +91,7 @@ function generateInvoiceHtml(data) {
         padding: 20px 10px;
         margin-top: auto;
         page-break-inside: avoid;
+        position: static;
       }
 
       .footer a {
