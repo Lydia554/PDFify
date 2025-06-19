@@ -15,10 +15,7 @@ function generateInvoicePremiumHtml(data) {
     senderAddress = '',
     includeTitle = true,
     items = [],
-    subtotal = 0,
     taxRate = 0,
-    taxAmount = 0,
-    total = 0,
     notes = '',
     logo = '',
   } = data;
@@ -48,6 +45,17 @@ function generateInvoicePremiumHtml(data) {
       </tr>
     `).join('')
     : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`;
+
+
+    const computedSubtotal = itemsArray.reduce((sum, item) => {
+  const qty = Number(item.quantity) || 0;
+  const price = Number(item.unitPrice) || 0;
+  return sum + qty * price;
+}, 0);
+
+const computedTaxAmount = (Number(taxRate) || 0) / 100 * computedSubtotal;
+const computedTotal = computedSubtotal + computedTaxAmount;
+
 
   return `
  
@@ -214,20 +222,21 @@ function generateInvoicePremiumHtml(data) {
         <tbody>
           ${renderItems}
         </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3" style="text-align:right;">Subtotal:</td>
-            <td>${Number(subtotal).toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colspan="3" style="text-align:right;">Tax (${Number(taxRate).toFixed(2)} %):</td>
-            <td>${Number(taxAmount).toFixed(2)}</td>
-          </tr>
-          <tr>
-            <td colspan="3" style="text-align:right;">Total:</td>
-            <td>${Number(total).toFixed(2)}</td>
-          </tr>
-        </tfoot>
+   <tfoot>
+  <tr>
+    <td colspan="3" style="text-align:right;">Subtotal:</td>
+    <td>${computedSubtotal.toFixed(2)}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="text-align:right;">Tax (${Number(taxRate).toFixed(2)} %):</td>
+    <td>${computedTaxAmount.toFixed(2)}</td>
+  </tr>
+  <tr>
+    <td colspan="3" style="text-align:right;">Total:</td>
+    <td>${computedTotal.toFixed(2)}</td>
+  </tr>
+</tfoot>
+
       </table>
   
       ${notes ? `<div class="notes"><strong>Notes:</strong> ${notes}</div>` : ''}
