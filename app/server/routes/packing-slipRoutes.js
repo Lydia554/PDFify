@@ -229,7 +229,7 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
               `).join('')}
             </tbody>
           </table>
-
+</div>
 
 
           <div class="footer">
