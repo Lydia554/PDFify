@@ -92,6 +92,12 @@ body::before {
         margin: 10px auto 30px auto;
         transition: transform 0.3s ease;
       }
+        textarea {
+  font-size: 1rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
 
       img.recipe-img:hover {
         transform: scale(1.05);
