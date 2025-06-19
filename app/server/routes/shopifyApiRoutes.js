@@ -125,6 +125,7 @@ function generateInvoiceHTML(invoiceData, isPremium) {
             font-size: 11px;
             border-top: 2px solid #cbd2e1;
             border-radius: 0 0 16px 16px;
+            position: static;
           }
         </style>
       </head>
