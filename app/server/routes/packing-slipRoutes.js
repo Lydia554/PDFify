@@ -232,12 +232,7 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
 
 
 
- 
-      </body>
-
-    </html>    
-    
-    <div class="footer">
+          <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
       <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
@@ -246,6 +241,9 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
         <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
       </p>
     </div>
+      </body>
+
+    </html>
   `;
 }
 
