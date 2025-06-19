@@ -104,26 +104,34 @@ function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
             font-weight: bold;
             color: #5e60ce;
           }
-          .footer {
-            position: static;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            font-size: 11px;
-            background-color: #f9f9f9;
-            color: #444;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            line-height: 1.6;
-          }
-          .footer a {
-            color: #0073e6;
-            text-decoration: none;
-          }
-          .footer a:hover {
-            text-decoration: underline;
-          }
+   .footer {
+        position: static;
+        max-width: 800px;
+        margin: 40px auto 10px auto;
+        padding: 10px 20px;
+        background-color: #f0f2f7;
+        color: #555;
+        border-top: 2px solid #cbd2e1;
+        text-align: center;
+        line-height: 1.6;
+        font-size: 11px;
+        border-radius: 0 0 16px 16px;
+        box-sizing: border-box;
+      }
+
+      .footer p {
+        margin: 6px 0;
+      }
+
+      .footer a {
+        color: #4a69bd;
+        text-decoration: none;
+        word-break: break-word;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
           ${addWatermark ? `
             .watermark {
               position: fixed;

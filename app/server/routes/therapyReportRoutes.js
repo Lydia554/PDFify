@@ -196,7 +196,7 @@ function generateTherapyReportHTML(data, isPremiumUser) {
         margin: 30px 0;
       }
 
-      .footer {
+   .footer {
         position: static;
         max-width: 800px;
         margin: 40px auto 10px auto;

@@ -107,28 +107,34 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
             background-color: #f9f9f9;
           }
 
-          .footer {
-            position: static;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            font-size: 11px;
-            background-color: #f9f9f9;
-            color: #444;
-            border-top: 1px solid #ccc;
-            text-align: center;
-            line-height: 1.6;
-          }
+   .footer {
+        position: static;
+        max-width: 800px;
+        margin: 40px auto 10px auto;
+        padding: 10px 20px;
+        background-color: #f0f2f7;
+        color: #555;
+        border-top: 2px solid #cbd2e1;
+        text-align: center;
+        line-height: 1.6;
+        font-size: 11px;
+        border-radius: 0 0 16px 16px;
+        box-sizing: border-box;
+      }
 
-          .footer a {
-            color: #0073e6;
-            text-decoration: none;
-          }
+      .footer p {
+        margin: 6px 0;
+      }
 
-          .footer a:hover {
-            text-decoration: underline;
-          }
+      .footer a {
+        color: #4a69bd;
+        text-decoration: none;
+        word-break: break-word;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
 
           ${addWatermark ? `
             .watermark {
@@ -223,11 +229,10 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
               `).join('')}
             </tbody>
           </table>
-        
-      </body>
 
 
-  <div class="footer">
+
+          <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
       <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
@@ -236,6 +241,7 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
         <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
       </p>
     </div>
+      </body>
 
     </html>
   `;
