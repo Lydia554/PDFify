@@ -63,8 +63,11 @@ function renderForm(template) {
       <label class="block text-white mb-1 font-semibold">Recipe Name: <input id="recipeName" name="recipeName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" name="prepTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" name="cookTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Ingredients (comma separated): <input id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block rows="5" class="w-full p-1 text-white mb-1 font-semibold">Instructions (semicolon separated): <input id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+     <label class="block text-white mb-1 font-semibold">Ingredients (comma separated): 
+  <textarea id="ingredients" name="ingredients" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Flour, Eggs, Sugar"></textarea></label>
+<label class="block text-white mb-1 font-semibold">Instructions (semicolon separated): 
+  <textarea id="instructions" name="instructions" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Mix ingredients; Bake for 20 min"></textarea></label>
+
 
       <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Media & Nutrition</legend>
