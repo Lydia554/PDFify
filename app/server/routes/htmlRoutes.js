@@ -106,11 +106,14 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
         </style>
       </head>
       <body>
+
         ${isPremium ? '' : `<img src="${logoUrl}" alt="Logo" class="logo" />`}
         ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
         <div class="content">
           ${htmlContent}
         </div>
+ </div>
+
        <div class="footer">
       <p>Thanks for using our service!</p>
       <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
