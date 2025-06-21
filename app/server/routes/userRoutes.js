@@ -75,7 +75,7 @@ router.post("/user-creation", async (req, res) => {
 
 
 
-router.post("/consent", authenticate, async (req, res) => {
+router.post("/consent", authenticate, dualAuth, async (req, res) => {
   try {
     const userId = req.session.userId;
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
