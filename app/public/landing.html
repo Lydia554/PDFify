@@ -6,7 +6,73 @@
   <title>PDFify Landing Page</title>
   <script src="js/theme.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    /* Fade-in on scroll */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
+    /* Hover scale for cards and buttons */
+    .hover-scale:hover {
+      transform: scale(1.05);
+      transition: transform 0.3s ease;
+    }
+    .hover-scale {
+      transition: transform 0.3s ease;
+    }
+
+    /* Typing effect for hero heading */
+    .typing-text {
+      border-right: 2px solid white;
+      white-space: nowrap;
+      overflow: hidden;
+      width: 0;
+      animation: typing 3.5s steps(40, end) forwards, blink-caret 0.75s step-end infinite;
+      font-weight: 700;
+      font-size: 2.5rem;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+    @keyframes typing {
+      from {
+        width: 0;
+      }
+      to {
+        width: 100%;
+      }
+    }
+    @keyframes blink-caret {
+      50% {
+        border-color: transparent;
+      }
+    }
+
+    /* Bounce animation for button */
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-5px);
+      }
+    }
+    .bounce {
+      animation: bounce 2s infinite;
+    }
+
+    /* Responsive fixes for typing text */
+    @media (min-width: 768px) {
+      .typing-text {
+        font-size: 3.5rem;
+      }
+    }
+  </style>
 </head>
 <body class="font-sans antialiased text-gray-800 dark:text-gray-100 dark:bg-gray-900">
 
