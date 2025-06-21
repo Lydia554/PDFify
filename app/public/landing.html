@@ -77,6 +77,32 @@
   </div>
 </section>
 
+<!-- Subtle animated shapes -->
+  <div aria-hidden="true" class="absolute top-10 left-10 w-32 h-32 bg-pink-500 rounded-full opacity-20 animate-pulse mix-blend-multiply"></div>
+  <div aria-hidden="true" class="absolute bottom-16 right-12 w-48 h-48 bg-purple-600 rounded-full opacity-30 animate-pulse mix-blend-multiply"></div>
+</section>
+
+<!-- How It Works -->
+<section class="py-20 bg-indigo-50 dark:bg-gray-900 text-center px-6">
+  <div class="max-w-5xl mx-auto">
+    <h2 class="text-3xl font-extrabold mb-12 dark:text-white fade-in">How It Works</h2>
+    <div class="grid md:grid-cols-3 gap-12 text-gray-700 dark:text-gray-300 text-left">
+      <div class="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-xl transition cursor-default">
+        <h3 class="font-bold text-xl mb-3">1. Authenticate</h3>
+        <p>Sign up and get your API token.</p>
+      </div>
+      <div class="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-xl transition cursor-default">
+        <h3 class="font-bold text-xl mb-3">2. Send JSON/HTML</h3>
+        <p>Use POST requests to define content and styles.</p>
+      </div>
+      <div class="p-6 bg-white dark:bg-gray-800 rounded-3xl shadow-lg hover:shadow-xl transition cursor-default">
+        <h3 class="font-bold text-xl mb-3">3. Get PDF Instantly</h3>
+        <p>Receive a downloadable file URL in response.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Developer Preview -->
 <section class="py-16 bg-white dark:bg-gray-900">
   <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
@@ -116,6 +142,54 @@ Content-Type: application/json
          class="inline-block text-purple-700 dark:text-purple-400 hover:underline font-semibold text-sm">
         📄 Preview PDF
       </a>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="py-20 bg-gray-900 text-center px-6 text-white">
+  <div class="max-w-7xl mx-auto">
+    <h2 class="text-4xl font-extrabold mb-16 text-gray-900 dark:text-white fade-in">
+      What Makes <span class="gradient-text">PDFify</span> Unique?
+    </h2>
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+
+      <!-- Shopify Integration -->
+      <div class="bg-white dark:bg-gray-700 rounded-3xl p-10 shadow-lg hover:shadow-2xl transition cursor-default">
+        <div class="mx-auto w-20 h-20 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center mb-8 text-green-600 dark:text-green-300">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3h18v18H3V3z"/></svg>
+        </div>
+        <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Shopify Integration</h3>
+        <p class="text-gray-700 dark:text-gray-300 text-lg">Auto-generate branded invoices using webhooks with zero app installs or theme modifications.</p>
+      </div>
+
+      <!-- Friendly Mode -->
+      <div class="bg-white dark:bg-gray-700 rounded-3xl p-10 shadow-lg hover:shadow-2xl transition cursor-default">
+        <div class="mx-auto w-20 h-20 rounded-full bg-purple-100 dark:bg-purple-800 flex items-center justify-center mb-8 text-purple-600 dark:text-purple-300">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4z"/></svg>
+        </div>
+        <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Friendly Mode</h3>
+        <p class="text-gray-700 dark:text-gray-300 text-lg">No coding needed! Use simple JSON and templates to create your invoices and PDFs.</p>
+      </div>
+
+      <!-- Premium Templates -->
+      <div class="bg-white dark:bg-gray-700 rounded-3xl p-10 shadow-lg hover:shadow-2xl transition cursor-default">
+        <div class="mx-auto w-20 h-20 rounded-full bg-pink-100 dark:bg-pink-800 flex items-center justify-center mb-8 text-pink-600 dark:text-pink-300">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Premium Templates</h3>
+        <p class="text-gray-700 dark:text-gray-300 text-lg">Unlock beautiful invoice designs with logos, product images, and more for your store.</p>
+      </div>
+
+      <!-- Dev Mode -->
+      <div class="bg-white dark:bg-gray-700 rounded-3xl p-10 shadow-lg hover:shadow-2xl transition cursor-default">
+        <div class="mx-auto w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center mb-8 text-blue-600 dark:text-blue-300">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        </div>
+        <h3 class="text-2xl font-bold mb-4 text-gray-900 dark:text-white">Dev Mode</h3>
+        <p class="text-gray-700 dark:text-gray-300 text-lg">Access developer-friendly tools and API debugging features to build and test with ease.</p>
+      </div>
+
     </div>
   </div>
 </section>
@@ -196,26 +270,37 @@ Content-Type: application/json
 </section>
 
 
-<!-- How It Works -->
-<section class="py-16 bg-gray-100 dark:bg-gray-900">
-  <div class="max-w-5xl mx-auto px-4 text-center">
-    <h2 class="text-2xl font-bold mb-6">How It Works</h2>
-    <div class="grid md:grid-cols-3 gap-8 text-left">
-      <div>
-        <h3 class="font-bold text-lg mb-2">1. Authenticate</h3>
-        <p>Sign up and get your API token</p>
-      </div>
-      <div>
-        <h3 class="font-bold text-lg mb-2">2. Send JSON/HTML</h3>
-        <p>Use POST requests to define content and styles</p>
-      </div>
-      <div>
-        <h3 class="font-bold text-lg mb-2">3. Get PDF Instantly</h3>
-        <p>Receive a downloadable file URL in response</p>
-      </div>
+<!-- Contact / Support -->
+  <section id="contact" class="py-16 bg-gray-100 dark:bg-gray-800 px-6">
+    <div class="max-w-3xl mx-auto text-center fade-in">
+      <h2 class="text-3xl font-extrabold mb-6 text-gray-900 dark:text-white">Questions? We're Here to Help!</h2>
+      <p class="mb-8 text-gray-700 dark:text-gray-300 max-w-xl mx-auto">
+        Reach out anytime — whether you want a demo, custom features, or technical help.
+      </p>
+      <form action="pdfifyapi@gmail.com" method="POST" enctype="text/plain" class="max-w-xl mx-auto space-y-6">
+        <input
+          type="email"
+          name="email"
+          placeholder="Your email"
+          required
+          class="w-full p-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        />
+        <textarea
+          name="message"
+          placeholder="Your message"
+          rows="5"
+          required
+          class="w-full p-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        ></textarea>
+        <button
+          type="submit"
+          class="bg-yellow-400 text-gray-900 px-8 py-3 rounded-full font-bold hover:bg-yellow-500 transition hover-scale"
+        >
+          Send Message
+        </button>
+      </form>
     </div>
-  </div>
-</section>
+  </section>
 
 <!-- Call to Action -->
 <section id="get-started" class="py-16 bg-blue-600 dark:bg-blue-700 text-white text-center">
