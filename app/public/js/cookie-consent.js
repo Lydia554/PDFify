@@ -24,17 +24,22 @@ window.addEventListener('DOMContentLoaded', () => {
           We use cookies to improve your experience. 
           <a href="/privacy-policy.html" target="_blank" style="color: #4CAF50; text-decoration: underline;">Privacy Policy</a>.
         </span>
-        <button id="accept-cookies" style="
-          background-color: #4CAF50;
-          border: none;
-          color: white;
-          padding: 8px 16px;
-          font-size: 14px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: background-color 0.3s ease;
-        ">
-          Accept
+  <button id="accept-cookies" style="
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 6px 12px;     /* reduced padding */
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  min-width: 80px;       /* ensures it’s not too narrow */
+  max-width: 120px;      /* prevents it from getting too wide */
+  white-space: nowrap;   /* prevent wrapping */
+">
+  Accept
+
+
         </button>
       </div>
     `;
