@@ -66,10 +66,14 @@ const userSchema = new mongoose.Schema(
     deleted: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
 
+    cookieConsent: { type: Boolean, default: false },
+cookieConsentDate: { type: Date },
+
     // Password reset
     resetToken: { type: String },
     resetTokenExpiry: { type: Date },
   },
+  
   { timestamps: true }
 );
 

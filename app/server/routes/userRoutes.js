@@ -75,7 +75,21 @@ router.post("/user-creation", async (req, res) => {
 
 
 
+router.post("/consent", authenticate, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
+    await User.findByIdAndUpdate(userId, {
+      cookieConsent: true,
+      cookieConsentDate: new Date()
+    });
+
+    res.json({ message: "Consent saved" });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save consent" });
+  }
+});
 
 
 

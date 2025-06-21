@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="js/cookie-consent.js"></script>
+
 </head>
 <body>
 
@@ -54,11 +56,18 @@
       }
     });
   
-    document.getElementById("loginForm").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const email = document.getElementById("email").value.trim();
-      const password = document.getElementById("password").value.trim();
-      const result = document.getElementById("result");
+document.getElementById("loginForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const result = document.getElementById("result");
+
+  if (!localStorage.getItem('cookieConsent')) {
+    result.innerText = "You must accept cookies to continue.";
+    result.className = "result error";
+    result.style.display = "block";
+    return;
+  }
   
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
      
