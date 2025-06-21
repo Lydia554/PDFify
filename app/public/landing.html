@@ -78,29 +78,52 @@
     </div>
   </section>
 
-  <!-- Social Proof -->
-  <section class="py-12 bg-blue-50 dark:bg-blue-900 text-center px-6">
-    <div class="max-w-3xl mx-auto fade-in">
-      <h2 class="text-2xl font-bold mb-4 text-blue-900 dark:text-blue-300">What Our Founder Says</h2>
-      <blockquote class="italic text-gray-700 dark:text-gray-300 max-w-xl mx-auto">
-        “PDFify was born from the frustration of endless manual invoice formatting. Now, it saves me and thousands of others hours every month — seamlessly integrated with Shopify and flexible for every user.”
-      </blockquote>
-      <p class="mt-4 font-semibold text-blue-800 dark:text-blue-400">– Lidija Jokić, Founder & Developer</p>
-    </div>
-  </section>
+ 
 
-  <!-- Developer Preview -->
-  <section class="py-16 bg-white dark:bg-gray-900">
-    <div class="max-w-4xl mx-auto text-center fade-in">
-      <h2 class="text-3xl font-extrabold mb-8 text-gray-900 dark:text-white">Developer Friendly</h2>
-      <p class="mb-6 max-w-2xl mx-auto text-gray-700 dark:text-gray-300">
-        Whether you prefer visual templates or raw JSON, our API supports seamless PDF generation and easy previewing — ideal for developers integrating invoices, receipts, or any custom PDFs.
-      </p>
-      <a href="https://docs.pdfify.example" class="inline-block bg-purple-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-purple-700 hover:shadow-lg transition hover-scale">
-        Explore API Docs
+
+<!-- Developer Preview -->
+<section class="py-16 bg-white dark:bg-gray-900">
+  <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+    <div>
+      <h2 class="text-2xl font-bold mb-4">Simple API Call</h2>
+      <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-x-auto">
+        <pre class="text-sm whitespace-pre"><code>POST /api/generate-invoice
+Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+
+{
+  "data": {
+    "customerName": "Anna Moore",
+    "customerEmail": "anna@example.com",
+    "orderId": "12345",
+    "date": "2025-03-25",
+    "items": [
+      { "name": "PDF Template", "quantity": 1, "price": "10.00€", "total": "10.00" },
+      { "name": "Extra Support", "quantity": 1, "price": "5.00€", "total": "5.00" }
+    ],
+    "subtotal": "15.00€",
+    "tax": "3.15€",
+    "total": "18.15€",
+    "customLogoUrl": "https://example.com/custom-logo.png",
+    "showChart": true,
+    "isPremium": true
+  }
+}</code></pre>
+      </div>
+    </div>
+    <div class="flex flex-col items-center">
+      <h2 class="text-2xl font-bold mb-4 self-start">PDF Output</h2>
+      <img src="/demo/Invoice-Dev-Premium-1.jpg?v=2" ... 
+           alt="Invoice Example"
+           class="rounded shadow border border-gray-300 dark:border-gray-600 w-full max-w-xl object-contain mb-2" />
+      <a href="/demo/Invoice-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer"
+         class="inline-block text-purple-700 dark:text-purple-400 hover:underline font-semibold text-sm">
+        📄 Preview PDF
       </a>
     </div>
-  </section>
+  </div>
+</section>
+
 
   <!-- Pricing Table -->
   <section id="pricing" class="py-20 bg-gradient-to-b from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 px-6">
@@ -168,37 +191,42 @@
     </div>
   </section>
 
-  <!-- Contact / Support -->
-  <section id="contact" class="py-16 bg-gray-100 dark:bg-gray-800 px-6">
-    <div class="max-w-3xl mx-auto text-center fade-in">
-      <h2 class="text-3xl font-extrabold mb-6 text-gray-900 dark:text-white">Questions? We're Here to Help!</h2>
-      <p class="mb-8 text-gray-700 dark:text-gray-300 max-w-xl mx-auto">
-        Reach out anytime — whether you want a demo, custom features, or technical help.
-      </p>
-      <form action="mailto:hello@pdfify.example" method="POST" enctype="text/plain" class="max-w-xl mx-auto space-y-6">
-        <input
-          type="email"
-          name="email"
-          placeholder="Your email"
-          required
-          class="w-full p-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        />
-        <textarea
-          name="message"
-          placeholder="Your message"
-          rows="5"
-          required
-          class="w-full p-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-        ></textarea>
-        <button
-          type="submit"
-          class="bg-yellow-400 text-gray-900 px-8 py-3 rounded-full font-bold hover:bg-yellow-500 transition hover-scale"
-        >
-          Send Message
-        </button>
-      </form>
+
+  <!-- Pricing Grid -->
+<section id="pricing" class="py-16 bg-gray-50 dark:bg-gray-800">
+  <div class="max-w-6xl mx-auto px-4 text-center">
+    <h2 class="text-3xl font-bold mb-10">Choose Your Plan</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+      
+      <div class="p-6 bg-white dark:bg-gray-900 rounded shadow hover:shadow-lg border dark:border-gray-700">
+        <h3 class="text-xl font-bold mb-2">Free</h3>
+        <p class="mb-2">✅ 30 PDFs/month,</p>
+        <p class="mb-2">❌ No branding control, watermarked PDFs, no styling options</p>
+        <p class="mb-6">💬 Basic support</p>
+        <p class="text-2xl font-bold">€0</p>
+      </div>
+
+      <div class="p-6 bg-blue-50 dark:bg-blue-900 rounded shadow-lg border-2 border-blue-500">
+        <h3 class="text-xl font-bold mb-2">Premium</h3>
+        <p class="mb-2">✅ 1000 PDFs/month</p>
+        <p class="mb-2">✅ Branding control, no watermark, more features</p>
+        <p class="mb-6">⚡ Priority support</p>
+        <p class="text-red-600 line-through mb-1">€9.99/mo</p>
+        <p class="text-2xl font-bold">€4.99/mo</p>
+      </div>
+
+      <div class="p-6 bg-yellow-50 dark:bg-yellow-900 rounded shadow hover:shadow-lg border dark:border-yellow-600">
+        <h3 class="text-xl font-bold mb-2">Pro</h3>
+        <p class="mb-2">✅ 10,000 PDFs/month</p>
+        <p class="mb-2">✅ Includes all Premium features</p>
+        <p class="mb-6">📞 Dedicated support</p>
+        <p class="text-red-600 line-through mb-1">€49.99/mo</p>
+        <p class="text-2xl font-bold">€29.99/mo</p>
+      </div>
+
     </div>
-  </section>
+  </div>
+</section>
 
 
 <!-- Mode Summary Section -->
@@ -257,86 +285,6 @@
 </section>
 
 
-<!-- Developer Preview -->
-<section class="py-16 bg-white dark:bg-gray-900">
-  <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-    <div>
-      <h2 class="text-2xl font-bold mb-4">Simple API Call</h2>
-      <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-x-auto">
-        <pre class="text-sm whitespace-pre"><code>POST /api/generate-invoice
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-
-{
-  "data": {
-    "customerName": "Anna Moore",
-    "customerEmail": "anna@example.com",
-    "orderId": "12345",
-    "date": "2025-03-25",
-    "items": [
-      { "name": "PDF Template", "quantity": 1, "price": "10.00€", "total": "10.00" },
-      { "name": "Extra Support", "quantity": 1, "price": "5.00€", "total": "5.00" }
-    ],
-    "subtotal": "15.00€",
-    "tax": "3.15€",
-    "total": "18.15€",
-    "customLogoUrl": "https://example.com/custom-logo.png",
-    "showChart": true,
-    "isPremium": true
-  }
-}</code></pre>
-      </div>
-    </div>
-    <div class="flex flex-col items-center">
-      <h2 class="text-2xl font-bold mb-4 self-start">PDF Output</h2>
-      <img src="/demo/Invoice-Dev-Premium-1.jpg?v=2" ... 
-           alt="Invoice Example"
-           class="rounded shadow border border-gray-300 dark:border-gray-600 w-full max-w-xl object-contain mb-2" />
-      <a href="/demo/Invoice-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer"
-         class="inline-block text-purple-700 dark:text-purple-400 hover:underline font-semibold text-sm">
-        📄 Preview PDF
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing Grid -->
-<section id="pricing" class="py-16 bg-gray-50 dark:bg-gray-800">
-  <div class="max-w-6xl mx-auto px-4 text-center">
-    <h2 class="text-3xl font-bold mb-10">Choose Your Plan</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-      
-      <div class="p-6 bg-white dark:bg-gray-900 rounded shadow hover:shadow-lg border dark:border-gray-700">
-        <h3 class="text-xl font-bold mb-2">Free</h3>
-        <p class="mb-2">✅ 30 PDFs/month,</p>
-        <p class="mb-2">❌ No branding control, watermarked PDFs, no styling options</p>
-        <p class="mb-6">💬 Basic support</p>
-        <p class="text-2xl font-bold">€0</p>
-      </div>
-
-      <div class="p-6 bg-blue-50 dark:bg-blue-900 rounded shadow-lg border-2 border-blue-500">
-        <h3 class="text-xl font-bold mb-2">Premium</h3>
-        <p class="mb-2">✅ 1000 PDFs/month</p>
-        <p class="mb-2">✅ Branding control, no watermark, more features</p>
-        <p class="mb-6">⚡ Priority support</p>
-        <p class="text-red-600 line-through mb-1">€9.99/mo</p>
-        <p class="text-2xl font-bold">€4.99/mo</p>
-      </div>
-
-      <div class="p-6 bg-yellow-50 dark:bg-yellow-900 rounded shadow hover:shadow-lg border dark:border-yellow-600">
-        <h3 class="text-xl font-bold mb-2">Pro</h3>
-        <p class="mb-2">✅ 10,000 PDFs/month</p>
-        <p class="mb-2">✅ Includes all Premium features</p>
-        <p class="mb-6">📞 Dedicated support</p>
-        <p class="text-red-600 line-through mb-1">€49.99/mo</p>
-        <p class="text-2xl font-bold">€29.99/mo</p>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-
 
 
 <!-- Custom Templates Info -->
@@ -382,6 +330,64 @@ Content-Type: application/json
     <a href="/login.html" class="bg-white text-blue-600 px-6 py-3 rounded font-bold hover:bg-gray-100 transition">Log In</a>
   </div>
 </section>
+
+
+  <!-- Contact / Support -->
+  <section id="contact" class="py-16 bg-gray-100 dark:bg-gray-800 px-6">
+    <div class="max-w-3xl mx-auto text-center fade-in">
+      <h2 class="text-3xl font-extrabold mb-6 text-gray-900 dark:text-white">Questions? We're Here to Help!</h2>
+      <p class="mb-8 text-gray-700 dark:text-gray-300 max-w-xl mx-auto">
+        Reach out anytime — whether you want a demo, custom features, or technical help.
+      </p>
+      <form action="mailto:hello@pdfify.example" method="POST" enctype="text/plain" class="max-w-xl mx-auto space-y-6">
+        <input
+          type="email"
+          name="email"
+          placeholder="Your email"
+          required
+          class="w-full p-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        />
+        <textarea
+          name="message"
+          placeholder="Your message"
+          rows="5"
+          required
+          class="w-full p-3 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        ></textarea>
+        <button
+          type="submit"
+          class="bg-yellow-400 text-gray-900 px-8 py-3 rounded-full font-bold hover:bg-yellow-500 transition hover-scale"
+        >
+          Send Message
+        </button>
+      </form>
+    </div>
+  </section>
+
+
+  <!-- Social Proof -->
+  <section class="py-12 bg-blue-50 dark:bg-blue-900 text-center px-6">
+    <div class="max-w-3xl mx-auto fade-in">
+      <h2 class="text-2xl font-bold mb-4 text-blue-900 dark:text-blue-300">What Our Founder Says</h2>
+      <blockquote class="italic text-gray-700 dark:text-gray-300 max-w-xl mx-auto">
+        “PDFify was born from the frustration of endless manual invoice formatting. Now, it saves me and thousands of others hours every month — seamlessly integrated with Shopify and flexible for every user.”
+      </blockquote>
+      <p class="mt-4 font-semibold text-blue-800 dark:text-blue-400">– Lidija Jokić, Founder & Developer</p>
+    </div>
+  </section>
+
+  <!-- Developer Preview -->
+  <section class="py-16 bg-white dark:bg-gray-900">
+    <div class="max-w-4xl mx-auto text-center fade-in">
+      <h2 class="text-3xl font-extrabold mb-8 text-gray-900 dark:text-white">Developer Friendly</h2>
+      <p class="mb-6 max-w-2xl mx-auto text-gray-700 dark:text-gray-300">
+        Whether you prefer visual templates or raw JSON, our API supports seamless PDF generation and easy previewing — ideal for developers integrating invoices, receipts, or any custom PDFs.
+      </p>
+      <a href="https://docs.pdfify.example" class="inline-block bg-purple-600 text-white px-8 py-3 rounded-full font-semibold hover:bg-purple-700 hover:shadow-lg transition hover-scale">
+        Explore API Docs
+      </a>
+    </div>
+  </section>
 
   <!-- Footer -->
   <footer class="bg-gray-800 border-t border-gray-700 mt-12">
