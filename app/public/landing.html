@@ -23,35 +23,56 @@
 </section>
 
 <!-- Mode Summary Section -->
-<section class="py-12 bg-white dark:bg-gray-800">
-  <div class="max-w-4xl mx-auto px-4">
-    <h2 class="text-2xl font-bold text-center mb-6">Pick Your Mode</h2>
-    <p class="text-center text-gray-700 dark:text-gray-300 mb-6">
-      If you notice visitors bouncing from the landing page without logging in, consider moving one strong visual and a brief explanation of each mode into the landing page, like:
+<section class="py-16 bg-gradient-to-b from-gray-50 via-white to-gray-100 dark:from-gray-800 dark:via-gray-900 dark:to-gray-800">
+  <div class="max-w-5xl mx-auto px-6 text-center">
+    <h2 class="text-3xl font-extrabold mb-4 text-gray-900 dark:text-white">Explore the Modes</h2>
+    <p class="text-gray-600 dark:text-gray-300 mb-12">
+      Get started your way — whether you're a developer, a business owner, or just need a quick PDF. Pick the mode that fits.
     </p>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left border border-gray-300 dark:border-gray-700 rounded overflow-hidden">
-        <thead class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100">
-          <tr>
-            <th class="py-3 px-4 font-semibold">Mode</th>
-            <th class="py-3 px-4 font-semibold">Summary</th>
-          </tr>
-        </thead>
-        <tbody class="text-gray-800 dark:text-gray-200">
-          <tr class="border-t border-gray-200 dark:border-gray-700">
-            <td class="py-3 px-4 font-medium">Shopify</td>
-            <td class="py-3 px-4">Auto-generate branded invoices via webhooks</td>
-          </tr>
-          <tr class="border-t border-gray-200 dark:border-gray-700">
-            <td class="py-3 px-4 font-medium">Friendly Mode</td>
-            <td class="py-3 px-4">Fill a form, get a PDF — no tech needed</td>
-          </tr>
-          <tr class="border-t border-gray-200 dark:border-gray-700">
-            <td class="py-3 px-4 font-medium">Dev Mode</td>
-            <td class="py-3 px-4">Post JSON or HTML, test and preview instantly</td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="grid gap-6 sm:grid-cols-2 md:grid-cols-3 text-left">
+      
+      <!-- Shopify Mode -->
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow hover:shadow-xl transition">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="bg-green-100 dark:bg-green-900 p-2 rounded-full">
+            <svg class="w-6 h-6 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24"><path d="M3 3h18v18H3V3z"/></svg>
+          </div>
+          <h3 class="text-xl font-bold">Shopify</h3>
+        </div>
+        <p class="text-gray-700 dark:text-gray-300">
+          Auto-generate branded invoices using webhooks — no app install or theme edits needed.
+        </p>
+      </div>
+
+      <!-- Friendly Mode -->
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow hover:shadow-xl transition">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="bg-blue-100 dark:bg-blue-900 p-2 rounded-full">
+            <svg class="w-6 h-6 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24"><path d="M9 12h6M9 16h6M9 8h6M4 6h16v12H4z"/></svg>
+          </div>
+          <h3 class="text-xl font-bold">Friendly Mode</h3>
+        </div>
+        <p class="text-gray-700 dark:text-gray-300">
+          Just fill out a simple form — no technical skills required. Generate PDFs instantly.
+        </p>
+      </div>
+
+      <!-- Dev Mode -->
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow hover:shadow-xl transition">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="bg-purple-100 dark:bg-purple-900 p-2 rounded-full">
+            <svg class="w-6 h-6 text-purple-600 dark:text-purple-300" fill="none" stroke="currentColor" stroke-width="2"
+                 viewBox="0 0 24 24"><path d="M3 4a1 1 0 011-1h2a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM14 4h6a1 1 0 011 1v6m-7 7l3 3 3-3M17 13v6"/></svg>
+          </div>
+          <h3 class="text-xl font-bold">Dev Mode</h3>
+        </div>
+        <p class="text-gray-700 dark:text-gray-300">
+          Send JSON or raw HTML — preview your PDF in real time using the API or browser.
+        </p>
+      </div>
+
     </div>
   </div>
 </section>
