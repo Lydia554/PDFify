@@ -72,12 +72,11 @@
     </div>
   </div>
 </section>
-
 <!-- Features -->
 <section class="py-20 bg-gradient-to-b from-gray-100 to-white dark:from-gray-900 dark:to-gray-800 text-center px-6">
   <div class="max-w-6xl mx-auto">
     <h2 class="text-4xl font-extrabold mb-16 text-gray-900 dark:text-white fade-in">What Makes <span class="gradient-text">PDFify</span> Unique?</h2>
-    <div class="grid md:grid-cols-3 gap-12 max-w-5xl mx-auto">
+    <div class="grid md:grid-cols-4 gap-12 max-w-5xl mx-auto">
 
       <!-- Shopify Integration -->
       <div class="bg-white dark:bg-gray-800 rounded-3xl p-10 shadow-lg hover:shadow-2xl transition cursor-default">
@@ -105,6 +104,16 @@
         <h3 class="text-2xl font-bold mb-4">Premium Templates</h3>
         <p class="text-gray-700 dark:text-gray-300 text-lg">Unlock beautiful invoice designs with logos, product images, and more for your store.</p>
       </div>
+
+      <!-- Dev Mode -->
+      <div class="bg-white dark:bg-gray-800 rounded-3xl p-10 shadow-lg hover:shadow-2xl transition cursor-default">
+        <div class="mx-auto w-20 h-20 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mb-8 text-blue-600 dark:text-blue-300">
+          <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+        </div>
+        <h3 class="text-2xl font-bold mb-4">Dev Mode</h3>
+        <p class="text-gray-700 dark:text-gray-300 text-lg">Access developer-friendly tools and API debugging features to build and test with ease.</p>
+      </div>
+
     </div>
   </div>
 </section>
@@ -126,15 +135,13 @@
       <p class="text-lg mb-8">Basic PDF template with confidential watermark.</p>
       <ul class="mb-8 space-y-3 text-gray-700 dark:text-gray-400">
         <li>✔ Basic template</li>
-        <li>✔ 'Confidential' watermark</li>
+        <li>✔ Watermarks</li>
         <li>✔ API access</li>
         <li>✘ No premium templates</li>
         <li>✘ No product images</li>
+        <li>📄 30 PDF pages/month</li>
       </ul>
-      <div class="text-4xl font-extrabold mb-6">$0 <span class="text-base font-normal">/month</span></div>
-      <button class="w-full bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-200 font-semibold rounded-full py-4 hover:bg-gray-400 dark:hover:bg-gray-600 transition">
-        Get Started
-      </button>
+      <div class="text-4xl font-extrabold mb-6">€0 <span class="text-base font-normal">/month</span></div>
     </div>
 
     <!-- Premium Plan -->
@@ -146,11 +153,11 @@
         <li>✔ Custom branding</li>
         <li>✔ Product images in invoices</li>
         <li>✔ Shopify webhook integration</li>
+        <li>📄 1,000 PDF pages/month</li>
       </ul>
-      <div class="text-4xl font-extrabold mb-6">$19 <span class="text-base font-normal">/month</span></div>
-      <button class="w-full bg-gray-900 text-yellow-400 font-semibold rounded-full py-4 hover:bg-gray-800 transition">
-        Upgrade Now
-      </button>
+      <div class="text-4xl font-extrabold mb-6">
+        <span class="line-through text-red-600 mr-3">€9.99</span> €4.99 <span class="text-base font-normal">/month</span>
+      </div>
     </div>
 
     <!-- Pro Plan -->
@@ -161,11 +168,11 @@
         <li>✔ All Premium features</li>
         <li>✔ Priority support</li>
         <li>✔ Higher API rate limits</li>
+        <li>📄 10,000 PDF pages/month</li>
       </ul>
-      <div class="text-4xl font-extrabold mb-6">$49 <span class="text-base font-normal">/month</span></div>
-      <button class="w-full bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-200 font-semibold rounded-full py-4 hover:bg-gray-400 dark:hover:bg-gray-600 transition">
-        Contact Sales
-      </button>
+      <div class="text-4xl font-extrabold mb-6">
+        <span class="line-through text-red-600 mr-3">€49.99</span> €29.99 <span class="text-base font-normal">/month</span>
+      </div>
     </div>
 
   </div>
@@ -215,44 +222,6 @@ Content-Type: application/json
   </div>
 </section>
 
-
-
-
-  <!-- Pricing Grid -->
-<section id="pricing" class="py-16 bg-gray-50 dark:bg-gray-800">
-  <div class="max-w-6xl mx-auto px-4 text-center">
-    <h2 class="text-3xl font-bold mb-10">Choose Your Plan</h2>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
-      
-      <div class="p-6 bg-white dark:bg-gray-900 rounded shadow hover:shadow-lg border dark:border-gray-700">
-        <h3 class="text-xl font-bold mb-2">Free</h3>
-        <p class="mb-2">✅ 30 PDFs/month,</p>
-        <p class="mb-2">❌ No branding control, watermarked PDFs, no styling options</p>
-        <p class="mb-6">💬 Basic support</p>
-        <p class="text-2xl font-bold">€0</p>
-      </div>
-
-      <div class="p-6 bg-blue-50 dark:bg-blue-900 rounded shadow-lg border-2 border-blue-500">
-        <h3 class="text-xl font-bold mb-2">Premium</h3>
-        <p class="mb-2">✅ 1000 PDFs/month</p>
-        <p class="mb-2">✅ Branding control, no watermark, more features</p>
-        <p class="mb-6">⚡ Priority support</p>
-        <p class="text-red-600 line-through mb-1">€9.99/mo</p>
-        <p class="text-2xl font-bold">€4.99/mo</p>
-      </div>
-
-      <div class="p-6 bg-yellow-50 dark:bg-yellow-900 rounded shadow hover:shadow-lg border dark:border-yellow-600">
-        <h3 class="text-xl font-bold mb-2">Pro</h3>
-        <p class="mb-2">✅ 10,000 PDFs/month</p>
-        <p class="mb-2">✅ Includes all Premium features</p>
-        <p class="mb-6">📞 Dedicated support</p>
-        <p class="text-red-600 line-through mb-1">€49.99/mo</p>
-        <p class="text-2xl font-bold">€29.99/mo</p>
-      </div>
-
-    </div>
-  </div>
-</section>
 
 
 
