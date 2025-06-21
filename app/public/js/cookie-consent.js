@@ -1,36 +1,63 @@
 window.addEventListener('DOMContentLoaded', () => {
-  const consent = localStorage.getItem('cookieConsent');
-  console.log('cookieConsent in localStorage:', consent);
-
-  if (!consent) {
-    console.log('No cookie consent found, showing banner...');
+  if (!localStorage.getItem('cookieConsent')) {
     const banner = document.createElement('div');
     banner.innerHTML = `
-      <div style="position:fixed;bottom:0;left:0;right:0;padding:1em;background:#f8f9fa;border-top:1px solid #ccc;z-index:10000;text-align:center">
-        We use cookies to improve your experience. <a href="/privacy-policy.html" target="_blank">Privacy Policy</a>.
-        <button id="accept-cookies" style="margin-left:1em;">Accept</button>
+      <div style="
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 1em 2em;
+        background: #222;
+        color: #eee;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        border-top: 3px solid #4CAF50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        z-index: 10000;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+      ">
+        <span>
+          We use cookies to improve your experience. 
+          <a href="/privacy-policy.html" target="_blank" style="color: #4CAF50; text-decoration: underline;">Privacy Policy</a>.
+        </span>
+        <button id="accept-cookies" style="
+          background-color: #4CAF50;
+          border: none;
+          color: white;
+          padding: 8px 16px;
+          font-size: 14px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+        ">
+          Accept
+        </button>
       </div>
     `;
     document.body.appendChild(banner);
 
-    document.getElementById('accept-cookies').addEventListener('click', () => {
-      console.log('Accept button clicked, setting cookieConsent to true');
+    const acceptBtn = document.getElementById('accept-cookies');
+    acceptBtn.addEventListener('click', () => {
       localStorage.setItem('cookieConsent', 'true');
 
-      // OPTIONAL: Send to backend if user is logged in or you want server-side record
       fetch('/api/user/consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ consent: true })
-      }).then(() => {
-        console.log('Consent recorded on backend');
-      }).catch((err) => {
-        console.error('Error sending consent to backend:', err);
-      });
+      }).catch(() => {});
 
       banner.remove();
     });
-  } else {
-    console.log('Cookie consent already given, no banner shown');
+
+    acceptBtn.addEventListener('mouseenter', () => {
+      acceptBtn.style.backgroundColor = '#45a049';
+    });
+    acceptBtn.addEventListener('mouseleave', () => {
+      acceptBtn.style.backgroundColor = '#4CAF50';
+    });
   }
 });
