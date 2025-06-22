@@ -19,23 +19,26 @@
     <div class="w-10 h-10 border-4 border-gray-600 border-l-indigo-500 rounded-full animate-spin"></div>
   </div>
 
-  <!-- Navigation -->
-  <nav class="flex justify-between items-center bg-gray-600 shadow-md rounded-md p-4 mb-8 sticky top-0 z-40 fade-in-up">
-    <div class="flex gap-3">
-      <a href="/api-guide"
-         class="flex items-center gap-1 px-3 py-2 text-indigo-300 bg-indigo-900 hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
-         📑 API Guide
-      </a>
-      <a href="/shopify-guide"
-         class="flex items-center gap-1 px-3 py-2 text-indigo-300 bg-indigo-900 hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
-         📑 Shopify Guide
-      </a>
-      <a href="#"
+  <!-- Header -->
+  <header class="bg-gray-700 shadow fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
+      <nav class="space-x-4">
+        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+        <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
+        <a href="/shopify-guide" class="text-gray-400 hover:text-purple-400">📑Shopify Guide</a>
+        <a href="/pdf-generator-demo" class="text-purple-400 font-semibold">📄 PDF Generator</a>
+        <a href="#"
          id="userDashboardLink"
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 bg-indigo-900 hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          👤User Dashboard
       </a>
+      </nav>
     </div>
+  </header>
+
+
+  
 
     <button id="logoutButton"
             class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md">
@@ -724,7 +727,15 @@ fetch('/get-stripe-key')
     background-color: #f4f7fb;
     color: #333;
   }
-
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
 
   h1 {
     text-align: center;
