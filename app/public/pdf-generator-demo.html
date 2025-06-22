@@ -21,7 +21,9 @@
 
 
   
-  <!-- Navigation -->
+   <!-- Header -->
+  <header class="bg-gray-700 shadow fixed top-0 left-0 right-0 z-50">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
   <nav class="flex justify-between items-center bg-gray-600 shadow-md rounded-md p-4 mb-8 sticky top-0 z-40 fade-in-up">
     <div class="flex gap-3">
       <a href="/api-guide"
@@ -44,6 +46,7 @@
      🚪 Logout
     </button>
   </nav>
+</header>
 
   <!-- Mode Toggle -->
   <div id="modeToggle" class="flex gap-4 mb-8 fade-in-up">
@@ -747,6 +750,16 @@ fetch('/get-stripe-key')
     margin-top: 10px;
     transition: background-color 0.3s;
   }
+
+  header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); /* dark navy to indigo to purple */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
 
   button:hover {
     background-color: #1976d2;
