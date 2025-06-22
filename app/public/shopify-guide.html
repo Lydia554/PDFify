@@ -13,7 +13,7 @@
 <body>
 
   <!-- Header -->
-  <header class="bg-gray-700 shadow fixed top-0 left-0 right-0 z-50">
+  <header">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
       <nav class="space-x-4">
@@ -229,15 +229,16 @@
       border-radius: 4px;
     }
 
-    header.bg-white {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: white;
-      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-      z-index: 1000;
-    }
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
 
     header .max-w-6xl {
       max-width: 72rem;
