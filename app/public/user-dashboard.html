@@ -13,20 +13,30 @@
 
 
   </head>
-  <body class="bg-gray-800 text-gray-200 font-mono">
-    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-      <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-    </div>
+<body class="bg-gray-900 text-gray-200 font-mono">
 
-    <!-- Navigation -->
-    <nav class="bg-gray-700 shadow p-4 mb-8">
-      <div class="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📑 API Guide</a>
-        <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📑 Shopify Guide</a>
-        <a href="/pdf-generator-demo" class="text-sm font-semibold px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">📄 PDF Generator</a>
-        <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-600 text-white rounded hover:bg-pink-700">🚪 Logout</button>
-      </div>
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
+    <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+
+  <!-- Header with Navigation -->
+  <header class="fixed top-0 left-0 right-0 z-50 shadow" style="background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);">
+    <nav class="max-w-4xl mx-auto px-4 py-3 flex flex-wrap justify-center gap-4">
+      <a href="/api-guide" class="text-sm font-semibold px-4 py-2 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+        📑 API Guide
+      </a>
+      <a href="/shopify-guide" class="text-sm font-semibold px-4 py-2 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+        📑 Shopify Guide
+      </a>
+      <a href="/pdf-generator-demo" class="text-sm font-semibold px-4 py-2 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+        📄 PDF Generator
+      </a>
+      <button id="logoutButton" class="text-sm font-semibold px-4 py-2 bg-pink-600 hover:bg-pink-700 rounded text-white transition duration-200">
+        🚪 Logout
+      </button>
     </nav>
+  </header>
+
 
     <main class="max-w-3xl mx-auto px-4">
       <h1 class="text-3xl font-bold mb-6 text-center">👋 Welcome Back!</h1>
@@ -398,6 +408,16 @@ fetchShopifyConnection();
 
 
   <style>
+
+    header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
 
 
 
