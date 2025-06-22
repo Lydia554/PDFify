@@ -6,13 +6,10 @@
   <title>Login</title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="js/cookie-consent.js"></script>
-    <link rel="icon" href="images/Icon.png" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="Icon.png">
-
 
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-  <section class="bg-gray-900 text-white py-20 text-center px-4 rounded shadow-lg w-full max-w-md">
+<body>
+
   <div class="container">
     <h1>Login</h1>
 
@@ -42,7 +39,7 @@
       <a href="/forgot-password.html">Forgot Password?</a> 
      
     </div>
-</section>
+
 
   </div>
 
@@ -116,31 +113,34 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
     });
   </script>
   
-
-  <style>
+ <style>
     body {
       font-family: 'Arial', sans-serif;
-      background: #f7f7f7;
+      background: #e5e7eb; 
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
       margin: 0;
     }
+
     .container {
-      background: #ffffff;
-      padding: 40px;
+      background: #111827; 
+      color: white;
+      padding: 80px 20px; 
       border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
       width: 100%;
       max-width: 450px;
       text-align: center;
     }
+
     h1 {
-      color: #5e60ce;
+      color: white;
       margin-bottom: 30px;
       font-size: 24px;
     }
+
     label {
       text-align: left;
       display: block;
@@ -148,19 +148,23 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
       margin: 12px 0 6px;
       font-size: 16px;
     }
+
     input {
       width: 100%;
       padding: 16px;
       margin-bottom: 20px;
-      border: 2px solid #ddd;
+      border: 2px solid #374151; 
       border-radius: 8px;
       font-size: 16px;
-      transition: border-color 0.3s;
+      background-color: #1f2937; 
+      color: white;
     }
+
     input:focus {
       border-color: #5e60ce;
       outline: none;
     }
+
     button {
       background-color: #5e60ce;
       color: white;
@@ -172,74 +176,82 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
       transition: background-color 0.3s;
       width: 100%;
     }
+
     button:hover {
       background-color: #4b4dbf;
     }
+
     .password-container {
-  position: relative;
-}
+      position: relative;
+    }
 
-.toggle-btn {
-  position: absolute;
-  right: 10px; 
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  color: #5e60ce;
-  padding: 0; 
-  line-height: 1; 
-}
+    .toggle-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      color: #5e60ce;
+      padding: 0;
+      line-height: 1;
+    }
 
-.extra-links {
-    margin-top: 12px;
-    font-size: 14px;
-    color: #5e60ce;
-  }
+    .extra-links {
+      margin-top: 12px;
+      font-size: 14px;
+      color: #c7d2fe;
+    }
 
-  .extra-links a {
-    color: #5e60ce;
-    text-decoration: underline;
-    margin: 0 4px;
-  }
+    .extra-links a {
+      color: #c7d2fe;
+      text-decoration: underline;
+      margin: 0 4px;
+    }
 
-  .extra-links a:hover {
-    color: #4b4dbf;
-  }
+    .extra-links a:hover {
+      color: #a5b4fc;
+    }
 
+    .register-link {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #c7d2fe;
+    }
+
+    .register-link a {
+      color: #c7d2fe;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .register-link a:hover {
+      color: #a5b4fc;
+    }
 
     .result {
       margin-top: 20px;
       font-size: 16px;
-      color: #333;
+      color: #f87171; 
     }
-    .register-link {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #5e60ce;
-    }
-    .register-link a {
-      color: #5e60ce;
-      text-decoration: underline;
-      cursor: pointer;
-    }
-    .register-link a:hover {
-      color: #4b4dbf;
-    }
-    
+
     @media (max-width: 480px) {
       .container {
         padding: 30px;
       }
+
       h1 {
         font-size: 22px;
       }
+
       label {
         font-size: 14px;
       }
-      input, button {
+
+      input,
+      button {
         padding: 14px;
         font-size: 14px;
       }
