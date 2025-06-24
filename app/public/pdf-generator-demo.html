@@ -83,14 +83,15 @@
     </div>
 
     <div class="flex gap-4">
-      <button onclick="sendRequest(true)" 
-        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
-        🔍 Preview
-      </button>
-      <button onclick="sendRequest(false)" 
-        class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
-        ⬇️ Download
-      </button>
+      <button id="previewDevBtn" 
+  class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
+  🔍 Preview
+</button>
+<button id="generateDevBtn"
+  class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
+  ⬇️ Download
+</button>
+
     </div>
 
     <p id="result" class="text-white-700 mt-4"></p>
