@@ -7,6 +7,7 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
+const { generateZugferdXML } = require('../utils/zugferdHelper');
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -286,6 +287,7 @@ const watermarkHTML =
 }
 
 
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
@@ -312,7 +314,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-   
     const now = new Date();
     if (
       !user.previewLastReset ||
@@ -338,6 +339,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
 
+    // Generate ZUGFeRD XML
+    const zugferdXml = generateZugferdXML(invoiceData);
+    const xmlPath = path.join(pdfDir, `Invoice_${safeOrderId}.xml`);
+    fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
+
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const browser = await puppeteer.launch({
       headless: true,
@@ -345,7 +351,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     const page = await browser.newPage();
 
-   
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
@@ -354,26 +359,26 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
-   const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+    const html = generateInvoiceHTML({ ...invoiceData, isPreview });
 
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({
-  path: pdfPath,
-  format: "A4",
-  printBackground: true,
-  displayHeaderFooter: true,     
-  headerTemplate: `<div></div>`,  
-  footerTemplate: `              // <-- footer with page count
-    <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
-      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-    </div>`,
-  margin: {                       
-    top: "20mm",
-    bottom: "20mm",
-    left: "10mm",
-    right: "10mm",
-  },
-});
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      displayHeaderFooter: true,     
+      headerTemplate: `<div></div>`,  
+      footerTemplate: `
+        <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
+          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+        </div>`,
+      margin: {                       
+        top: "20mm",
+        bottom: "20mm",
+        left: "10mm",
+        right: "10mm",
+      },
+    });
 
     await browser.close();
 
@@ -381,15 +386,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
 
- 
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
           user.previewCount += 1;
         } else {
-      
           if (user.usageCount + pageCount > user.maxUsage) {
             fs.unlinkSync(pdfPath);
+            fs.unlinkSync(xmlPath);
             return res.status(403).json({
               error: "Monthly usage limit reached. Upgrade to premium for more pages.",
             });
@@ -398,9 +402,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         }
       }
     } else {
- 
       if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
+        fs.unlinkSync(xmlPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
@@ -415,7 +419,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         console.error("Download error:", err);
       }
       fs.unlinkSync(pdfPath);
+      fs.unlinkSync(xmlPath); // Clean up XML after sending PDF
     });
+
   } catch (error) {
     console.error("PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
