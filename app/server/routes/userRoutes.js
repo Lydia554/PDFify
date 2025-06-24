@@ -116,7 +116,7 @@ router.get("/usage", authenticate, dualAuth, async (req, res) => {
 });
 
 
-router.get("/me", authenticate, dualAuth,  async (req, res) => {
+router.get("/me", authenticate, dualAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
 
@@ -132,12 +132,14 @@ router.get("/me", authenticate, dualAuth,  async (req, res) => {
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
+      plan: user.plan || "Free",  
     });
   } catch (error) {
     console.error("Error fetching user details:", error);
     res.status(500).json({ error: "Error fetching user details" });
   }
 });
+
 
 router.put("/update", authenticate, dualAuth, async (req, res) => {
   const { email, password } = req.body;
