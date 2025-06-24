@@ -286,8 +286,6 @@ const watermarkHTML =
 `;
 }
 
-
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
@@ -341,8 +339,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     // Generate ZUGFeRD XML
     const zugferdXml = generateZugferdXML(invoiceData);
+
+    // *** LOG GENERATED XML TO CONSOLE ***
+    console.log("Generated ZUGFeRD XML:");
+    console.log(zugferdXml);
+
     const xmlPath = path.join(pdfDir, `Invoice_${safeOrderId}.xml`);
-    fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
+    fs.writeFileSync(xmlPath, zugferdXml, "utf-8");
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const browser = await puppeteer.launch({
@@ -354,7 +357,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
-      invoiceData.isBasicUser = true;  
+      invoiceData.isBasicUser = true;
     } else {
       invoiceData.isBasicUser = false;
     }
@@ -366,13 +369,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       path: pdfPath,
       format: "A4",
       printBackground: true,
-      displayHeaderFooter: true,     
-      headerTemplate: `<div></div>`,  
+      displayHeaderFooter: true,
+      headerTemplate: `<div></div>`,
       footerTemplate: `
         <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
           Page <span class="pageNumber"></span> of <span class="totalPages"></span>
         </div>`,
-      margin: {                       
+      margin: {
         top: "20mm",
         bottom: "20mm",
         left: "10mm",
@@ -414,6 +417,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     await user.save();
 
+    // *** RETURN XML IN RESPONSE FOR TESTING (REMOVE OR COMMENT OUT LATER) ***
+    // return res.json({ message: "Invoice generated", zugferdXml });
+
+    // Original download response:
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Download error:", err);
@@ -421,11 +428,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       fs.unlinkSync(pdfPath);
       fs.unlinkSync(xmlPath); // Clean up XML after sending PDF
     });
-
   } catch (error) {
     console.error("PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-module.exports = router;
