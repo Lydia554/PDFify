@@ -151,13 +151,14 @@
     }
 
 
-    function displayUserInfo(data) {
-      document.getElementById("email").textContent = data.email || "";
-      document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || "");
-      document.getElementById("usageCount").textContent = data.usageCount || 0;
-      document.getElementById("maxUsage").textContent = data.maxUsage || 0;
-      document.getElementById("premiumStatus").textContent = data.isPremium ? "Premium" : "Free";
-    }
+function displayUserInfo(data) {
+  document.getElementById("email").textContent = data.email || "";
+  document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || "");
+  document.getElementById("usageCount").textContent = data.usageCount || 0;
+  document.getElementById("maxUsage").textContent = data.maxUsage || 0;
+  document.getElementById("premiumStatus").textContent = data.plan || "Free";
+}
+
 
     async function fetchUserData() {
       const apiKey = getApiKey();
@@ -331,7 +332,7 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 
 
 
-    // Fetch Shopify connection info and update UI
+   
 async function fetchShopifyConnection() {
   try {
     const response = await api.get("/shopify/connection");

@@ -92,7 +92,6 @@ router.post("/consent", authenticate, dualAuth, async (req, res) => {
 });
 
 
-
 router.get("/usage", authenticate, dualAuth, async (req, res) => {
   const user = req.user;
 
@@ -100,14 +99,22 @@ router.get("/usage", authenticate, dualAuth, async (req, res) => {
     return res.status(404).json({ error: "User not found" });
   }
 
+
+  let plan = "Free"; 
+  if (user.isPremium) {
+    plan = "Premium";
+  }
+
+
   res.json({
     email: user.email,
     apiKey: user.apiKey,
     usageCount: user.usageCount,
     maxUsage: user.maxUsage,
-    isPremium: user.isPremium,
+    plan: plan, 
   });
 });
+
 
 router.get("/me", authenticate, dualAuth,  async (req, res) => {
   try {
