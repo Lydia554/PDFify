@@ -340,9 +340,17 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     // Generate ZUGFeRD XML
-    const zugferdXml = generateZugferdXML(invoiceData);
-    const xmlPath = path.join(pdfDir, `Invoice_${safeOrderId}.xml`);
-    fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
+  
+const zugferdXml = generateZugferdXML(invoiceData);
+
+// Log XML to console so you can see it during debugging
+console.log("----- Generated ZUGFeRD XML Start -----");
+console.log(zugferdXml);
+console.log("----- Generated ZUGFeRD XML End -----");
+
+const xmlPath = path.join(pdfDir, `Invoice_${safeOrderId}.xml`);
+fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
+
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const browser = await puppeteer.launch({
