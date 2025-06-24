@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PDFify Generator</title>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/cookie-consent.js"></script>
@@ -21,7 +21,7 @@
 
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-50 shadow"">
-  <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+  <div class="max-w-3xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
@@ -120,25 +120,22 @@
     <p id="friendlyResult" class="text-gray-300 mt-4"></p>
   </div>
 
-<!-- Premium Upgrade -->
-<section class="mt-12 text-center fade-in-up">
- <h3 class="text-xl sm:text-2xl font-semibold text-fuchsia-400 tracking-wide mb-4 drop-shadow-md animate-bounce">
-  ✨ Upgrade to Premium: More Features & Power!
-</h3>
-  <button id="payment-button" 
-    class="inline-block bg-fuchsia-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-fuchsia-700 transition-all shadow-lg ">
-    💎 Pay for Premium Access
-  </button>
-  <p id="payment-result" class="mt-4 text-gray-300"></p>
-</section>
-
+  <!-- Premium Upgrade -->
+  <section class="mt-12 text-center fade-in-up">
+    <h3 class="text-xl font-semibold text-gray-100 mb-4">Upgrade to Premium (More Generations More Features)</h3>
+    <button id="payment-button" 
+      class="inline-block bg-fuchsia-600 text-white px-6 py-3 rounded-md font-semibold hover:bg-fuchsia-700 transition-all shadow-lg animate-bounce">
+      💎 Pay for Premium Access
+    </button>
+    <p id="payment-result" class="mt-4 text-gray-300"></p>
+  </section>
 
   <!-- Pro Upgrade -->
-  <section class="mt-12 text-center fade-in-up border-t border-gray-600 pt-8 ">
-    <h3 class="text-2xl font-bold text-indigo-300 mb-2 animate-pulse">Go Pro: Ultimate Access</h3>
+  <section class="mt-12 text-center fade-in-up border-t border-gray-600 pt-8">
+    <h3 class="text-2xl font-bold text-indigo-300 mb-2">Go Pro: Ultimate Access</h3>
  
     <button id="pro-payment-button"
-      class="inline-block bg-indigo-600 text-white px-8 py-4 rounded-md font-bold hover:bg-indigo-700 transition-all shadow-lg ">
+      class="inline-block bg-indigo-600 text-white px-8 py-4 rounded-md font-bold hover:bg-indigo-700 transition-all shadow-lg animate-pulse">
       🚀 Upgrade to Pro Plan
     </button>
   </section>
@@ -610,9 +607,9 @@ fetch('/get-stripe-key')
   .then(data => {
     const stripe = Stripe(data.stripePublishableKey);
 
-    
+    // Premium Plan Button Handler
     document.getElementById('payment-button').addEventListener('click', async () => {
-      const apiKey = document.getElementById('apiKey').textContent.trim() || localStorage.getItem('apiKey');
+      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
       if (!apiKey) {
         alert('Please provide your API key');
         return;
@@ -626,10 +623,10 @@ fetch('/get-stripe-key')
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            email: data.email, 
+            email: "user@example.com", 
             plan_type: "premium"   
           }),
-          
+          credentials: "include",
         });
 
         if (!response.ok) {
@@ -660,7 +657,7 @@ fetch('/get-stripe-key')
 
     
     document.getElementById('pro-payment-button').addEventListener('click', async () => {
-      const apiKey = document.getElementById('apiKey').textContent.trim() || localStorage.getItem('apiKey');
+      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
       if (!apiKey) {
         alert('Please provide your API key');
         return;
@@ -674,10 +671,10 @@ fetch('/get-stripe-key')
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            email: data.email,
+            email: "user@example.com", 
             plan_type: "pro"   
           }),
-         
+          credentials: "include",
         });
 
         if (!response.ok) {
@@ -695,13 +692,11 @@ fetch('/get-stripe-key')
           return;
         }
 
-      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
-if (error) {
-  console.error("Stripe redirectToCheckout error:", error);
-  alert('Error during checkout: ' + error.message);
-}
-
-
+        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (error) {
+          console.log(error);
+          alert('Error during checkout');
+        }
       } catch (err) {
         console.error("Unexpected error:", err);
         alert('An unexpected error occurred. Please try again.');
@@ -710,63 +705,6 @@ if (error) {
 
   })
   .catch(error => console.error('Error fetching Stripe key:', error));
-
-  
-
-async function fetchUserPlan() {
-  try {
-    const apiKey = localStorage.getItem("apiKey");
-    if (!apiKey) return; // no key, no plan
-
-    const response = await axios.get("/api/auth/me", {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
-
-    const user = response.data;
-    const plan = (user.planType || "Free").toLowerCase();
-
-    const premiumBtn = document.getElementById("payment-button");
-    const proBtn = document.getElementById("pro-payment-button");
-    const resultText = document.getElementById("payment-result");
-
-    // Helper to disable button with label
-    const disableBtn = (btn, label) => {
-      btn.disabled = true;
-      btn.classList.add("opacity-50", "cursor-not-allowed");
-      btn.innerText = label;
-    };
-
-    // Helper to enable button with label
-    const enableBtn = (btn, label) => {
-      btn.disabled = false;
-      btn.classList.remove("opacity-50", "cursor-not-allowed");
-      btn.innerText = label;
-    };
-
-    if (plan === "pro") {
-      // Disable both buttons for Pro user
-      disableBtn(premiumBtn, "✅ Pro User");
-      disableBtn(proBtn, "✅ Pro User");
-      resultText.textContent = "You have Pro access — thank you!";
-    } else if (plan === "premium") {
-      // Disable premium button only, enable pro button
-      disableBtn(premiumBtn, "✅ You're already upgraded");
-      enableBtn(proBtn, "🚀 Upgrade to Pro Plan");
-      resultText.textContent = "You have Premium access — enjoy!";
-    } else {
-      // Free user — enable both buttons
-      enableBtn(premiumBtn, "💎 Pay for Premium Access");
-      enableBtn(proBtn, "🚀 Upgrade to Pro Plan");
-      resultText.textContent = "";
-    }
-  } catch (error) {
-    console.error("Error fetching plan type:", error);
-  }
-}
-
-document.addEventListener("DOMContentLoaded", fetchUserPlan);
 
 
 
@@ -793,7 +731,7 @@ document.addEventListener("DOMContentLoaded", fetchUserPlan);
     padding: 0;
     background-color: #f4f7fb;
     color: #333;
-    margin-top: 3%;
+    margin-top: 20%;
   }
 
 
