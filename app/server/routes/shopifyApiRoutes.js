@@ -15,7 +15,6 @@ require('dotenv').config();
 
 
 function generateInvoiceHTML(invoiceData, isPremium) {
-  const FORCE_PREMIUM = true; 
   const premium = FORCE_PREMIUM || isPremium;
 
   const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
