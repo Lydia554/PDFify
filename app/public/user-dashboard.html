@@ -217,11 +217,11 @@ function displayUserInfo(data) {
     });
 
 
-document.addEventListener("DOMContentLoaded", () => {
-  const upgradeBtn = document.getElementById("upgradeSubscriptionButton");
-  const downgradeBtn = document.getElementById("downgradeSubscriptionButton");
-  const resultMessage = document.getElementById("result");
+const upgradeBtn = document.getElementById("upgradeSubscriptionButton");
+const downgradeBtn = document.getElementById("downgradeSubscriptionButton");
+const resultMessage = document.getElementById("result");
 
+document.addEventListener("DOMContentLoaded", () => {
   if (!upgradeBtn || !downgradeBtn) {
     console.error("Buttons not found");
     return;
@@ -230,6 +230,8 @@ document.addEventListener("DOMContentLoaded", () => {
   upgradeBtn.addEventListener("click", () => handleSubscriptionChange("upgrade"));
   downgradeBtn.addEventListener("click", () => handleSubscriptionChange("downgrade"));
 });
+
+
 
 
     async function handleSubscriptionChange(type) {
