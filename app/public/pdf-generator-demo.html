@@ -630,7 +630,7 @@ fetch('/api/get-stripe-key')
     const premiumBtn = document.getElementById('payment-button');
     const proBtn = document.getElementById('pro-payment-button');
 
-    // Disable buttons based on planType
+    
     if (userData.planType === 'premium') {
       premiumBtn.disabled = true;
       premiumBtn.textContent += ' (Current Plan)';
@@ -957,33 +957,77 @@ button:disabled {
     }
   }
 
-  /* Responsive styles */
-  @media (max-width: 600px) {
-    body {
-      padding: 10px;
-    }
-
-    h1 {
-      font-size: 20px;
-    }
-
-    button {
-      font-size: 14px;
-      padding: 10px;
-    }
-
-    label, select, input, textarea {
-      font-size: 14px;
-    }
-
-    textarea {
-      min-height: 100px;
-    }
-
-    #logoutButton, #payment-button, #payment-result {
-      width: 100%;
-    }
+@media (max-width: 768px) {
+  body {
+    margin-top: 10%;
+    padding: 10px;
   }
+
+  h1 {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+
+  button {
+    font-size: 14px;
+    padding: 10px 16px;
+  }
+
+  #logoutButton {
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  label {
+    font-size: 13px;
+  }
+
+  select, input, textarea {
+    font-size: 13px;
+    padding: 10px;
+  }
+
+  textarea {
+    min-height: 250px;
+  }
+
+  .toggle-container {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  #modeToggle button {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  .api-docs-button {
+    width: 100%;
+    text-align: center;
+    font-size: 14px;
+  }
+
+  .premium-only {
+    font-size: 18px;
+    padding: 8px;
+  }
+
+  .premium-only::after {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+
+  header {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  #result,
+  #payment-result {
+    font-size: 14px;
+  }
+}
+
 </style>
 
 
