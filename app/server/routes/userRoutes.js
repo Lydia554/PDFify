@@ -92,23 +92,28 @@ router.post("/consent", authenticate, dualAuth, async (req, res) => {
 });
 
 router.get("/usage", authenticate, dualAuth, async (req, res) => {
-  const user = req.user;
+  try {
+    const user = await User.findById(req.user.userId);
 
-  if (!user) {
-    return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const planType = user.planType || "Free";
+
+    res.json({
+      email: user.email,
+      apiKey: user.apiKey,
+      usageCount: user.usageCount,
+      maxUsage: user.maxUsage,
+      planType: planType,
+    });
+  } catch (error) {
+    console.error("Error in /usage route:", error);
+    res.status(500).json({ error: "Server error" });
   }
-
-
-  const planType = user.planType || "Free";
-
-  res.json({
-    email: user.email,
-    apiKey: user.apiKey,
-    usageCount: user.usageCount,
-    maxUsage: user.maxUsage,
-    planType: planType, 
-  });
 });
+
 
 
 router.get("/me", authenticate, dualAuth, async (req, res) => {
