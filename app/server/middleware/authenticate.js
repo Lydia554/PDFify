@@ -51,6 +51,7 @@ if (!user || user.deleted) {
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
+       planType: user.planType || "Free", 
     };
 
    
