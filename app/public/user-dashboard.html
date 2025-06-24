@@ -156,8 +156,9 @@ function displayUserInfo(data) {
   document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || "");
   document.getElementById("usageCount").textContent = data.usageCount || 0;
   document.getElementById("maxUsage").textContent = data.maxUsage || 0;
-  document.getElementById("premiumStatus").textContent = data.plan || "Free";
+  document.getElementById("premiumStatus").textContent = data.planType || "Free";
 }
+
 
 
     async function fetchUserData() {
