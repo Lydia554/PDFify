@@ -654,7 +654,7 @@ fetch('/api/get-stripe-key')
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            email: userData.email,
+            email: user.email,
             plan_type: 'premium'
           }),
           credentials: 'include',
@@ -696,7 +696,7 @@ fetch('/api/get-stripe-key')
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            email: userData.email,
+            email: user.email,
             plan_type: 'pro'
           }),
           credentials: 'include',
@@ -823,6 +823,10 @@ fetch('/api/get-stripe-key')
     background-color: #f50057;
   }
 
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 
   #result {
