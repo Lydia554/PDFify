@@ -179,17 +179,20 @@ friendlyBtn.addEventListener('click', () => {
   devBtn.classList.remove('active');
   devSection.style.display = 'none';
   friendlySection.style.display = 'block';
+});
 
+document.addEventListener("DOMContentLoaded", () => {
+  // Fade-in animation for elements with fade-in-up class
+  document.querySelectorAll('.fade-in-up').forEach(el => {
+    el.classList.add('opacity-0');
+    setTimeout(() => el.classList.remove('opacity-0'), 50);
+  });
 
-    document.addEventListener("DOMContentLoaded", () => {
-      document.querySelectorAll('.fade-in-up').forEach(el => {
-        el.classList.add('opacity-0');
-        setTimeout(() => el.classList.remove('opacity-0'), 50);
-      });
-    });
+  // Fetch user plan info and update buttons/text accordingly
+  fetchUserPlan();
+});
 
-
-    async function fetchUserPlan() {
+async function fetchUserPlan() {
   try {
     const apiKey = localStorage.getItem("apiKey");
     if (!apiKey) return;
@@ -207,7 +210,6 @@ friendlyBtn.addEventListener('click', () => {
     const proBtn = document.getElementById("pro-payment-button");
     const resultText = document.getElementById("payment-result");
 
-   
     const disableBtn = (btn, label) => {
       btn.disabled = true;
       btn.classList.add("opacity-50", "cursor-not-allowed");
@@ -236,18 +238,11 @@ friendlyBtn.addEventListener('click', () => {
 
       resultText.textContent = "";
     }
-
   } catch (error) {
     console.error("Error fetching plan type:", error);
   }
 }
 
-
-document.addEventListener("DOMContentLoaded", fetchUserPlan);
-
-
-  
-});
 
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {

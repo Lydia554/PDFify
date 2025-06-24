@@ -217,47 +217,47 @@ function displayUserInfo(data) {
     });
 
 
-    const upgradeBtn = document.getElementById("upgradeSubscriptionButton");
-    const downgradeBtn = document.getElementById("downgradeSubscriptionButton");
-    const resultMessage = document.getElementById("result");
+async function handleSubscriptionChange(type) {
+  const button = type === "upgrade" ? upgradeBtn : downgradeBtn;
+  button.disabled = true;
+  resultMessage.textContent = "";
 
-    async function handleSubscriptionChange(type) {
-      const button = type === "upgrade" ? upgradeBtn : downgradeBtn;
-      button.disabled = true;
-      resultMessage.textContent = "";
+  try {
+    if (type === "upgrade") {
+      const stripeKeyResponse = await api.get("/get-stripe-key");
+      const stripe = Stripe(stripeKeyResponse.data.stripePublishableKey);
 
-      try {
-        if (type === "upgrade") {
-          const stripeKeyResponse = await api.get("/get-stripe-key");
-          const stripe = Stripe(stripeKeyResponse.data.stripePublishableKey);
+      const response = await api.post("/stripe/create-checkout-session", {
+        email: document.getElementById("email").textContent,
+        plan: "premium",
+      });
 
-          const response = await api.post("/stripe/create-checkout-session", {
-            email: document.getElementById("email").textContent,
-            plan: "premium",
-          });
-
-          if (response.data.id) {
-            const { error } = await stripe.redirectToCheckout({ sessionId: response.data.id });
-            if (error) {
-              resultMessage.textContent = "Failed to redirect to Stripe. Please try again.";
-            }
-          } else {
-            resultMessage.textContent = "Failed to create checkout session. Please try again.";
-          }
-        } else {
-          const response = await api.post("/stripe/unsubscribe");
-          if (response.status === 200) {
-            resultMessage.textContent = response.data.message;
-            await fetchUserData();
-          }
+      if (response.data.id) {
+        const { error } = await stripe.redirectToCheckout({ sessionId: response.data.id });
+        if (error) {
+          resultMessage.textContent = "Failed to redirect to Stripe. Please try again.";
         }
-      } catch (error) {
-        console.error(`Failed to ${type === "upgrade" ? "upgrade" : "cancel"} subscription:`, error);
-        resultMessage.textContent = `Failed to ${type === "upgrade" ? "upgrade" : "cancel"} subscription. Please try again.`;
-      } finally {
-        button.disabled = false;
+        
+      } else {
+        resultMessage.textContent = "Failed to create checkout session. Please try again.";
+      }
+    } else {
+      
+      const response = await api.post("/stripe/unsubscribe");
+      if (response.status === 200) {
+        resultMessage.textContent = response.data.message;
+        await fetchUserData();
+        await fetchUserPlan(); 
       }
     }
+  } catch (error) {
+    console.error(`Failed to ${type === "upgrade" ? "upgrade" : "cancel"} subscription:`, error);
+    resultMessage.textContent = `Failed to ${type === "upgrade" ? "upgrade" : "cancel"} subscription. Please try again.`;
+  } finally {
+    button.disabled = false;
+  }
+}
+
 
     upgradeBtn.addEventListener("click", () => handleSubscriptionChange("upgrade"));
     downgradeBtn.addEventListener("click", () => handleSubscriptionChange("downgrade"));
