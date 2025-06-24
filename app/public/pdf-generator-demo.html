@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PDFify Generator</title>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/cookie-consent.js"></script>
@@ -470,8 +470,6 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 
 
 
-  
-
 async function connectShopify(domain, token) {
         const apiKey = localStorage.getItem('apiKey');
 
@@ -605,7 +603,7 @@ fetch('/get-stripe-key')
 
     
     document.getElementById('payment-button').addEventListener('click', async () => {
-      const apiKey = document.getElementById('apiKey').textContent.trim() || localStorage.getItem('apiKey');
+      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
       if (!apiKey) {
         alert('Please provide your API key');
         return;
@@ -619,10 +617,10 @@ fetch('/get-stripe-key')
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            email: data.email, 
-            plan: "premium"   
+            email: "user@example.com", 
+            plan_type: "premium"   
           }),
-          
+          credentials: "include",
         });
 
         if (!response.ok) {
@@ -653,7 +651,7 @@ fetch('/get-stripe-key')
 
     
     document.getElementById('pro-payment-button').addEventListener('click', async () => {
-      const apiKey = document.getElementById('apiKey').textContent.trim() || localStorage.getItem('apiKey');
+      const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
       if (!apiKey) {
         alert('Please provide your API key');
         return;
@@ -667,10 +665,10 @@ fetch('/get-stripe-key')
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            email: data.email,
-            plan: "pro"   
+            email: "user@example.com", 
+            plan_type: "pro"   
           }),
-         
+          credentials: "include",
         });
 
         if (!response.ok) {
@@ -688,13 +686,11 @@ fetch('/get-stripe-key')
           return;
         }
 
-      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
-if (error) {
-  console.error("Stripe redirectToCheckout error:", error);
-  alert('Error during checkout: ' + error.message);
-}
-
-
+        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (error) {
+          console.log(error);
+          alert('Error during checkout');
+        }
       } catch (err) {
         console.error("Unexpected error:", err);
         alert('An unexpected error occurred. Please try again.');
@@ -703,63 +699,6 @@ if (error) {
 
   })
   .catch(error => console.error('Error fetching Stripe key:', error));
-
-  
-
-async function fetchUserPlan() {
-  try {
-    const apiKey = localStorage.getItem("apiKey");
-    if (!apiKey) return; // no key, no plan
-
-    const response = await axios.get("/api/auth/me", {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
-
-    const user = response.data;
-    const plan = (user.planType || "Free").toLowerCase();
-
-    const premiumBtn = document.getElementById("payment-button");
-    const proBtn = document.getElementById("pro-payment-button");
-    const resultText = document.getElementById("payment-result");
-
-    // Helper to disable button with label
-    const disableBtn = (btn, label) => {
-      btn.disabled = true;
-      btn.classList.add("opacity-50", "cursor-not-allowed");
-      btn.innerText = label;
-    };
-
-    // Helper to enable button with label
-    const enableBtn = (btn, label) => {
-      btn.disabled = false;
-      btn.classList.remove("opacity-50", "cursor-not-allowed");
-      btn.innerText = label;
-    };
-
-    if (plan === "pro") {
-      // Disable both buttons for Pro user
-      disableBtn(premiumBtn, "✅ Pro User");
-      disableBtn(proBtn, "✅ Pro User");
-      resultText.textContent = "You have Pro access — thank you!";
-    } else if (plan === "premium") {
-      // Disable premium button only, enable pro button
-      disableBtn(premiumBtn, "✅ You're already upgraded");
-      enableBtn(proBtn, "🚀 Upgrade to Pro Plan");
-      resultText.textContent = "You have Premium access — enjoy!";
-    } else {
-      // Free user — enable both buttons
-      enableBtn(premiumBtn, "💎 Pay for Premium Access");
-      enableBtn(proBtn, "🚀 Upgrade to Pro Plan");
-      resultText.textContent = "";
-    }
-  } catch (error) {
-    console.error("Error fetching plan type:", error);
-  }
-}
-
-document.addEventListener("DOMContentLoaded", fetchUserPlan);
 
 
 
