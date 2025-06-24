@@ -189,6 +189,63 @@ friendlyBtn.addEventListener('click', () => {
     });
 
 
+    async function fetchUserPlan() {
+  try {
+    const apiKey = localStorage.getItem("apiKey");
+    if (!apiKey) return;
+
+    const response = await axios.get("/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    const user = response.data;
+    const plan = (user.planType || "free").toLowerCase();
+
+    const premiumBtn = document.getElementById("payment-button");
+    const proBtn = document.getElementById("pro-payment-button");
+    const resultText = document.getElementById("payment-result");
+
+   
+    const disableBtn = (btn, label) => {
+      btn.disabled = true;
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+      btn.innerText = label;
+    };
+
+    if (plan === "pro") {
+      disableBtn(premiumBtn, "✅ Pro User");
+      disableBtn(proBtn, "✅ Pro User");
+      resultText.textContent = "You have Pro access — thank you!";
+    } else if (plan === "premium") {
+      disableBtn(premiumBtn, "✅ You're already upgraded");
+      proBtn.disabled = false;
+      proBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      proBtn.innerText = "🚀 Upgrade to Pro Plan";
+      resultText.textContent = "You have Premium access — enjoy!";
+    } else {
+      // free plan
+      premiumBtn.disabled = false;
+      premiumBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      premiumBtn.innerText = "💎 Pay for Premium Access";
+
+      proBtn.disabled = false;
+      proBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      proBtn.innerText = "🚀 Upgrade to Pro Plan";
+
+      resultText.textContent = "";
+    }
+
+  } catch (error) {
+    console.error("Error fetching plan type:", error);
+  }
+}
+
+
+document.addEventListener("DOMContentLoaded", fetchUserPlan);
+
+
   
 });
 
@@ -710,32 +767,6 @@ fetch('/get-stripe-key')
   .catch(error => console.error('Error fetching Stripe key:', error));
 
 
-async function fetchUserPlan() {
-  try {
-    const response = await axios.get('/api/auth/me', {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('apiKey')}`
-      }
-    });
-
-    const user = response.data;
-
- 
-    if (user.planType.toLowerCase() === 'premium' || user.planType.toLowerCase() === 'pro')  {
-      const upgradeBtn = document.getElementById('payment-button');
-      if (upgradeBtn) {
-        upgradeBtn.disabled = true;
-        upgradeBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        upgradeBtn.innerText = "✅ You're already upgraded";
-      }
-    }
-
-  } catch (err) {
-    console.error('Error fetching user data:', err);
-  }
-}
-
-fetchUserPlan();
 
 
   
