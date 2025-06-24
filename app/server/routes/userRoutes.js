@@ -91,7 +91,6 @@ router.post("/consent", authenticate, dualAuth, async (req, res) => {
   }
 });
 
-
 router.get("/usage", authenticate, dualAuth, async (req, res) => {
   const user = req.user;
 
@@ -100,18 +99,14 @@ router.get("/usage", authenticate, dualAuth, async (req, res) => {
   }
 
 
-  let plan = "Free"; 
-  if (user.isPremium) {
-    plan = "Premium";
-  }
-
+  const planType = user.planType || "Free";
 
   res.json({
     email: user.email,
     apiKey: user.apiKey,
     usageCount: user.usageCount,
     maxUsage: user.maxUsage,
-    plan: plan, 
+    planType: planType, 
   });
 });
 
@@ -132,13 +127,14 @@ router.get("/me", authenticate, dualAuth, async (req, res) => {
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
-      plan: user.plan || "Free",  
+      planType: user.planType || "Free",  
     });
   } catch (error) {
     console.error("Error fetching user details:", error);
     res.status(500).json({ error: "Error fetching user details" });
   }
 });
+
 
 
 router.put("/update", authenticate, dualAuth, async (req, res) => {

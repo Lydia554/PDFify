@@ -721,7 +721,7 @@ async function fetchUserPlan() {
     const user = response.data;
 
  
-    if (user.planType === 'premium' || user.planType === 'pro') {
+    if (user.planType.toLowerCase() === 'premium' || user.planType.toLowerCase() === 'pro')  {
       const upgradeBtn = document.getElementById('payment-button');
       if (upgradeBtn) {
         upgradeBtn.disabled = true;
