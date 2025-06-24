@@ -601,7 +601,7 @@ async function sendRequest(isPreview = false) {
     alert('Please provide your API key');
     throw new Error('API key missing');
   }
-  const response = await fetch('/api/me', {
+  const response = await fetch('/me', {
     headers: {
       'Authorization': `Bearer ${apiKey}`
     }
