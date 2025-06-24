@@ -596,7 +596,7 @@ async function sendRequest(isPreview = false) {
 
 
     
-fetch('/get-stripe-key')
+fetch('/api/get-stripe-key')
   .then(response => response.json())
   .then(data => {
     const stripe = Stripe(data.stripePublishableKey);
