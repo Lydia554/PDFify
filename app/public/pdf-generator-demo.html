@@ -655,7 +655,7 @@ fetch('/api/get-stripe-key')
           },
           body: JSON.stringify({
             email: userData.email,
-            plan_type: 'premium'
+            plan: 'premium'
           }),
           credentials: 'include',
         });
@@ -697,7 +697,7 @@ fetch('/api/get-stripe-key')
           },
           body: JSON.stringify({
             email: userData.email,
-            plan_type: 'pro'
+            plan: 'pro'
           }),
           credentials: 'include',
         });
