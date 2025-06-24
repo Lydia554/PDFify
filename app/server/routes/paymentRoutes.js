@@ -25,7 +25,7 @@ router.post("/create-checkout-session", async (req, res) => {
   }
 
   try {
-    log("Received request to create checkout session:", { email, plan });
+   log("Received request to create checkout session:", { email, plan });
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
