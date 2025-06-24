@@ -695,11 +695,13 @@ fetch('/get-stripe-key')
           return;
         }
 
-        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
-        if (error) {
-          console.log(error);
-          alert('Error during checkout');
-        }
+      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+if (error) {
+  console.error("Stripe redirectToCheckout error:", error);
+  alert('Error during checkout: ' + error.message);
+}
+
+
       } catch (err) {
         console.error("Unexpected error:", err);
         alert('An unexpected error occurred. Please try again.');
