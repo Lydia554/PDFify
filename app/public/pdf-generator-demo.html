@@ -603,70 +603,33 @@ async function sendRequest(isPreview = false) {
   }
 }
 
-
-    
 fetch('/get-stripe-key')
   .then(response => response.json())
   .then(data => {
     const stripe = Stripe(data.stripePublishableKey);
 
-    
-    document.getElementById('payment-button').addEventListener('click', async () => {
-      const apiKey = document.getElementById('apiKey').textContent.trim() || localStorage.getItem('apiKey');
-      if (!apiKey) {
-        alert('Please provide your API key');
-        return;
-      }
+    const paymentBtn = document.getElementById('payment-button');
+    const proPaymentBtn = document.getElementById('pro-payment-button');
+    const resultText = document.getElementById('payment-result');
+
+    if (!paymentBtn || !proPaymentBtn) {
+      console.error('Payment buttons not found');
+      return;
+    }
+
+    const handleCheckout = async (plan) => {
+      // Disable buttons to prevent multiple clicks
+      paymentBtn.disabled = true;
+      proPaymentBtn.disabled = true;
+      if(resultText) resultText.textContent = '';
 
       try {
-        const response = await fetch('/api/stripe/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify({
-            email: data.email, 
-            plan_type: "premium"   
-          }),
-          credentials: "include",
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          console.error("Error creating checkout session:", error);
-          alert(`Error: ${error.error || "Failed to create checkout session"}`);
+        const apiKey = document.getElementById('apiKey')?.textContent.trim() || localStorage.getItem('apiKey');
+        if (!apiKey) {
+          alert('Please provide your API key');
           return;
         }
 
-        const session = await response.json();
-
-        if (!session.id) {
-          alert('Error: No session ID returned from backend.');
-          console.log(session);
-          return;
-        }
-
-        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
-        if (error) {
-          console.log(error);
-          alert('Error during checkout');
-        }
-      } catch (err) {
-        console.error("Unexpected error:", err);
-        alert('An unexpected error occurred. Please try again.');
-      }
-    });
-
-    
-    document.getElementById('pro-payment-button').addEventListener('click', async () => {
-      const apiKey = document.getElementById('apiKey').textContent.trim() || localStorage.getItem('apiKey');
-      if (!apiKey) {
-        alert('Please provide your API key');
-        return;
-      }
-
-      try {
         const response = await fetch('/api/stripe/create-checkout-session', {
           method: 'POST',
           headers: {
@@ -675,7 +638,7 @@ fetch('/get-stripe-key')
           },
           body: JSON.stringify({
             email: data.email,
-            plan_type: "pro"   
+            plan: plan  // changed to 'plan' for consistency, adjust if needed
           }),
           credentials: "include",
         });
@@ -703,9 +666,15 @@ fetch('/get-stripe-key')
       } catch (err) {
         console.error("Unexpected error:", err);
         alert('An unexpected error occurred. Please try again.');
+      } finally {
+        // Re-enable buttons regardless of outcome
+        paymentBtn.disabled = false;
+        proPaymentBtn.disabled = false;
       }
-    });
+    };
 
+    paymentBtn.addEventListener('click', () => handleCheckout('premium'));
+    proPaymentBtn.addEventListener('click', () => handleCheckout('pro'));
   })
   .catch(error => console.error('Error fetching Stripe key:', error));
 
