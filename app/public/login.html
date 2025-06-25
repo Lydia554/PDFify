@@ -229,21 +229,75 @@ document.getElementById("loginForm").addEventListener("submit", async (event) =>
        color: #4b4dbf;
     }
     
-    @media (max-width: 420px) {
-      .container {
-        padding: 30px;
-      }
-      h1 {
-        font-size: 22px;
-      }
-      label {
-        font-size: 14px;
-      }
-      input, button {
-        padding: 14px;
-        font-size: 14px;
-      }
-    }
+ @media (max-width: 420px) {
+  body {
+    padding: 1rem;
+    height: auto;
+    align-items: flex-start;
+  }
+
+  .container {
+    padding: 1.5rem 1rem;
+    border-radius: 6px;
+    max-width: 100%;
+    box-shadow: none;
+    background: linear-gradient(to bottom, #4338ca, #6b21a8, #be185d);
+  }
+
+  h1 {
+    font-size: 20px;
+    margin-bottom: 1.25rem;
+  }
+
+  label {
+    font-size: 14px;
+    margin: 10px 0 6px;
+  }
+
+  input {
+    padding: 0.6rem;
+    font-size: 15px;
+  }
+
+  .password-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .toggle-btn {
+    font-size: 16px;
+    padding: 0 0.5rem;
+    height: 100%;
+    margin-left: -0.5rem;
+  }
+
+  button[type="submit"] {
+    padding: 0.7rem;
+    font-size: 15px;
+    margin-top: 1rem;
+  }
+
+  .register-link,
+  .extra-links {
+    font-size: 14px;
+    text-align: center;
+    margin-top: 1rem;
+  }
+
+  .register-link a,
+  .extra-links a {
+    display: inline-block;
+    margin-top: 0.25rem;
+  }
+
+  .result {
+    font-size: 14px;
+    margin-top: 1rem;
+    text-align: center;
+  }
+}
+
   </style>
 
 </body>
