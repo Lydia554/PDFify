@@ -28,6 +28,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
     "pdf-parse": "^1.1.1",
+    "pdf-lib": "^1.17.1",
     "puppeteer": "^24.7.2",
     "stripe": "^17.7.0",
     "web-streams-polyfill": "^4.1.0"

@@ -8,6 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
+const { PDFDocument } = require('pdf-lib');
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -287,7 +288,6 @@ const watermarkHTML =
 }
 
 
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
@@ -296,7 +296,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     let invoiceData = { ...data };
-
     if (typeof invoiceData.items === "string") {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
@@ -338,17 +337,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!fs.existsSync(pdfDir)) {
       fs.mkdirSync(pdfDir, { recursive: true });
     }
-// Generate ZUGFeRD XML
-const zugferdXml = generateZugferdXML(invoiceData);
 
-// Log entire XML at once to avoid reversed line order in logs
-console.log("----- Generated ZUGFeRD XML Start -----\n" + zugferdXml + "\n----- Generated ZUGFeRD XML End -----");
+    // Step 1: Generate ZUGFeRD XML
+    const zugferdXml = generateZugferdXML(invoiceData);
+    console.log("----- Generated ZUGFeRD XML Start -----\n" + zugferdXml + "\n----- Generated ZUGFeRD XML End -----");
 
-const xmlPath = path.join(pdfDir, `Invoice_${safeOrderId}.xml`);
-fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
-
-
-    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
+    // Step 2: Generate PDF with Puppeteer
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -358,38 +352,50 @@ fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
-      invoiceData.isBasicUser = true;  
+      invoiceData.isBasicUser = true;
     } else {
       invoiceData.isBasicUser = false;
     }
 
     const html = generateInvoiceHTML({ ...invoiceData, isPreview });
-
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({
-      path: pdfPath,
+    const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      displayHeaderFooter: true,     
-      headerTemplate: `<div></div>`,  
+      displayHeaderFooter: true,
+      headerTemplate: `<div></div>`,
       footerTemplate: `
         <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
           Page <span class="pageNumber"></span> of <span class="totalPages"></span>
         </div>`,
-      margin: {                       
+      margin: {
         top: "20mm",
         bottom: "20mm",
         left: "10mm",
         right: "10mm",
       },
     });
-
     await browser.close();
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
+    // Step 3: Embed XML into PDF using pdf-lib
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const xmlBuffer = Buffer.from(zugferdXml, 'utf-8');
+    await pdfDoc.attach(xmlBuffer, `Invoice_${safeOrderId}.xml`, {
+      mimeType: 'application/xml',
+      description: 'ZUGFeRD Invoice XML',
+      creationDate: new Date(),
+      modificationDate: new Date(),
+    });
+
+    const finalPdfBytes = await pdfDoc.save();
+    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
+    fs.writeFileSync(pdfPath, finalPdfBytes);
+
+    // Step 4: Count pages
+    const parsed = await pdfParse(finalPdfBytes);
     const pageCount = parsed.numpages;
 
+    // Step 5: Usage checks
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
@@ -397,7 +403,6 @@ fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
         } else {
           if (user.usageCount + pageCount > user.maxUsage) {
             fs.unlinkSync(pdfPath);
-            fs.unlinkSync(xmlPath);
             return res.status(403).json({
               error: "Monthly usage limit reached. Upgrade to premium for more pages.",
             });
@@ -408,7 +413,6 @@ fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
     } else {
       if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        fs.unlinkSync(xmlPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
@@ -418,12 +422,12 @@ fs.writeFileSync(xmlPath, zugferdXml, 'utf-8');
 
     await user.save();
 
+    // Step 6: Send and clean up
     res.download(pdfPath, (err) => {
       if (err) {
         console.error("Download error:", err);
       }
       fs.unlinkSync(pdfPath);
-      fs.unlinkSync(xmlPath); // Clean up XML after sending PDF
     });
 
   } catch (error) {
