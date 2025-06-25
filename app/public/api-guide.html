@@ -1062,7 +1062,7 @@ header {
       border-radius: 4px;
     }
 
-    /* Header styles */
+   
     header.bg-white {
       position: fixed;
       top: 0;
@@ -1082,7 +1082,7 @@ header {
       align-items: center;
     }
 
-  /* Hover zoom effect */
+
   img.zoomable {
     transition: transform 0.3s ease;
     cursor: pointer;
@@ -1093,15 +1093,11 @@ header {
   .hidden {
     display: none;
   }
-  /* Ensure image container doesn't stretch */
+  
   .image-toggle-container img {
     width: 100%;
     height: auto;
   }
-
-
-
-
 
 
     @keyframes spin {
@@ -1109,6 +1105,51 @@ header {
         transform: rotate(360deg);
       }
     }
+
+
+
+    @media (max-width: 420px) {
+  body {
+    padding: 7.5rem 1rem 2rem;
+    font-size: 0.95rem;
+  }
+
+  main {
+    padding: 1.5rem;
+    border-radius: 6px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  header .max-w-6xl {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  header nav,
+  header nav a,
+  header nav button {
+    width: 100%;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 0.5rem 0;
+  }
+
+  img.zoomable {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+
+
+
   </style>
 </body>
 </html>
