@@ -8,7 +8,8 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
-const { PDFDocument, PDFDict } = require('pdf-lib');
+
+
 
 
 const log = (message, data = null) => {
@@ -380,20 +381,17 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     
  // Step 3: Embed XML into PDF using pdf-lib
-const { PDFDocument, PDFName, PDFString, PDFDict } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFString } = require('pdf-lib');
 
-// Load the generated PDF
 const pdfDoc = await PDFDocument.load(pdfBuffer);
 const xmlBuffer = Buffer.from(zugferdXml, 'utf-8');
 
-// Create embedded file stream
 const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
   Type: PDFName.of('EmbeddedFile'),
   Subtype: PDFName.of('application/xml'),
 });
 const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-// Create file specification dictionary
 const efDict = pdfDoc.context.obj({
   F: embeddedFileRef,
   UF: embeddedFileRef,
@@ -409,11 +407,9 @@ const fileSpecDict = pdfDoc.context.obj({
 });
 const fileSpecRef = pdfDoc.context.register(fileSpecDict);
 
-// Attach file to /AF array in catalog
 const catalog = pdfDoc.catalog;
 catalog.set(PDFName.of('AF'), pdfDoc.context.obj([fileSpecRef]));
 
-// Add file to /Names → /EmbeddedFiles
 let namesDict = catalog.lookup(PDFName.of('Names'));
 if (!namesDict) {
   namesDict = pdfDoc.context.obj({});
@@ -431,6 +427,8 @@ if (!embeddedFilesDict) {
   });
   namesDict.set(PDFName.of('EmbeddedFiles'), embeddedFilesDict);
 }
+
+
 
 // Save the updated PDF with the embedded XML
 const finalPdfBytes = await pdfDoc.save();
