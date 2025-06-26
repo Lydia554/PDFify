@@ -391,6 +391,27 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     fs.writeFileSync(pdfPath, finalPdfBytes);
 
+
+    const { exec } = require("child_process");
+
+const pdfaPath = pdfPath.replace(".pdf", "_pdfa3.pdf");
+const iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc"; // path inside most Debian-based Ghostscript installs
+
+const gsCommand = `gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE -sColorConversionStrategy=RGB -sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile=${pdfaPath} -sProcessColorModel=DeviceRGB -sPDFAOutputIntent=Custom -sOutputICCProfile=${iccProfilePath} ${pdfPath}`;
+
+await new Promise((resolve, reject) => {
+  exec(gsCommand, (err, stdout, stderr) => {
+    if (err) {
+      console.error("Ghostscript PDF/A-3 conversion failed:", stderr || err);
+      return reject(new Error("PDF/A-3 conversion failed"));
+    }
+    console.log("Ghostscript PDF/A-3 conversion succeeded.");
+    fs.unlinkSync(pdfPath); // remove the non-compliant one
+    resolve();
+  });
+});
+
+
     // Step 4: Count pages
     const parsed = await pdfParse(finalPdfBytes);
     const pageCount = parsed.numpages;
@@ -423,12 +444,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
 
     // Step 6: Send and clean up
-    res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Download error:", err);
-      }
-      fs.unlinkSync(pdfPath);
-    });
+res.download(pdfaPath, (err) => {
+  if (err) console.error("Download error:", err);
+  fs.unlinkSync(pdfaPath);
+});
+
 
   } catch (error) {
     console.error("PDF generation failed:", error);
