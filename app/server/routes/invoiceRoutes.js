@@ -377,39 +377,55 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     await browser.close();
 
-    // Step 3: Embed XML into PDF using pdf-lib
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-    const xmlBuffer = Buffer.from(zugferdXml, 'utf-8');
-    await pdfDoc.attach(xmlBuffer, `Invoice_${safeOrderId}.xml`, {
-      mimeType: 'application/xml',
-      description: 'ZUGFeRD Invoice XML',
-      creationDate: new Date(),
-      modificationDate: new Date(),
-    });
+    
+ // Step 3: Embed XML into PDF using pdf-lib
+const pdfDoc = await PDFDocument.load(pdfBuffer);
+const xmlBuffer = Buffer.from(zugferdXml, 'utf-8');
 
-    const finalPdfBytes = await pdfDoc.save();
-    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-    fs.writeFileSync(pdfPath, finalPdfBytes);
-
-
-    const { exec } = require("child_process");
-
-const pdfaPath = pdfPath.replace(".pdf", "_pdfa3.pdf");
-const iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc"; // path inside most Debian-based Ghostscript installs
-
-const gsCommand = `gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE -sColorConversionStrategy=RGB -sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile=${pdfaPath} -sProcessColorModel=DeviceRGB -sPDFAOutputIntent=Custom -sOutputICCProfile=${iccProfilePath} ${pdfPath}`;
-
-await new Promise((resolve, reject) => {
-  exec(gsCommand, (err, stdout, stderr) => {
-    if (err) {
-      console.error("Ghostscript PDF/A-3 conversion failed:", stderr || err);
-      return reject(new Error("PDF/A-3 conversion failed"));
-    }
-    console.log("Ghostscript PDF/A-3 conversion succeeded.");
-    fs.unlinkSync(pdfPath); // remove the non-compliant one
-    resolve();
-  });
+// Create embedded file stream
+const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+  Type: 'EmbeddedFile',
+  Subtype: 'application/xml',
 });
+const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+
+// Create file specification dictionary with AFRelationship
+const filespecDict = pdfDoc.context.obj({
+  Type: 'Filespec',
+  F: `Invoice_${safeOrderId}.xml`,
+  UF: `Invoice_${safeOrderId}.xml`,
+  AFRelationship: 'Alternative',
+  Desc: 'ZUGFeRD Invoice XML',
+  EF: {
+    F: embeddedFileRef,
+    UF: embeddedFileRef,
+  },
+});
+const filespecRef = pdfDoc.context.register(filespecDict);
+
+// Set /AF array in catalog
+const catalog = pdfDoc.catalog;
+catalog.set('AF', pdfDoc.context.obj([filespecRef]));
+
+// Attach the file to Names dictionary
+let namesDict = catalog.lookupMaybe('Names', PDFDict);
+if (!namesDict) {
+  namesDict = pdfDoc.context.obj({});
+  catalog.set('Names', namesDict);
+}
+
+let embeddedFilesDict = namesDict.lookupMaybe('EmbeddedFiles', PDFDict);
+if (!embeddedFilesDict) {
+  embeddedFilesDict = pdfDoc.context.obj({
+    Names: [pdfDoc.context.obj(`Invoice_${safeOrderId}.xml`), filespecRef],
+  });
+  namesDict.set('EmbeddedFiles', embeddedFilesDict);
+}
+
+// Save the PDF with embedded XML
+const finalPdfBytes = await pdfDoc.save();
+const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
+fs.writeFileSync(pdfPath, finalPdfBytes);
 
 
     // Step 4: Count pages
