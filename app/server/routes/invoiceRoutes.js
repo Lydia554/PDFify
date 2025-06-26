@@ -463,7 +463,7 @@ fs.writeFileSync(pdfPath, finalPdfBytes);
     // Step 6: Send and clean up
 res.download(pdfPath, (err) => {
   if (err) console.error("Download error:", err);
-  fs.unlinkSync(pdfaPath);
+  fs.unlinkSync(pdfPath);
 });
 
 
