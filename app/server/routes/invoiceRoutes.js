@@ -8,7 +8,8 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, PDFDict } = require('pdf-lib');
+
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -460,7 +461,7 @@ fs.writeFileSync(pdfPath, finalPdfBytes);
     await user.save();
 
     // Step 6: Send and clean up
-res.download(pdfaPath, (err) => {
+res.download(pdfPath, (err) => {
   if (err) console.error("Download error:", err);
   fs.unlinkSync(pdfaPath);
 });
