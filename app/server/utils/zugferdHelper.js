@@ -2,6 +2,21 @@
 
 const { format } = require("date-fns");
 
+// Basic XML escape helper
+function escapeXml(unsafe) {
+  if (!unsafe) return "";
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case "<": return "&lt;";
+      case ">": return "&gt;";
+      case "&": return "&amp;";
+      case "'": return "&apos;";
+      case '"': return "&quot;";
+      default: return c;
+    }
+  });
+}
+
 function generateZugferdXML(data) {
   const now = new Date();
   const invoiceDate = data.date ? new Date(data.date) : now;
@@ -12,26 +27,36 @@ function generateZugferdXML(data) {
   // Format monetary amounts as string with 2 decimals, dot separator
   const fmtAmount = (num) => Number(num).toFixed(2);
 
-  // Calculate totals fallback
-  const subtotal = fmtAmount(data.subtotal || data.items?.reduce((acc, i) => acc + (i.total || 0), 0));
-  const tax = fmtAmount(data.tax || (subtotal * 0.21));
-  const total = fmtAmount(data.total || (parseFloat(subtotal) + parseFloat(tax)));
+  // VAT rate - default 21%
+  const vatRate = data.vatRate !== undefined ? Number(data.vatRate) : 21;
 
-  // Generate XML
+  // Calculate totals fallback
+  const subtotal = fmtAmount(
+    data.subtotal ??
+      data.items?.reduce((acc, i) => acc + (i.price * (i.quantity ?? 1) || 0), 0) ??
+      0
+  );
+  const tax = fmtAmount(
+    data.tax ?? ((parseFloat(subtotal) * vatRate) / 100)
+  );
+  const total = fmtAmount(
+    data.total ?? (parseFloat(subtotal) + parseFloat(tax))
+  );
+
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:1p0"
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
                           xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
                           xmlns:qdt="urn:un:unece:uncefact:data:standard:QualifiedDataType:12"
                           xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15"
                           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <rsm:ExchangedDocumentContext>
     <ram:GuidelineSpecifiedDocumentContextParameter>
-      <ram:ID>urn:ferd:CrossIndustryDocument:invoice:1p0:basic</ram:ID>
+      <ram:ID>urn:ferd:CrossIndustryDocument:invoice:2p1:basic</ram:ID>
     </ram:GuidelineSpecifiedDocumentContextParameter>
   </rsm:ExchangedDocumentContext>
 
   <rsm:ExchangedDocument>
-    <ram:ID>${data.orderId || 'INV-0001'}</ram:ID>
+    <ram:ID>${escapeXml(data.orderId || 'INV-0001')}</ram:ID>
     <ram:TypeCode>380</ram:TypeCode> <!-- Invoice -->
     <ram:IssueDateTime>
       <udt:DateTimeString format="102">${fmtDate(invoiceDate).replace(/-/g, '')}</udt:DateTimeString>
@@ -44,25 +69,25 @@ function generateZugferdXML(data) {
   <rsm:SupplyChainTradeTransaction>
     <ram:ApplicableHeaderTradeAgreement>
       <ram:SellerTradeParty>
-        <ram:Name>${data.sellerName || "Your Company Name"}</ram:Name>
+        <ram:Name>${escapeXml(data.sellerName || "Your Company Name")}</ram:Name>
         <ram:PostalTradeAddress>
-          <ram:PostcodeCode>${data.sellerPostcode || "00000"}</ram:PostcodeCode>
-          <ram:LineOne>${data.sellerAddress || "Seller Address"}</ram:LineOne>
-          <ram:CityName>${data.sellerCity || "Seller City"}</ram:CityName>
-          <ram:CountryID>${data.sellerCountry || "DE"}</ram:CountryID>
+          <ram:PostcodeCode>${escapeXml(data.sellerPostcode || "00000")}</ram:PostcodeCode>
+          <ram:LineOne>${escapeXml(data.sellerAddress || "Seller Address")}</ram:LineOne>
+          <ram:CityName>${escapeXml(data.sellerCity || "Seller City")}</ram:CityName>
+          <ram:CountryID>${escapeXml(data.sellerCountry || "DE")}</ram:CountryID>
         </ram:PostalTradeAddress>
         <ram:SpecifiedTaxRegistration>
-          <ram:ID schemeID="FC">DE123456789</ram:ID>
+          <ram:ID schemeID="FC">${escapeXml(data.sellerTaxId || "DE123456789")}</ram:ID>
         </ram:SpecifiedTaxRegistration>
       </ram:SellerTradeParty>
 
       <ram:BuyerTradeParty>
-        <ram:Name>${data.customerName || "Customer"}</ram:Name>
+        <ram:Name>${escapeXml(data.customerName || "Customer")}</ram:Name>
         <ram:PostalTradeAddress>
-          <ram:PostcodeCode>${data.customerPostcode || "00000"}</ram:PostcodeCode>
-          <ram:LineOne>${data.customerAddress || "Customer Address"}</ram:LineOne>
-          <ram:CityName>${data.customerCity || "Customer City"}</ram:CityName>
-          <ram:CountryID>${data.customerCountry || "DE"}</ram:CountryID>
+          <ram:PostcodeCode>${escapeXml(data.customerPostcode || "00000")}</ram:PostcodeCode>
+          <ram:LineOne>${escapeXml(data.customerAddress || "Customer Address")}</ram:LineOne>
+          <ram:CityName>${escapeXml(data.customerCity || "Customer City")}</ram:CityName>
+          <ram:CountryID>${escapeXml(data.customerCountry || "DE")}</ram:CountryID>
         </ram:PostalTradeAddress>
       </ram:BuyerTradeParty>
     </ram:ApplicableHeaderTradeAgreement>
@@ -76,53 +101,57 @@ function generateZugferdXML(data) {
     </ram:ApplicableHeaderTradeDelivery>
 
     <ram:ApplicableHeaderTradeSettlement>
-      <ram:InvoiceCurrencyCode>${data.currency || "EUR"}</ram:InvoiceCurrencyCode>
+      <ram:InvoiceCurrencyCode>${escapeXml(data.currency || "EUR")}</ram:InvoiceCurrencyCode>
       <ram:SpecifiedTradeSettlementPaymentMeans>
         <ram:TypeCode>42</ram:TypeCode> <!-- Payment by invoice -->
       </ram:SpecifiedTradeSettlementPaymentMeans>
       <ram:ApplicableTradeTax>
-        <ram:CalculatedAmount currencyID="${data.currency || "EUR"}">${tax}</ram:CalculatedAmount>
+        <ram:CalculatedAmount currencyID="${escapeXml(data.currency || "EUR")}">${tax}</ram:CalculatedAmount>
         <ram:TypeCode>VAT</ram:TypeCode>
         <ram:CategoryCode>S</ram:CategoryCode>
-        <ram:RateApplicablePercent>21</ram:RateApplicablePercent>
+        <ram:RateApplicablePercent>${vatRate}</ram:RateApplicablePercent>
       </ram:ApplicableTradeTax>
       <ram:SpecifiedTradeSettlementMonetarySummation>
-        <ram:LineTotalAmount currencyID="${data.currency || "EUR"}">${subtotal}</ram:LineTotalAmount>
-        <ram:TaxTotalAmount currencyID="${data.currency || "EUR"}">${tax}</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount currencyID="${data.currency || "EUR"}">${total}</ram:GrandTotalAmount>
+        <ram:LineTotalAmount currencyID="${escapeXml(data.currency || "EUR")}">${subtotal}</ram:LineTotalAmount>
+        <ram:TaxTotalAmount currencyID="${escapeXml(data.currency || "EUR")}">${tax}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount currencyID="${escapeXml(data.currency || "EUR")}">${total}</ram:GrandTotalAmount>
       </ram:SpecifiedTradeSettlementMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
 
-    <ram:IncludedSupplyChainTradeLineItem>
-      ${data.items?.map((item, idx) => `
-      <ram:AssociatedDocumentLineDocument>
-        <ram:LineID>${idx + 1}</ram:LineID>
-        <ram:IncludedNote>
-          <ram:Content>${item.description || item.name || "Item description"}</ram:Content>
-        </ram:IncludedNote>
-      </ram:AssociatedDocumentLineDocument>
-      <ram:SpecifiedTradeProduct>
-        <ram:Name>${item.name || "Product"}</ram:Name>
-      </ram:SpecifiedTradeProduct>
-      <ram:SpecifiedLineTradeAgreement>
-        <ram:GrossPriceProductTradePrice>
-          <ram:ChargeAmount currencyID="${data.currency || "EUR"}">${fmtAmount(item.price || 0)}</ram:ChargeAmount>
-        </ram:GrossPriceProductTradePrice>
-      </ram:SpecifiedLineTradeAgreement>
-      <ram:SpecifiedLineTradeDelivery>
-        <ram:BilledQuantity unitCode="${item.unit || "C62"}">${item.quantity || 1}</ram:BilledQuantity>
-      </ram:SpecifiedLineTradeDelivery>
-      <ram:SpecifiedLineTradeSettlement>
-        <ram:ApplicableTradeTax>
-          <ram:TypeCode>VAT</ram:TypeCode>
-          <ram:CategoryCode>S</ram:CategoryCode>
-          <ram:RateApplicablePercent>21</ram:RateApplicablePercent>
-          <ram:CalculatedAmount currencyID="${data.currency || "EUR"}">${fmtAmount((item.price || 0) * (item.quantity || 1) * 0.21)}</ram:CalculatedAmount>
-        </ram:ApplicableTradeTax>
-        <ram:TradeSettlementLineAmount currencyID="${data.currency || "EUR"}">${fmtAmount((item.price || 0) * (item.quantity || 1))}</ram:TradeSettlementLineAmount>
-      </ram:SpecifiedLineTradeSettlement>
-      `).join('')}
-    </ram:IncludedSupplyChainTradeLineItem>
+    ${data.items
+      ?.map(
+        (item, idx) => `
+      <ram:IncludedSupplyChainTradeLineItem>
+        <ram:AssociatedDocumentLineDocument>
+          <ram:LineID>${idx + 1}</ram:LineID>
+          <ram:IncludedNote>
+            <ram:Content>${escapeXml(item.description || item.name || "Item description")}</ram:Content>
+          </ram:IncludedNote>
+        </ram:AssociatedDocumentLineDocument>
+        <ram:SpecifiedTradeProduct>
+          <ram:Name>${escapeXml(item.name || "Product")}</ram:Name>
+        </ram:SpecifiedTradeProduct>
+        <ram:SpecifiedLineTradeAgreement>
+          <ram:GrossPriceProductTradePrice>
+            <ram:ChargeAmount currencyID="${escapeXml(data.currency || "EUR")}">${fmtAmount(item.price || 0)}</ram:ChargeAmount>
+          </ram:GrossPriceProductTradePrice>
+        </ram:SpecifiedLineTradeAgreement>
+        <ram:SpecifiedLineTradeDelivery>
+          <ram:BilledQuantity unitCode="${escapeXml(item.unit || "C62")}">${item.quantity ?? 1}</ram:BilledQuantity>
+        </ram:SpecifiedLineTradeDelivery>
+        <ram:SpecifiedLineTradeSettlement>
+          <ram:ApplicableTradeTax>
+            <ram:TypeCode>VAT</ram:TypeCode>
+            <ram:CategoryCode>S</ram:CategoryCode>
+            <ram:RateApplicablePercent>${vatRate}</ram:RateApplicablePercent>
+            <ram:CalculatedAmount currencyID="${escapeXml(data.currency || "EUR")}">${fmtAmount((item.price || 0) * (item.quantity ?? 1) * (vatRate / 100))}</ram:CalculatedAmount>
+          </ram:ApplicableTradeTax>
+          <ram:TradeSettlementLineAmount currencyID="${escapeXml(data.currency || "EUR")}">${fmtAmount((item.price || 0) * (item.quantity ?? 1))}</ram:TradeSettlementLineAmount>
+        </ram:SpecifiedLineTradeSettlement>
+      </ram:IncludedSupplyChainTradeLineItem>
+    `
+      )
+      .join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
