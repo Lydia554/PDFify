@@ -301,50 +301,36 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (typeof invoiceData.items === "string") {
       try {
         invoiceData.items = JSON.parse(invoiceData.items);
-      } catch (err) {
+      } catch {
         invoiceData.items = [];
       }
     }
-
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
     }
 
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const now = new Date();
-    if (
-      !user.previewLastReset ||
-      now.getMonth() !== user.previewLastReset.getMonth() ||
-      now.getFullYear() !== user.previewLastReset.getFullYear()
-    ) {
+    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
       user.previewCount = 0;
       user.previewLastReset = now;
     }
-
-    if (
-      !user.usageLastReset ||
-      now.getMonth() !== user.usageLastReset.getMonth() ||
-      now.getFullYear() !== user.usageLastReset.getFullYear()
-    ) {
+    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
       user.usageCount = 0;
       user.usageLastReset = now;
     }
 
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-    // Step 1: Generate ZUGFeRD XML
+    // 1) Generate ZUGFeRD XML
     const zugferdXml = generateZugferdXML(invoiceData);
-    console.log("----- Generated ZUGFeRD XML Start -----\n" + zugferdXml + "\n----- Generated ZUGFeRD XML End -----");
+    console.log("----- Generated ZUGFeRD XML -----\n" + zugferdXml);
 
-    // Step 2: Generate PDF with Puppeteer
+    // 2) Generate PDF with Puppeteer
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -361,6 +347,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     const html = generateInvoiceHTML({ ...invoiceData, isPreview });
     await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
+    const pdfa3PdfPath = path.join(pdfDir, `Invoice_${safeOrderId}_pdfa3.pdf`);
+    const finalPdfPath = path.join(pdfDir, `Invoice_${safeOrderId}_final.pdf`);
+
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -379,76 +370,97 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     await browser.close();
 
-    
- // Step 3: Embed XML into PDF using pdf-lib
-const { PDFDocument, PDFName, PDFString } = require('pdf-lib');
+    // Save initial PDF
+    fs.writeFileSync(pdfPath, pdfBuffer);
 
-const pdfDoc = await PDFDocument.load(pdfBuffer);
-const xmlBuffer = Buffer.from(zugferdXml, 'utf-8');
+    // 3) Convert to PDF/A-3 using Ghostscript
+    // Adjust the ICC profile path as needed (you need an ICC profile file)
+    const iccProfilePath = "/usr/share/color/icc/colord/sRGB.icc"; // Example common path in Linux, change if needed
 
-const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-  Type: PDFName.of('EmbeddedFile'),
-  Subtype: PDFName.of('application/xml'),
-});
-const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+    const gsCmd = `
+      gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
+      -sProcessColorModel=DeviceCMYK -sDEVICE=pdfwrite \
+      -sPDFACompatibilityPolicy=1 \
+      -sOutputICCProfile=${iccProfilePath} \
+      -sOutputFile="${pdfa3PdfPath}" "${pdfPath}"
+    `;
 
-const efDict = pdfDoc.context.obj({
-  F: embeddedFileRef,
-  UF: embeddedFileRef,
-});
+    await new Promise((resolve, reject) => {
+      exec(gsCmd, (error, stdout, stderr) => {
+        if (error) {
+          console.error("Ghostscript error:", error);
+          reject(error);
+          return;
+        }
+        console.log("Ghostscript PDF/A-3 conversion done");
+        resolve();
+      });
+    });
 
-const fileSpecDict = pdfDoc.context.obj({
-  Type: PDFName.of('Filespec'),
-  F: PDFString.of(`Invoice_${safeOrderId}.xml`),
-  UF: PDFString.of(`Invoice_${safeOrderId}.xml`),
-  AFRelationship: PDFName.of('Alternative'),
-  Desc: PDFString.of('ZUGFeRD Invoice XML'),
-  EF: efDict,
-});
-const fileSpecRef = pdfDoc.context.register(fileSpecDict);
+    // 4) Load PDF/A-3 PDF into pdf-lib and embed ZUGFeRD XML
+    const pdfData = fs.readFileSync(pdfa3PdfPath);
+    const pdfDoc = await PDFDocument.load(pdfData);
+    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-const catalog = pdfDoc.catalog;
-catalog.set(PDFName.of('AF'), pdfDoc.context.obj([fileSpecRef]));
+    const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+      Type: PDFName.of("EmbeddedFile"),
+      Subtype: PDFName.of("application/xml"),
+    });
+    const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-let namesDict = catalog.lookup(PDFName.of('Names'));
-if (!namesDict) {
-  namesDict = pdfDoc.context.obj({});
-  catalog.set(PDFName.of('Names'), namesDict);
-}
+    const efDict = pdfDoc.context.obj({
+      F: embeddedFileRef,
+      UF: embeddedFileRef,
+    });
 
-let embeddedFilesDict = namesDict.lookup(PDFName.of('EmbeddedFiles'));
-if (!embeddedFilesDict) {
-  const embeddedFilesArray = pdfDoc.context.obj([
-    PDFString.of(`Invoice_${safeOrderId}.xml`),
-    fileSpecRef,
-  ]);
-  embeddedFilesDict = pdfDoc.context.obj({
-    Names: embeddedFilesArray,
-  });
-  namesDict.set(PDFName.of('EmbeddedFiles'), embeddedFilesDict);
-}
+    const fileSpecDict = pdfDoc.context.obj({
+      Type: PDFName.of("Filespec"),
+      F: PDFString.of(`Invoice_${safeOrderId}.xml`),
+      UF: PDFString.of(`Invoice_${safeOrderId}.xml`),
+      AFRelationship: PDFName.of("Alternative"),
+      Desc: PDFString.of("ZUGFeRD Invoice XML"),
+      EF: efDict,
+    });
+    const fileSpecRef = pdfDoc.context.register(fileSpecDict);
 
+    const catalog = pdfDoc.catalog;
+    catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
+    let namesDict = catalog.lookup(PDFName.of("Names"));
+    if (!namesDict) {
+      namesDict = pdfDoc.context.obj({});
+      catalog.set(PDFName.of("Names"), namesDict);
+    }
 
-// Save the updated PDF with the embedded XML
-const finalPdfBytes = await pdfDoc.save();
-const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-fs.writeFileSync(pdfPath, finalPdfBytes);
+    let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"));
+    if (!embeddedFilesDict) {
+      const embeddedFilesArray = pdfDoc.context.obj([
+        PDFString.of(`Invoice_${safeOrderId}.xml`),
+        fileSpecRef,
+      ]);
+      embeddedFilesDict = pdfDoc.context.obj({
+        Names: embeddedFilesArray,
+      });
+      namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+    }
 
+    const finalPdfBytes = await pdfDoc.save();
+    fs.writeFileSync(finalPdfPath, finalPdfBytes);
 
-
-    // Step 4: Count pages
+    // 5) Count pages for usage limits
     const parsed = await pdfParse(finalPdfBytes);
     const pageCount = parsed.numpages;
 
-    // Step 5: Usage checks
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
           user.previewCount += 1;
         } else {
           if (user.usageCount + pageCount > user.maxUsage) {
+            // Clean up files
             fs.unlinkSync(pdfPath);
+            fs.unlinkSync(pdfa3PdfPath);
+            fs.unlinkSync(finalPdfPath);
             return res.status(403).json({
               error: "Monthly usage limit reached. Upgrade to premium for more pages.",
             });
@@ -459,22 +471,23 @@ fs.writeFileSync(pdfPath, finalPdfBytes);
     } else {
       if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
+        fs.unlinkSync(pdfa3PdfPath);
+        fs.unlinkSync(finalPdfPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
       }
       user.usageCount += pageCount;
     }
-
     await user.save();
 
-    // Step 6: Send and clean up
-res.download(pdfPath, (err) => {
-  if (err) console.error("Download error:", err);
-  fs.unlinkSync(pdfPath);
-});
-
-
+    // 6) Send final PDF and cleanup
+    res.download(finalPdfPath, (err) => {
+      if (err) console.error("Download error:", err);
+      [pdfPath, pdfa3PdfPath, finalPdfPath].forEach((file) => {
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+      });
+    });
   } catch (error) {
     console.error("PDF generation failed:", error);
     res.status(500).json({ error: "PDF generation failed" });
