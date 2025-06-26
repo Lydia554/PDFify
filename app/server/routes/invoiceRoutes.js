@@ -380,53 +380,63 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     
  // Step 3: Embed XML into PDF using pdf-lib
+const { PDFDocument, PDFName, PDFString, PDFDict } = require('pdf-lib');
+
+// Load the generated PDF
 const pdfDoc = await PDFDocument.load(pdfBuffer);
 const xmlBuffer = Buffer.from(zugferdXml, 'utf-8');
 
 // Create embedded file stream
 const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-  Type: 'EmbeddedFile',
-  Subtype: 'application/xml',
+  Type: PDFName.of('EmbeddedFile'),
+  Subtype: PDFName.of('application/xml'),
 });
 const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-// Create file specification dictionary with AFRelationship
-const filespecDict = pdfDoc.context.obj({
-  Type: 'Filespec',
-  F: `Invoice_${safeOrderId}.xml`,
-  UF: `Invoice_${safeOrderId}.xml`,
-  AFRelationship: 'Alternative',
-  Desc: 'ZUGFeRD Invoice XML',
-  EF: {
-    F: embeddedFileRef,
-    UF: embeddedFileRef,
-  },
+// Create file specification dictionary
+const efDict = pdfDoc.context.obj({
+  F: embeddedFileRef,
+  UF: embeddedFileRef,
 });
-const filespecRef = pdfDoc.context.register(filespecDict);
 
-// Set /AF array in catalog
+const fileSpecDict = pdfDoc.context.obj({
+  Type: PDFName.of('Filespec'),
+  F: PDFString.of(`Invoice_${safeOrderId}.xml`),
+  UF: PDFString.of(`Invoice_${safeOrderId}.xml`),
+  AFRelationship: PDFName.of('Alternative'),
+  Desc: PDFString.of('ZUGFeRD Invoice XML'),
+  EF: efDict,
+});
+const fileSpecRef = pdfDoc.context.register(fileSpecDict);
+
+// Attach file to /AF array in catalog
 const catalog = pdfDoc.catalog;
-catalog.set('AF', pdfDoc.context.obj([filespecRef]));
+catalog.set(PDFName.of('AF'), pdfDoc.context.obj([fileSpecRef]));
 
-// Attach the file to Names dictionary
-let namesDict = catalog.lookupMaybe('Names', PDFDict);
+// Add file to /Names → /EmbeddedFiles
+let namesDict = catalog.lookup(PDFName.of('Names'));
 if (!namesDict) {
   namesDict = pdfDoc.context.obj({});
-  catalog.set('Names', namesDict);
+  catalog.set(PDFName.of('Names'), namesDict);
 }
 
-let embeddedFilesDict = namesDict.lookupMaybe('EmbeddedFiles', PDFDict);
+let embeddedFilesDict = namesDict.lookup(PDFName.of('EmbeddedFiles'));
 if (!embeddedFilesDict) {
+  const embeddedFilesArray = pdfDoc.context.obj([
+    PDFString.of(`Invoice_${safeOrderId}.xml`),
+    fileSpecRef,
+  ]);
   embeddedFilesDict = pdfDoc.context.obj({
-    Names: [pdfDoc.context.obj(`Invoice_${safeOrderId}.xml`), filespecRef],
+    Names: embeddedFilesArray,
   });
-  namesDict.set('EmbeddedFiles', embeddedFilesDict);
+  namesDict.set(PDFName.of('EmbeddedFiles'), embeddedFilesDict);
 }
 
-// Save the PDF with embedded XML
+// Save the updated PDF with the embedded XML
 const finalPdfBytes = await pdfDoc.save();
 const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
 fs.writeFileSync(pdfPath, finalPdfBytes);
+
 
 
     // Step 4: Count pages
