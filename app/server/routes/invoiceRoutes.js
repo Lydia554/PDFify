@@ -289,7 +289,6 @@ const watermarkHTML =
 `;
 }
 
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   try {
     let { data, isPreview } = req.body;
@@ -313,11 +312,19 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const now = new Date();
-    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
+    if (
+      !user.previewLastReset ||
+      now.getMonth() !== user.previewLastReset.getMonth() ||
+      now.getFullYear() !== user.previewLastReset.getFullYear()
+    ) {
       user.previewCount = 0;
       user.previewLastReset = now;
     }
-    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
+    if (
+      !user.usageLastReset ||
+      now.getMonth() !== user.usageLastReset.getMonth() ||
+      now.getFullYear() !== user.usageLastReset.getFullYear()
+    ) {
       user.usageCount = 0;
       user.usageLastReset = now;
     }
@@ -374,18 +381,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.writeFileSync(pdfPath, pdfBuffer);
 
     // 3) Convert to PDF/A-3 using Ghostscript
-   
-   const iccProfilePath = path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+    const iccProfilePath = path.resolve(
+      __dirname,
+      "../app/sRGB_IEC61966-2-1_no_black_scaling.icc"
+    );
 
-const gsCmd = `
-  gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
-  -sColorConversionStrategy=RGB \
-  -sProcessColorModel=DeviceRGB \
-  -sDEVICE=pdfwrite \
-  -sPDFACompatibilityPolicy=1 \
-  -sOutputICCProfile="${iccProfilePath}" \
-  -sOutputFile="${pdfa3PdfPath}" "${pdfPath}"
-`;
+    const gsCmd = `
+      gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
+      -sColorConversionStrategy=RGB \
+      -sProcessColorModel=DeviceRGB \
+      -sDEVICE=pdfwrite \
+      -sPDFACompatibilityPolicy=1 \
+      -sOutputICCProfile="${iccProfilePath}" \
+      -sOutputFile="${pdfa3PdfPath}" "${pdfPath}"
+    `;
 
     await new Promise((resolve, reject) => {
       exec(gsCmd, (error, stdout, stderr) => {
@@ -404,17 +413,20 @@ const gsCmd = `
     const pdfDoc = await PDFDocument.load(pdfData);
     const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
+    // Create embedded file stream for ZUGFeRD XML
     const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       Type: PDFName.of("EmbeddedFile"),
       Subtype: PDFName.of("application/xml"),
     });
     const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
+    // Create EF dictionary
     const efDict = pdfDoc.context.obj({
       F: embeddedFileRef,
       UF: embeddedFileRef,
     });
 
+    // Create Filespec dictionary
     const fileSpecDict = pdfDoc.context.obj({
       Type: PDFName.of("Filespec"),
       F: PDFString.of(`Invoice_${safeOrderId}.xml`),
@@ -425,9 +437,11 @@ const gsCmd = `
     });
     const fileSpecRef = pdfDoc.context.register(fileSpecDict);
 
+    // Set AF entry in catalog
     const catalog = pdfDoc.catalog;
     catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
+    // Setup EmbeddedFiles name dictionary
     let namesDict = catalog.lookup(PDFName.of("Names"));
     if (!namesDict) {
       namesDict = pdfDoc.context.obj({});
@@ -446,6 +460,7 @@ const gsCmd = `
       namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
     }
 
+    // Save final PDF with embedded XML
     const finalPdfBytes = await pdfDoc.save();
     fs.writeFileSync(finalPdfPath, finalPdfBytes);
 
