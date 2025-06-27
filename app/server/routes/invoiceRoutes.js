@@ -9,7 +9,7 @@ const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { exec } = require("child_process");
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 
 
 
@@ -443,10 +443,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // Set XMP metadata stream and link in catalog
     await pdfDoc.setXmpMetadata(mergedXmp);
 
-    const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, 'utf8'), {
-      Type: PDFName.of('Metadata'),
-      Subtype: PDFName.of('XML'),
-    });
+   const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, 'utf8'), {
+  Type: PDFName.of('Metadata'),
+  Subtype: PDFName.of('XML'),
+  Filter: PDFName.of('FlateDecode'),
+});
+
     const metadataRef = pdfDoc.context.register(metadataStream);
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 
@@ -478,14 +480,22 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // Save PDF first to generate buffer for hashing
     let pdfWithXmlBuffer = await pdfDoc.save();
 
-    const id1 = crypto.createHash('md5').update(pdfWithXmlBuffer).digest();
-    const id2 = crypto.createHash('md5').update(Buffer.from(String(Date.now()))).digest();
+const id1 = crypto.createHash('md5').update(pdfWithXmlBuffer).digest();
+const id2 = crypto.createHash('md5').update(Buffer.from(String(Date.now()))).digest();
 
-    const idArray = pdfDoc.context.obj([
-      PDFString.fromBytes(id1),
-      PDFString.fromBytes(id2),
-    ]);
-    pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
+const pages = pdfDoc.getPages();
+for (const page of pages) {
+  const dict = page.node;
+  if (!dict.has(PDFName.of('Group'))) {
+    dict.set(
+      PDFName.of('Group'),
+      pdfDoc.context.obj({
+        S: PDFName.of('Transparency'),
+        CS: PDFName.of('DeviceRGB'),
+      })
+    );
+  }
+}
 
     // Save PDF again with ID
     pdfWithXmlBuffer = await pdfDoc.save();
