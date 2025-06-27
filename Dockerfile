@@ -27,6 +27,12 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
+# Update package lists and install Ghostscript
+RUN apt-get update && \
+    apt-get install -y ghostscript --no-install-recommends && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Only copy package.json and package-lock.json first to cache layers
