@@ -9,7 +9,7 @@ const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { exec } = require("child_process");
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFString, PDFDict, PDFNumber } = require("pdf-lib");
 
 
 
@@ -338,13 +338,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     // 1) Generate ZUGFeRD XML
     const zugferdXml = generateZugferdXML(invoiceData);
+    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
     console.log("----- Generated ZUGFeRD XML -----\n" + zugferdXml);
 
-    // 2) Generate PDF with Puppeteer
-    browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    // 2) Generate HTML to PDF
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
 
     if (!user.isPremium) {
@@ -360,7 +358,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
     const pdfa3PdfPath = path.join(pdfDir, `Invoice_${safeOrderId}_pdfa3.pdf`);
-    const finalPdfPath = path.join(pdfDir, `Invoice_${safeOrderId}_final.pdf`);
 
     const pdfBuffer = await page.pdf({
       format: "A4",
@@ -371,22 +368,28 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
           Page <span class="pageNumber"></span> of <span class="totalPages"></span>
         </div>`,
-      margin: {
-        top: "20mm",
-        bottom: "20mm",
-        left: "10mm",
-        right: "10mm",
-      },
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
     });
 
-    // 3) Embed ZUGFeRD XML into PDF with pdf-lib BEFORE Ghostscript conversion
+    // 3) Embed XML into PDF using pdf-lib
     const pdfDoc = await PDFDocument.load(pdfBuffer);
-    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
     const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       Type: PDFName.of("EmbeddedFile"),
       Subtype: PDFName.of("application/xml"),
     });
+
+    // Add /Params dictionary with size and mod date
+    const stats = {
+      size: xmlBuffer.length,
+      modDate: new Date().toISOString(),
+    };
+    const paramsDict = pdfDoc.context.obj({
+      Size: stats.size,
+      ModDate: PDFString.fromDate(new Date(stats.modDate)),
+    });
+    embeddedFileStream.set(PDFName.of("Params"), paramsDict);
+
     const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
     const efDict = pdfDoc.context.obj({
@@ -405,28 +408,31 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     const filespecRef = pdfDoc.context.register(filespecDict);
 
+    // Merge into /Names dictionary
     const catalog = pdfDoc.catalog;
-    catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
-
-    const metadataDict = pdfDoc.context.obj({
-      AFRelationship: PDFName.of("Data"),
-      UF: PDFString.of(fileName),
-      Desc: PDFString.of("ZUGFeRD XML"),
-      MIME: PDFString.of("application/xml"),
+    const names = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
+    const embeddedFilesDict = names.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({
+      Names: [],
     });
-    embeddedFileStream.set(PDFName.of("Params"), metadataDict);
+    const embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"))?.asArray() || [];
 
-    const namesDict = pdfDoc.context.obj({
-      EmbeddedFiles: pdfDoc.context.obj({
-        Names: [PDFString.of(fileName), filespecRef],
-      }),
-    });
-    catalog.set(PDFName.of("Names"), namesDict);
+    embeddedFilesArray.push(PDFString.of(fileName), filespecRef);
+    embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
+    names.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+    catalog.set(PDFName.of("Names"), names);
 
-    const zugferdXmp = `
+    // Set /AF entry in catalog (append to existing if needed)
+    const afArray = catalog.lookup(PDFName.of("AF"))?.asArray() || pdfDoc.context.obj([]);
+    afArray.push(filespecRef);
+    catalog.set(PDFName.of("AF"), afArray);
+
+    // Merge XMP metadata
+    const existingXmp = pdfDoc.getXmpMetadata();
+    const mergedXmp = `
 <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    ${existingXmp?.split("</rdf:RDF>")[0] || ""}
     <rdf:Description xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#"
       zf:ConformanceLevel="BASIC"
       zf:DocumentFileName="${fileName}"
@@ -436,23 +442,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 </x:xmpmeta>
 <?xpacket end="w"?>`.trim();
 
-    await pdfDoc.setXmpMetadata(zugferdXmp);
+    await pdfDoc.setXmpMetadata(mergedXmp);
 
     const pdfWithXmlBuffer = await pdfDoc.save();
     fs.writeFileSync(pdfPath, pdfWithXmlBuffer);
 
-    // 4) Convert to PDF/A-3 with Ghostscript
-    const iccProfilePath = path.resolve(
-      __dirname,
-      "../app/sRGB_IEC61966-2-1_no_black_scaling.icc"
-    );
-
+    // 4) Ghostscript PDF/A-3 conversion — preserve OutputIntent
+    const iccProfilePath = path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
     const gsCmd = `
       gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
       -sColorConversionStrategy=RGB \
       -sProcessColorModel=DeviceRGB \
       -sDEVICE=pdfwrite \
       -sPDFACompatibilityPolicy=1 \
+      -dUseCIEColor \
       -sOutputICCProfile="${iccProfilePath}" \
       -sOutputFile="${pdfa3PdfPath}" "${pdfPath}"
     `;
@@ -461,20 +464,19 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       exec(gsCmd, (error, stdout, stderr) => {
         if (error) {
           console.error("Ghostscript error:", error);
-          reject(error);
-          return;
+          return reject(error);
         }
         console.log("Ghostscript PDF/A-3 conversion done");
         resolve();
       });
     });
 
-    // 5) Read final PDF/A-3 and count pages
+    // 5) Count pages
     const finalPdfBytes = fs.readFileSync(pdfa3PdfPath);
     const parsed = await pdfParse(finalPdfBytes);
     const pageCount = parsed.numpages;
 
-    // 6) Enforce usage limits for preview or full generate
+    // 6) Enforce usage limits
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
@@ -502,7 +504,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
     await user.save();
 
-    // 7) Send final PDF and cleanup
+    // 7) Send PDF/A-3
     res.download(pdfa3PdfPath, (err) => {
       if (err) console.error("Download error:", err);
       [pdfPath, pdfa3PdfPath].forEach((file) => {
@@ -513,10 +515,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     console.error("Error generating invoice:", error);
     return res.status(500).json({ error: "Internal server error" });
   } finally {
-    if (browser) {
-      await browser.close();
-    }
+    if (browser) await browser.close();
   }
 });
+
 
 module.exports = router;
