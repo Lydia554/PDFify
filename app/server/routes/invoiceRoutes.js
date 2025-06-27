@@ -294,6 +294,7 @@ const watermarkHTML =
 
 
 
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
   try {
@@ -376,12 +377,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // 3) Embed ZUGFeRD XML in PDF using pdf-lib
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
+    // Embedded file stream for ZUGFeRD XML
     const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       Type: PDFName.of("EmbeddedFile"),
       Subtype: PDFName.of("application/xml"),
     });
-
-    // Add /Params dictionary
     embeddedFileStream.set(
       PDFName.of("Params"),
       pdfDoc.context.obj({
@@ -389,14 +389,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         ModDate: PDFString.fromDate(new Date()),
       })
     );
-
     const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
+    // File specification dictionary
     const efDict = pdfDoc.context.obj({
       F: embeddedFileRef,
       UF: embeddedFileRef,
     });
-
     const fileName = "zugferd-invoice.xml";
     const filespecDict = pdfDoc.context.obj({
       Type: PDFName.of("Filespec"),
@@ -408,7 +407,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     const filespecRef = pdfDoc.context.register(filespecDict);
 
-    // Ensure /Names → /EmbeddedFiles is set
+    // Set /Names → /EmbeddedFiles
     const catalog = pdfDoc.catalog;
     const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
     const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({
@@ -421,11 +420,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
     catalog.set(PDFName.of("Names"), namesDict);
 
-    // Set /AF entry
+    // Set /AF entry (associated files)
     const afArray = pdfDoc.context.obj([filespecRef]);
     catalog.set(PDFName.of("AF"), afArray);
 
-    // Merge XMP metadata
+    // Merge XMP metadata with ZUGFeRD info
     const existingXmp = pdfDoc.getXmpMetadata() || "";
     const mergedXmp = `
 <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
@@ -441,25 +440,69 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 </x:xmpmeta>
 <?xpacket end="w"?>`.trim();
 
+    // Set XMP metadata stream and link in catalog
     await pdfDoc.setXmpMetadata(mergedXmp);
-    const pdfWithXmlBuffer = await pdfDoc.save();
+
+    const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, 'utf8'), {
+      Type: PDFName.of('Metadata'),
+      Subtype: PDFName.of('XML'),
+    });
+    const metadataRef = pdfDoc.context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+
+    // Add OutputIntent with ICC profile for PDF/A-3
+    const iccProfilePath = process.env.ICC_PROFILE_PATH
+      ? path.resolve(process.env.ICC_PROFILE_PATH)
+      : path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+    const iccData = fs.readFileSync(iccProfilePath);
+
+    const iccStream = pdfDoc.context.flateStream(iccData, {
+      N: 3,
+      Alternate: PDFName.of('DeviceRGB'),
+      Filter: PDFName.of('FlateDecode'),
+    });
+    const iccRef = pdfDoc.context.register(iccStream);
+
+    const outputIntentDict = pdfDoc.context.obj({
+      Type: PDFName.of('OutputIntent'),
+      S: PDFName.of('GTS_PDFA1'),
+      OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
+      Info: PDFString.of('sRGB IEC61966-2.1'),
+      DestOutputProfile: iccRef,
+    });
+    const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+
+    pdfDoc.catalog.set(PDFName.of('OutputIntents'), pdfDoc.context.obj([outputIntentRef]));
+
+    // Add /ID array (two 16-byte unique identifiers)
+    // Save PDF first to generate buffer for hashing
+    let pdfWithXmlBuffer = await pdfDoc.save();
+
+    const id1 = crypto.createHash('md5').update(pdfWithXmlBuffer).digest();
+    const id2 = crypto.createHash('md5').update(Buffer.from(String(Date.now()))).digest();
+
+    const idArray = pdfDoc.context.obj([
+      PDFString.fromBytes(id1),
+      PDFString.fromBytes(id2),
+    ]);
+    pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
+
+    // Save PDF again with ID
+    pdfWithXmlBuffer = await pdfDoc.save();
     fs.writeFileSync(pdfPath, pdfWithXmlBuffer);
 
     // 4) Ghostscript PDF/A-3b conversion
-const iccProfilePath = process.env.ICC_PROFILE_PATH
-  ? path.resolve(process.env.ICC_PROFILE_PATH)
-  : path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+    const gsCmd = `
+      gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
+      -dColorConversionStrategy=/sRGB \
+      -sProcessColorModel=DeviceRGB \
+      -sDEVICE=pdfwrite \
+      -sPDFACompatibilityPolicy=1 \
+      -dUseCIEColor \
+      -sOutputICCProfile="${iccProfilePath.replace(/"/g, '\\"')}" \
+      -sOutputFile="${pdfa3PdfPath.replace(/"/g, '\\"')}" "${pdfPath.replace(/"/g, '\\"')}"
+    `;
 
-const gsCmd = `
-  gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
-  -sColorConversionStrategy=RGB \
-  -sProcessColorModel=DeviceRGB \
-  -sDEVICE=pdfwrite \
-  -sPDFACompatibilityPolicy=1 \
-  -dUseCIEColor \
-  -sOutputICCProfile="${iccProfilePath.replace(/"/g, '\\"')}" \
-  -sOutputFile="${pdfa3PdfPath.replace(/"/g, '\\"')}" "${pdfPath.replace(/"/g, '\\"')}"
-`;
     await new Promise((resolve, reject) => {
       exec(gsCmd, (error, stdout, stderr) => {
         if (error) {
@@ -496,18 +539,23 @@ const gsCmd = `
       }
       user.usageCount += pageCount;
     }
+
     await user.save();
 
-    // 6) Send response
-    res.download(pdfa3PdfPath, (err) => {
-      if (err) console.error("Download error:", err);
-      [pdfPath, pdfa3PdfPath].forEach((file) => {
-        if (fs.existsSync(file)) fs.unlinkSync(file);
-      });
-    });
-  } catch (error) {
-    console.error("Error generating invoice:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    // 6) Send file to client
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="Invoice_${safeOrderId}.pdf"`);
+    res.send(finalPdfBytes);
+
+    // Cleanup temp files
+    try {
+      fs.unlinkSync(pdfPath);
+      fs.unlinkSync(pdfa3PdfPath);
+    } catch {}
+
+  } catch (err) {
+    console.error("Invoice generation error:", err);
+    res.status(500).json({ error: "Failed to generate invoice" });
   } finally {
     if (browser) await browser.close();
   }
