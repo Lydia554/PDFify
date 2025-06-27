@@ -374,16 +374,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.writeFileSync(pdfPath, pdfBuffer);
 
     // 3) Convert to PDF/A-3 using Ghostscript
-    // Adjust the ICC profile path as needed (you need an ICC profile file)
-    const iccProfilePath = "/usr/share/color/icc/colord/sRGB.icc"; // Example common path in Linux, change if needed
+   
+   const iccProfilePath = path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
 
-    const gsCmd = `
-      gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
-      -sProcessColorModel=DeviceCMYK -sDEVICE=pdfwrite \
-      -sPDFACompatibilityPolicy=1 \
-      -sOutputICCProfile=${iccProfilePath} \
-      -sOutputFile="${pdfa3PdfPath}" "${pdfPath}"
-    `;
+const gsCmd = `
+  gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
+  -sColorConversionStrategy=RGB \
+  -sProcessColorModel=DeviceRGB \
+  -sDEVICE=pdfwrite \
+  -sPDFACompatibilityPolicy=1 \
+  -sOutputICCProfile="${iccProfilePath}" \
+  -sOutputFile="${pdfa3PdfPath}" "${pdfPath}"
+`;
 
     await new Promise((resolve, reject) => {
       exec(gsCmd, (error, stdout, stderr) => {
