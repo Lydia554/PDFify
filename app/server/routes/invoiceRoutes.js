@@ -291,8 +291,8 @@ const watermarkHTML =
 </html>
 `;
 }
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
+  let browser;
   try {
     let { data, isPreview } = req.body;
     if (!data || typeof data !== "object") {
@@ -341,7 +341,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     console.log("----- Generated ZUGFeRD XML -----\n" + zugferdXml);
 
     // 2) Generate PDF with Puppeteer
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
@@ -378,12 +378,70 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         right: "10mm",
       },
     });
-    await browser.close();
 
-    // Save initial PDF
-    fs.writeFileSync(pdfPath, pdfBuffer);
+    // 3) Embed ZUGFeRD XML into PDF with pdf-lib BEFORE Ghostscript conversion
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-    // 3) Convert to PDF/A-3 using Ghostscript
+    const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+      Type: PDFName.of("EmbeddedFile"),
+      Subtype: PDFName.of("application/xml"),
+    });
+    const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+
+    const efDict = pdfDoc.context.obj({
+      F: embeddedFileRef,
+      UF: embeddedFileRef,
+    });
+
+    const fileName = "zugferd-invoice.xml";
+    const filespecDict = pdfDoc.context.obj({
+      Type: PDFName.of("Filespec"),
+      F: PDFString.of(fileName),
+      UF: PDFString.of(fileName),
+      EF: efDict,
+      Desc: PDFString.of("ZUGFeRD invoice XML"),
+      AFRelationship: PDFName.of("Data"),
+    });
+    const filespecRef = pdfDoc.context.register(filespecDict);
+
+    const catalog = pdfDoc.catalog;
+    catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+
+    const metadataDict = pdfDoc.context.obj({
+      AFRelationship: PDFName.of("Data"),
+      UF: PDFString.of(fileName),
+      Desc: PDFString.of("ZUGFeRD XML"),
+      MIME: PDFString.of("application/xml"),
+    });
+    embeddedFileStream.set(PDFName.of("Params"), metadataDict);
+
+    const namesDict = pdfDoc.context.obj({
+      EmbeddedFiles: pdfDoc.context.obj({
+        Names: [PDFString.of(fileName), filespecRef],
+      }),
+    });
+    catalog.set(PDFName.of("Names"), namesDict);
+
+    const zugferdXmp = `
+<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#"
+      zf:ConformanceLevel="BASIC"
+      zf:DocumentFileName="${fileName}"
+      zf:DocumentType="INVOICE"
+      zf:Version="1.0"/>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`.trim();
+
+    await pdfDoc.setXmpMetadata(zugferdXmp);
+
+    const pdfWithXmlBuffer = await pdfDoc.save();
+    fs.writeFileSync(pdfPath, pdfWithXmlBuffer);
+
+    // 4) Convert to PDF/A-3 with Ghostscript
     const iccProfilePath = path.resolve(
       __dirname,
       "../app/sRGB_IEC61966-2-1_no_black_scaling.icc"
@@ -411,100 +469,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
     });
 
-  // 4) Load PDF/A-3 PDF into pdf-lib and embed ZUGFeRD XML
-const pdfData = fs.readFileSync(pdfa3PdfPath);
-const pdfDoc = await PDFDocument.load(pdfData);
-const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-
-// Create embedded file stream for ZUGFeRD XML
-const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-  Type: PDFName.of("EmbeddedFile"),
-  Subtype: PDFName.of("application/xml"),
-});
-const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
-
-// Create EF dictionary
-const efDict = pdfDoc.context.obj({
-  F: embeddedFileRef,
-  UF: embeddedFileRef,
-});
-
-// Create Filespec dictionary with correct AFRelationship
-const fileName = 'zugferd-invoice.xml';
-const filespecDict = pdfDoc.context.obj({
-  Type: PDFName.of("Filespec"),
-  F: PDFString.of(fileName),
-  UF: PDFString.of(fileName),
-  EF: efDict,
-  Desc: PDFString.of("ZUGFeRD invoice XML"),
-  AFRelationship: PDFName.of("Data"),
-});
-const filespecRef = pdfDoc.context.register(filespecDict);
-
-// Attach the file in Catalog's AF array
-const catalog = pdfDoc.catalog;
-catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
-
-// Set embedded file Params
-const metadataDict = pdfDoc.context.obj({
-  AFRelationship: PDFName.of("Data"),
-  UF: PDFString.of(fileName),
-  Desc: PDFString.of("ZUGFeRD XML"),
-  MIME: PDFString.of("application/xml"),
-});
-embeddedFileStream.set(PDFName.of("Params"), metadataDict);
-
-// Add to Names dictionary
-const namesDict = pdfDoc.context.obj({
-  EmbeddedFiles: pdfDoc.context.obj({
-    Names: [PDFString.of(fileName), filespecRef],
-  }),
-});
-catalog.set(PDFName.of("Names"), namesDict);
-
-// Inject ZUGFeRD XMP metadata
-const zugferdXmp = `
-<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#"
-      zf:ConformanceLevel="BASIC"
-      zf:DocumentFileName="${fileName}"
-      zf:DocumentType="INVOICE"
-      zf:Version="1.0"/>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end="w"?>`.trim();
-
-await pdfDoc.setXmpMetadata(zugferdXmp);
-
-
-    // Optional: mark it as PDF/A-3 and ZUGFeRD
-    const metadata = await pdfDoc.getMetadata();
-    if (!metadata) {
-      pdfDoc.setTitle("Invoice");
-      pdfDoc.setSubject("ZUGFeRD Invoice");
-      pdfDoc.setProducer("PDFify.pro");
-    }
-
-    // Save final PDF
-    const finalPdfBytes = await pdfDoc.save();
-    fs.writeFileSync(finalPdfPath, finalPdfBytes);
-
-    // 5) Count pages for usage limits
+    // 5) Read final PDF/A-3 and count pages
+    const finalPdfBytes = fs.readFileSync(pdfa3PdfPath);
     const parsed = await pdfParse(finalPdfBytes);
     const pageCount = parsed.numpages;
 
+    // 6) Enforce usage limits for preview or full generate
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
           user.previewCount += 1;
         } else {
           if (user.usageCount + pageCount > user.maxUsage) {
-            // Clean up files
             fs.unlinkSync(pdfPath);
             fs.unlinkSync(pdfa3PdfPath);
-            fs.unlinkSync(finalPdfPath);
             return res.status(403).json({
               error: "Monthly usage limit reached. Upgrade to premium for more pages.",
             });
@@ -516,7 +494,6 @@ await pdfDoc.setXmpMetadata(zugferdXmp);
       if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         fs.unlinkSync(pdfa3PdfPath);
-        fs.unlinkSync(finalPdfPath);
         return res.status(403).json({
           error: "Monthly usage limit reached. Upgrade to premium for more pages.",
         });
@@ -525,14 +502,14 @@ await pdfDoc.setXmpMetadata(zugferdXmp);
     }
     await user.save();
 
-    // 6) Send final PDF and cleanup
-    res.download(finalPdfPath, (err) => {
+    // 7) Send final PDF and cleanup
+    res.download(pdfa3PdfPath, (err) => {
       if (err) console.error("Download error:", err);
-      [pdfPath, pdfa3PdfPath, finalPdfPath].forEach((file) => {
+      [pdfPath, pdfa3PdfPath].forEach((file) => {
         if (fs.existsSync(file)) fs.unlinkSync(file);
       });
     });
- } catch (error) {
+  } catch (error) {
     console.error("Error generating invoice:", error);
     return res.status(500).json({ error: "Internal server error" });
   } finally {
