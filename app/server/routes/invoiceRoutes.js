@@ -9,7 +9,7 @@ const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { exec } = require("child_process");
-const { PDFDocument, PDFName, PDFString, PDFDict, PDFNumber } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 
 
 
@@ -291,6 +291,9 @@ const watermarkHTML =
 </html>
 `;
 }
+
+
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
   try {
@@ -339,9 +342,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // 1) Generate ZUGFeRD XML
     const zugferdXml = generateZugferdXML(invoiceData);
     const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-    console.log("----- Generated ZUGFeRD XML -----\n" + zugferdXml);
 
-    // 2) Generate HTML to PDF
+    // 2) Generate PDF with Puppeteer
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
 
@@ -371,7 +373,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
     });
 
-    // 3) Embed XML into PDF using pdf-lib
+    // 3) Embed ZUGFeRD XML in PDF using pdf-lib
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
     const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
@@ -379,16 +381,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       Subtype: PDFName.of("application/xml"),
     });
 
-    // Add /Params dictionary with size and mod date
-    const stats = {
-      size: xmlBuffer.length,
-      modDate: new Date().toISOString(),
-    };
-    const paramsDict = pdfDoc.context.obj({
-      Size: stats.size,
-      ModDate: PDFString.fromDate(new Date(stats.modDate)),
-    });
-    embeddedFileStream.set(PDFName.of("Params"), paramsDict);
+    // Add /Params dictionary
+    embeddedFileStream.set(
+      PDFName.of("Params"),
+      pdfDoc.context.obj({
+        Size: xmlBuffer.length,
+        ModDate: PDFString.fromDate(new Date()),
+      })
+    );
 
     const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
@@ -408,31 +408,30 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     const filespecRef = pdfDoc.context.register(filespecDict);
 
-    // Merge into /Names dictionary
+    // Ensure /Names → /EmbeddedFiles is set
     const catalog = pdfDoc.catalog;
-    const names = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
-    const embeddedFilesDict = names.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({
+    const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
+    const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({
       Names: [],
     });
     const embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"))?.asArray() || [];
 
     embeddedFilesArray.push(PDFString.of(fileName), filespecRef);
     embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-    names.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-    catalog.set(PDFName.of("Names"), names);
+    namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+    catalog.set(PDFName.of("Names"), namesDict);
 
-    // Set /AF entry in catalog (append to existing if needed)
-    const afArray = catalog.lookup(PDFName.of("AF"))?.asArray() || pdfDoc.context.obj([]);
-    afArray.push(filespecRef);
+    // Set /AF entry
+    const afArray = pdfDoc.context.obj([filespecRef]);
     catalog.set(PDFName.of("AF"), afArray);
 
     // Merge XMP metadata
-    const existingXmp = pdfDoc.getXmpMetadata();
+    const existingXmp = pdfDoc.getXmpMetadata() || "";
     const mergedXmp = `
 <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    ${existingXmp?.split("</rdf:RDF>")[0] || ""}
+    ${existingXmp.split("</rdf:RDF>")[0] || ""}
     <rdf:Description xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#"
       zf:ConformanceLevel="BASIC"
       zf:DocumentFileName="${fileName}"
@@ -443,11 +442,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 <?xpacket end="w"?>`.trim();
 
     await pdfDoc.setXmpMetadata(mergedXmp);
-
     const pdfWithXmlBuffer = await pdfDoc.save();
     fs.writeFileSync(pdfPath, pdfWithXmlBuffer);
 
-    // 4) Ghostscript PDF/A-3 conversion — preserve OutputIntent
+    // 4) Ghostscript PDF/A-3b conversion
     const iccProfilePath = path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
     const gsCmd = `
       gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
@@ -466,17 +464,15 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           console.error("Ghostscript error:", error);
           return reject(error);
         }
-        console.log("Ghostscript PDF/A-3 conversion done");
         resolve();
       });
     });
 
-    // 5) Count pages
+    // 5) Count pages and enforce limits
     const finalPdfBytes = fs.readFileSync(pdfa3PdfPath);
     const parsed = await pdfParse(finalPdfBytes);
     const pageCount = parsed.numpages;
 
-    // 6) Enforce usage limits
     if (isPreview) {
       if (!user.isPremium) {
         if (user.previewCount < 3) {
@@ -485,9 +481,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           if (user.usageCount + pageCount > user.maxUsage) {
             fs.unlinkSync(pdfPath);
             fs.unlinkSync(pdfa3PdfPath);
-            return res.status(403).json({
-              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-            });
+            return res.status(403).json({ error: "Monthly usage limit reached." });
           }
           user.usageCount += pageCount;
         }
@@ -496,15 +490,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
         fs.unlinkSync(pdfa3PdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
+        return res.status(403).json({ error: "Monthly usage limit reached." });
       }
       user.usageCount += pageCount;
     }
     await user.save();
 
-    // 7) Send PDF/A-3
+    // 6) Send response
     res.download(pdfa3PdfPath, (err) => {
       if (err) console.error("Download error:", err);
       [pdfPath, pdfa3PdfPath].forEach((file) => {
@@ -518,6 +510,5 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (browser) await browser.close();
   }
 });
-
 
 module.exports = router;
