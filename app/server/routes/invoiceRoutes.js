@@ -428,42 +428,53 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       F: embeddedFileRef,
       UF: embeddedFileRef,
     });
+    
 
-    // Create Filespec dictionary
-    const fileSpecDict = pdfDoc.context.obj({
+    const fileName = 'zugferd-invoice.xml';
+
+    const filespecDict = pdfDoc.context.obj({
       Type: PDFName.of("Filespec"),
-      F: PDFString.of(`Invoice_${safeOrderId}.xml`),
-      UF: PDFString.of(`Invoice_${safeOrderId}.xml`),
-      AFRelationship: PDFName.of("Alternative"),
-      Desc: PDFString.of("ZUGFeRD Invoice XML"),
+      F: PDFString.of(fileName),
+      UF: PDFString.of(fileName),
       EF: efDict,
+      Desc: PDFString.of("ZUGFeRD invoice XML"),
     });
-    const fileSpecRef = pdfDoc.context.register(fileSpecDict);
 
-    // Set AF entry in catalog
+    const filespecRef = pdfDoc.context.register(filespecDict);
+
+    // Add AF (Associated Files) entry to Catalog
     const catalog = pdfDoc.catalog;
-    catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+    catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-    // Setup EmbeddedFiles name dictionary
-    let namesDict = catalog.lookup(PDFName.of("Names"));
-    if (!namesDict) {
-      namesDict = pdfDoc.context.obj({});
-      catalog.set(PDFName.of("Names"), namesDict);
+    // Set Metadata on the Embedded File
+    const metadataDict = pdfDoc.context.obj({
+      AFRelationship: PDFName.of("Alternative"),
+      UF: PDFString.of(fileName),
+      Desc: PDFString.of("ZUGFeRD XML"),
+      MIME: PDFString.of("application/xml"),
+    });
+
+    // Add the Metadata to the embedded file stream
+    embeddedFileStream.set(PDFName.of("Params"), metadataDict);
+
+    // Add to Names dictionary
+    const namesDict = pdfDoc.context.obj({
+      EmbeddedFiles: pdfDoc.context.obj({
+        Names: [PDFString.of(fileName), filespecRef],
+      }),
+    });
+
+    catalog.set(PDFName.of("Names"), namesDict);
+
+    // Optional: mark it as PDF/A-3 and ZUGFeRD
+    const metadata = await pdfDoc.getMetadata();
+    if (!metadata) {
+      pdfDoc.setTitle("Invoice");
+      pdfDoc.setSubject("ZUGFeRD Invoice");
+      pdfDoc.setProducer("PDFify.pro");
     }
 
-    let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"));
-    if (!embeddedFilesDict) {
-      const embeddedFilesArray = pdfDoc.context.obj([
-        PDFString.of(`Invoice_${safeOrderId}.xml`),
-        fileSpecRef,
-      ]);
-      embeddedFilesDict = pdfDoc.context.obj({
-        Names: embeddedFilesArray,
-      });
-      namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-    }
-
-    // Save final PDF with embedded XML
+    // Save final PDF
     const finalPdfBytes = await pdfDoc.save();
     fs.writeFileSync(finalPdfPath, finalPdfBytes);
 
