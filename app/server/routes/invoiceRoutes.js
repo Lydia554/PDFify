@@ -411,60 +411,73 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
     });
 
-    // 4) Load PDF/A-3 PDF into pdf-lib and embed ZUGFeRD XML
-    const pdfData = fs.readFileSync(pdfa3PdfPath);
-    const pdfDoc = await PDFDocument.load(pdfData);
-    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+  // 4) Load PDF/A-3 PDF into pdf-lib and embed ZUGFeRD XML
+const pdfData = fs.readFileSync(pdfa3PdfPath);
+const pdfDoc = await PDFDocument.load(pdfData);
+const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-    // Create embedded file stream for ZUGFeRD XML
-    const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-      Type: PDFName.of("EmbeddedFile"),
-      Subtype: PDFName.of("application/xml"),
-    });
-    const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+// Create embedded file stream for ZUGFeRD XML
+const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+  Type: PDFName.of("EmbeddedFile"),
+  Subtype: PDFName.of("application/xml"),
+});
+const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-    // Create EF dictionary
-    const efDict = pdfDoc.context.obj({
-      F: embeddedFileRef,
-      UF: embeddedFileRef,
-    });
-    
+// Create EF dictionary
+const efDict = pdfDoc.context.obj({
+  F: embeddedFileRef,
+  UF: embeddedFileRef,
+});
 
-    const fileName = 'zugferd-invoice.xml';
+// Create Filespec dictionary with correct AFRelationship
+const fileName = 'zugferd-invoice.xml';
+const filespecDict = pdfDoc.context.obj({
+  Type: PDFName.of("Filespec"),
+  F: PDFString.of(fileName),
+  UF: PDFString.of(fileName),
+  EF: efDict,
+  Desc: PDFString.of("ZUGFeRD invoice XML"),
+  AFRelationship: PDFName.of("Data"),
+});
+const filespecRef = pdfDoc.context.register(filespecDict);
 
-    const filespecDict = pdfDoc.context.obj({
-      Type: PDFName.of("Filespec"),
-      F: PDFString.of(fileName),
-      UF: PDFString.of(fileName),
-      EF: efDict,
-      Desc: PDFString.of("ZUGFeRD invoice XML"),
-    });
+// Attach the file in Catalog's AF array
+const catalog = pdfDoc.catalog;
+catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-    const filespecRef = pdfDoc.context.register(filespecDict);
+// Set embedded file Params
+const metadataDict = pdfDoc.context.obj({
+  AFRelationship: PDFName.of("Data"),
+  UF: PDFString.of(fileName),
+  Desc: PDFString.of("ZUGFeRD XML"),
+  MIME: PDFString.of("application/xml"),
+});
+embeddedFileStream.set(PDFName.of("Params"), metadataDict);
 
-    // Add AF (Associated Files) entry to Catalog
-    const catalog = pdfDoc.catalog;
-    catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+// Add to Names dictionary
+const namesDict = pdfDoc.context.obj({
+  EmbeddedFiles: pdfDoc.context.obj({
+    Names: [PDFString.of(fileName), filespecRef],
+  }),
+});
+catalog.set(PDFName.of("Names"), namesDict);
 
-    // Set Metadata on the Embedded File
-    const metadataDict = pdfDoc.context.obj({
-      AFRelationship: PDFName.of("Alternative"),
-      UF: PDFString.of(fileName),
-      Desc: PDFString.of("ZUGFeRD XML"),
-      MIME: PDFString.of("application/xml"),
-    });
+// Inject ZUGFeRD XMP metadata
+const zugferdXmp = `
+<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#"
+      zf:ConformanceLevel="BASIC"
+      zf:DocumentFileName="${fileName}"
+      zf:DocumentType="INVOICE"
+      zf:Version="1.0"/>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`.trim();
 
-    // Add the Metadata to the embedded file stream
-    embeddedFileStream.set(PDFName.of("Params"), metadataDict);
+await pdfDoc.setXmpMetadata(zugferdXmp);
 
-    // Add to Names dictionary
-    const namesDict = pdfDoc.context.obj({
-      EmbeddedFiles: pdfDoc.context.obj({
-        Names: [PDFString.of(fileName), filespecRef],
-      }),
-    });
-
-    catalog.set(PDFName.of("Names"), namesDict);
 
     // Optional: mark it as PDF/A-3 and ZUGFeRD
     const metadata = await pdfDoc.getMetadata();
