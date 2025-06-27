@@ -446,20 +446,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.writeFileSync(pdfPath, pdfWithXmlBuffer);
 
     // 4) Ghostscript PDF/A-3b conversion
+const iccProfilePath = process.env.ICC_PROFILE_PATH
+  ? path.resolve(process.env.ICC_PROFILE_PATH)
+  : path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+
 const gsCmd = `
   gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
-  -sDEVICE=pdfwrite \
   -sColorConversionStrategy=RGB \
   -sProcessColorModel=DeviceRGB \
-  -dUseCIEColor \
-  -dPrinted=false \
-  -sOutputIntent=Custom \
-  -sOutputICCProfile="${iccProfilePath}" \
+  -sDEVICE=pdfwrite \
   -sPDFACompatibilityPolicy=1 \
-  -sOutputFile="${pdfa3PdfPath}" "${pdfPath}"
+  -dUseCIEColor \
+  -sOutputICCProfile="${iccProfilePath.replace(/"/g, '\\"')}" \
+  -sOutputFile="${pdfa3PdfPath.replace(/"/g, '\\"')}" "${pdfPath.replace(/"/g, '\\"')}"
 `;
-
-
     await new Promise((resolve, reject) => {
       exec(gsCmd, (error, stdout, stderr) => {
         if (error) {
