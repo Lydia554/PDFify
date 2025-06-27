@@ -8,6 +8,9 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
+const { exec } = require("child_process");
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+
 
 
 
@@ -505,9 +508,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         if (fs.existsSync(file)) fs.unlinkSync(file);
       });
     });
-  } catch (error) {
-    console.error("PDF generation failed:", error);
-    res.status(500).json({ error: "PDF generation failed" });
+ } catch (error) {
+    console.error("Error generating invoice:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
   }
 });
 
