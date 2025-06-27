@@ -294,7 +294,6 @@ const watermarkHTML =
 
 
 
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
   try {
@@ -303,6 +302,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
+    // Normalize items array
     let invoiceData = { ...data };
     if (typeof invoiceData.items === "string") {
       try {
@@ -318,6 +318,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // Reset counters if month changed (example logic)
     const now = new Date();
     if (
       !user.previewLastReset ||
@@ -335,6 +336,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       user.usageCount = 0;
       user.usageLastReset = now;
     }
+    await user.save();
 
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
@@ -359,9 +361,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const html = generateInvoiceHTML({ ...invoiceData, isPreview });
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-    const pdfa3PdfPath = path.join(pdfDir, `Invoice_${safeOrderId}_pdfa3.pdf`);
-
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -374,10 +373,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
     });
 
-    // 3) Embed ZUGFeRD XML in PDF using pdf-lib
+    // 3) Embed ZUGFeRD XML into PDF using pdf-lib
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    // Embedded file stream for ZUGFeRD XML
+    // Create embedded file stream for XML
     const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       Type: PDFName.of("EmbeddedFile"),
       Subtype: PDFName.of("application/xml"),
@@ -386,12 +385,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       PDFName.of("Params"),
       pdfDoc.context.obj({
         Size: xmlBuffer.length,
-        ModDate: PDFString.fromDate(new Date()),
+        ModDate: PDFHexString.fromDate(new Date()),
       })
     );
     const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-    // File specification dictionary
+    // Create file specification dictionary
     const efDict = pdfDoc.context.obj({
       F: embeddedFileRef,
       UF: embeddedFileRef,
@@ -399,32 +398,30 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const fileName = "zugferd-invoice.xml";
     const filespecDict = pdfDoc.context.obj({
       Type: PDFName.of("Filespec"),
-      F: PDFString.of(fileName),
-      UF: PDFString.of(fileName),
+      F: PDFHexString.fromString(fileName),
+      UF: PDFHexString.fromString(fileName),
       EF: efDict,
-      Desc: PDFString.of("ZUGFeRD invoice XML"),
+      Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
       AFRelationship: PDFName.of("Data"),
     });
     const filespecRef = pdfDoc.context.register(filespecDict);
 
-    // Set /Names → /EmbeddedFiles
+    // Set /Names → /EmbeddedFiles dictionary
     const catalog = pdfDoc.catalog;
     const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
-    const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({
-      Names: [],
-    });
-    const embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"))?.asArray() || [];
+    const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
+    const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
 
-    embeddedFilesArray.push(PDFString.of(fileName), filespecRef);
+    embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
     embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
     namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
     catalog.set(PDFName.of("Names"), namesDict);
 
-    // Set /AF entry (associated files)
+    // Set /AF (Associated Files) entry
     const afArray = pdfDoc.context.obj([filespecRef]);
     catalog.set(PDFName.of("AF"), afArray);
 
-    // Merge XMP metadata with ZUGFeRD info
+    // Merge and set XMP metadata with ZUGFeRD info
     const existingXmp = pdfDoc.getXmpMetadata() || "";
     const mergedXmp = `
 <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
@@ -440,22 +437,19 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 </x:xmpmeta>
 <?xpacket end="w"?>`.trim();
 
-    // Set XMP metadata stream and link in catalog
     await pdfDoc.setXmpMetadata(mergedXmp);
 
-   const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, 'utf8'), {
-  Type: PDFName.of('Metadata'),
-  Subtype: PDFName.of('XML'),
-  Filter: PDFName.of('FlateDecode'),
-});
-
+    // Add metadata stream
+    const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, 'utf8'), {
+      Type: PDFName.of('Metadata'),
+      Subtype: PDFName.of('XML'),
+      Filter: PDFName.of('FlateDecode'),
+    });
     const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+    catalog.set(PDFName.of('Metadata'), metadataRef);
 
-    // Add OutputIntent with ICC profile for PDF/A-3
-    const iccProfilePath = process.env.ICC_PROFILE_PATH
-      ? path.resolve(process.env.ICC_PROFILE_PATH)
-      : path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+    // Add OutputIntent (sRGB ICC profile) for PDF/A-3 compliance
+    const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
     const iccData = fs.readFileSync(iccProfilePath);
 
     const iccStream = pdfDoc.context.flateStream(iccData, {
@@ -468,104 +462,28 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const outputIntentDict = pdfDoc.context.obj({
       Type: PDFName.of('OutputIntent'),
       S: PDFName.of('GTS_PDFA1'),
-      OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
-      Info: PDFString.of('sRGB IEC61966-2.1'),
+      OutputConditionIdentifier: PDFHexString.fromString('sRGB IEC61966-2.1'),
+      Info: PDFHexString.fromString('sRGB IEC61966-2.1'),
       DestOutputProfile: iccRef,
     });
     const outputIntentRef = pdfDoc.context.register(outputIntentDict);
 
-    pdfDoc.catalog.set(PDFName.of('OutputIntents'), pdfDoc.context.obj([outputIntentRef]));
+    catalog.set(PDFName.of('OutputIntents'), pdfDoc.context.obj([outputIntentRef]));
 
-    // Add /ID array (two 16-byte unique identifiers)
-    // Save PDF first to generate buffer for hashing
-    let pdfWithXmlBuffer = await pdfDoc.save();
+    // Serialize PDF with embedded XML and metadata
+    const finalPdfBytes = await pdfDoc.save();
 
-const id1 = crypto.createHash('md5').update(pdfWithXmlBuffer).digest();
-const id2 = crypto.createHash('md5').update(Buffer.from(String(Date.now()))).digest();
-
-const pages = pdfDoc.getPages();
-for (const page of pages) {
-  const dict = page.node;
-  if (!dict.has(PDFName.of('Group'))) {
-    dict.set(
-      PDFName.of('Group'),
-      pdfDoc.context.obj({
-        S: PDFName.of('Transparency'),
-        CS: PDFName.of('DeviceRGB'),
-      })
-    );
-  }
-}
-
-    // Save PDF again with ID
-    pdfWithXmlBuffer = await pdfDoc.save();
-    fs.writeFileSync(pdfPath, pdfWithXmlBuffer);
-
-    // 4) Ghostscript PDF/A-3b conversion
-    const gsCmd = `
-      gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE \
-      -dColorConversionStrategy=/sRGB \
-      -sProcessColorModel=DeviceRGB \
-      -sDEVICE=pdfwrite \
-      -sPDFACompatibilityPolicy=1 \
-      -dUseCIEColor \
-      -sOutputICCProfile="${iccProfilePath.replace(/"/g, '\\"')}" \
-      -sOutputFile="${pdfa3PdfPath.replace(/"/g, '\\"')}" "${pdfPath.replace(/"/g, '\\"')}"
-    `;
-
-    await new Promise((resolve, reject) => {
-      exec(gsCmd, (error, stdout, stderr) => {
-        if (error) {
-          console.error("Ghostscript error:", error);
-          return reject(error);
-        }
-        resolve();
-      });
+    // 4) Send PDF response
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
+      "Content-Length": finalPdfBytes.length,
     });
 
-    // 5) Count pages and enforce limits
-    const finalPdfBytes = fs.readFileSync(pdfa3PdfPath);
-    const parsed = await pdfParse(finalPdfBytes);
-    const pageCount = parsed.numpages;
-
-    if (isPreview) {
-      if (!user.isPremium) {
-        if (user.previewCount < 3) {
-          user.previewCount += 1;
-        } else {
-          if (user.usageCount + pageCount > user.maxUsage) {
-            fs.unlinkSync(pdfPath);
-            fs.unlinkSync(pdfa3PdfPath);
-            return res.status(403).json({ error: "Monthly usage limit reached." });
-          }
-          user.usageCount += pageCount;
-        }
-      }
-    } else {
-      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        fs.unlinkSync(pdfa3PdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached." });
-      }
-      user.usageCount += pageCount;
-    }
-
-    await user.save();
-
-    // 6) Send file to client
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="Invoice_${safeOrderId}.pdf"`);
-    res.send(finalPdfBytes);
-
-    // Cleanup temp files
-    try {
-      fs.unlinkSync(pdfPath);
-      fs.unlinkSync(pdfa3PdfPath);
-    } catch {}
-
-  } catch (err) {
-    console.error("Invoice generation error:", err);
-    res.status(500).json({ error: "Failed to generate invoice" });
+    return res.send(Buffer.from(finalPdfBytes));
+  } catch (error) {
+    console.error("Error generating invoice PDF:", error);
+    return res.status(500).json({ error: "Internal server error" });
   } finally {
     if (browser) await browser.close();
   }
