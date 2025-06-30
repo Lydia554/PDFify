@@ -503,6 +503,7 @@ await new Promise((resolve, reject) => {
   '-dBATCH',
   '-dNOPAUSE',
   '-dNOOUTERSAVE',
+  '-dPreserveMetadata',
   '-dPrinted=false',
   '-dAllowTransparency=false',
   '-dPreserveSMask=false',
