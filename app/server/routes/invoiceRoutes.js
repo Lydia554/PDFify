@@ -6,9 +6,7 @@ const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
-const pdfParse = require("pdf-parse");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
-const { exec } = require("child_process");
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 
 
@@ -292,8 +290,6 @@ const watermarkHTML =
 `;
 }
 
-
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
   try {
@@ -342,14 +338,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-    // 1) Generate ZUGFeRD XML
-    const zugferdXml = generateZugferdXML(invoiceData);
-    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-
-    // 2) Generate PDF with Puppeteer
-    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-    const page = await browser.newPage();
-
+    // Set basic user flags for UI or styling
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
@@ -357,6 +346,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     } else {
       invoiceData.isBasicUser = false;
     }
+
+    // 1) Generate PDF with Puppeteer first (common for all users)
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
 
     const html = generateInvoiceHTML({ ...invoiceData, isPreview });
     await page.setContent(html, { waitUntil: "networkidle0" });
@@ -373,57 +366,64 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
     });
 
-    // 3) Embed ZUGFeRD XML into PDF using pdf-lib
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    let finalPdfBytes;
 
-    // Create embedded file stream for XML
-    const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-      Type: PDFName.of("EmbeddedFile"),
-      Subtype: PDFName.of("application/xml"),
-    });
-    embeddedFileStream.set(
-      PDFName.of("Params"),
-      pdfDoc.context.obj({
-        Size: xmlBuffer.length,
-        ModDate: PDFHexString.fromDate(new Date()),
-      })
-    );
-    const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+    // 2) If user is PRO, generate and embed ZUGFeRD XML
+    if (user.plan === "pro") {
+      const zugferdXml = generateZugferdXML(invoiceData);
+      const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-    // Create file specification dictionary
-    const efDict = pdfDoc.context.obj({
-      F: embeddedFileRef,
-      UF: embeddedFileRef,
-    });
-    const fileName = "zugferd-invoice.xml";
-    const filespecDict = pdfDoc.context.obj({
-      Type: PDFName.of("Filespec"),
-      F: PDFHexString.fromString(fileName),
-      UF: PDFHexString.fromString(fileName),
-      EF: efDict,
-      Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
-      AFRelationship: PDFName.of("Data"),
-    });
-    const filespecRef = pdfDoc.context.register(filespecDict);
+      // Load PDF with pdf-lib
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    // Set /Names → /EmbeddedFiles dictionary
-    const catalog = pdfDoc.catalog;
-    const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
-    const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
-    const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
+      // Create embedded file stream for XML
+      const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+        Type: PDFName.of("EmbeddedFile"),
+        Subtype: PDFName.of("application/xml"),
+      });
+      embeddedFileStream.set(
+        PDFName.of("Params"),
+        pdfDoc.context.obj({
+          Size: xmlBuffer.length,
+          ModDate: PDFHexString.fromDate(new Date()),
+        })
+      );
+      const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-    embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
-    embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-    namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-    catalog.set(PDFName.of("Names"), namesDict);
+      // Create file specification dictionary
+      const efDict = pdfDoc.context.obj({
+        F: embeddedFileRef,
+        UF: embeddedFileRef,
+      });
+      const fileName = "zugferd-invoice.xml";
+      const filespecDict = pdfDoc.context.obj({
+        Type: PDFName.of("Filespec"),
+        F: PDFHexString.fromString(fileName),
+        UF: PDFHexString.fromString(fileName),
+        EF: efDict,
+        Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
+        AFRelationship: PDFName.of("Data"),
+      });
+      const filespecRef = pdfDoc.context.register(filespecDict);
 
-    // Set /AF (Associated Files) entry
-    const afArray = pdfDoc.context.obj([filespecRef]);
-    catalog.set(PDFName.of("AF"), afArray);
+      // Set /Names → /EmbeddedFiles dictionary
+      const catalog = pdfDoc.catalog;
+      const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
+      const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
+      const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
 
-    // Merge and set XMP metadata with ZUGFeRD info
-    const existingXmp = pdfDoc.getXmpMetadata() || "";
-    const mergedXmp = `
+      embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
+      embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
+      namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+      catalog.set(PDFName.of("Names"), namesDict);
+
+      // Set /AF (Associated Files) entry
+      const afArray = pdfDoc.context.obj([filespecRef]);
+      catalog.set(PDFName.of("AF"), afArray);
+
+      // Merge and set XMP metadata with ZUGFeRD info
+      const existingXmp = pdfDoc.getXmpMetadata() || "";
+      const mergedXmp = `
 <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
@@ -437,43 +437,47 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 </x:xmpmeta>
 <?xpacket end="w"?>`.trim();
 
-    await pdfDoc.setXmpMetadata(mergedXmp);
+      await pdfDoc.setXmpMetadata(mergedXmp);
 
-    // Add metadata stream
-    const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, 'utf8'), {
-      Type: PDFName.of('Metadata'),
-      Subtype: PDFName.of('XML'),
-      Filter: PDFName.of('FlateDecode'),
-    });
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    catalog.set(PDFName.of('Metadata'), metadataRef);
+      // Add metadata stream
+      const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, "utf8"), {
+        Type: PDFName.of("Metadata"),
+        Subtype: PDFName.of("XML"),
+        Filter: PDFName.of("FlateDecode"),
+      });
+      const metadataRef = pdfDoc.context.register(metadataStream);
+      catalog.set(PDFName.of("Metadata"), metadataRef);
 
-    // Add OutputIntent (sRGB ICC profile) for PDF/A-3 compliance
-    const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
-    const iccData = fs.readFileSync(iccProfilePath);
+      // Add OutputIntent (sRGB ICC profile) for PDF/A-3 compliance
+      const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+      const iccData = fs.readFileSync(iccProfilePath);
 
-    const iccStream = pdfDoc.context.flateStream(iccData, {
-      N: 3,
-      Alternate: PDFName.of('DeviceRGB'),
-      Filter: PDFName.of('FlateDecode'),
-    });
-    const iccRef = pdfDoc.context.register(iccStream);
+      const iccStream = pdfDoc.context.flateStream(iccData, {
+        N: 3,
+        Alternate: PDFName.of("DeviceRGB"),
+        Filter: PDFName.of("FlateDecode"),
+      });
+      const iccRef = pdfDoc.context.register(iccStream);
 
-    const outputIntentDict = pdfDoc.context.obj({
-      Type: PDFName.of('OutputIntent'),
-      S: PDFName.of('GTS_PDFA1'),
-      OutputConditionIdentifier: PDFHexString.fromString('sRGB IEC61966-2.1'),
-      Info: PDFHexString.fromString('sRGB IEC61966-2.1'),
-      DestOutputProfile: iccRef,
-    });
-    const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+      const outputIntentDict = pdfDoc.context.obj({
+        Type: PDFName.of("OutputIntent"),
+        S: PDFName.of("GTS_PDFA1"),
+        OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        DestOutputProfile: iccRef,
+      });
+      const outputIntentRef = pdfDoc.context.register(outputIntentDict);
 
-    catalog.set(PDFName.of('OutputIntents'), pdfDoc.context.obj([outputIntentRef]));
+      catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
 
-    // Serialize PDF with embedded XML and metadata
-    const finalPdfBytes = await pdfDoc.save();
+      // Serialize PDF with embedded XML and metadata
+      finalPdfBytes = await pdfDoc.save();
+    } else {
+      // Non-PRO users get PDF without ZUGFeRD XML embedding
+      finalPdfBytes = pdfBuffer;
+    }
 
-    // 4) Send PDF response
+    // 3) Send PDF response
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
