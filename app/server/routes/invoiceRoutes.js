@@ -163,7 +163,7 @@ const watermarkHTML =
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
         font-size: 60px;
-        color: rgba(255, 0, 0, 0.1);
+       color: #ffcccc;
         font-weight: 900;
         pointer-events: none;
         user-select: none;
