@@ -417,6 +417,28 @@ const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       });
       const filespecRef = pdfDoc.context.register(filespecDict);
 
+      // Add ID to trailer
+const idArray = pdfDoc.context.obj([
+  PDFHexString.fromText("1234567890abcdef1234567890abcdef"),
+  PDFHexString.fromText("1234567890abcdef1234567890abcdef")
+]);
+pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
+
+// Add Group dict to each page for transparency
+const pages = pdfDoc.getPages();
+for (const page of pages) {
+  const dict = page.node;
+  const groupDict = pdfDoc.context.obj({
+    Type: PDFName.of("Group"),
+    S: PDFName.of("Transparency"),
+    CS: PDFName.of("DeviceRGB"),
+    I: PDFBoolean.False,
+    K: PDFBoolean.False
+  });
+  dict.set(PDFName.of("Group"), groupDict);
+}
+
+
       // Set /Names → /EmbeddedFiles dictionary
       const catalog = pdfDoc.catalog;
       const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
