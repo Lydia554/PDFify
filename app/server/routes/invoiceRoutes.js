@@ -298,7 +298,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
-    // Normalize items array
+   
     let invoiceData = { ...data };
     if (typeof invoiceData.items === "string") {
       try {
@@ -314,7 +314,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Reset counters if month changed (example logic)
+
     const now = new Date();
     if (
       !user.previewLastReset ||
@@ -338,7 +338,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-    // Set basic user flags for UI or styling
+   
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
@@ -347,7 +347,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
-    // 1) Generate PDF with Puppeteer first (common for all users)
+    // 1) Generate PDF with Puppeteer first
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
 
@@ -471,10 +471,10 @@ const outputIntentDict = pdfDoc.context.obj({
 
       catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
 
-      // Serialize PDF with embedded XML and metadata
+      
       finalPdfBytes = await pdfDoc.save();
     } else {
-      // Non-PRO users get PDF without ZUGFeRD XML embedding
+      
       finalPdfBytes = pdfBuffer;
     }
 
@@ -503,7 +503,6 @@ await new Promise((resolve, reject) => {
 
 const gsFinalPdf = fs.readFileSync(tempOutput);
 
-// Use this instead:
 res.set({
   'Content-Type': 'application/pdf',
   'Content-Disposition': `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
@@ -514,16 +513,6 @@ return res.send(gsFinalPdf);
     
 
 
-    
-
-    // 3) Send PDF response
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
-      "Content-Length": finalPdfBytes.length,
-    });
-
-    return res.send(Buffer.from(finalPdfBytes));
   } catch (error) {
     console.error("Error generating invoice PDF:", error);
     return res.status(500).json({ error: "Internal server error" });
