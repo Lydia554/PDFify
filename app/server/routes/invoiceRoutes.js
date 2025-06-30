@@ -374,13 +374,24 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
       // Load PDF with pdf-lib
-      const pdfDoc = await PDFDocument.load(pdfBuffer);
+const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-      // Create embedded file stream for XML
-      const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-        Type: PDFName.of("EmbeddedFile"),
-        Subtype: PDFName.of("application/xml"),
-      });
+// Add document metadata
+pdfDoc.setTitle(`Invoice ${invoiceData.orderId || ""}`);
+pdfDoc.setSubject("ZUGFeRD Invoice");
+pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"]);
+pdfDoc.setProducer("PDFify API");
+pdfDoc.setCreator("PDFify");
+pdfDoc.setCreationDate(new Date());
+pdfDoc.setModificationDate(new Date());
+
+// Create embedded file stream for XML
+const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+  Type: PDFName.of("EmbeddedFile"),
+  Subtype: PDFName.of("application/xml"),
+});
+
+
       embeddedFileStream.set(
         PDFName.of("Params"),
         pdfDoc.context.obj({
@@ -485,20 +496,30 @@ const tempOutput = `/tmp/output-${Date.now()}.pdf`;
 fs.writeFileSync(tempInput, finalPdfBytes);
 
 await new Promise((resolve, reject) => {
+
+
   execFile('gs', [
-    '-dPDFA=3', '-dBATCH', '-dNOPAUSE', '-dNOOUTERSAVE',
-    '-sProcessColorModel=DeviceRGB',
-    '-sDEVICE=pdfwrite', '-sPDFACompatibilityPolicy=1',
-    '-sOutputFile=' + tempOutput,
-    '-dEmbedAllFonts=true', '-dSubsetFonts=true',
-    '-dUseCIEColor',
-    '-sColorConversionStrategy=RGB',
-    '-sOutputIntentProfile=' + '/app/sRGB_IEC61966-2-1_no_black_scaling.icc',
-    tempInput
-  ], (err) => {
-    if (err) return reject(err);
-    resolve();
-  });
+  '-dPDFA=3',
+  '-dBATCH',
+  '-dNOPAUSE',
+  '-dNOOUTERSAVE',
+  '-dPrinted=false',
+  '-dAllowTransparency=false',
+  '-dPreserveSMask=false',
+  '-sProcessColorModel=DeviceRGB',
+  '-sColorConversionStrategy=RGB',
+  '-sDEVICE=pdfwrite',
+  '-sPDFACompatibilityPolicy=1',
+  '-dEmbedAllFonts=true',
+  '-dSubsetFonts=true',
+  '-dUseCIEColor',
+  '-sOutputIntentProfile=' + '/app/sRGB_IEC61966-2-1_no_black_scaling.icc',
+  '-sOutputFile=' + tempOutput,
+  tempInput
+], (err) => {
+  if (err) return reject(err);
+  resolve();
+});
 });
 
 const gsFinalPdf = fs.readFileSync(tempOutput);
