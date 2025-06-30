@@ -79,7 +79,7 @@ const watermarkHTML =
         margin: 20px auto;
         padding: 30px 40px 160px;
         background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 8px 25px  #2a3d66;
         border-radius: 16px;
         border: 1px solid #e0e4ec;
         position: relative;
@@ -459,13 +459,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       const iccRef = pdfDoc.context.register(iccStream);
 
-      const outputIntentDict = pdfDoc.context.obj({
-        Type: PDFName.of("OutputIntent"),
-        S: PDFName.of("GTS_PDFA1"),
-        OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
-        Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
-        DestOutputProfile: iccRef,
-      });
+const outputIntentDict = pdfDoc.context.obj({
+  Type: PDFName.of("OutputIntent"),
+  S: PDFName.of("GTS_PDFA1"),
+  OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
+  Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
+  DestOutputProfile: iccRef,
+});
+
       const outputIntentRef = pdfDoc.context.register(outputIntentDict);
 
       catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
@@ -476,6 +477,44 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       // Non-PRO users get PDF without ZUGFeRD XML embedding
       finalPdfBytes = pdfBuffer;
     }
+
+    const { execFile } = require('child_process');
+const tempInput = `/tmp/input-${Date.now()}.pdf`;
+const tempOutput = `/tmp/output-${Date.now()}.pdf`;
+
+fs.writeFileSync(tempInput, finalPdfBytes);
+
+await new Promise((resolve, reject) => {
+  execFile('gs', [
+    '-dPDFA=3', '-dBATCH', '-dNOPAUSE', '-dNOOUTERSAVE',
+    '-sProcessColorModel=DeviceRGB',
+    '-sDEVICE=pdfwrite', '-sPDFACompatibilityPolicy=1',
+    '-sOutputFile=' + tempOutput,
+    '-dEmbedAllFonts=true', '-dSubsetFonts=true',
+    '-dUseCIEColor',
+    '-sColorConversionStrategy=RGB',
+    '-sOutputIntentProfile=' + '/app/sRGB_IEC61966-2-1_no_black_scaling.icc',
+    tempInput
+  ], (err) => {
+    if (err) return reject(err);
+    resolve();
+  });
+});
+
+const gsFinalPdf = fs.readFileSync(tempOutput);
+
+// Use this instead:
+res.set({
+  'Content-Type': 'application/pdf',
+  'Content-Disposition': `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
+  'Content-Length': gsFinalPdf.length,
+});
+return res.send(gsFinalPdf);
+
+    
+
+
+    
 
     // 3) Send PDF response
     res.set({
