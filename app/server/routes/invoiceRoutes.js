@@ -491,63 +491,68 @@ const outputIntentDict = pdfDoc.context.obj({
       finalPdfBytes = pdfBuffer;
     }
 
-    // Ghostscript Section with Console Logs
-    const tempInput = `/tmp/input-${Date.now()}.pdf`;
-    const tempOutput = `/tmp/output-${Date.now()}.pdf`;
+// Ghostscript Section with Detailed Console Logs
+const tempInput = `/tmp/input-${Date.now()}.pdf`;
+const tempOutput = `/tmp/output-${Date.now()}.pdf`;
 
-    fs.writeFileSync(tempInput, finalPdfBytes);
-    console.log(`[Ghostscript] 📝 Temp input saved: ${tempInput}`);
-    console.log(`[Ghostscript] ⏳ Starting Ghostscript processing...`);
+fs.writeFileSync(tempInput, finalPdfBytes);
+console.log(`[Ghostscript] 📝 Temp input saved: ${tempInput}`);
+console.log(`[Ghostscript] ⏳ Starting Ghostscript processing...`);
 
-    await new Promise((resolve, reject) => {
-      execFile(
-        "gs",
-        [
-          "-dPDFA=3",
-          "-dBATCH",
-          "-dNOPAUSE",
-          "-dNOOUTERSAVE",
-          "-dPreserveMetadata",
-          "-dPrinted=false",
-          "-dAllowTransparency=false",
-          "-dPreserveSMask=false",
-          "-sProcessColorModel=DeviceRGB",
-          "-sColorConversionStrategy=RGB",
-          "-sDEVICE=pdfwrite",
-          "-sPDFACompatibilityPolicy=1",
-          "-dEmbedAllFonts=true",
-          "-dSubsetFonts=true",
-          "-dUseCIEColor",
-          "-sOutputIntentProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
-          `-sOutputFile=${tempOutput}`,
-          tempInput,
-        ],
-        (err, stdout, stderr) => {
-          if (err) {
-            console.error("[Ghostscript] ❌ Error during execution:", err.message);
-            console.error("[Ghostscript] stderr:", stderr);
-            return reject(err);
-          }
-          console.log("[Ghostscript] ✅ Processing completed");
-          resolve();
-        }
-      );
-    });
-
-    if (!fs.existsSync(tempOutput)) {
-      console.error("[Ghostscript] ❗ Output file not found:", tempOutput);
-      throw new Error("Ghostscript did not produce an output file.");
+await new Promise((resolve, reject) => {
+  execFile(
+    "gs",
+    [
+      "-dPDFA=3",
+      "-dBATCH",
+      "-dNOPAUSE",
+      "-dPreserveMetadata",
+      "-dPrinted=false",
+      "-dAllowTransparency=false",
+      "-dPreserveSMask=false",
+      "-sProcessColorModel=DeviceRGB",
+      "-sColorConversionStrategy=RGB",
+      "-sDEVICE=pdfwrite",
+      "-sPDFACompatibilityPolicy=1",
+      "-dEmbedAllFonts=true",
+      "-dSubsetFonts=true",
+      "-dUseCIEColor",
+      "-sOutputIntentProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
+      `-sOutputFile=${tempOutput}`,
+      tempInput,
+    ],
+    (err, stdout, stderr) => {
+      if (err) {
+        console.error("[Ghostscript] ❌ Error during execution:", err.message);
+        console.error("[Ghostscript] stderr:", stderr);
+        return reject(err);
+      }
+      console.log("[Ghostscript] ✅ Processing completed");
+      if (stdout && stdout.trim().length > 0) console.log("[Ghostscript] stdout:", stdout.trim());
+      if (stderr && stderr.trim().length > 0) console.log("[Ghostscript] stderr:", stderr.trim());
+      resolve();
     }
+  );
+});
 
-    console.log("[Ghostscript] 📄 Output PDF ready:", tempOutput);
-    const gsFinalPdf = fs.readFileSync(tempOutput);
+if (!fs.existsSync(tempOutput)) {
+  console.error("[Ghostscript] ❗ Output file not found:", tempOutput);
+  throw new Error("Ghostscript did not produce an output file.");
+}
 
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
-      "Content-Length": gsFinalPdf.length,
-    });
-    return res.send(gsFinalPdf);
+console.log("[Ghostscript] 📄 Output PDF ready:", tempOutput);
+const gsFinalPdf = fs.readFileSync(tempOutput);
+
+res.set({
+  "Content-Type": "application/pdf",
+  "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
+  "Content-Length": gsFinalPdf.length,
+});
+return res.send(gsFinalPdf);
+
+
+
+
   } catch (error) {
     console.error("Error generating invoice PDF:", error);
     return res.status(500).json({ error: "Internal server error" });
