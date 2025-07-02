@@ -491,16 +491,30 @@ const outputIntentDict = pdfDoc.context.obj({
       finalPdfBytes = pdfBuffer;
     }
 
-// Ghostscript Section with Detailed Console Logs
+const { execFile } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
 const tempInput = `/tmp/input-${Date.now()}.pdf`;
 const tempOutput = `/tmp/output-${Date.now()}.pdf`;
+const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
 
+// Write the input PDF
 fs.writeFileSync(tempInput, finalPdfBytes);
 console.log(`[Ghostscript] 📝 Temp input saved: ${tempInput}`);
+
+// Check ICC profile file exists
+if (!fs.existsSync(iccProfilePath)) {
+  console.error(`[Ghostscript] ❌ ICC profile not found at path: ${iccProfilePath}`);
+  throw new Error("ICC profile missing for Ghostscript.");
+} else {
+  console.log(`[Ghostscript] ✅ ICC profile found: ${iccProfilePath}`);
+}
+
 console.log(`[Ghostscript] ⏳ Starting Ghostscript processing...`);
 
 await new Promise((resolve, reject) => {
-  execFile(
+  const gsProcess = execFile(
     "gs",
     [
       "-dPDFA=3",
@@ -517,30 +531,54 @@ await new Promise((resolve, reject) => {
       "-dEmbedAllFonts=true",
       "-dSubsetFonts=true",
       "-dUseCIEColor",
-      "-sOutputIntentProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
+      `-sOutputIntentProfile=${iccProfilePath}`,
       `-sOutputFile=${tempOutput}`,
       tempInput,
-    ],
-    (err, stdout, stderr) => {
-      if (err) {
-        console.error("[Ghostscript] ❌ Error during execution:", err.message);
-        console.error("[Ghostscript] stderr:", stderr);
-        return reject(err);
-      }
-      console.log("[Ghostscript] ✅ Processing completed");
-      if (stdout && stdout.trim().length > 0) console.log("[Ghostscript] stdout:", stdout.trim());
-      if (stderr && stderr.trim().length > 0) console.log("[Ghostscript] stderr:", stderr.trim());
-      resolve();
-    }
+    ]
   );
+
+  // Collect stdout/stderr line by line as they come
+  gsProcess.stdout.setEncoding("utf8");
+  gsProcess.stdout.on("data", (chunk) => {
+    chunk.toString().split(/\r?\n/).forEach(line => {
+      if (line.trim()) console.log("[Ghostscript stdout]", line.trim());
+    });
+  });
+
+  gsProcess.stderr.setEncoding("utf8");
+  gsProcess.stderr.on("data", (chunk) => {
+    chunk.toString().split(/\r?\n/).forEach(line => {
+      if (line.trim()) console.error("[Ghostscript stderr]", line.trim());
+    });
+  });
+
+  gsProcess.on("error", (error) => {
+    console.error("[Ghostscript] ❌ Spawn error:", error);
+    reject(error);
+  });
+
+  gsProcess.on("exit", (code, signal) => {
+    if (code === 0) {
+      console.log("[Ghostscript] ✅ Processing completed successfully.");
+      if (!fs.existsSync(tempOutput)) {
+        reject(new Error(`[Ghostscript] ❗ Output file missing after process exit.`));
+        return;
+      }
+      resolve();
+    } else {
+      reject(new Error(`[Ghostscript] ❌ Process exited with code ${code} and signal ${signal}`));
+    }
+  });
 });
 
+// Check output file again just to be sure
 if (!fs.existsSync(tempOutput)) {
   console.error("[Ghostscript] ❗ Output file not found:", tempOutput);
   throw new Error("Ghostscript did not produce an output file.");
 }
 
 console.log("[Ghostscript] 📄 Output PDF ready:", tempOutput);
+
 const gsFinalPdf = fs.readFileSync(tempOutput);
 
 res.set({
@@ -549,7 +587,6 @@ res.set({
   "Content-Length": gsFinalPdf.length,
 });
 return res.send(gsFinalPdf);
-
 
 
 
