@@ -8,6 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
+const { execFile } = require("child_process");
 
 
 
@@ -491,9 +492,8 @@ const outputIntentDict = pdfDoc.context.obj({
       finalPdfBytes = pdfBuffer;
     }
 
-const { execFile } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+
+
 
 const tempInput = `/tmp/input-${Date.now()}.pdf`;
 const tempOutput = `/tmp/output-${Date.now()}.pdf`;
