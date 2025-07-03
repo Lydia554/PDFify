@@ -92,7 +92,8 @@ router.post("/user-creation", async (req, res) => {
 
 router.post("/consent", authenticate, dualAuth, async (req, res) => {
   try {
-    const userId = req.session.userId;
+    const userId = req.user.userId;
+
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
     await User.findByIdAndUpdate(userId, {
@@ -100,11 +101,13 @@ router.post("/consent", authenticate, dualAuth, async (req, res) => {
       cookieConsentDate: new Date()
     });
 
-    res.json({ message: "Consent saved" });
+    return res.json({ message: "Consent saved" });
   } catch (err) {
-    res.status(500).json({ error: "Failed to save consent" });
+    console.error("Consent saving error:", err);
+    return res.status(500).json({ error: "Failed to save consent" });
   }
 });
+
 
 
 router.get("/usage", authenticate, dualAuth, async (req, res) => {
