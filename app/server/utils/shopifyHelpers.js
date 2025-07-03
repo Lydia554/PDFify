@@ -1,7 +1,6 @@
 const axios = require("axios");
-const User = require("../models/User"); // Adjust path if needed
+const User = require("../models/User"); 
 
-// Resolves the Shopify access token from request headers or DB
 async function resolveShopifyToken(req, shopDomain) {
   let token = req.body?.shopifyAccessToken || req.headers["x-shopify-access-token"];
 
@@ -22,7 +21,7 @@ async function resolveShopifyToken(req, shopDomain) {
   return token;
 }
 
-// Fetches product image from Shopify using the product ID
+
 async function fetchProductImage(productId, shopDomain, token) {
   if (!productId) return null;
 
@@ -42,7 +41,7 @@ async function fetchProductImage(productId, shopDomain, token) {
   }
 }
 
-// Enriches line items by adding product images
+
 async function enrichLineItemsWithImages(lineItems, shopDomain, token) {
   return Promise.all(
     lineItems.map(async (item) => ({

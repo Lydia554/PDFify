@@ -2,7 +2,7 @@
 
 const { format } = require("date-fns");
 
-// Basic XML escape helper
+
 function escapeXml(unsafe) {
   if (!unsafe) return "";
   return unsafe.replace(/[<>&'"]/g, (c) => {
@@ -21,16 +21,15 @@ function generateZugferdXML(data) {
   const now = new Date();
   const invoiceDate = data.date ? new Date(data.date) : now;
 
-  // Helper function for formatting date as YYYY-MM-DD
   const fmtDate = (date) => format(date, "yyyy-MM-dd");
 
-  // Format monetary amounts as string with 2 decimals, dot separator
+
   const fmtAmount = (num) => Number(num).toFixed(2);
 
-  // VAT rate - default 21%
+
   const vatRate = data.vatRate !== undefined ? Number(data.vatRate) : 21;
 
-  // Calculate totals fallback
+  
   const subtotal = fmtAmount(
     data.subtotal ??
       data.items?.reduce((acc, i) => acc + (i.price * (i.quantity ?? 1) || 0), 0) ??
