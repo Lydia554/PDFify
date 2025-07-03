@@ -24,36 +24,46 @@ window.addEventListener('DOMContentLoaded', () => {
           We use cookies to improve your experience. 
           <a href="/privacy-policy.html" target="_blank" style="color: #4CAF50; text-decoration: underline;">Privacy Policy</a>.
         </span>
-  <button id="accept-cookies" style="
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  padding: 6px 12px;     /* reduced padding */
-  font-size: 14px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  min-width: 80px;       /* ensures it’s not too narrow */
-  max-width: 120px;      /* prevents it from getting too wide */
-  white-space: nowrap;   /* prevent wrapping */
-">
-  Accept
-
-
+        <button id="accept-cookies" style="
+          background-color: #4CAF50;
+          border: none;
+          color: white;
+          padding: 6px 12px;
+          font-size: 14px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background-color 0.3s ease;
+          min-width: 80px;
+          max-width: 120px;
+          white-space: nowrap;
+        ">
+          Accept
         </button>
       </div>
     `;
     document.body.appendChild(banner);
 
     const acceptBtn = document.getElementById('accept-cookies');
+
     acceptBtn.addEventListener('click', () => {
       localStorage.setItem('cookieConsent', 'true');
 
-      fetch('/api/user/consent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ consent: true })
-      }).catch(() => {});
+      const apiKey = localStorage.getItem('apiKey');
+      if (apiKey) {
+        fetch('/api/user/consent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ consent: true }),
+          credentials: 'include',
+        }).catch(() => {
+          console.warn('Failed to update cookie consent on server');
+        });
+      } else {
+        console.warn('No API key found - consent not sent to server');
+      }
 
       banner.remove();
     });
@@ -64,5 +74,21 @@ window.addEventListener('DOMContentLoaded', () => {
     acceptBtn.addEventListener('mouseleave', () => {
       acceptBtn.style.backgroundColor = '#4CAF50';
     });
+  } else {
+
+    const apiKey = localStorage.getItem('apiKey');
+    if (apiKey) {
+      fetch('/api/user/consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ consent: true }),
+        credentials: 'include',
+      }).catch(() => {
+        console.warn('Failed to update cookie consent on server');
+      });
+    }
   }
 });
