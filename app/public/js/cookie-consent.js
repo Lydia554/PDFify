@@ -49,7 +49,7 @@ window.addEventListener('DOMContentLoaded', () => {
     acceptBtn.addEventListener('click', () => {
       localStorage.setItem('cookieConsent', 'true');
 
-      fetch('/consent', {
+      fetch('/api/user/consent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ consent: true })

@@ -730,7 +730,7 @@ fetch('/api/get-stripe-key')
 
 window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('cookieConsent') === 'true') {
-    fetch('/consent', {
+    fetch('/api/user/consent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
