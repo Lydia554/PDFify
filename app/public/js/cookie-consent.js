@@ -1,9 +1,5 @@
-// cookiesConsent.js
-
 window.addEventListener('DOMContentLoaded', () => {
-  
   if (!localStorage.getItem('cookieConsent')) {
- 
     const banner = document.createElement('div');
     banner.innerHTML = `
       <div style="
@@ -28,34 +24,38 @@ window.addEventListener('DOMContentLoaded', () => {
           We use cookies to improve your experience. 
           <a href="/privacy-policy.html" target="_blank" style="color: #4CAF50; text-decoration: underline;">Privacy Policy</a>.
         </span>
-        <button id="accept-cookies" style="
-          background-color: #4CAF50;
-          border: none;
-          color: white;
-          padding: 6px 12px;
-          font-size: 14px;
-          border-radius: 4px;
-          cursor: pointer;
-          transition: background-color 0.3s ease;
-          min-width: 80px;
-          max-width: 120px;
-          white-space: nowrap;
-        ">
-          Accept
+  <button id="accept-cookies" style="
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 6px 12px;     /* reduced padding */
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  min-width: 80px;       /* ensures it’s not too narrow */
+  max-width: 120px;      /* prevents it from getting too wide */
+  white-space: nowrap;   /* prevent wrapping */
+">
+  Accept
+
+
         </button>
       </div>
     `;
     document.body.appendChild(banner);
 
     const acceptBtn = document.getElementById('accept-cookies');
-
     acceptBtn.addEventListener('click', () => {
-    
       localStorage.setItem('cookieConsent', 'true');
-      
+
+      fetch('/consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consent: true })
+      }).catch(() => {});
+
       banner.remove();
-     
-      window.location.href = "/login.html";
     });
 
     acceptBtn.addEventListener('mouseenter', () => {
