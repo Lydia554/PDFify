@@ -1,5 +1,9 @@
+// cookiesConsent.js
+
 window.addEventListener('DOMContentLoaded', () => {
+  
   if (!localStorage.getItem('cookieConsent')) {
+ 
     const banner = document.createElement('div');
     banner.innerHTML = `
       <div style="
@@ -44,17 +48,14 @@ window.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(banner);
 
     const acceptBtn = document.getElementById('accept-cookies');
+
     acceptBtn.addEventListener('click', () => {
+    
       localStorage.setItem('cookieConsent', 'true');
-
-      fetch('/api/user/consent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include', 
-        body: JSON.stringify({ consent: true })
-      }).catch(() => {});
-
+      
       banner.remove();
+     
+      window.location.href = "/login.html";
     });
 
     acceptBtn.addEventListener('mouseenter', () => {
@@ -63,13 +64,5 @@ window.addEventListener('DOMContentLoaded', () => {
     acceptBtn.addEventListener('mouseleave', () => {
       acceptBtn.style.backgroundColor = '#4CAF50';
     });
-  } else {
-
-    fetch('/api/user/consent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ consent: true })
-    }).catch(() => {});
   }
 });

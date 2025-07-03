@@ -97,7 +97,7 @@ router.post("/consent", authenticate, dualAuth, async (req, res) => {
 
     await User.findByIdAndUpdate(userId, {
       cookieConsent: true,
-      cookieConsentDate: new Date(),
+      cookieConsentDate: new Date()
     });
 
     res.json({ message: "Consent saved" });
@@ -105,6 +105,7 @@ router.post("/consent", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to save consent" });
   }
 });
+
 
 router.get("/usage", authenticate, dualAuth, async (req, res) => {
   try {
