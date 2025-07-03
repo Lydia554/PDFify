@@ -1,27 +1,5 @@
 window.addEventListener('DOMContentLoaded', () => {
-  const apiKey = localStorage.getItem('apiKey');
-
-  function sendConsent() {
-    if (!apiKey) {
-      console.warn('No API key found - consent not sent to server');
-      return;
-    }
-
-    fetch('/api/user/consent', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ consent: true }),
-      credentials: 'include',
-    })
-    .then(() => console.log("Consent sent to server"))
-    .catch(() => console.warn('Failed to update cookie consent on server'));
-  }
-
   if (!localStorage.getItem('cookieConsent')) {
-   
     const banner = document.createElement('div');
     banner.innerHTML = `
       <div style="
@@ -66,20 +44,51 @@ window.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(banner);
 
     const acceptBtn = document.getElementById('accept-cookies');
+
     acceptBtn.addEventListener('click', () => {
       localStorage.setItem('cookieConsent', 'true');
-      sendConsent();
+
+      const apiKey = localStorage.getItem('apiKey');
+      if (apiKey) {
+        fetch('/api/user/consent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ consent: true }),
+          credentials: 'include',
+        }).catch(() => {
+          console.warn('Failed to update cookie consent on server');
+        });
+      } else {
+        console.warn('No API key found - consent not sent to server');
+      }
+
       banner.remove();
     });
+
     acceptBtn.addEventListener('mouseenter', () => {
       acceptBtn.style.backgroundColor = '#45a049';
     });
     acceptBtn.addEventListener('mouseleave', () => {
       acceptBtn.style.backgroundColor = '#4CAF50';
     });
-
   } else {
-   
-    sendConsent();
+
+    const apiKey = localStorage.getItem('apiKey');
+    if (apiKey) {
+      fetch('/api/user/consent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({ consent: true }),
+        credentials: 'include',
+      }).catch(() => {
+        console.warn('Failed to update cookie consent on server');
+      });
+    }
   }
 });
