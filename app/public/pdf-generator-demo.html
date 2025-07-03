@@ -728,14 +728,16 @@ fetch('/api/get-stripe-key')
   .catch(error => console.error('Error fetching Stripe key:', error));
 
 
-  window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('cookieConsent') === 'true') {
     fetch('/api/user/consent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', 
+      credentials: 'include',
       body: JSON.stringify({ consent: true }),
-    }).catch((err) => {
+    })
+    .then(() => console.log("Consent sent to server"))
+    .catch((err) => {
       console.warn('Failed to update cookie consent on server:', err);
     });
   }

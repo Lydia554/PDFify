@@ -78,12 +78,24 @@ router.post("/user-creation", async (req, res) => {
 router.post("/consent", authenticate, async (req, res) => {
   try {
     const userId = req.user.userId;
+    console.log("Consent route userId:", userId);
+
     if (!userId) return res.status(401).json({ error: "Not authenticated" });
 
-    await User.findByIdAndUpdate(userId, {
-      cookieConsent: true,
-      cookieConsentDate: new Date()
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        cookieConsent: true,
+        cookieConsentDate: new Date()
+      },
+      { new: true }
+    );
+
+    console.log("Updated user:", updatedUser);
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     return res.json({ message: "Consent saved" });
   } catch (err) {
