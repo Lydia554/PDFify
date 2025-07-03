@@ -49,21 +49,11 @@ window.addEventListener('DOMContentLoaded', () => {
     acceptBtn.addEventListener('click', () => {
       localStorage.setItem('cookieConsent', 'true');
 
-      const apiKey = localStorage.getItem('apiKey');
-
-fetch('/api/user/consent', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${apiKey}`,
-  },
-  credentials: 'include',
-  body: JSON.stringify({ consent: true }),
-})
-.then(() => console.log("Consent sent to server"))
-.catch((err) => {
-  console.warn('Failed to update cookie consent on server:', err);
-});
+      fetch('/consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consent: true })
+      }).catch(() => {});
 
       banner.remove();
     });
