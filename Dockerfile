@@ -24,14 +24,10 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libxtst6 \
     xdg-utils \
+    ghostscript \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Update package lists and install Ghostscript
-RUN apt-get update && \
-    apt-get install -y ghostscript --no-install-recommends && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
