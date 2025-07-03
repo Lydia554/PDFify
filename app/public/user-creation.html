@@ -94,7 +94,13 @@
       }
 
       try {
-        const response = await axios.post(`/api/user/user-creation`, { email, password });
+      const cookieConsent = localStorage.getItem("cookieConsent") === "true";
+
+const response = await axios.post(`/api/user/user-creation`, {
+  email,
+  password,
+  cookieConsent
+});
 
         const message = response.data.message || "Account created successfully.";
         const redirect = response.data.redirect || "/login.html";
