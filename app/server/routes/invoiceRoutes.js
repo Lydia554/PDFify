@@ -498,8 +498,10 @@ const outputIntentDict = pdfDoc.context.obj({
 const tempInput = `/tmp/input-${Date.now()}.pdf`;
 const tempOutput = `/tmp/output-${Date.now()}.pdf`;
 const iccProfilePath = process.env.ICC_PROFILE_PATH
-  ? path.resolve(process.env.ICC_PROFILE_PATH) // convert env path to absolute
-  : path.resolve(__dirname, "../../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+  ? path.resolve(process.env.ICC_PROFILE_PATH)
+  : path.resolve(__dirname, "../sRGB_IEC61966-2-1_no_black_scaling.icc");
+
+console.log("[Ghostscript] ICC path resolved to:", iccProfilePath);
 
 
 // Write the input PDF
