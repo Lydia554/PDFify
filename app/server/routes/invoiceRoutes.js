@@ -348,7 +348,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
-    // 1) Generate PDF with Puppeteer first
+    // 1) Generate base PDF with Puppeteer
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
 
@@ -367,32 +367,29 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
     });
 
-    let finalPdfBytes;
+    let finalPdfBytes = pdfBuffer;
 
-    // 2) If user is PRO, generate and embed ZUGFeRD XML
+    // 2) If PRO user, embed ZUGFeRD XML and metadata
     if (user.plan === "pro") {
       const zugferdXml = generateZugferdXML(invoiceData);
       const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-      // Load PDF with pdf-lib
-const pdfDoc = await PDFDocument.load(pdfBuffer);
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-// Add document metadata
-pdfDoc.setTitle(`Invoice ${invoiceData.orderId || ""}`);
-pdfDoc.setSubject("ZUGFeRD Invoice");
-pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"]);
-pdfDoc.setProducer("PDFify API");
-pdfDoc.setCreator("PDFify");
-pdfDoc.setCreationDate(new Date());
-pdfDoc.setModificationDate(new Date());
+      // Set document metadata
+      pdfDoc.setTitle(`Invoice ${invoiceData.orderId || ""}`);
+      pdfDoc.setSubject("ZUGFeRD Invoice");
+      pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"]);
+      pdfDoc.setProducer("PDFify API");
+      pdfDoc.setCreator("PDFify");
+      pdfDoc.setCreationDate(new Date());
+      pdfDoc.setModificationDate(new Date());
 
-// Create embedded file stream for XML
-const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-  Type: PDFName.of("EmbeddedFile"),
-  Subtype: PDFName.of("application/xml"),
-});
-
-
+      // Embed XML as file
+      const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+        Type: PDFName.of("EmbeddedFile"),
+        Subtype: PDFName.of("application/xml"),
+      });
       embeddedFileStream.set(
         PDFName.of("Params"),
         pdfDoc.context.obj({
@@ -402,12 +399,8 @@ const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       );
       const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-      // Create file specification dictionary
-      const efDict = pdfDoc.context.obj({
-        F: embeddedFileRef,
-        UF: embeddedFileRef,
-      });
       const fileName = "zugferd-invoice.xml";
+      const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
       const filespecDict = pdfDoc.context.obj({
         Type: PDFName.of("Filespec"),
         F: PDFHexString.fromString(fileName),
@@ -418,29 +411,22 @@ const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       });
       const filespecRef = pdfDoc.context.register(filespecDict);
 
-
-      // Set /Names → /EmbeddedFiles dictionary
+      // Embed into catalog
       const catalog = pdfDoc.catalog;
       const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
       const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
       const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
-
       embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
       embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
       namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
       catalog.set(PDFName.of("Names"), namesDict);
+      catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-      // Set /AF (Associated Files) entry
-      const afArray = pdfDoc.context.obj([filespecRef]);
-      catalog.set(PDFName.of("AF"), afArray);
-
-      // Merge and set XMP metadata with ZUGFeRD info
-      const existingXmp = pdfDoc.getXmpMetadata() || "";
+      // Embed XMP Metadata
       const mergedXmp = `
 <?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    ${existingXmp.split("</rdf:RDF>")[0] || ""}
     <rdf:Description xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#"
       zf:ConformanceLevel="BASIC"
       zf:DocumentFileName="${fileName}"
@@ -452,7 +438,6 @@ const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
 
       await pdfDoc.setXmpMetadata(mergedXmp);
 
-      // Add metadata stream
       const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, "utf8"), {
         Type: PDFName.of("Metadata"),
         Subtype: PDFName.of("XML"),
@@ -461,139 +446,68 @@ const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
       const metadataRef = pdfDoc.context.register(metadataStream);
       catalog.set(PDFName.of("Metadata"), metadataRef);
 
-      // Add OutputIntent (sRGB ICC profile) for PDF/A-3 compliance
+      // Add OutputIntent (ICC profile)
       const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
       const iccData = fs.readFileSync(iccProfilePath);
-
       const iccStream = pdfDoc.context.flateStream(iccData, {
         N: 3,
         Alternate: PDFName.of("DeviceRGB"),
         Filter: PDFName.of("FlateDecode"),
       });
       const iccRef = pdfDoc.context.register(iccStream);
-
-const outputIntentDict = pdfDoc.context.obj({
-  Type: PDFName.of("OutputIntent"),
-  S: PDFName.of("GTS_PDFA1"),
-  OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
-  Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
-  DestOutputProfile: iccRef,
-});
-
+      const outputIntentDict = pdfDoc.context.obj({
+        Type: PDFName.of("OutputIntent"),
+        S: PDFName.of("GTS_PDFA1"),
+        OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        DestOutputProfile: iccRef,
+      });
       const outputIntentRef = pdfDoc.context.register(outputIntentDict);
-
       catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
-      
 
-      
       finalPdfBytes = await pdfDoc.save();
-    } else {
-      
-      finalPdfBytes = pdfBuffer;
     }
 
+    // 3) Finalize PDF/A-3 via Ghostscript
+    const tempInput = `/tmp/input-${Date.now()}.pdf`;
+    const tempOutput = `/tmp/output-${Date.now()}.pdf`;
+    const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../sRGB_IEC61966-2-1_no_black_scaling.icc");
 
+    fs.writeFileSync(tempInput, finalPdfBytes);
 
+    if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found");
 
-const tempInput = `/tmp/input-${Date.now()}.pdf`;
-const tempOutput = `/tmp/output-${Date.now()}.pdf`;
-const iccProfilePath = process.env.ICC_PROFILE_PATH
-  ? path.resolve(process.env.ICC_PROFILE_PATH)
-  : path.resolve(__dirname, "../sRGB_IEC61966-2-1_no_black_scaling.icc");
-
-console.log("[Ghostscript] ICC path resolved to:", iccProfilePath);
-
-
-// Write the input PDF
-fs.writeFileSync(tempInput, finalPdfBytes);
-console.log(`[Ghostscript] 📝 Temp input saved: ${tempInput}`);
-
-// Check ICC profile file exists
-if (!fs.existsSync(iccProfilePath)) {
-  console.error(`[Ghostscript] ❌ ICC profile not found at path: ${iccProfilePath}`);
-  throw new Error("ICC profile missing for Ghostscript.");
-} else {
-  console.log(`[Ghostscript] ✅ ICC profile found: ${iccProfilePath}`);
-}
-
-console.log(`[Ghostscript] ⏳ Starting Ghostscript processing...`);
-
-await new Promise((resolve, reject) => {
-  const gsProcess = execFile(
-    "gs",
-    [
-      "-dPDFA=3",
-      "-dBATCH",
-      "-dNOPAUSE",
-      "-dPreserveMetadata",
-      "-dPrinted=false",
-      "-dAllowTransparency=false",
-      "-dPreserveSMask=false",
-      "-sProcessColorModel=DeviceRGB",
-      "-sColorConversionStrategy=RGB",
-      "-sDEVICE=pdfwrite",
-      "-sPDFACompatibilityPolicy=1",
-      "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
-      "-dUseCIEColor",
-      `-sOutputIntentProfile=${iccProfilePath}`,
-      `-sOutputFile=${tempOutput}`,
-      tempInput,
-    ]
-  );
-
-  // Collect stdout/stderr line by line as they come
-  gsProcess.stdout.setEncoding("utf8");
-  gsProcess.stdout.on("data", (chunk) => {
-    chunk.toString().split(/\r?\n/).forEach(line => {
-      if (line.trim()) console.log("[Ghostscript stdout]", line.trim());
+    await new Promise((resolve, reject) => {
+      const gsProcess = execFile(
+        "gs",
+        [
+          "-dPDFA=3",
+          "-dBATCH",
+          "-dNOPAUSE",
+          "-dPreserveMetadata",
+          "-sDEVICE=pdfwrite",
+          "-sProcessColorModel=DeviceRGB",
+          "-sColorConversionStrategy=RGB",
+          "-dEmbedAllFonts=true",
+          "-dSubsetFonts=true",
+          "-sPDFACompatibilityPolicy=1",
+          `-sOutputIntentProfile=${iccPath}`,
+          `-sOutputFile=${tempOutput}`,
+          tempInput,
+        ],
+        (error) => (error ? reject(error) : resolve())
+      );
     });
-  });
 
-  gsProcess.stderr.setEncoding("utf8");
-  gsProcess.stderr.on("data", (chunk) => {
-    chunk.toString().split(/\r?\n/).forEach(line => {
-      if (line.trim()) console.error("[Ghostscript stderr]", line.trim());
+    if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript did not produce an output file");
+    const gsFinalPdf = fs.readFileSync(tempOutput);
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
+      "Content-Length": gsFinalPdf.length,
     });
-  });
-
-  gsProcess.on("error", (error) => {
-    console.error("[Ghostscript] ❌ Spawn error:", error);
-    reject(error);
-  });
-
-  gsProcess.on("exit", (code, signal) => {
-    if (code === 0) {
-      console.log("[Ghostscript] ✅ Processing completed successfully.");
-      if (!fs.existsSync(tempOutput)) {
-        reject(new Error(`[Ghostscript] ❗ Output file missing after process exit.`));
-        return;
-      }
-      resolve();
-    } else {
-      reject(new Error(`[Ghostscript] ❌ Process exited with code ${code} and signal ${signal}`));
-    }
-  });
-});
-
-// Check output file again just to be sure
-if (!fs.existsSync(tempOutput)) {
-  console.error("[Ghostscript] ❗ Output file not found:", tempOutput);
-  throw new Error("Ghostscript did not produce an output file.");
-}
-
-console.log("[Ghostscript] 📄 Output PDF ready:", tempOutput);
-
-const gsFinalPdf = fs.readFileSync(tempOutput);
-
-res.set({
-  "Content-Type": "application/pdf",
-  "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
-  "Content-Length": gsFinalPdf.length,
-});
-return res.send(gsFinalPdf);
-
-
+    return res.send(gsFinalPdf);
 
   } catch (error) {
     console.error("Error generating invoice PDF:", error);
