@@ -1,104 +1,98 @@
-<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.160451, 2019/07/23-19:19:01        ">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about=""
-      xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-      xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
-      xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-      xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
-      xmlns:pdfx="http://ns.adobe.com/pdfx/1.3/"
-      xmlns:dc="http://purl.org/dc/elements/1.1/"
-      xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:pdfa:ZUGFeRD:2.1:urn1#"
-      xmlns:pdfuaid="http://www.aiim.org/pdfua/ns/id/"
-      xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-      xmlns:xmpRights="http://ns.adobe.com/xap/1.0/rights/"
-      xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-      xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-      xmlns:pdfaType="http://www.aiim.org/pdfa/ns/type#"
-  
-  
-      
-      <!-- PDF/A identification -->
+<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify Metadata Toolkit 1.0'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <rdf:Description rdf:about=''
+      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+      xmlns:xmp='http://ns.adobe.com/xap/1.0/'
+      xmlns:dc='http://purl.org/dc/elements/1.1/'
+      xmlns:pdf='http://ns.adobe.com/pdf/1.3/'
+      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
+      xmlns:zf='urn:ferd:pdfa:CrossIndustryDocument:invoice:pdfa:ZUGFeRD:2.1:urn1#'
+      xmlns:pdfaExtension='http://www.aiim.org/pdfa/ns/extension/'
+      xmlns:pdfaSchema='http://www.aiim.org/pdfa/ns/schema#'
+      xmlns:pdfaProperty='http://www.aiim.org/pdfa/ns/property#'>
+
+      <!-- PDF/A Identification -->
       <pdfaid:part>3</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
-      
-      <!-- Document information -->
-      <dc:format>application/pdf</dc:format>
+
+      <!-- Document Metadata -->
       <dc:title>
         <rdf:Alt>
-          <rdf:li xml:lang="x-default">Invoice PDF with ZUGFeRD embedded XML</rdf:li>
+          <rdf:li xml:lang='x-default'>Invoice</rdf:li>
         </rdf:Alt>
       </dc:title>
       <dc:creator>
         <rdf:Seq>
-          <rdf:li>Your Company or Application Name</rdf:li>
+          <rdf:li>PDFify</rdf:li>
         </rdf:Seq>
       </dc:creator>
       <dc:description>
         <rdf:Alt>
-          <rdf:li xml:lang="x-default">Invoice document with embedded ZUGFeRD XML metadata</rdf:li>
+          <rdf:li xml:lang='x-default'>ZUGFeRD-compliant invoice with embedded XML metadata</rdf:li>
         </rdf:Alt>
       </dc:description>
+      <dc:format>application/pdf</dc:format>
 
-      <!-- XMP Basic info -->
-      <xmp:CreatorTool>Your PDF generator and ZUGFeRD tool</xmp:CreatorTool>
-      <xmp:ModifyDate>2025-06-26T00:00:00+00:00</xmp:ModifyDate>
-      <xmp:MetadataDate>2025-06-26T00:00:00+00:00</xmp:MetadataDate>
-      <xmp:CreateDate>2025-06-26T00:00:00+00:00</xmp:CreateDate>
-      
-      <!-- XMP MM Schema -->
-      <xmpMM:DocumentID>uuid:12345678-1234-1234-1234-123456789abc</xmpMM:DocumentID>
-      <xmpMM:InstanceID>uuid:abcdefab-1234-5678-abcd-abcdefabcdef</xmpMM:InstanceID>
+      <!-- XMP Basic -->
+      <xmp:CreatorTool>PDFify Generator</xmp:CreatorTool>
+      <xmp:CreateDate>2025-07-04T00:00:00+00:00</xmp:CreateDate>
+      <xmp:ModifyDate>2025-07-04T00:00:00+00:00</xmp:ModifyDate>
+      <xmp:MetadataDate>2025-07-04T00:00:00+00:00</xmp:MetadataDate>
+
+      <!-- XMP Media Management -->
+      <xmpMM:DocumentID>uuid:{{DOCUMENT_UUID}}</xmpMM:DocumentID>
+      <xmpMM:InstanceID>uuid:{{INSTANCE_UUID}}</xmpMM:InstanceID>
 
       <!-- PDF Producer -->
-      <pdf:Producer>Ghostscript 10.00</pdf:Producer>
+      <pdf:Producer>Ghostscript 10.0; PDFify</pdf:Producer>
 
-      <!-- ZUGFeRD specific metadata -->
-      <zf:DocumentFileName>Invoice_12345.pdf</zf:DocumentFileName>
+      <!-- ZUGFeRD metadata -->
+      <zf:DocumentFileName>{{INVOICE_FILENAME}}</zf:DocumentFileName>
       <zf:DocumentType>INVOICE</zf:DocumentType>
       <zf:DocumentTypeVersion>2.1</zf:DocumentTypeVersion>
       <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
 
-      <!-- PDF/A extensions for ZUGFeRD -->
+      <!-- PDF/A Extension Schema for ZUGFeRD -->
       <pdfaExtension:schemas>
         <rdf:Bag>
-          <rdf:li rdf:parseType="Resource">
+          <rdf:li rdf:parseType='Resource'>
             <pdfaSchema:schema>ZUGFeRD PDFA Extension Schema</pdfaSchema:schema>
             <pdfaSchema:namespaceURI>urn:ferd:pdfa:CrossIndustryDocument:invoice:pdfa:ZUGFeRD:2.1:urn1#</pdfaSchema:namespaceURI>
             <pdfaSchema:prefix>zf</pdfaSchema:prefix>
             <pdfaSchema:property>
               <rdf:Seq>
-                <rdf:li rdf:parseType="Resource">
+                <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Filename of the embedded invoice XML document</pdfaProperty:description>
+                  <pdfaProperty:description>Filename of embedded XML invoice</pdfaProperty:description>
                 </rdf:li>
-                <rdf:li rdf:parseType="Resource">
+                <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>DocumentType</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Type of document (INVOICE)</pdfaProperty:description>
+                  <pdfaProperty:description>Type of embedded document</pdfaProperty:description>
                 </rdf:li>
-                <rdf:li rdf:parseType="Resource">
+                <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>DocumentTypeVersion</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Version of the ZUGFeRD profile</pdfaProperty:description>
+                  <pdfaProperty:description>ZUGFeRD Version</pdfaProperty:description>
                 </rdf:li>
-                <rdf:li rdf:parseType="Resource">
+                <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Conformance level (BASIC, EXTENDED, etc.)</pdfaProperty:description>
+                  <pdfaProperty:description>ZUGFeRD Profile</pdfaProperty:description>
                 </rdf:li>
               </rdf:Seq>
             </pdfaSchema:property>
           </rdf:li>
         </rdf:Bag>
       </pdfaExtension:schemas>
-      
+
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end="w"?>
+<?xpacket end='w'?>
