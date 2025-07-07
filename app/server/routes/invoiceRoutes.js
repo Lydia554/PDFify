@@ -484,7 +484,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           "-sProcessColorModel=DeviceRGB",
           "-sColorConversionStrategy=RGB",
           "-dEmbedAllFonts=true",
-          "-dSubsetFonts=true",
+          "-dSubsetFonts=false",
            "-dUseCIEColor",
           "-sPDFACompatibilityPolicy=1",
           `-sOutputIntentProfile=${iccPath}`,
