@@ -348,6 +348,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
+
+    if (!isPreview) {
+  user.usageCount++;
+  await user.save();
+  console.log("✅ Usage count incremented for user:", user.email);
+}
+
+
  // 1) Generate base PDF with Puppeteer
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
