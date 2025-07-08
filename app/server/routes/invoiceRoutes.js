@@ -330,12 +330,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
   try {
     let { data, isPreview } = req.body;
-    isPreview = isPreview === true || isPreview === "true"; 
-
     if (!data || typeof data !== "object") {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
 
+   
     let invoiceData = { ...data };
     if (typeof invoiceData.items === "string") {
       try {
@@ -351,20 +350,31 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+
     const now = new Date();
-    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
+    if (
+      !user.previewLastReset ||
+      now.getMonth() !== user.previewLastReset.getMonth() ||
+      now.getFullYear() !== user.previewLastReset.getFullYear()
+    ) {
       user.previewCount = 0;
       user.previewLastReset = now;
     }
-    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
+    if (
+      !user.usageLastReset ||
+      now.getMonth() !== user.usageLastReset.getMonth() ||
+      now.getFullYear() !== user.usageLastReset.getFullYear()
+    ) {
       user.usageCount = 0;
       user.usageLastReset = now;
     }
+    await user.save();
 
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
+   
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
@@ -373,20 +383,29 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
-   
-    if (!isPreview && user.plan === "pro") {
-      user.usageCount += 1;
-      await user.save();
-      console.log("📊 Pro usage count incremented:", user.usageCount);
-    }
+    // Increment correct counter
+if (isPreview) {
+  user.previewCount += 1;
+  console.log("🧪 Preview count incremented:", user.previewCount);
+} else if (user.plan === "pro") {
+  user.usageCount += 1;
+  console.log("📊 Pro usage count incremented:", user.usageCount);
+}
 
-    await user.save();
+await user.save();
 
+    
+
+ // 1) Generate base PDF with Puppeteer
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
+
     const html = generateInvoiceHTML({ ...invoiceData, isPreview: true });
+    console.log("🟣 HTML generated for invoice.");
 
     await page.setContent(html, { waitUntil: "networkidle0" });
+    console.log("🟢 HTML content loaded in Puppeteer.");
+
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -399,14 +418,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
     });
 
+    console.log("📄 Base PDF created via Puppeteer.");
     let finalPdfBytes = pdfBuffer;
 
-    // 🧩 Embed ZUGFeRD if PRO
+    // 2) If PRO user, embed ZUGFeRD XML and metadata
     if (user.plan === "pro") {
+      console.log("🧩 PRO user detected — embedding ZUGFeRD metadata.");
+
       const zugferdXml = generateZugferdXML(invoiceData);
       const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
       const pdfDoc = await PDFDocument.load(pdfBuffer);
 
+      // Set PDF metadata
       pdfDoc.setTitle(`Invoice ${invoiceData.orderId || ""}`);
       pdfDoc.setSubject("ZUGFeRD Invoice");
       pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"]);
@@ -414,7 +437,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       pdfDoc.setCreator("PDFify");
       pdfDoc.setCreationDate(new Date());
       pdfDoc.setModificationDate(new Date());
+      console.log("📌 PDF metadata set.");
 
+      // Embed XML
       const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
         Type: PDFName.of("EmbeddedFile"),
         Subtype: PDFName.of("application/xml"),
@@ -446,10 +471,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
       catalog.set(PDFName.of("Names"), namesDict);
       catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+      console.log("📎 ZUGFeRD XML embedded.");
 
+      // Embed XMP Metadata
       const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
       const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
       await pdfDoc.setXmpMetadata(mergedXmp);
+      console.log("🧠 XMP metadata set.");
 
       const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, "utf8"), {
         Type: PDFName.of("Metadata"),
@@ -459,6 +487,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const metadataRef = pdfDoc.context.register(metadataStream);
       catalog.set(PDFName.of("Metadata"), metadataRef);
 
+      // Add OutputIntent (ICC)
       const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
       const iccData = fs.readFileSync(iccProfilePath);
       const iccStream = pdfDoc.context.flateStream(iccData, {
@@ -476,11 +505,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       const outputIntentRef = pdfDoc.context.register(outputIntentDict);
       catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+      console.log("🎨 ICC OutputIntent embedded.");
 
       finalPdfBytes = await pdfDoc.save();
+      console.log("📥 PRO PDF saved with metadata.");
     }
 
-    // Finalize PDF/A-3 via Ghostscript
+    // 3) Finalize PDF/A-3 via Ghostscript
+    console.log("⚙️ Finalizing via Ghostscript...");
     const tempInput = `/tmp/input-${Date.now()}.pdf`;
     const tempOutput = `/tmp/output-${Date.now()}.pdf`;
     const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../sRGB_IEC61966-2-1_no_black_scaling.icc");
@@ -489,32 +521,38 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found");
 
     await new Promise((resolve, reject) => {
-      execFile("gs", [
-        "-dPDFA=3",
-        "-dBATCH",
-        "-dNOPAUSE",
-        "-dPreserveMetadata",
-        "-sDEVICE=pdfwrite",
-        "-sProcessColorModel=DeviceRGB",
-        "-sColorConversionStrategy=RGB",
-        "-dEmbedAllFonts=true",
-        "-dSubsetFonts=true",
-        "-dUseCIEColor",
-        "-sPDFACompatibilityPolicy=1",
-        `-sOutputIntentProfile=${iccPath}`,
-        `-sOutputFile=${tempOutput}`,
-        tempInput,
-      ], (error) => error ? reject(error) : resolve());
+      const gsProcess = execFile(
+        "gs",
+        [
+          "-dPDFA=3",
+          "-dBATCH",
+          "-dNOPAUSE",
+          "-dPreserveMetadata",
+          "-sDEVICE=pdfwrite",
+          "-sProcessColorModel=DeviceRGB",
+          "-sColorConversionStrategy=RGB",
+          "-dEmbedAllFonts=true",
+          "-dSubsetFonts=true",
+           "-dUseCIEColor",
+          "-sPDFACompatibilityPolicy=1",
+          `-sOutputIntentProfile=${iccPath}`,
+          `-sOutputFile=${tempOutput}`,
+          tempInput,
+        ],
+        (error) => (error ? reject(error) : resolve())
+      );
     });
 
     if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript did not produce an output file");
     const gsFinalPdf = fs.readFileSync(tempOutput);
+    console.log("✅ Ghostscript finalized PDF/A-3.");
 
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
       "Content-Length": gsFinalPdf.length,
     });
+    console.log("📤 Sending PDF response.");
     return res.send(gsFinalPdf);
 
   } catch (error) {
@@ -523,9 +561,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   } finally {
     if (browser) {
       await browser.close();
+      console.log("🧹 Browser closed.");
     }
   }
 });
-
 
 module.exports = router;
