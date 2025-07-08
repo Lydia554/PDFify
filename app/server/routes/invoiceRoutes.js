@@ -392,7 +392,7 @@ if (isPreview) {
   console.log("📊 Pro usage count incremented:", user.usageCount);
 }
 
-await user.save();
+
 
     
 
@@ -565,5 +565,7 @@ await user.save();
     }
   }
 });
+
+await user.save();
 
 module.exports = router;
