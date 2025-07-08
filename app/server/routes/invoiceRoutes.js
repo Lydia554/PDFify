@@ -348,11 +348,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
-
-    if (!isPreview) {
-  user.usageCount++;
+    
+if (!isPreview && user.plan === "pro") {
+  user.usageCount += 1;
   await user.save();
-  console.log("✅ Usage count incremented for user:", user.email);
+  console.log("📊 Pro usage count incremented:", user.usageCount);
 }
 
 
