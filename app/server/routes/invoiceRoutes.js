@@ -370,14 +370,24 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isBasicUser = false;
     }
 
-    // Count usage
-    if (isPreview) {
+// Count usage
+if (isPreview) {
+  if (user.planType === "free") {
+    if (user.previewCount < 3) {
       user.previewCount += 1;
-      console.log("🧪 Preview count incremented:", user.previewCount);
-    } else if (user.plan === "pro") {
+      console.log("🧪 Free user preview incremented:", user.previewCount);
+    } else {
       user.usageCount += 1;
-      console.log("📊 Pro usage count incremented:", user.usageCount);
+      console.log("⚠️ Free user exceeded preview limit, counting as usage:", user.usageCount);
     }
+  } else {
+    console.log("🧪 Preview for premium/pro user — not counted.");
+  }
+} else {
+  user.usageCount += 1;
+  console.log("📊 Usage (non-preview) incremented:", user.usageCount);
+}
+
     await user.save();
 
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
