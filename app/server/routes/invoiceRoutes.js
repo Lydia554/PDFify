@@ -60,146 +60,181 @@ const watermarkHTML =
   return `
 <html>
   <head>
-    <style>
-      /* common styles */
-      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
 
-      body {
-        font-family: 'Open Sans', sans-serif;
-        color: #333;
-        background: #f4f7fb;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        position: relative;
-      }
+  body {
+    font-family: 'Open Sans', sans-serif;
+    color: #333;
+    background: #f4f7fb;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    position: relative;
+  }
 
-      .container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 30px 40px 160px;
-        background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-        box-shadow: 0 8px 25px  #2a3d66;
-        border-radius: 16px;
-        border: 1px solid #e0e4ec;
-        position: relative;
-        z-index: 1;
-      }
+  .container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 30px 40px 160px;
+    background: linear-gradient(to bottom right, #ffffff, #f8fbff);
+    box-shadow: 0 8px 25px #2a3d66;
+    border-radius: 16px;
+    border: 1px solid #e0e4ec;
+    position: relative;
+    z-index: 1;
+  }
 
-      /* Table styles for PREMIUM users */
-      .premium .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-      .premium .table th,
-      .premium .table td {
-        padding: 14px;
-        border: 1px solid #dee2ef;
-        text-align: left;
-      }
-      .premium .table th {
-        background-color: #dbe7ff;
-        color: #2a3d66;
-        font-weight: 600;
-      }
-      .premium .table td {
-        color: #444;
-        background-color: #fdfdff;
-      }
-      .premium .table tr:nth-child(even) td {
-        background-color: #f6f9fe;
-      }
-   .premium .table tfoot td {
-  background-color: #dbe7ff;
-  font-weight: bold;
-  color: #2a3d66; 
-}
-        
-.premium .total p {
-  font-weight: bold;
-  color: #2a3d66;
-}
+  .premium .table,
+  .basic .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
 
-      /* Table styles for BASIC users */
-      .basic .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-      .basic .table th,
-      .basic .table td {
-        padding: 14px;
-        border: 1px solid #ccc;
-        text-align: left;
-      }
-      .basic .table th {
-        background-color: #fff;
-        color: #333;
-        font-weight: 600;
-      }
-      .basic .table td {
-        color: #444;
-        background-color: #fff;
-      }
-      .basic .table tr:nth-child(even) td {
-        background-color: #f9f9f9;
-      }
-      .basic .table tfoot td {
-        background-color: #fff;
-        font-weight: bold;
-      }
-        .basic .total p {
-  font-weight: normal;
-  color: #333;
-}
+  .premium .table th,
+  .premium .table td {
+    padding: 14px;
+    border: 1px solid #dee2ef;
+    text-align: left;
+  }
 
-      /* Watermark styles */
-      .watermark {
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 60px;
-       color: #ffcccc;
-        font-weight: 900;
-        pointer-events: none;
-        user-select: none;
-        z-index: 9999;
-        white-space: nowrap;
-      }
+  .premium .table th {
+    background-color: #dbe7ff;
+    color: #2a3d66;
+    font-weight: 600;
+  }
 
-      .footer {
-        position: static;
-        max-width: 800px;
-        margin: 40px auto 10px auto;
-        padding: 10px 20px;
-        background-color: #f0f2f7;
-        color: #555;
-        border-top: 2px solid #cbd2e1;
-        text-align: center;
-        line-height: 1.6;
-        font-size: 11px;
-        border-radius: 0 0 16px 16px;
-        box-sizing: border-box;
-      }
+  .premium .table td {
+    color: #444;
+    background-color: #fdfdff;
+  }
 
-      .footer p {
-        margin: 6px 0;
-      }
+  .premium .table tr:nth-child(even) td {
+    background-color: #f6f9fe;
+  }
 
-      .footer a {
-        color: #4a69bd;
-        text-decoration: none;
-        word-break: break-word;
-      }
+  .premium .table tfoot td {
+    background-color: #dbe7ff;
+    font-weight: bold;
+    color: #2a3d66;
+  }
 
-      .footer a:hover {
-        text-decoration: underline;
-      }
+  .premium .total p {
+    font-weight: bold;
+    color: #2a3d66;
+  }
 
-    </style>
+  .basic .table th,
+  .basic .table td {
+    padding: 14px;
+    border: 1px solid #ccc;
+    text-align: left;
+  }
+
+  .basic .table th {
+    background-color: #fff;
+    color: #333;
+    font-weight: 600;
+  }
+
+  .basic .table td {
+    color: #444;
+    background-color: #fff;
+  }
+
+  .basic .table tr:nth-child(even) td {
+    background-color: #f9f9f9;
+  }
+
+  .basic .table tfoot td {
+    background-color: #fff;
+    font-weight: bold;
+  }
+
+  .basic .total p {
+    font-weight: normal;
+    color: #333;
+  }
+
+  .watermark {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 60px;
+    color: #ffcccc;
+    font-weight: 900;
+    pointer-events: none;
+    user-select: none;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+
+  .footer {
+    position: static;
+    max-width: 800px;
+    margin: 40px auto 10px auto;
+    padding: 10px 20px;
+    background-color: #f0f2f7;
+    color: #555;
+    border-top: 2px solid #cbd2e1;
+    text-align: center;
+    line-height: 1.6;
+    font-size: 11px;
+    border-radius: 0 0 16px 16px;
+    box-sizing: border-box;
+  }
+
+  .footer p {
+    margin: 6px 0;
+  }
+
+  .footer a {
+    color: #4a69bd;
+    text-decoration: none;
+    word-break: break-word;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ========================== */
+  /* PDF/A-2b compliant override */
+  /* ========================== */
+  .pdfa-clean .container {
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  .pdfa-clean .premium .table th {
+    background-color: #e6e6e6 !important;
+    color: #000 !important;
+  }
+
+  .pdfa-clean .premium .table td {
+    background-color: #ffffff !important;
+    color: #000 !important;
+  }
+
+  .pdfa-clean .premium .table tr:nth-child(even) td {
+    background-color: #f2f2f2 !important;
+  }
+
+  .pdfa-clean .footer {
+    background-color: #eaeaea !important;
+    color: #000 !important;
+    border-top: 1px solid #bbb !important;
+  }
+
+  .pdfa-clean .watermark {
+    display: none !important;
+  }
+</style>
+
   </head>
   <body class="${userClass}">
     <div class="container">
