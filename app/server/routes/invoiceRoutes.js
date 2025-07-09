@@ -538,6 +538,8 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
     "-dSubsetFonts=true",
+    -"dPreserveDocInfo=false",
+
     "-sPDFACompatibilityPolicy=1",
     `-sOutputIntentProfile=${iccPath}`,
     `-sOutputFile=${tempOutput}`,
