@@ -434,9 +434,16 @@ pdfDoc.setCreator("");
 pdfDoc.setKeywords([]);
 
 // 🧼 Extra safety: remove raw Info dict
-const infoKey = pdfDoc.context.trailer.get(PDFName.of('Info'));
-if (infoKey) {
-  pdfDoc.context.trailer.delete(PDFName.of('Info'));
+const infoDict = pdfDoc.context.trailer.get(PDFName.of("Info"));
+if (infoDict) {
+  const info = infoDict.lookupMaybe(PDFName.of("Info"))?.asDict?.();
+  if (info) {
+    const keys = info.keys();
+    for (const key of keys) {
+      info.delete(key);
+    }
+  }
+  pdfDoc.context.trailer.delete(PDFName.of("Info"));
 }
 
 // Now set clean ASCII metadata
