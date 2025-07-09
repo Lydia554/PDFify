@@ -438,7 +438,7 @@ pdfDoc.setKeywords([]);
 const sanitizeMetadata = (str) =>
   String(str || "").replace(/[^\x20-\x7E]/g, "");
 
-pdfDoc.setTitle(sanitizeMetadata(`Invoice ${orderId}`));
+pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
 pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
 pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
 pdfDoc.setCreator(sanitizeMetadata("PDFify"));
