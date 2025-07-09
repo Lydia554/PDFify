@@ -8,7 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
-const { execFile } = require("child_process");
+
 
 
 
@@ -451,9 +451,6 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
 
 
 
-
-
-
   const now = new Date();
   pdfDoc.setCreationDate(now);
   pdfDoc.setModificationDate(now);
@@ -520,7 +517,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
       const outputIntentRef = pdfDoc.context.register(outputIntentDict);
       catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
 
-      finalPdfBytes = await pdfDoc.save({ useObjectStreams: false });
+      finalPdfBytes = await pdfDoc.save();
     }
 
 
