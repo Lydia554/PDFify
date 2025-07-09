@@ -429,7 +429,9 @@ if (user.plan === "pro") {
   const orderId = invoiceData.orderId || "";
   pdfDoc.setTitle(sanitizeMetadata(`Invoice ${orderId}`));
   pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
-  pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"]);
+const sanitizeArray = (arr) => arr.map(sanitizeMetadata);
+pdfDoc.setKeywords(sanitizeArray(["invoice", "ZUGFeRD", "PDF/A-3"]));
+
   pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
   pdfDoc.setCreator(sanitizeMetadata("PDFify"));
 
@@ -491,7 +493,7 @@ if (user.plan === "pro") {
       const iccRef = pdfDoc.context.register(iccStream);
       const outputIntentDict = pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
-        S: PDFName.of("GTS_PDFA1"),
+        S: PDFName.of("GTS_PDFA3"),
         OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
         Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
         DestOutputProfile: iccRef,
@@ -501,6 +503,15 @@ if (user.plan === "pro") {
 
       finalPdfBytes = await pdfDoc.save();
     }
+
+
+    console.log("🧾 Metadata Check:");
+console.log("  Title:", pdfDoc.getTitle());
+console.log("  Subject:", pdfDoc.getSubject());
+console.log("  Keywords:", pdfDoc.getKeywords());
+console.log("  Producer:", pdfDoc.getProducer());
+console.log("  Creator:", pdfDoc.getCreator());
+
 
     console.log("⚙️ Finalizing via Ghostscript...");
     const tempInput = `/tmp/input-${Date.now()}.pdf`;
