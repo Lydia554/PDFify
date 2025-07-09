@@ -416,19 +416,26 @@ if (isPreview) {
 
     let finalPdfBytes = pdfBuffer;
 
-    if (user.plan === "pro") {
-      console.log("🧩 Embedding ZUGFeRD metadata...");
-      const zugferdXml = generateZugferdXML(invoiceData);
-      const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-      const pdfDoc = await PDFDocument.load(pdfBuffer);
+if (user.plan === "pro") {
+  console.log("🧩 Embedding ZUGFeRD metadata...");
+  const zugferdXml = generateZugferdXML(invoiceData);
+  const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-      pdfDoc.setTitle(`Invoice ${invoiceData.orderId || ""}`);
-      pdfDoc.setSubject("ZUGFeRD Invoice");
-      pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"]);
-      pdfDoc.setProducer("PDFify API");
-      pdfDoc.setCreator("PDFify");
-      pdfDoc.setCreationDate(new Date());
-      pdfDoc.setModificationDate(new Date());
+ 
+  const sanitizeMetadata = (str) =>
+    String(str).replace(/[^\x20-\x7E]/g, ""); 
+
+  const orderId = invoiceData.orderId || "";
+  pdfDoc.setTitle(sanitizeMetadata(`Invoice ${orderId}`));
+  pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
+  pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"]);
+  pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
+  pdfDoc.setCreator(sanitizeMetadata("PDFify"));
+
+  const now = new Date();
+  pdfDoc.setCreationDate(now);
+  pdfDoc.setModificationDate(now);
 
       const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
         Type: PDFName.of("EmbeddedFile"),
@@ -516,7 +523,6 @@ if (isPreview) {
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
     "-dSubsetFonts=true",
-    "-dUseCIEColor",
     "-sPDFACompatibilityPolicy=1",
     `-sOutputIntentProfile=${iccPath}`,
     `-sOutputFile=${tempOutput}`,
