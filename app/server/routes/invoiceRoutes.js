@@ -535,6 +535,7 @@ pdfDoc.setCreator(sanitizeMetadata("PDFify"));
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
     "-dSubsetFonts=true",
+    "-dPreserveEPSInfo=false",
     "-sPDFACompatibilityPolicy=1",
     `-sOutputIntentProfile=${iccPath}`,
     `-sOutputFile=${tempOutput}`,
