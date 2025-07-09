@@ -432,17 +432,15 @@ console.log("  Creator:", pdfDoc.getCreator());
 
 
  
-  const sanitizeMetadata = (str) =>
-    String(str).replace(/[^\x20-\x7E]/g, ""); 
+const sanitizeMetadata = (str) =>
+  String(str).replace(/[^\x20-\x7E]/g, "");
 
-  const orderId = invoiceData.orderId || "";
-  pdfDoc.setTitle(sanitizeMetadata(`Invoice ${orderId}`));
-  pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
-const sanitizeArray = (arr) => arr.map(sanitizeMetadata);
-pdfDoc.setKeywords(sanitizeArray(["invoice", "ZUGFeRD", "PDF/A-3"]));
+pdfDoc.setTitle(sanitizeMetadata(`Invoice ${orderId}`));
+pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
+pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"].map(sanitizeMetadata));
+pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
+pdfDoc.setCreator(sanitizeMetadata("PDFify"));
 
-  pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
-  pdfDoc.setCreator(sanitizeMetadata("PDFify"));
 
   const now = new Date();
   pdfDoc.setCreationDate(now);
@@ -561,12 +559,17 @@ pdfDoc.setKeywords(sanitizeArray(["invoice", "ZUGFeRD", "PDF/A-3"]));
     if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript failed to generate output PDF");
 
     const gsFinalPdf = fs.readFileSync(tempOutput);
+    
+const sanitizeFileName = (name) =>
+  name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
+const safeFileName = sanitizeFileName(`Invoice_${safeOrderId}_pdfa3.pdf`);
 
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}_pdfa3.pdf`,
-      "Content-Length": gsFinalPdf.length,
-    });
+res.set({
+  "Content-Type": "application/pdf",
+  "Content-Disposition": `attachment; filename=${safeFileName}`,
+  "Content-Length": gsFinalPdf.length,
+});
+
 
     console.log("📤 Sending finalized PDF.");
     return res.send(gsFinalPdf);
