@@ -423,23 +423,25 @@ if (user.plan === "pro") {
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
   
-    console.log("🧾 Metadata Check:");
-console.log("  Title:", pdfDoc.getTitle());
-console.log("  Subject:", pdfDoc.getSubject());
-console.log("  Keywords:", pdfDoc.getKeywords());
-console.log("  Producer:", pdfDoc.getProducer());
-console.log("  Creator:", pdfDoc.getCreator());
+// Clear inherited metadata (important!)
+pdfDoc.setTitle("");
+pdfDoc.setSubject("");
+pdfDoc.setKeywords([]);
+pdfDoc.setProducer("");
+pdfDoc.setCreator("");
 
-
- 
+// Now set sanitized versions
 const sanitizeMetadata = (str) =>
-  String(str).replace(/[^\x20-\x7E]/g, "");
+  String(str || "").replace(/[^\x20-\x7E]/g, "");
+
+const sanitizeArray = (arr) => arr.map(sanitizeMetadata);
 
 pdfDoc.setTitle(sanitizeMetadata(`Invoice ${orderId}`));
 pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
-pdfDoc.setKeywords(["invoice", "ZUGFeRD", "PDF/A-3"].map(sanitizeMetadata));
+pdfDoc.setKeywords(sanitizeArray(["invoice", "ZUGFeRD", "PDF/A-3"]));
 pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
 pdfDoc.setCreator(sanitizeMetadata("PDFify"));
+
 
 
   const now = new Date();
@@ -559,7 +561,7 @@ pdfDoc.setCreator(sanitizeMetadata("PDFify"));
     if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript failed to generate output PDF");
 
     const gsFinalPdf = fs.readFileSync(tempOutput);
-    
+
 const sanitizeFileName = (name) =>
   name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
 const safeFileName = sanitizeFileName(`Invoice_${safeOrderId}_pdfa3.pdf`);
