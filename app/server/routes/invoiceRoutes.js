@@ -422,19 +422,24 @@ if (user.plan === "pro") {
   const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
  
 
-  
 const pdfDoc = await PDFDocument.load(pdfBuffer, {
-  updateMetadata: false, // prevent pdf-lib from carrying over
+  updateMetadata: false,
 });
 
-// Overwrite metadata fields with clean ASCII-only versions
+// Clear any existing metadata
 pdfDoc.setTitle("");
 pdfDoc.setSubject("");
 pdfDoc.setProducer("");
 pdfDoc.setCreator("");
 pdfDoc.setKeywords([]);
 
-// Then set sanitized versions
+// 🧼 Extra safety: remove raw Info dict
+const infoKey = pdfDoc.context.trailer.get(PDFName.of('Info'));
+if (infoKey) {
+  pdfDoc.context.trailer.delete(PDFName.of('Info'));
+}
+
+// Now set clean ASCII metadata
 const sanitizeMetadata = (str) =>
   String(str || "").replace(/[^\x20-\x7E]/g, "");
 
@@ -443,6 +448,8 @@ pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
 pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
 pdfDoc.setCreator(sanitizeMetadata("PDFify"));
 pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
+
+
 
 
 
@@ -513,7 +520,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
       const outputIntentRef = pdfDoc.context.register(outputIntentDict);
       catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
 
-      finalPdfBytes = await pdfDoc.save();
+      finalPdfBytes = await pdfDoc.save({ useObjectStreams: false });
     }
 
 
