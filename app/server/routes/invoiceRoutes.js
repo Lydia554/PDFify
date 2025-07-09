@@ -420,27 +420,30 @@ if (user.plan === "pro") {
   console.log("🧩 Embedding ZUGFeRD metadata...");
   const zugferdXml = generateZugferdXML(invoiceData);
   const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+ 
 
   
-// Clear inherited metadata (important!)
+const pdfDoc = await PDFDocument.load(pdfBuffer, {
+  updateMetadata: false, // prevent pdf-lib from carrying over
+});
+
+// Overwrite metadata fields with clean ASCII-only versions
 pdfDoc.setTitle("");
 pdfDoc.setSubject("");
-pdfDoc.setKeywords([]);
 pdfDoc.setProducer("");
 pdfDoc.setCreator("");
+pdfDoc.setKeywords([]);
 
-// Now set sanitized versions
+// Then set sanitized versions
 const sanitizeMetadata = (str) =>
   String(str || "").replace(/[^\x20-\x7E]/g, "");
 
-const sanitizeArray = (arr) => arr.map(sanitizeMetadata);
-
 pdfDoc.setTitle(sanitizeMetadata(`Invoice ${orderId}`));
 pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
-pdfDoc.setKeywords(sanitizeArray(["invoice", "ZUGFeRD", "PDF/A-3"]));
 pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
 pdfDoc.setCreator(sanitizeMetadata("PDFify"));
+pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
+
 
 
 
@@ -535,7 +538,6 @@ pdfDoc.setCreator(sanitizeMetadata("PDFify"));
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
     "-dSubsetFonts=true",
-    "-dPreserveEPSInfo=false",
     "-sPDFACompatibilityPolicy=1",
     `-sOutputIntentProfile=${iccPath}`,
     `-sOutputFile=${tempOutput}`,
