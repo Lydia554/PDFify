@@ -403,7 +403,7 @@ if (isPreview) {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      displayHeaderFooter: true,
+       displayHeaderFooter: false,
       headerTemplate: `<div></div>`,
       footerTemplate: `
         <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
@@ -538,8 +538,6 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
     "-dSubsetFonts=true",
-    -"dPreserveDocInfo=false",
-
     "-sPDFACompatibilityPolicy=1",
     `-sOutputIntentProfile=${iccPath}`,
     `-sOutputFile=${tempOutput}`,
