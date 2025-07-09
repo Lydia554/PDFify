@@ -403,7 +403,7 @@ if (isPreview) {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      displayHeaderFooter: true,
+      displayHeaderFooter: false,
       headerTemplate: `<div></div>`,
       footerTemplate: `
         <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
