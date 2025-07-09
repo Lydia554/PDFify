@@ -503,28 +503,42 @@ if (isPreview) {
     fs.writeFileSync(tempInput, finalPdfBytes);
     if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found");
 
-    await new Promise((resolve, reject) => {
-      execFile(
-        "gs",
-        [
-          "-dPDFA=3",
-          "-dBATCH",
-          "-dNOPAUSE",
-          "-dPreserveMetadata",
-          "-sDEVICE=pdfwrite",
-          "-sProcessColorModel=DeviceRGB",
-          "-sColorConversionStrategy=RGB",
-          "-dEmbedAllFonts=true",
-          "-dSubsetFonts=true",
-          "-dUseCIEColor",
-          "-sPDFACompatibilityPolicy=1",
-          `-sOutputIntentProfile=${iccPath}`,
-          `-sOutputFile=${tempOutput}`,
-          tempInput,
-        ],
-        (error) => (error ? reject(error) : resolve())
-      );
-    });
+   await new Promise((resolve, reject) => {
+  const { execFile } = require("child_process");
+
+  const args = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-dPreserveMetadata",
+    "-sDEVICE=pdfwrite",
+    "-sProcessColorModel=DeviceRGB",
+    "-sColorConversionStrategy=RGB",
+    "-dEmbedAllFonts=true",
+    "-dSubsetFonts=true",
+    "-dUseCIEColor",
+    "-sPDFACompatibilityPolicy=1",
+    `-sOutputIntentProfile=${iccPath}`,
+    `-sOutputFile=${tempOutput}`,
+    tempInput,
+  ];
+
+  const gsProcess = execFile("gs", args, (error, stdout, stderr) => {
+    if (error) {
+      console.error("❌ Ghostscript error:", error);
+      console.error("🔴 stderr:", stderr);
+      return reject(error);
+    }
+
+    if (stderr) {
+      console.warn("⚠️ Ghostscript stderr:", stderr);
+    }
+
+    console.log("✅ Ghostscript completed successfully.");
+    resolve();
+  });
+});
+
 
     if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript failed to generate output PDF");
 
