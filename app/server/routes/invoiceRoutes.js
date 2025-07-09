@@ -422,6 +422,15 @@ if (user.plan === "pro") {
   const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
+  
+    console.log("🧾 Metadata Check:");
+console.log("  Title:", pdfDoc.getTitle());
+console.log("  Subject:", pdfDoc.getSubject());
+console.log("  Keywords:", pdfDoc.getKeywords());
+console.log("  Producer:", pdfDoc.getProducer());
+console.log("  Creator:", pdfDoc.getCreator());
+
+
  
   const sanitizeMetadata = (str) =>
     String(str).replace(/[^\x20-\x7E]/g, ""); 
@@ -503,14 +512,6 @@ pdfDoc.setKeywords(sanitizeArray(["invoice", "ZUGFeRD", "PDF/A-3"]));
 
       finalPdfBytes = await pdfDoc.save();
     }
-
-
-    console.log("🧾 Metadata Check:");
-console.log("  Title:", pdfDoc.getTitle());
-console.log("  Subject:", pdfDoc.getSubject());
-console.log("  Keywords:", pdfDoc.getKeywords());
-console.log("  Producer:", pdfDoc.getProducer());
-console.log("  Creator:", pdfDoc.getCreator());
 
 
     console.log("⚙️ Finalizing via Ghostscript...");
