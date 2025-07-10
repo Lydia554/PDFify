@@ -577,7 +577,6 @@ const args = [
   "-dEmbedAllFonts=true",
   "-dSubsetFonts=true",
   "-dPreserveDocInfo=false",
-  "-dUseCIEColor",
   "-dPDFACompatibilityPolicy=1",
 
   // Important: include the PostScript setup file
