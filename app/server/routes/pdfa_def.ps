@@ -1,26 +1,39 @@
 %!
 % pdfa_def.ps: PDF/A-3b compliance setup for Ghostscript
 
-% Define ICC profile
+% Open ICC profile file as a stream
+/iccfile (..app/sRGB_IEC61966-2-1_no_black_scaling.icc) (r) file def
+
+% Get length of ICC profile (in bytes)
+iccfile length /iccfilelength exch def
+
+% Define ICCBased colorspace with embedded profile stream
 [ /ICCBased
-  << /N 3
-     /Alternate /DeviceRGB
-     /Length currentfile exch readstring pop
-     /Filter /ASCII85Decode
-     /DecodeParms << /Columns 3 /BitsPerComponent 8 /Colors 3 >> 
-     /DataSource currentfile /ASCII85Decode filter
+  <<
+    /N 3
+    /Alternate /DeviceRGB
+    /Length iccfilelength
+    /Filter /ASCII85Decode
+    /DecodeParms << /Columns 3 /BitsPerComponent 8 /Colors 3 >>
+    /DataSource iccfile
   >>
 ] setcolorspace
 
-% Set OutputIntent (this is mandatory for PDF/A-2b and 3b)
-[
-  /OutputIntent <<
+% Setup OutputIntent dictionary (mandatory for PDF/A)
+/OutputIntents [
+  <<
     /Type /OutputIntent
     /S /GTS_PDFA1
     /OutputConditionIdentifier (sRGB IEC61966-2.1)
     /Info (sRGB IEC61966-2.1)
-    /DestOutputProfile (/app/sRGB_IEC61966-2-1_no_black_scaling.icc)
-
+    /DestOutputProfile iccfile
   >>
-] /OutputIntents exch def
+] def
 
+% Add OutputIntent to document Info dictionary
+userdict /pdfa_def 100 dict put
+pdfa_def begin
+  <<
+    /OutputIntents OutputIntents
+  >> setdistillerparams
+end
