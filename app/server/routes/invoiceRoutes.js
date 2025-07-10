@@ -202,34 +202,29 @@ const watermarkHTML =
   }
 
   /* ========================== */
-  /* PDF/A-2b compliant override */
+  /* PDF/A-3b compliant override */
   /* ========================== */
-  .pdfa-clean .container {
+ .pdfa-clean .container {
     background-color: #ffffff !important;
     box-shadow: none !important;
     border: 1px solid #ccc !important;
   }
-
   .pdfa-clean .premium .table th {
     background-color: #e6e6e6 !important;
     color: #000 !important;
   }
-
   .pdfa-clean .premium .table td {
     background-color: #ffffff !important;
     color: #000 !important;
   }
-
   .pdfa-clean .premium .table tr:nth-child(even) td {
     background-color: #f2f2f2 !important;
   }
-
   .pdfa-clean .footer {
     background-color: #eaeaea !important;
     color: #000 !important;
     border-top: 1px solid #bbb !important;
   }
-
   .pdfa-clean .watermark {
     display: none !important;
   }
@@ -329,6 +324,29 @@ const watermarkHTML =
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
+
+
+
+  
+  const { execSync } = require("child_process");
+  const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+
+  // Check Ghostscript availability
+  try {
+    const gsVersion = execSync("gs --version").toString().trim();
+    console.log("📦 Ghostscript version:", gsVersion);
+  } catch (err) {
+    console.error("❌ Ghostscript not found or not executable.");
+    return res.status(500).json({ error: "Ghostscript is not installed or not available in the system PATH." });
+  }
+
+  // Check ICC profile presence
+  if (!fs.existsSync(iccPath)) {
+    console.error("❌ ICC profile not found at:", iccPath);
+    return res.status(500).json({ error: "Required ICC profile is missing for PDF/A-3 compliance." });
+  }
+
+  
   try {
     let { data, isPreview } = req.body;
     if (!data || typeof data !== "object") {
@@ -447,7 +465,7 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
 
   // Set clean ASCII metadata explicitly
   pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
-  pdfDoc.setAuthor(sanitizeMetadata("PDFify User")); // added author
+  pdfDoc.setAuthor(sanitizeMetadata("PDFify User")); 
   pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
   pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
   pdfDoc.setCreator(sanitizeMetadata("PDFify"));
@@ -587,7 +605,7 @@ const gsFinalPdf = fs.readFileSync(tempOutput);
 
 // ✅ Then save it locally for validation
 const localValidationPath = path.resolve(__dirname, "pdfs", "latest-invoice.pdf");
-fs.mkdirSync(path.dirname(localValidationPath), { recursive: true }); // ensure pdfs/ exists
+fs.mkdirSync(path.dirname(localValidationPath), { recursive: true }); 
 fs.writeFileSync(localValidationPath, gsFinalPdf);
 console.log("📥 Copied PDF for local VeraPDF validation.");
 
