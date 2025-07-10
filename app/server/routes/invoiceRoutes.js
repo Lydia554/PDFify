@@ -581,7 +581,7 @@ const args = [
   "-dPreserveDocInfo=false",
   "-dPDFACompatibilityPolicy=1",
   `-sOutputFile=${tempOutput}`,
-  tempInput
+  
 
 
  
