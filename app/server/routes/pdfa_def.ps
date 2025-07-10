@@ -2,7 +2,8 @@
 % pdfa_def.ps: PDF/A-3b compliance setup for Ghostscript
 
 % Open ICC profile file as a stream
-/iccfile (..app/sRGB_IEC61966-2-1_no_black_scaling.icc) (r) file def
+/iccfile (/app/sRGB_IEC61966-2-1_no_black_scaling.icc) (r) file def
+
 
 % Get length of ICC profile (in bytes)
 iccfile length /iccfilelength exch def
