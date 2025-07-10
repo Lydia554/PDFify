@@ -549,7 +549,6 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
     "-dNOPAUSE",
     "-dPreserveMetadata",
     "-sDEVICE=pdfwrite",
-    "-dUseCIEColor=true",
     "-sProcessColorModel=DeviceRGB",
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
