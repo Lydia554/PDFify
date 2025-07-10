@@ -11,7 +11,7 @@
         <rdf:Bag>
           <rdf:li rdf:parseType='Resource'>
             <pdfaSchema:schema>ZUGFeRD PDFA Extension Schema</pdfaSchema:schema>
-            <pdfaSchema:namespaceURI>urn:ferd:pdfa:CrossIndustryDocument:invoice:2p1:basic</pdfaSchema:namespaceURI>
+            <pdfaSchema:namespaceURI>urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic</pdfaSchema:namespaceURI>
             <pdfaSchema:prefix>zf</pdfaSchema:prefix>
             <pdfaSchema:property>
               <rdf:Seq>
@@ -47,7 +47,7 @@
     </rdf:Description>
 
     <!-- Actual ZUGFeRD metadata -->
-    <rdf:Description xmlns:zf='urn:ferd:pdfa:CrossIndustryDocument:invoice:2p1:basic' rdf:about=''>
+    <rdf:Description xmlns:zf='urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic' rdf:about=''>
       <zf:DocumentFileName>zugferd-invoice.xml</zf:DocumentFileName>
       <zf:DocumentType>INVOICE</zf:DocumentType>
       <zf:Version>2.1</zf:Version>

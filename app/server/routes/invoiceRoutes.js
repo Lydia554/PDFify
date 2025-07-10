@@ -507,7 +507,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
       const metadataRef = pdfDoc.context.register(metadataStream);
       catalog.set(PDFName.of("Metadata"), metadataRef);
 
-      const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+
       const iccData = fs.readFileSync(iccProfilePath);
       const iccStream = pdfDoc.context.flateStream(iccData, {
         N: 3,
@@ -532,7 +532,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     console.log("⚙️ Finalizing via Ghostscript...");
     const tempInput = `/tmp/input-${Date.now()}.pdf`;
     const tempOutput = `/tmp/output-${Date.now()}.pdf`;
-    const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../sRGB_IEC61966-2-1_no_black_scaling.icc");
+    const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "..app/sRGB_IEC61966-2-1_no_black_scaling.icc");
 
     fs.writeFileSync(tempInput, finalPdfBytes);
     if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found");
@@ -574,9 +574,18 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
 });
 
 
-    if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript failed to generate output PDF");
 
-    const gsFinalPdf = fs.readFileSync(tempOutput);
+if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript failed to generate output PDF");
+
+// 🔄 First read the Ghostscript output
+const gsFinalPdf = fs.readFileSync(tempOutput);
+
+// ✅ Then save it locally for validation
+const localValidationPath = path.resolve(__dirname, "pdfs", "latest-invoice.pdf");
+fs.mkdirSync(path.dirname(localValidationPath), { recursive: true }); // ensure pdfs/ exists
+fs.writeFileSync(localValidationPath, gsFinalPdf);
+console.log("📥 Copied PDF for local VeraPDF validation.");
+
 
 const sanitizeFileName = (name) =>
   name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
