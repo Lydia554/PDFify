@@ -546,6 +546,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     "-dNOPAUSE",
     "-dPreserveMetadata",
     "-sDEVICE=pdfwrite",
+    "-dUseCIEColor=true",
     "-sProcessColorModel=DeviceRGB",
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
