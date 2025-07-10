@@ -330,7 +330,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   
   const { execSync } = require("child_process");
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
-  const psFilePath = path.resolve(__dirname, 'pdfa_def.ps');
+
 
 console.log('✅ pdfa_def.ps path:', psFilePath, fs.existsSync(psFilePath));
 
@@ -582,7 +582,7 @@ const args = [
   "-dPreserveDocInfo=false",
   "-dPDFACompatibilityPolicy=1",
   `-sOutputFile=${tempOutput}`,
-   psFilePath,       // <- absolute, resolved above
+
 
  
 ];
