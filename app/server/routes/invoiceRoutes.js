@@ -341,12 +341,17 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   }
 
   // Check ICC profile presence
-  if (!fs.existsSync(iccPath)) {
-    console.error("❌ ICC profile not found at:", iccPath);
-    return res.status(500).json({ error: "Required ICC profile is missing for PDF/A-3 compliance." });
-  }
 
-  
+
+if (!fs.existsSync(iccPath)) {
+  console.error("❌ ICC profile not found at:", iccPath);
+  return res.status(500).json({ error: "Required ICC profile is missing for PDF/A-3 compliance." });
+} else {
+  console.log("🖨️ ICC profile found and accessible:", iccPath);
+}
+
+
+
   try {
     let { data, isPreview } = req.body;
     if (!data || typeof data !== "object") {
