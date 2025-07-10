@@ -12,6 +12,7 @@
           <rdf:li rdf:parseType='Resource'>
             <pdfaSchema:schema>ZUGFeRD PDFA Extension Schema</pdfaSchema:schema>
             <pdfaSchema:namespaceURI>urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic</pdfaSchema:namespaceURI>
+
             <pdfaSchema:prefix>zf</pdfaSchema:prefix>
             <pdfaSchema:property>
               <rdf:Seq>
