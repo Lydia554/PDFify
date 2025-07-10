@@ -551,10 +551,6 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     "-dEmbedAllFonts=true",
     "-dSubsetFonts=true",
     "-dPreserveDocInfo=false",
-    -"dForcesettrue -dDetectDuplicateImages=true",
-    -"dHaveTransparency=true",
--"dUseCIEColor",
-
     "-sPDFACompatibilityPolicy=1",
     `-sOutputIntentProfile=${iccPath}`,
     `-sOutputFile=${tempOutput}`,
