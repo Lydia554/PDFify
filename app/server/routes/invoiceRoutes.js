@@ -570,18 +570,20 @@ const args = [
   "-dPDFA=3",
   "-dBATCH",
   "-dNOPAUSE",
-  "-dPreserveMetadata",
   "-sDEVICE=pdfwrite",
+  "-dNOOUTERSAVE",
   "-sProcessColorModel=DeviceRGB",
   "-sColorConversionStrategy=RGB",
   "-dEmbedAllFonts=true",
   "-dSubsetFonts=true",
-  "-dPreserveDocInfo=true",
-  "-dCompatibilityLevel=1.7",
-  "-sPDFACompatibilityPolicy=1",
-  `-sOutputICCProfile=${iccPath}`, 
+  "-dPreserveDocInfo=false",
+  "-dUseCIEColor",
+  "-dPDFACompatibilityPolicy=1",
+
+  // Important: include the PostScript setup file
   `-sOutputFile=${tempOutput}`,
-  tempInput,
+  `${__dirname}/pdfa_def.ps`,
+  tempInput
 ];
 
 
