@@ -543,25 +543,24 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
    await new Promise((resolve, reject) => {
   const { execFile } = require("child_process");
 
-  const args = [
-    "-dPDFA=3",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-dPreserveMetadata",
-    "-sDEVICE=pdfwrite",
-    "-sProcessColorModel=DeviceRGB",
-    "-sColorConversionStrategy=RGB",
-    "-dEmbedAllFonts=true",
-    "-dSubsetFonts=true",
-    "-dPreserveDocInfo=false",
-    "-dProcessColorModel=/DeviceCMYK",
-     "-dCompatibilityLevel=1.7",
+const args = [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-dPreserveMetadata",
+  "-sDEVICE=pdfwrite",
+  "-sProcessColorModel=DeviceRGB",
+  "-sColorConversionStrategy=RGB",
+  "-dEmbedAllFonts=true",
+  "-dSubsetFonts=true",
+  "-dPreserveDocInfo=true",
+  "-dCompatibilityLevel=1.7",
+  "-sPDFACompatibilityPolicy=1",
+  `-sOutputICCProfile=${iccPath}`, 
+  `-sOutputFile=${tempOutput}`,
+  tempInput,
+];
 
-    "-sPDFACompatibilityPolicy=1",
-    `-sOutputIntentProfile=${iccPath}`,
-    `-sOutputFile=${tempOutput}`,
-    tempInput,
-  ];
 
   const gsProcess = execFile("gs", args, (error, stdout, stderr) => {
     if (error) {
