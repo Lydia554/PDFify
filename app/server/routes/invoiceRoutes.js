@@ -8,7 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
-
+const psFilePath = path.join(__dirname, 'pdfa_def.ps');
 
 
 
@@ -578,11 +578,10 @@ const args = [
   "-dSubsetFonts=true",
   "-dPreserveDocInfo=false",
   "-dPDFACompatibilityPolicy=1",
-
-  // Important: include the PostScript setup file
   `-sOutputFile=${tempOutput}`,
-  `${__dirname}/pdfa_def.ps`,
-  tempInput
+   psFilePath,       // <- absolute, resolved above
+  tempInput         // <- absolute too
+ 
 ];
 
 
