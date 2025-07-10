@@ -332,7 +332,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
 
 
-console.log('✅ pdfa_def.ps path:', psFilePath, fs.existsSync(psFilePath));
 
   // Check Ghostscript availability
   try {
