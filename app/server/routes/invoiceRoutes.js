@@ -8,9 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
-const psFilePath = path.resolve(__dirname, 'pdfa_def.ps');
 
-console.log('✅ pdfa_def.ps path:', psFilePath, fs.existsSync(psFilePath));
 
 
 
@@ -332,6 +330,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   
   const { execSync } = require("child_process");
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+  const psFilePath = path.resolve(__dirname, 'pdfa_def.ps');
+
+console.log('✅ pdfa_def.ps path:', psFilePath, fs.existsSync(psFilePath));
 
   // Check Ghostscript availability
   try {
@@ -536,7 +537,7 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
       catalog.set(PDFName.of("Metadata"), metadataRef);
 
 
-      const iccData = fs.readFileSync(iccProfilePath);
+      const iccData = fs.readFileSync(iccPath);
       const iccStream = pdfDoc.context.flateStream(iccData, {
         N: 3,
         Alternate: PDFName.of("DeviceRGB"),
@@ -560,7 +561,7 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
     console.log("⚙️ Finalizing via Ghostscript...");
     const tempInput = `/tmp/input-${Date.now()}.pdf`;
     const tempOutput = `/tmp/output-${Date.now()}.pdf`;
-    const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "..app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+    const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
 
     fs.writeFileSync(tempInput, finalPdfBytes);
     if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found");
