@@ -8,7 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
-const psFilePath = path.join(__dirname, '..', '..', 'pdfa_def.ps');
+const psFilePath = path.resolve(__dirname, 'pdfa_def.ps');
 
 console.log('✅ pdfa_def.ps path:', psFilePath, fs.existsSync(psFilePath));
 
