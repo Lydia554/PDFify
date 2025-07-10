@@ -500,8 +500,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
       await pdfDoc.setXmpMetadata(mergedXmp);
 
 
-
-
+      
 
       const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
       const iccData = fs.readFileSync(iccProfilePath);
@@ -550,7 +549,6 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     -"dForcesettrue -dDetectDuplicateImages=true",
     -"dHaveTransparency=true",
 -"dUseCIEColor",
-"-dPrinted=false", 
 
     "-sPDFACompatibilityPolicy=1",
     `-sOutputIntentProfile=${iccPath}`,
