@@ -529,7 +529,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     }
 
 
-    console.log("⚙️ Finalizing via Ghostscript...");
+    console.log(" Finalizing via Ghostscript...");
     const tempInput = `/tmp/input-${Date.now()}.pdf`;
     const tempOutput = `/tmp/output-${Date.now()}.pdf`;
     const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../sRGB_IEC61966-2-1_no_black_scaling.icc");
@@ -560,16 +560,16 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
 
   const gsProcess = execFile("gs", args, (error, stdout, stderr) => {
     if (error) {
-      console.error("❌ Ghostscript error:", error);
-      console.error("🔴 stderr:", stderr);
+      console.error(" Ghostscript error:", error);
+      console.error(" stderr:", stderr);
       return reject(error);
     }
 
     if (stderr) {
-      console.warn("⚠️ Ghostscript stderr:", stderr);
+      console.warn(" Ghostscript stderr:", stderr);
     }
 
-    console.log("✅ Ghostscript completed successfully.");
+    console.log(" Ghostscript completed successfully.");
     resolve();
   });
 });
@@ -599,7 +599,7 @@ res.set({
   } finally {
     if (browser) {
       await browser.close();
-      console.log("🧹 Puppeteer browser closed.");
+      console.log(" Puppeteer browser closed.");
     }
   }
 });
