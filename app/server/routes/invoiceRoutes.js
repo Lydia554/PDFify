@@ -583,7 +583,7 @@ const args = [
   "-dPDFACompatibilityPolicy=1",
   `-sOutputFile=${tempOutput}`,
    psFilePath,       // <- absolute, resolved above
-  tempInput         // <- absolute too
+
  
 ];
 
