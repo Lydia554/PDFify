@@ -520,7 +520,8 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
   const sanitizeXmp = (xmlStr) =>
     xmlStr
       .replace(/[\r\n\t]+/g, " ")
-      .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
+     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
+
       .trim();
   const sanitizedXmp = sanitizeXmp(mergedXmp);
 
@@ -560,7 +561,7 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
     console.log("⚙️ Finalizing via Ghostscript...");
     const tempInput = `/tmp/input-${Date.now()}.pdf`;
     const tempOutput = `/tmp/output-${Date.now()}.pdf`;
-    const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+ 
 
     fs.writeFileSync(tempInput, finalPdfBytes);
     if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found");
