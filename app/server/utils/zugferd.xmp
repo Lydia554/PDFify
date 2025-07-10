@@ -2,17 +2,16 @@
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Adobe XMP Core 5.6-c140 79.164384, 2020/07/10-21:49:21'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
 
-    <!-- PDF/A Extension Schema for ZUGFeRD -->
-    <rdf:Description xmlns:pdfaExtension='http://www.aiim.org/pdfa/ns/extension/'
-        xmlns:pdfaSchema='http://www.aiim.org/pdfa/ns/schema#'
-        xmlns:pdfaProperty='http://www.aiim.org/pdfa/ns/property#'
-        rdf:about=''>
+    <!-- PDF/A Extension Schema Declaration -->
+    <rdf:Description xmlns:pdfaExtension='http://www.aiim.org/pdfa/ns/extension/' 
+                     xmlns:pdfaSchema='http://www.aiim.org/pdfa/ns/schema#' 
+                     xmlns:pdfaProperty='http://www.aiim.org/pdfa/ns/property#' 
+                     rdf:about=''>
       <pdfaExtension:schemas>
         <rdf:Bag>
           <rdf:li rdf:parseType='Resource'>
             <pdfaSchema:schema>ZUGFeRD PDFA Extension Schema</pdfaSchema:schema>
             <pdfaSchema:namespaceURI>urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic</pdfaSchema:namespaceURI>
-
             <pdfaSchema:prefix>zf</pdfaSchema:prefix>
             <pdfaSchema:property>
               <rdf:Seq>
@@ -47,7 +46,7 @@
       </pdfaExtension:schemas>
     </rdf:Description>
 
-    <!-- Actual ZUGFeRD metadata -->
+    <!-- ZUGFeRD Metadata Values -->
     <rdf:Description xmlns:zf='urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic' rdf:about=''>
       <zf:DocumentFileName>zugferd-invoice.xml</zf:DocumentFileName>
       <zf:DocumentType>INVOICE</zf:DocumentType>
@@ -55,17 +54,16 @@
       <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
     </rdf:Description>
 
-    <!-- PDF/A-3b Conformance Metadata -->
+    <!-- PDF/A-3 Identification -->
     <rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/' rdf:about=''>
       <pdfaid:part>3</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
     </rdf:Description>
 
-    <!-- Associated File Relationship Metadata (for /AF) -->
-    <rdf:Description
-        xmlns:afrl='http://www.aiim.org/pdfa/ns/afrelationship/'
-        xmlns:pdfaAF='http://www.aiim.org/pdfa/ns/af/'
-        rdf:about=''>
+    <!-- Associated Files Metadata (/AF entry) -->
+    <rdf:Description xmlns:pdfaAF='http://www.aiim.org/pdfa/ns/af/' 
+                     xmlns:afrl='http://www.aiim.org/pdfa/ns/afrelationship/' 
+                     rdf:about=''>
       <pdfaAF:attachedFile>
         <rdf:Bag>
           <rdf:li rdf:parseType='Resource'>
