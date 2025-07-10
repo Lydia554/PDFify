@@ -499,8 +499,13 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
       const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
       await pdfDoc.setXmpMetadata(mergedXmp);
 
-
-      
+      const metadataStream = pdfDoc.context.flateStream(Buffer.from(mergedXmp, "utf8"), {
+        Type: PDFName.of("Metadata"),
+        Subtype: PDFName.of("XML"),
+        Filter: PDFName.of("FlateDecode"),
+      });
+      const metadataRef = pdfDoc.context.register(metadataStream);
+      catalog.set(PDFName.of("Metadata"), metadataRef);
 
       const iccProfilePath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
       const iccData = fs.readFileSync(iccProfilePath);
@@ -541,6 +546,7 @@ pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
     "-dNOPAUSE",
     "-dPreserveMetadata",
     "-sDEVICE=pdfwrite",
+  "-dPrinted=false",
     "-sProcessColorModel=DeviceRGB",
     "-sColorConversionStrategy=RGB",
     "-dEmbedAllFonts=true",
