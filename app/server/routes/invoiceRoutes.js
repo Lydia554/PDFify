@@ -455,8 +455,7 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
   const sanitizeMetadata = (str) =>
     String(str || "")
       .replace(/[\r\n\t]+/g, " ")
-     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
-
+      .replace(/[^\x20-\x7E]/g, "")
       .trim();
 
   // Remove old Info dictionary fully
