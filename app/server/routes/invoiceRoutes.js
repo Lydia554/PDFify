@@ -392,17 +392,41 @@ if (isPreview) {
 
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
 
+    // Generate base HTML
+    const html = generateInvoiceHTML({ ...invoiceData, isPreview: true });
+    console.log("🟣 HTML generated.");
+
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+       displayHeaderFooter: false,
+      headerTemplate: `<div></div>`,
+      footerTemplate: `
+        <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
+          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+        </div>`,
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    });
+
+    console.log("📄 Base PDF generated.");
+
+    let finalPdfBytes = pdfBuffer;
+
 if (user.plan === "pro") {
   console.log("🧩 Embedding ZUGFeRD metadata...");
-
   const zugferdXml = generateZugferdXML(invoiceData);
   const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+ 
 
-  const pdfDoc = await PDFDocument.load(pdfBuffer, {
-    updateMetadata: false,
-  });
+const pdfDoc = await PDFDocument.load(pdfBuffer, {
+  updateMetadata: false,
+});
 
-  // Sanitize metadata strings: remove newlines, non-ASCII chars, trim spaces
+ // Sanitize metadata strings: remove newlines, non-ASCII chars, trim spaces
   const sanitizeMetadata = (str) =>
     String(str || "")
       .replace(/[\r\n\t]+/g, " ")
@@ -433,40 +457,39 @@ if (user.plan === "pro") {
   pdfDoc.setCreationDate(now);
   pdfDoc.setModificationDate(now);
 
-  // Embed ZUGFeRD XML as embedded file
-  const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-    Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("application/xml"),
-  });
-  embeddedFileStream.set(PDFName.of("Params"), pdfDoc.context.obj({
-    Size: xmlBuffer.length,
-    ModDate: PDFHexString.fromDate(new Date()),
-  }));
-  const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+      const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+        Type: PDFName.of("EmbeddedFile"),
+        Subtype: PDFName.of("application/xml"),
+      });
+      embeddedFileStream.set(PDFName.of("Params"), pdfDoc.context.obj({
+        Size: xmlBuffer.length,
+        ModDate: PDFHexString.fromDate(new Date()),
+      }));
+      const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
 
-  const fileName = "zugferd-invoice.xml";
-  const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
-  const filespecDict = pdfDoc.context.obj({
-    Type: PDFName.of("Filespec"),
-    F: PDFHexString.fromString(fileName),
-    UF: PDFHexString.fromString(fileName),
-    EF: efDict,
-    Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
-    AFRelationship: PDFName.of("Data"),
-  });
-  const filespecRef = pdfDoc.context.register(filespecDict);
+      const fileName = "zugferd-invoice.xml";
+      const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
+      const filespecDict = pdfDoc.context.obj({
+        Type: PDFName.of("Filespec"),
+        F: PDFHexString.fromString(fileName),
+        UF: PDFHexString.fromString(fileName),
+        EF: efDict,
+        Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
+        AFRelationship: PDFName.of("Data"),
+      });
+      const filespecRef = pdfDoc.context.register(filespecDict);
 
-  const catalog = pdfDoc.catalog;
-  const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
-  const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
-  const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
-  embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
-  embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-  namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-  catalog.set(PDFName.of("Names"), namesDict);
-  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+      const catalog = pdfDoc.catalog;
+      const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
+      const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
+      const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
+      embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
+      embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
+      namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+      catalog.set(PDFName.of("Names"), namesDict);
+      catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-  // Load, sanitize and embed XMP metadata
+       // Load, sanitize and embed XMP metadata
   const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
   const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
   const sanitizeXmp = (xmlStr) =>
@@ -478,36 +501,35 @@ if (user.plan === "pro") {
 
   await pdfDoc.setXmpMetadata(sanitizedXmp);
 
-  // Metadata stream for catalog
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf8"), {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-    Filter: PDFName.of("FlateDecode"),
-  });
-  const metadataRef = pdfDoc.context.register(metadataStream);
-  catalog.set(PDFName.of("Metadata"), metadataRef);
 
-  // ICC profile embedding
-  const iccData = fs.readFileSync(iccProfilePath);
-  const iccStream = pdfDoc.context.flateStream(iccData, {
-    N: 3,
-    Alternate: PDFName.of("DeviceRGB"),
-    Filter: PDFName.of("FlateDecode"),
-  });
-  const iccRef = pdfDoc.context.register(iccStream);
-  const outputIntentDict = pdfDoc.context.obj({
-    Type: PDFName.of("OutputIntent"),
-    S: PDFName.of("GTS_PDFA3"),
-    OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
-    Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
-  });
-  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
-  catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+      const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf8"), {
+        Type: PDFName.of("Metadata"),
+        Subtype: PDFName.of("XML"),
+        Filter: PDFName.of("FlateDecode"),
+      });
+      const metadataRef = pdfDoc.context.register(metadataStream);
+      catalog.set(PDFName.of("Metadata"), metadataRef);
 
-  finalPdfBytes = await pdfDoc.save();
-}
 
+      const iccData = fs.readFileSync(iccProfilePath);
+      const iccStream = pdfDoc.context.flateStream(iccData, {
+        N: 3,
+        Alternate: PDFName.of("DeviceRGB"),
+        Filter: PDFName.of("FlateDecode"),
+      });
+      const iccRef = pdfDoc.context.register(iccStream);
+      const outputIntentDict = pdfDoc.context.obj({
+        Type: PDFName.of("OutputIntent"),
+        S: PDFName.of("GTS_PDFA3"),
+        OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        DestOutputProfile: iccRef,
+      });
+      const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+      catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+
+      finalPdfBytes = await pdfDoc.save();
+    }
 
 
     console.log("⚙️ Finalizing via Ghostscript...");
