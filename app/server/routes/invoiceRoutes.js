@@ -546,11 +546,11 @@ if (user.plan === "pro") {
   // Load, sanitize and embed XMP metadata
   const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
   const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
- console.log("🔍 Sanitized XMP XML:\n", sanitizedXmp);
+
 
   const sanitizedXmp = sanitizeXmp(mergedXmp);
   const utf8CleanBuffer = Buffer.from(sanitizedXmp, "utf8");
-
+ console.log("🔍 Sanitized XMP XML:\n", sanitizedXmp);
   // Remove BOM if present (first 3 bytes)
   const cleanBuffer =
     utf8CleanBuffer[0] === 0xef &&
