@@ -656,6 +656,6 @@ return res.send(gsFinalPdf);
     console.log("🧹 Puppeteer browser closed.");
   }
 }
-
+});
 
 module.exports = router;
