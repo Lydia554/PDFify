@@ -2,9 +2,7 @@
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Adobe XMP Core 5.6-c140 79.164384, 2020/07/10-21:49:21'>
   <rdf:RDF
     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    xmlns:pdfa="http://www.aiim.org/pdfa/ns/id/"
     xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-
     xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
     xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
     xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
@@ -12,7 +10,21 @@
     xmlns:afrl="http://www.aiim.org/pdfa/ns/afrelationship/"
     xmlns:zf="urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic">
 
-    <!-- PDF/A Extension Schema Declaration -->
+    <!-- PDF/A-3 Identification -->
+    <rdf:Description rdf:about="">
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+
+    <!-- ZUGFeRD Metadata Values -->
+    <rdf:Description rdf:about="">
+      <zf:DocumentFileName>zugferd-invoice.xml</zf:DocumentFileName>
+      <zf:DocumentType>INVOICE</zf:DocumentType>
+      <zf:Version>2.1</zf:Version>
+      <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
+    </rdf:Description>
+
+    <!-- Extension Schema Declaration -->
     <rdf:Description rdf:about="">
       <pdfaExtension:schemas>
         <rdf:Bag>
@@ -53,21 +65,7 @@
       </pdfaExtension:schemas>
     </rdf:Description>
 
-    <!-- ZUGFeRD Metadata Values -->
-    <rdf:Description rdf:about="">
-      <zf:DocumentFileName>zugferd-invoice.xml</zf:DocumentFileName>
-      <zf:DocumentType>INVOICE</zf:DocumentType>
-      <zf:Version>2.1</zf:Version>
-      <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
-    </rdf:Description>
-
-    <!-- PDF/A-3 Identification -->
-    <rdf:Description rdf:about="">
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-
-    <!-- Associated Files Metadata (/AF entry) -->
+    <!-- Associated Files Metadata -->
     <rdf:Description rdf:about="">
       <pdfaAF:attachedFile>
         <rdf:Bag>
