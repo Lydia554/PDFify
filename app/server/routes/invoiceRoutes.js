@@ -549,8 +549,9 @@ if (user.plan === "pro") {
 
 
   const sanitizedXmp = sanitizeXmp(mergedXmp);
+  console.log("🔍 Sanitized XMP XML:\n", sanitizedXmp);
   const utf8CleanBuffer = Buffer.from(sanitizedXmp, "utf8");
- console.log("🔍 Sanitized XMP XML:\n", sanitizedXmp);
+
   // Remove BOM if present (first 3 bytes)
   const cleanBuffer =
     utf8CleanBuffer[0] === 0xef &&
