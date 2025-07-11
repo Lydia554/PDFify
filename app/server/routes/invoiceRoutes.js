@@ -541,16 +541,17 @@ if (user.plan === "pro") {
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
 
- 
+ // Load and sanitize XMP metadata
+const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
+const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
 
-  // Load, sanitize and embed XMP metadata
-  const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
-  const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
+try {
+  console.log("🔸 Before sanitizing XMP");
 
-console.log("🔸 Before sanitizing XMP");
   const sanitizedXmp = sanitizeXmp(mergedXmp);
- console.error("🔍 (stderr) Sanitized XMP XML:\n", sanitizedXmp);
- console.log("🔸 After sanitizing XMP");
+
+  console.error("🔍 (stderr) Sanitized XMP XML:\n", sanitizedXmp);
+  console.log("🔸 After sanitizing XMP");
 
   const utf8CleanBuffer = Buffer.from(sanitizedXmp, "utf8");
 
@@ -567,28 +568,34 @@ console.log("🔸 Before sanitizing XMP");
     Subtype: PDFName.of("XML"),
     Filter: PDFName.of("FlateDecode"),
   });
+
   const metadataRef = pdfDoc.context.register(metadataStream);
   catalog.set(PDFName.of("Metadata"), metadataRef);
-
-  const iccData = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.flateStream(iccData, {
-    N: 3,
-    Alternate: PDFName.of("DeviceRGB"),
-    Filter: PDFName.of("FlateDecode"),
-  });
-  const iccRef = pdfDoc.context.register(iccStream);
-  const outputIntentDict = pdfDoc.context.obj({
-    Type: PDFName.of("OutputIntent"),
-    S: PDFName.of("GTS_PDFA3"),
-    OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
-    Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
-  });
-  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
-  catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
-
-  finalPdfBytes = await pdfDoc.save();
+} catch (err) {
+  console.error("❌ Error during XMP sanitization or embedding:", err);
+  throw err;
 }
+
+// Embed ICC profile
+const iccData = fs.readFileSync(iccPath);
+const iccStream = pdfDoc.context.flateStream(iccData, {
+  N: 3,
+  Alternate: PDFName.of("DeviceRGB"),
+  Filter: PDFName.of("FlateDecode"),
+});
+const iccRef = pdfDoc.context.register(iccStream);
+const outputIntentDict = pdfDoc.context.obj({
+  Type: PDFName.of("OutputIntent"),
+  S: PDFName.of("GTS_PDFA3"),
+  OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
+  Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
+  DestOutputProfile: iccRef,
+});
+const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+
+finalPdfBytes = await pdfDoc.save();
+} 
 
 console.log("⚙️ Finalizing via Ghostscript...");
 const tempInput = `/tmp/input-${Date.now()}.pdf`;
