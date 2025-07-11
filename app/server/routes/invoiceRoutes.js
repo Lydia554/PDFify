@@ -520,12 +520,9 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
   const sanitizeXmp = (xmlStr) =>
     xmlStr
       .replace(/[\r\n\t]+/g, " ")
-     .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "")
 
       .trim();
   const sanitizedXmp = sanitizeXmp(mergedXmp);
-
-  await pdfDoc.setXmpMetadata(sanitizedXmp);
 
 
       const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf8"), {
