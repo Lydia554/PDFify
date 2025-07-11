@@ -436,6 +436,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       console.log("✅ Sanitized XMP string:", xmpString?.substring(0, 200) + "...");
       return xmpString;
     }
+    
+console.log("🔍 user.plan:", user.plan);
 
     if (user.plan === "pro") {
       console.log("🧩 Starting ZUGFeRD embedding");
@@ -528,7 +530,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     console.log("⚙️ Finalizing with Ghostscript");
-    
+
 const tempInput = `/tmp/input-${Date.now()}.pdf`;
 const tempOutput = `/tmp/output-${Date.now()}.pdf`;
 
