@@ -323,39 +323,32 @@ const watermarkHTML =
 
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
-  let browser;
+  console.log("🌐 /generate-invoice router hit");
 
-
-
-  
   const { execSync } = require("child_process");
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
 
-
-
-  // Check Ghostscript availability
   try {
     const gsVersion = execSync("gs --version").toString().trim();
     console.log("📦 Ghostscript version:", gsVersion);
   } catch (err) {
-    console.error("❌ Ghostscript not found or not executable.");
-    return res.status(500).json({ error: "Ghostscript is not installed or not available in the system PATH." });
+    console.error("❌ Ghostscript not found:", err.message);
+    return res.status(500).json({ error: "Ghostscript not installed." });
   }
 
-  // Check ICC profile presence
+  if (!fs.existsSync(iccPath)) {
+    console.error("❌ ICC profile not found:", iccPath);
+    return res.status(500).json({ error: "ICC profile missing." });
+  } else {
+    console.log("🖨️ ICC profile found:", iccPath);
+  }
 
-
-if (!fs.existsSync(iccPath)) {
-  console.error("❌ ICC profile not found at:", iccPath);
-  return res.status(500).json({ error: "Required ICC profile is missing for PDF/A-3 compliance." });
-} else {
-  console.log("🖨️ ICC profile found and accessible:", iccPath);
-}
-
-
+  let browser;
 
   try {
-    let { data, isPreview } = req.body;
+    const { data, isPreview } = req.body;
+    console.log("📥 Incoming data:", data);
+
     if (!data || typeof data !== "object") {
       return res.status(400).json({ error: "Invalid or missing data" });
     }
@@ -368,6 +361,7 @@ if (!fs.existsSync(iccPath)) {
         invoiceData.items = [];
       }
     }
+
     if (!Array.isArray(invoiceData.items)) {
       invoiceData.items = [];
     }
@@ -375,18 +369,16 @@ if (!fs.existsSync(iccPath)) {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Reset counts monthly
     const now = new Date();
-    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
+    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth()) {
       user.previewCount = 0;
       user.previewLastReset = now;
     }
-    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
+    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth()) {
       user.usageCount = 0;
       user.usageLastReset = now;
     }
 
-    // Set invoice flags based on plan
     if (!user.isPremium) {
       invoiceData.customLogoUrl = null;
       invoiceData.showChart = false;
@@ -395,209 +387,148 @@ if (!fs.existsSync(iccPath)) {
       invoiceData.isBasicUser = false;
     }
 
-// Count usage
-if (isPreview) {
-  if (user.planType === "free") {
-    if (user.previewCount < 3) {
-      user.previewCount += 1;
-      console.log("🧪 Free user preview incremented:", user.previewCount);
+    if (isPreview) {
+      if (user.planType === "free") {
+        if (user.previewCount < 3) {
+          user.previewCount += 1;
+          console.log("🧪 Free user preview:", user.previewCount);
+        } else {
+          user.usageCount += 1;
+          console.log("⚠️ Exceeded preview limit, counted as usage:", user.usageCount);
+        }
+      } else {
+        console.log("🧪 Preview for premium/pro user — not counted");
+      }
     } else {
       user.usageCount += 1;
-      console.log("⚠️ Free user exceeded preview limit, counting as usage:", user.usageCount);
+      console.log("📊 Usage incremented:", user.usageCount);
     }
-  } else {
-    console.log("🧪 Preview for premium/pro user — not counted.");
-  }
-} else {
-  user.usageCount += 1;
-  console.log("📊 Usage (non-preview) incremented:", user.usageCount);
-}
 
     await user.save();
 
     const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
+    const html = generateInvoiceHTML({ ...invoiceData, isPreview: true });
+    console.log("🟣 HTML generated");
 
-// Generate base HTML
-const html = generateInvoiceHTML({ ...invoiceData, isPreview: true });
-console.log("🟣 HTML generated.");
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
 
-browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-const page = await browser.newPage();
-await page.setContent(html, { waitUntil: "networkidle0" });
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    });
 
-const pdfBuffer = await page.pdf({
-  format: "A4",
-  printBackground: true,
-  displayHeaderFooter: false,
-  headerTemplate: `<div></div>`,
-  footerTemplate: `
-    <div style="font-size:10px; width:100%; text-align:center; color:#888; padding:5px 10px;">
-      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-    </div>`,
-  margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-});
+    console.log("📄 Base PDF generated");
 
-console.log("📄 Base PDF generated.");
+    let finalPdfBytes = pdfBuffer;
 
-let finalPdfBytes = pdfBuffer;
+    function sanitizeXmp(xmpString) {
+      console.log("📥 Raw XMP string:", xmpString?.substring(0, 200) + "...");
+      if (typeof xmpString !== "string") return "";
 
-// Sanitize XMP function
-function sanitizeXmp(xmpString) {
-  if (typeof xmpString !== "string") return "";
+      if (xmpString.charCodeAt(0) === 0xFEFF) xmpString = xmpString.slice(1);
+      xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
+      xmpString = xmpString.replace(/&(?!(amp;|lt;|gt;|apos;|quot;))/g, "&amp;");
+      xmpString = xmpString.replace(/\s+/g, " ").trim();
 
-  // Remove BOM if any
-  if (xmpString.charCodeAt(0) === 0xFEFF) {
-    xmpString = xmpString.slice(1);
-  }
-
-  // Remove invalid XML chars (control chars except \t, \n, \r)
-  xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
-
-  // Replace standalone & that are NOT part of valid entities
-  xmpString = xmpString.replace(/&(?!(amp;|lt;|gt;|apos;|quot;))/g, "&amp;");
-
-  // Normalize whitespace to single space
-  xmpString = xmpString.replace(/\s+/g, " ");
-
-  // Trim leading/trailing spaces
-  xmpString = xmpString.trim();
-
-  return xmpString;
-}
-
-if (user.plan === "pro") {
-  console.log("🧩 Embedding ZUGFeRD metadata...");
-  const zugferdXml = generateZugferdXML(invoiceData);
-  const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-
-  const pdfDoc = await PDFDocument.load(pdfBuffer, {
-    updateMetadata: false,
-  });
-
-  // Sanitize metadata strings: remove newlines, non-ASCII chars, trim spaces
-  const sanitizeMetadata = (str) =>
-    String(str || "")
-      .replace(/[\r\n\t]+/g, " ")
-      .replace(/[^\x20-\x7E]/g, "")
-      .trim();
-
-  // Remove old Info dictionary fully
-  const infoDictRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
-  if (infoDictRef) {
-    const infoDict = infoDictRef.lookupMaybe()?.asDict?.();
-    if (infoDict) {
-      for (const key of infoDict.keys()) {
-        infoDict.delete(key);
-      }
+      console.log("✅ Sanitized XMP string:", xmpString?.substring(0, 200) + "...");
+      return xmpString;
     }
-    pdfDoc.context.trailer.delete(PDFName.of("Info"));
-  }
 
-  // Set clean ASCII metadata explicitly
-  pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
-  pdfDoc.setAuthor(sanitizeMetadata("PDFify User"));
-  pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
-  pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
-  pdfDoc.setCreator(sanitizeMetadata("PDFify"));
-  pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
+    if (user.plan === "pro") {
+      console.log("🧩 Starting ZUGFeRD embedding");
 
-  const now = new Date();
-  pdfDoc.setCreationDate(now);
-  pdfDoc.setModificationDate(now);
+      const zugferdXml = generateZugferdXML(invoiceData);
+      const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-  const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-    Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("application/xml"),
-  });
-  embeddedFileStream.set(
-    PDFName.of("Params"),
-    pdfDoc.context.obj({
-      Size: xmlBuffer.length,
-      ModDate: PDFHexString.fromDate(new Date()),
-    })
-  );
-  const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+      const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
 
-  const fileName = "zugferd-invoice.xml";
-  const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
-  const filespecDict = pdfDoc.context.obj({
-    Type: PDFName.of("Filespec"),
-    F: PDFHexString.fromString(fileName),
-    UF: PDFHexString.fromString(fileName),
-    EF: efDict,
-    Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
-    AFRelationship: PDFName.of("Data"),
-  });
-  const filespecRef = pdfDoc.context.register(filespecDict);
+      const sanitizeMetadata = (str) => String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "").trim();
+      pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
+      pdfDoc.setAuthor(sanitizeMetadata("PDFify User"));
+      pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
+      pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
+      pdfDoc.setCreator(sanitizeMetadata("PDFify"));
+      pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
+      const now = new Date();
+      pdfDoc.setCreationDate(now);
+      pdfDoc.setModificationDate(now);
 
-  const catalog = pdfDoc.catalog;
-  const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
-  const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
-  const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
-  embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
-  embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-  namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-  catalog.set(PDFName.of("Names"), namesDict);
-  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+      const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+        Type: PDFName.of("EmbeddedFile"),
+        Subtype: PDFName.of("application/xml"),
+      });
 
+      const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+      const fileName = "zugferd-invoice.xml";
+      const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
+      const filespecDict = pdfDoc.context.obj({
+        Type: PDFName.of("Filespec"),
+        F: PDFHexString.fromString(fileName),
+        UF: PDFHexString.fromString(fileName),
+        EF: efDict,
+        Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
+        AFRelationship: PDFName.of("Data"),
+      });
+      const filespecRef = pdfDoc.context.register(filespecDict);
 
- // Load and sanitize XMP metadata
-const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
-const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
+      const catalog = pdfDoc.catalog;
+      const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
+      const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
+      const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
 
-try {
-  console.log("🔸 Before sanitizing XMP");
+      embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
+      embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
+      namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+      catalog.set(PDFName.of("Names"), namesDict);
+      catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-  const sanitizedXmp = sanitizeXmp(mergedXmp);
+      const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
+      const rawXmp = fs.readFileSync(xmpPath, "utf-8");
+      console.log("📂 Raw XMP loaded");
 
-  console.error("🔍 (stderr) Sanitized XMP XML:\n", sanitizedXmp);
-  console.log("🔸 After sanitizing XMP");
+      try {
+        const sanitizedXmp = sanitizeXmp(rawXmp);
+        const cleanBuffer = Buffer.from(sanitizedXmp, "utf-8");
 
-  const utf8CleanBuffer = Buffer.from(sanitizedXmp, "utf8");
+        const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
+          Type: PDFName.of("Metadata"),
+          Subtype: PDFName.of("XML"),
+          Filter: PDFName.of("FlateDecode"),
+        });
 
-  // Remove BOM if present (first 3 bytes)
-  const cleanBuffer =
-    utf8CleanBuffer[0] === 0xef &&
-    utf8CleanBuffer[1] === 0xbb &&
-    utf8CleanBuffer[2] === 0xbf
-      ? utf8CleanBuffer.slice(3)
-      : utf8CleanBuffer;
+        const metadataRef = pdfDoc.context.register(metadataStream);
+        catalog.set(PDFName.of("Metadata"), metadataRef);
+        console.log("✅ XMP embedded successfully");
+      } catch (err) {
+        console.error("❌ XMP embedding failed:", err);
+      }
 
-  const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-    Filter: PDFName.of("FlateDecode"),
-  });
+      const iccData = fs.readFileSync(iccPath);
+      const iccStream = pdfDoc.context.flateStream(iccData, {
+        N: 3,
+        Alternate: PDFName.of("DeviceRGB"),
+        Filter: PDFName.of("FlateDecode"),
+      });
 
-  const metadataRef = pdfDoc.context.register(metadataStream);
-  catalog.set(PDFName.of("Metadata"), metadataRef);
-} catch (err) {
-  console.error("❌ Error during XMP sanitization or embedding:", err);
-  throw err;
-}
+      const iccRef = pdfDoc.context.register(iccStream);
+      const outputIntentDict = pdfDoc.context.obj({
+        Type: PDFName.of("OutputIntent"),
+        S: PDFName.of("GTS_PDFA3"),
+        OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        DestOutputProfile: iccRef,
+      });
+      const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+      catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
 
-// Embed ICC profile
-const iccData = fs.readFileSync(iccPath);
-const iccStream = pdfDoc.context.flateStream(iccData, {
-  N: 3,
-  Alternate: PDFName.of("DeviceRGB"),
-  Filter: PDFName.of("FlateDecode"),
-});
-const iccRef = pdfDoc.context.register(iccStream);
-const outputIntentDict = pdfDoc.context.obj({
-  Type: PDFName.of("OutputIntent"),
-  S: PDFName.of("GTS_PDFA3"),
-  OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
-  Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
-  DestOutputProfile: iccRef,
-});
-const outputIntentRef = pdfDoc.context.register(outputIntentDict);
-catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+      finalPdfBytes = await pdfDoc.save();
+    }
 
-finalPdfBytes = await pdfDoc.save();
-} 
-
-console.log("⚙️ Finalizing via Ghostscript...");
+    console.log("⚙️ Finalizing with Ghostscript");
+    
 const tempInput = `/tmp/input-${Date.now()}.pdf`;
 const tempOutput = `/tmp/output-${Date.now()}.pdf`;
 
