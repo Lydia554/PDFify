@@ -70,7 +70,7 @@
       <pdfaAF:attachedFile>
         <rdf:Bag>
           <rdf:li rdf:parseType="Resource">
-            <afrl:AFRelationship>Alternative</afrl:AFRelationship>
+            <afrl:AFRelationship>Data</afrl:AFRelationship>
             <afrl:UF>zugferd-invoice.xml</afrl:UF>
             <afrl:MIME>application/xml</afrl:MIME>
             <afrl:Desc>ZUGFeRD Invoice XML</afrl:Desc>
