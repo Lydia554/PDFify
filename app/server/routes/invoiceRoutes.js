@@ -467,70 +467,98 @@ console.log("🔍 Forced user.plan:", user.plan);
         Subtype: PDFName.of("application/xml"),
       });
 
-      const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
-      const fileName = "zugferd-invoice.xml";
-      const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
-      const filespecDict = pdfDoc.context.obj({
-        Type: PDFName.of("Filespec"),
-        F: PDFHexString.of(fileName),
-        UF: PDFHexString.of(fileName),
-        EF: efDict,
-        Desc: PDFHexString.of("ZUGFeRD invoice XML"),
-        AFRelationship: PDFName.of("Data"),
-      });
-      const filespecRef = pdfDoc.context.register(filespecDict);
+const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+const fileName = "zugferd-invoice.xml";
+const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
+const filespecDict = pdfDoc.context.obj({
+  Type: PDFName.of("Filespec"),
+  F: PDFHexString.of(fileName),
+  UF: PDFHexString.of(fileName),
+  EF: efDict,
+  Desc: PDFHexString.of("ZUGFeRD invoice XML"),
+  AFRelationship: PDFName.of("Data"),
+});
+const filespecRef = pdfDoc.context.register(filespecDict);
 
-      const catalog = pdfDoc.catalog;
-      const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
-      const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
-      const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
+const catalog = pdfDoc.catalog;
 
-      embeddedFilesArray.push(PDFHexString.of(fileName), filespecRef);
-      embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-      namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-      catalog.set(PDFName.of("Names"), namesDict);
-      catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+// Get or create the Names dictionary
+let namesDict = catalog.lookup(PDFName.of("Names"));
+if (!namesDict) {
+  namesDict = pdfDoc.context.obj({});
+  catalog.set(PDFName.of("Names"), namesDict);
+} else {
+  namesDict = namesDict.asDict();
+}
 
-      const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
-      const rawXmp = fs.readFileSync(xmpPath, "utf-8");
-      console.log("📂 Raw XMP loaded");
+// Get or create EmbeddedFiles dictionary inside Names
+let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"));
+if (!embeddedFilesDict) {
+  embeddedFilesDict = pdfDoc.context.obj({ Names: [] });
+  namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+} else {
+  embeddedFilesDict = embeddedFilesDict.asDict();
+}
 
-      try {
-        const sanitizedXmp = sanitizeXmp(rawXmp);
-        const cleanBuffer = Buffer.from(sanitizedXmp, "utf-8");
+// Get or create the Names array inside EmbeddedFiles
+let embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"));
+if (!embeddedFilesArray) {
+  embeddedFilesArray = pdfDoc.context.obj([]);
+  embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
+} else {
+  embeddedFilesArray = embeddedFilesArray.asArray();
+}
 
-        const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
-          Type: PDFName.of("Metadata"),
-          Subtype: PDFName.of("XML"),
-          Filter: PDFName.of("FlateDecode"),
-        });
+// Add fileName and filespecRef to embeddedFilesArray
+embeddedFilesArray.push(PDFHexString.of(fileName));
+embeddedFilesArray.push(filespecRef);
 
-        const metadataRef = pdfDoc.context.register(metadataStream);
-        catalog.set(PDFName.of("Metadata"), metadataRef);
-        console.log("✅ XMP embedded successfully");
-      } catch (err) {
-        console.error("❌ XMP embedding failed:", err);
-      }
+// Set the AF array on catalog (Associated Files)
+catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-      const iccData = fs.readFileSync(iccPath);
-      const iccStream = pdfDoc.context.flateStream(iccData, {
-        N: 3,
-        Alternate: PDFName.of("DeviceRGB"),
-        Filter: PDFName.of("FlateDecode"),
-      });
+// The rest remains the same:
 
-      const iccRef = pdfDoc.context.register(iccStream);
-      const outputIntentDict = pdfDoc.context.obj({
-        Type: PDFName.of("OutputIntent"),
-        S: PDFName.of("GTS_PDFA3"),
-        OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
-        Info: PDFHexString.of("sRGB IEC61966-2.1"),
-        DestOutputProfile: iccRef,
-      });
-      const outputIntentRef = pdfDoc.context.register(outputIntentDict);
-      catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
+const rawXmp = fs.readFileSync(xmpPath, "utf-8");
+console.log("📂 Raw XMP loaded");
 
-      finalPdfBytes = await pdfDoc.save();
+try {
+  const sanitizedXmp = sanitizeXmp(rawXmp);
+  const cleanBuffer = Buffer.from(sanitizedXmp, "utf-8");
+
+  const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
+  });
+
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  catalog.set(PDFName.of("Metadata"), metadataRef);
+  console.log("✅ XMP embedded successfully");
+} catch (err) {
+  console.error("❌ XMP embedding failed:", err);
+}
+
+const iccData = fs.readFileSync(iccPath);
+const iccStream = pdfDoc.context.flateStream(iccData, {
+  N: 3,
+  Alternate: PDFName.of("DeviceRGB"),
+  Filter: PDFName.of("FlateDecode"),
+});
+
+const iccRef = pdfDoc.context.register(iccStream);
+const outputIntentDict = pdfDoc.context.obj({
+  Type: PDFName.of("OutputIntent"),
+  S: PDFName.of("GTS_PDFA3"),
+  OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
+  Info: PDFHexString.of("sRGB IEC61966-2.1"),
+  DestOutputProfile: iccRef,
+});
+const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+
+finalPdfBytes = await pdfDoc.save();
+
     }
 
     console.log("⚙️ Finalizing with Ghostscript");
