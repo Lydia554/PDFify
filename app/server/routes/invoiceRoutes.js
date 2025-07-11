@@ -545,9 +545,10 @@ const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
 const rawXmp = fs.readFileSync(xmpPath, "utf-8");
 console.log("📂 Raw XMP loaded");
 
+// Prepend BOM to ensure valid <?xpacket begin='\uFEFF' ... ?>
 try {
-  const sanitizedXmp = sanitizeXmp(rawXmp);
-  const cleanBuffer = Buffer.from(sanitizedXmp, "utf-8");
+  const bom = Buffer.from([0xEF, 0xBB, 0xBF]); // UTF-8 BOM
+  const cleanBuffer = Buffer.concat([bom, Buffer.from(rawXmp, "utf-8")]);
 
   const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
     Type: PDFName.of("Metadata"),
@@ -561,6 +562,7 @@ try {
 } catch (err) {
   console.error("❌ XMP embedding failed:", err);
 }
+
 
 const iccData = fs.readFileSync(iccPath);
 const iccStream = pdfDoc.context.flateStream(iccData, {
