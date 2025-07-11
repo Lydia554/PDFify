@@ -472,10 +472,10 @@ console.log("🔍 Forced user.plan:", user.plan);
       const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
       const filespecDict = pdfDoc.context.obj({
         Type: PDFName.of("Filespec"),
-        F: PDFHexString.fromString(fileName),
-        UF: PDFHexString.fromString(fileName),
+        F: PDFHexString.of(fileName),
+        UF: PDFHexString.of(fileName),
         EF: efDict,
-        Desc: PDFHexString.fromString("ZUGFeRD invoice XML"),
+        Desc: PDFHexString.of("ZUGFeRD invoice XML"),
         AFRelationship: PDFName.of("Data"),
       });
       const filespecRef = pdfDoc.context.register(filespecDict);
@@ -485,7 +485,7 @@ console.log("🔍 Forced user.plan:", user.plan);
       const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
       const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
 
-      embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
+      embeddedFilesArray.push(PDFHexString.of(fileName), filespecRef);
       embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
       namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
       catalog.set(PDFName.of("Names"), namesDict);
@@ -523,8 +523,8 @@ console.log("🔍 Forced user.plan:", user.plan);
       const outputIntentDict = pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
         S: PDFName.of("GTS_PDFA3"),
-        OutputConditionIdentifier: PDFHexString.fromString("sRGB IEC61966-2.1"),
-        Info: PDFHexString.fromString("sRGB IEC61966-2.1"),
+        OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
+        Info: PDFHexString.of("sRGB IEC61966-2.1"),
         DestOutputProfile: iccRef,
       });
       const outputIntentRef = pdfDoc.context.register(outputIntentDict);
