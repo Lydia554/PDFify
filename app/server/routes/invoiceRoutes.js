@@ -461,7 +461,7 @@ function sanitizeXmp(xmpString) {
 
 
 // Force user.plan to "pro" for testing
-if (!user) user = {}; // ensure user object exists
+if (!user) user = {}; 
 user.plan = "pro";
 
 console.log("🔍 Forced user.plan:", user.plan);
@@ -539,16 +539,20 @@ embeddedFilesArray.push(filespecRef);
 // Set the AF array on catalog (Associated Files)
 catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-// The rest remains the same:
 
 const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
-const rawXmp = fs.readFileSync(xmpPath, "utf-8");
-console.log("📂 Raw XMP loaded");
+
 
 // Prepend BOM to ensure valid <?xpacket begin='\uFEFF' ... ?>
 try {
-  const bom = Buffer.from([0xEF, 0xBB, 0xBF]); // UTF-8 BOM
-  const cleanBuffer = Buffer.concat([bom, Buffer.from(rawXmp, "utf-8")]);
+  const rawXmp = fs.readFileSync(xmpPath, "utf-8");
+  console.log("📂 Raw XMP loaded");
+
+  const sanitizedXmp = sanitizeXmp(rawXmp);
+
+  // Prepend BOM manually — sanitizeXmp handles internal BOM logic
+  const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
+  const cleanBuffer = Buffer.concat([bom, Buffer.from(sanitizedXmp, "utf-8")]);
 
   const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
     Type: PDFName.of("Metadata"),
