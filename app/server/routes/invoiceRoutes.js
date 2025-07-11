@@ -541,12 +541,12 @@ if (user.plan === "pro") {
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
 
-  console.log("🔍 Sanitized XMP XML:\n", sanitizedXmp);
-
+ 
 
   // Load, sanitize and embed XMP metadata
   const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
   const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
+ console.log("🔍 Sanitized XMP XML:\n", sanitizedXmp);
 
   const sanitizedXmp = sanitizeXmp(mergedXmp);
   const utf8CleanBuffer = Buffer.from(sanitizedXmp, "utf8");
