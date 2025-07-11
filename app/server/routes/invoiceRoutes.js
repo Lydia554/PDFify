@@ -634,14 +634,9 @@ await new Promise((resolve, reject) => {
 
 if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript failed to generate output PDF");
 
-// 🔄 First read the Ghostscript output
 const gsFinalPdf = fs.readFileSync(tempOutput);
 
-// ✅ Then save it locally for validation
-const localValidationPath = path.resolve(__dirname, "pdfs", "latest-invoice.pdf");
-fs.mkdirSync(path.dirname(localValidationPath), { recursive: true });
-fs.writeFileSync(localValidationPath, gsFinalPdf);
-console.log("📥 Copied PDF for local VeraPDF validation.");
+
 
 const sanitizeFileName = (name) => name.replace(/[^a-zA-Z0-9_\-\.]/g, "_");
 const safeFileName = sanitizeFileName(`Invoice_${safeOrderId}_pdfa3.pdf`);
