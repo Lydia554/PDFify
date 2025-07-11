@@ -436,8 +436,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       console.log("✅ Sanitized XMP string:", xmpString?.substring(0, 200) + "...");
       return xmpString;
     }
-    
-console.log("🔍 user.plan:", user.plan);
+
+// Force user.plan to "pro" for testing
+if (!user) user = {}; // ensure user object exists
+user.plan = "pro";
+
+console.log("🔍 Forced user.plan:", user.plan);
 
     if (user.plan === "pro") {
       console.log("🧩 Starting ZUGFeRD embedding");
