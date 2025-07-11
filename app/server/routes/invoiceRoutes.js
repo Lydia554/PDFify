@@ -547,9 +547,10 @@ if (user.plan === "pro") {
   const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
   const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
 
-
+console.log("🔸 Before sanitizing XMP");
   const sanitizedXmp = sanitizeXmp(mergedXmp);
  console.error("🔍 (stderr) Sanitized XMP XML:\n", sanitizedXmp);
+ console.log("🔸 After sanitizing XMP");
 
   const utf8CleanBuffer = Buffer.from(sanitizedXmp, "utf8");
 
