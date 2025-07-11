@@ -517,15 +517,18 @@ const pdfDoc = await PDFDocument.load(pdfBuffer, {
        // Load, sanitize and embed XMP metadata
   const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
   const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
-  const sanitizeXmp = (xmlStr) =>
-    xmlStr
-      .replace(/[\r\n\t]+/g, " ")
+      
 
-      .trim();
-  const sanitizedXmp = sanitizeXmp(mergedXmp);
+      const sanitizedXmp = sanitizeXmp(mergedXmp);
+const utf8CleanBuffer = Buffer.from(sanitizedXmp, 'utf8');
 
+// Remove BOM if present (first 3 bytes)
+const cleanBuffer = utf8CleanBuffer[0] === 0xEF && utf8CleanBuffer[1] === 0xBB && utf8CleanBuffer[2] === 0xBF
+  ? utf8CleanBuffer.slice(3)
+  : utf8CleanBuffer;
 
-      const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf8"), {
+const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
+
         Type: PDFName.of("Metadata"),
         Subtype: PDFName.of("XML"),
         Filter: PDFName.of("FlateDecode"),
