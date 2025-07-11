@@ -423,19 +423,25 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     console.log("📄 Base PDF generated");
 
     let finalPdfBytes = pdfBuffer;
+function sanitizeXmp(xmpString) {
+  console.log("📥 Raw XMP string:", xmpString?.substring(0, 200) + "...");
+  if (typeof xmpString !== "string") return "";
 
-    function sanitizeXmp(xmpString) {
-      console.log("📥 Raw XMP string:", xmpString?.substring(0, 200) + "...");
-      if (typeof xmpString !== "string") return "";
+  // Remove BOM if present
+  if (xmpString.charCodeAt(0) === 0xFEFF) xmpString = xmpString.slice(1);
 
-      if (xmpString.charCodeAt(0) === 0xFEFF) xmpString = xmpString.slice(1);
-      xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
-      xmpString = xmpString.replace(/&(?!(amp;|lt;|gt;|apos;|quot;))/g, "&amp;");
-      xmpString = xmpString.replace(/\s+/g, " ").trim();
+  // Remove invalid XML 1.0 control characters except tab(0x09), newline(0x0A), carriage return(0x0D)
+  xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 
-      console.log("✅ Sanitized XMP string:", xmpString?.substring(0, 200) + "...");
-      return xmpString;
-    }
+  // Escape ampersands not part of valid entities
+  xmpString = xmpString.replace(/&(?!amp;|lt;|gt;|apos;|quot;)/g, "&amp;");
+
+  // Replace multiple whitespace with single space, then trim
+  xmpString = xmpString.replace(/\s+/g, " ").trim();
+
+  console.log("✅ Sanitized XMP string:", xmpString?.substring(0, 200) + "...");
+  return xmpString;
+}
 
 // Force user.plan to "pro" for testing
 if (!user) user = {}; // ensure user object exists
