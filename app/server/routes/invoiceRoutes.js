@@ -423,25 +423,42 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     console.log("📄 Base PDF generated");
 
     let finalPdfBytes = pdfBuffer;
+
 function sanitizeXmp(xmpString) {
   console.log("📥 Raw XMP string:", xmpString?.substring(0, 200) + "...");
   if (typeof xmpString !== "string") return "";
 
-  // Remove BOM if present
-  if (xmpString.charCodeAt(0) === 0xFEFF) xmpString = xmpString.slice(1);
+  // Preserve BOM if it occurs right after '<?xpacket begin=' (inside quotes)
+  // We'll preserve the BOM in the packet header and only sanitize the rest
 
+  const xpacketBeginMatch = xmpString.match(/(<\?xpacket begin=['"])([\s\S]*?)(['"]>)/);
+  let xpacketBegin = "";
+  let rest = xmpString;
+
+  if (xpacketBeginMatch) {
+    xpacketBegin = xpacketBeginMatch[0]; // full match like <?xpacket begin='\ufeff'?>
+    // Remove the matched header from the rest string
+    rest = xmpString.slice(xpacketBegin.length);
+  }
+
+  // Now sanitize the rest of the XMP safely
   // Remove invalid XML 1.0 control characters except tab(0x09), newline(0x0A), carriage return(0x0D)
-  xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  rest = rest.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 
   // Escape ampersands not part of valid entities
-  xmpString = xmpString.replace(/&(?!amp;|lt;|gt;|apos;|quot;)/g, "&amp;");
+  rest = rest.replace(/&(?!amp;|lt;|gt;|apos;|quot;)/g, "&amp;");
 
-  // Replace multiple whitespace with single space, then trim
-  xmpString = xmpString.replace(/\s+/g, " ").trim();
+  // Replace multiple whitespace with single space, but keep XML formatting by preserving newlines
+  // Here we only collapse multiple spaces (not newlines) for safety:
+  rest = rest.replace(/[ ]{2,}/g, " ");
 
-  console.log("✅ Sanitized XMP string:", xmpString?.substring(0, 200) + "...");
-  return xmpString;
+  // Rebuild full XMP string with the preserved packet header
+  const sanitizedXmp = xpacketBegin + rest;
+
+  console.log("✅ Sanitized XMP string:", sanitizedXmp?.substring(0, 200) + "...");
+  return sanitizedXmp;
 }
+
 
 // Force user.plan to "pro" for testing
 if (!user) user = {}; // ensure user object exists
