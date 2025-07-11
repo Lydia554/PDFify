@@ -10,13 +10,14 @@
     xmlns:afrl="http://www.aiim.org/pdfa/ns/afrelationship/"
     xmlns:zf="urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic">
 
-    <!-- PDF/A-3 Identification -->
-    <rdf:Description rdf:about="">
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
+    <!-- PDF/A-3 Identification block: all properties in one Description, exact case -->
+    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <pdfaid:PDFAVersion>3</pdfaid:PDFAVersion>
+      <pdfaid:Part>3</pdfaid:Part>
+      <pdfaid:Conformance>B</pdfaid:Conformance>
     </rdf:Description>
 
-    <!-- ZUGFeRD Metadata Values -->
+    <!-- ZUGFeRD Metadata -->
     <rdf:Description rdf:about="">
       <zf:DocumentFileName>zugferd-invoice.xml</zf:DocumentFileName>
       <zf:DocumentType>INVOICE</zf:DocumentType>
