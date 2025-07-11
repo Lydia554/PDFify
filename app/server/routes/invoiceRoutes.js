@@ -441,27 +441,38 @@ console.log("📄 Base PDF generated.");
 
 let finalPdfBytes = pdfBuffer;
 
-// Sanitize XMP function
+// Sanitize XMP function with logging
 function sanitizeXmp(xmpString) {
-  if (typeof xmpString !== "string") return "";
+  console.log("🔍 Starting XMP sanitization...");
+  if (typeof xmpString !== "string") {
+    console.log("⚠️ XMP input is not a string, returning empty string.");
+    return "";
+  }
 
   // Remove BOM if any
   if (xmpString.charCodeAt(0) === 0xFEFF) {
+    console.log("🧹 BOM detected at start of XMP, removing.");
     xmpString = xmpString.slice(1);
   }
 
   // Remove invalid XML chars (control chars except \t, \n, \r)
+  const beforeCleanLength = xmpString.length;
   xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, "");
+  console.log(`🧼 Removed control characters: length went from ${beforeCleanLength} to ${xmpString.length}`);
 
   // Replace standalone & that are NOT part of valid entities
   xmpString = xmpString.replace(/&(?!(amp;|lt;|gt;|apos;|quot;))/g, "&amp;");
+  console.log("🔗 Replaced standalone ampersands with &amp;");
 
   // Normalize whitespace to single space
   xmpString = xmpString.replace(/\s+/g, " ");
+  console.log("⚪ Normalized whitespace to single spaces");
 
   // Trim leading/trailing spaces
   xmpString = xmpString.trim();
+  console.log("✂️ Trimmed leading and trailing spaces");
 
+  console.log(`✅ Sanitized XMP length: ${xmpString.length}`);
   return xmpString;
 }
 
@@ -469,12 +480,14 @@ if (user.plan === "pro") {
   console.log("🧩 Embedding ZUGFeRD metadata...");
   const zugferdXml = generateZugferdXML(invoiceData);
   const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+  console.log(`📏 Generated ZUGFeRD XML buffer length: ${xmlBuffer.length}`);
 
   const pdfDoc = await PDFDocument.load(pdfBuffer, {
     updateMetadata: false,
   });
+  console.log("📄 Loaded PDF document for embedding metadata.");
 
-  // Sanitize metadata strings: remove newlines, non-ASCII chars, trim spaces
+  // Sanitize metadata strings for Info dictionary
   const sanitizeMetadata = (str) =>
     String(str || "")
       .replace(/[\r\n\t]+/g, " ")
@@ -489,8 +502,10 @@ if (user.plan === "pro") {
       for (const key of infoDict.keys()) {
         infoDict.delete(key);
       }
+      console.log("🧹 Cleared old Info dictionary keys.");
     }
     pdfDoc.context.trailer.delete(PDFName.of("Info"));
+    console.log("🗑️ Removed Info dictionary reference from trailer.");
   }
 
   // Set clean ASCII metadata explicitly
@@ -500,11 +515,12 @@ if (user.plan === "pro") {
   pdfDoc.setProducer(sanitizeMetadata("PDFify API"));
   pdfDoc.setCreator(sanitizeMetadata("PDFify"));
   pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
-
   const now = new Date();
   pdfDoc.setCreationDate(now);
   pdfDoc.setModificationDate(now);
+  console.log("📝 Set PDF Info metadata fields.");
 
+  // Embed ZUGFeRD XML as embedded file stream
   const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("application/xml"),
@@ -517,6 +533,7 @@ if (user.plan === "pro") {
     })
   );
   const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+  console.log("📦 Registered embedded XML stream.");
 
   const fileName = "zugferd-invoice.xml";
   const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
@@ -529,32 +546,47 @@ if (user.plan === "pro") {
     AFRelationship: PDFName.of("Data"),
   });
   const filespecRef = pdfDoc.context.register(filespecDict);
+  console.log("📄 Created and registered Filespec dictionary.");
 
   const catalog = pdfDoc.catalog;
   const namesDict = catalog.lookupMaybe(PDFName.of("Names"))?.asDict() || pdfDoc.context.obj({});
   const embeddedFilesDict = namesDict.lookupMaybe(PDFName.of("EmbeddedFiles"))?.asDict() || pdfDoc.context.obj({ Names: [] });
   const embeddedFilesArray = embeddedFilesDict.lookupMaybe(PDFName.of("Names"))?.asArray() || [];
+
   embeddedFilesArray.push(PDFHexString.fromString(fileName), filespecRef);
   embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
   namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
   catalog.set(PDFName.of("Names"), namesDict);
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+  console.log("📚 Updated catalog with embedded files references.");
 
   // Load, sanitize and embed XMP metadata
   const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
+  console.log(`📂 Reading XMP metadata from ${xmpPath}`);
   const mergedXmp = fs.readFileSync(xmpPath, "utf-8");
+  console.log(`📏 Original XMP length: ${mergedXmp.length}`);
 
   const sanitizedXmp = sanitizeXmp(mergedXmp);
+  console.log(`🧼 Sanitized XMP length: ${sanitizedXmp.length}`);
+
   const utf8CleanBuffer = Buffer.from(sanitizedXmp, "utf8");
+  console.log(`🔢 UTF-8 buffer length: ${utf8CleanBuffer.length}`);
 
   // Remove BOM if present (first 3 bytes)
-  const cleanBuffer =
+  let cleanBuffer = utf8CleanBuffer;
+  if (
     utf8CleanBuffer[0] === 0xef &&
     utf8CleanBuffer[1] === 0xbb &&
     utf8CleanBuffer[2] === 0xbf
-      ? utf8CleanBuffer.slice(3)
-      : utf8CleanBuffer;
+  ) {
+    console.log("🧹 UTF-8 BOM detected, removing first 3 bytes.");
+    cleanBuffer = utf8CleanBuffer.slice(3);
+    console.log(`🔢 UTF-8 buffer length after BOM removal: ${cleanBuffer.length}`);
+  } else {
+    console.log("✅ No UTF-8 BOM detected.");
+  }
 
+  // Embed metadata stream
   const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
@@ -562,7 +594,9 @@ if (user.plan === "pro") {
   });
   const metadataRef = pdfDoc.context.register(metadataStream);
   catalog.set(PDFName.of("Metadata"), metadataRef);
+  console.log("📌 Embedded XMP metadata stream into PDF catalog.");
 
+  // Embed ICC profile for PDF/A-3 compliance
   const iccData = fs.readFileSync(iccPath);
   const iccStream = pdfDoc.context.flateStream(iccData, {
     N: 3,
@@ -579,8 +613,10 @@ if (user.plan === "pro") {
   });
   const outputIntentRef = pdfDoc.context.register(outputIntentDict);
   catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+  console.log("🎨 Embedded ICC OutputIntent profile.");
 
   finalPdfBytes = await pdfDoc.save();
+  console.log("💾 PDF saved with embedded ZUGFeRD metadata and XMP.");
 }
 
 console.log("⚙️ Finalizing via Ghostscript...");
@@ -592,42 +628,39 @@ if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found");
 
 await new Promise((resolve, reject) => {
   const { execFile } = require("child_process");
-
-  const args = [
-    "-dPDFA=3",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-sDEVICE=pdfwrite",
-    "-dNOOUTERSAVE",
-    "-sProcessColorModel=DeviceRGB",
-    "-sColorConversionStrategy=RGB",
-    "-dEmbedAllFonts=true",
-    "-dSubsetFonts=true",
-    "-dPreserveDocInfo=false",
-    "-dPDFACompatibilityPolicy=1",
-    `-sOutputFile=${tempOutput}`,
-  ];
-
-  const gsProcess = execFile("gs", args, (error, stdout, stderr) => {
-    if (error) {
-      console.error("❌ Ghostscript error:", error);
-      console.error("🔴 stderr:", stderr);
-      return reject(error);
+  execFile(
+    "gs",
+    [
+      "-dPDFA=3",
+      "-dBATCH",
+      "-dNOPAUSE",
+      "-dNOOUTERSAVE",
+      "-sProcessColorModel=DeviceRGB",
+      "-sDEVICE=pdfwrite",
+      `-sOutputFile=${tempOutput}`,
+      "-sPDFACompatibilityPolicy=1",
+      tempInput,
+    ],
+    (err, stdout, stderr) => {
+      if (err) {
+        console.error("❌ Ghostscript error:", err);
+        console.error(stderr);
+        reject(err);
+        return;
+      }
+      console.log("✅ Ghostscript validation done.");
+      resolve();
     }
-
-    if (stderr) {
-      console.warn("⚠️ Ghostscript stderr:", stderr);
-    }
-
-    console.log("✅ Ghostscript completed successfully.");
-    resolve();
-  });
+  );
 });
 
-if (!fs.existsSync(tempOutput)) throw new Error("Ghostscript failed to generate output PDF");
+const ghostscriptPdf = fs.readFileSync(tempOutput);
+fs.unlinkSync(tempInput);
+fs.unlinkSync(tempOutput);
 
-// 🔄 First read the Ghostscript output
-const gsFinalPdf = fs.readFileSync(tempOutput);
+console.log("🎉 PDF processing completed successfully.");
+return ghostscriptPdf;
+
 
 // ✅ Then save it locally for validation
 const localValidationPath = path.resolve(__dirname, "pdfs", "latest-invoice.pdf");
