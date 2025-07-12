@@ -4,7 +4,8 @@ const fs = require("fs");
 
 // Define paths
 const pdfDir = path.resolve(__dirname, "pdfs");
-const pdfPath = path.join(pdfDir, "latest-invoice.pdf");
+const pdfPath = path.resolve(__dirname, "test", "output-with-xmp.pdf");
+
 
 // VeraPDF CLI full path (adjust if needed)
 const verapdfPath = `"C:\\Users\\goldb\\Pro\\verapdf-pdfbox-1.28.1\\verapdf.bat"`;

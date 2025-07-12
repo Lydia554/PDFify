@@ -8,6 +8,7 @@
     "start": "node server/index.js",
     "dev": "nodemon server/index.js",
     "validate:pdf": "node validate-pdfa.js",
+    "test:xmp": "node test/embed-xmp-test.js",
     "embed-zugferd": "java -cp \"java-tools:java-tools/lib/*:java-tools\" ZUGFeRDEmbedder"
   },
   "keywords": [],

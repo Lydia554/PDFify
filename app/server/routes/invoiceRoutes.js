@@ -428,28 +428,18 @@ function sanitizeXmp(xmpString) {
   console.log("📥 Raw XMP string:", xmpString?.substring(0, 200) + "...");
   if (typeof xmpString !== "string") return "";
 
+  xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+  
 
-  const xpacketBeginMatch = xmpString.match(/(<\?xpacket begin=['"])([\s\S]*?)(['"]>)/);
-  let xpacketBegin = "";
-  let rest = xmpString;
-
-  if (xpacketBeginMatch) {
-    xpacketBegin = xpacketBeginMatch[0]; 
-
-    rest = xmpString.slice(xpacketBegin.length);
-  }
+  xmpString = xmpString.replace(/\r/g, "");
 
  
-  rest = rest.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  xmpString = xmpString.replace(/&(?!amp;|lt;|gt;|apos;|quot;)/g, "&amp;");
 
-  rest = rest.replace(/&(?!amp;|lt;|gt;|apos;|quot;)/g, "&amp;");
 
-  rest = rest.replace(/[ ]{2,}/g, " ");
-
-  const sanitizedXmp = xpacketBegin + rest;
-
-  console.log("✅ Sanitized XMP string:", sanitizedXmp?.substring(0, 200) + "...");
-  return sanitizedXmp;
+  const sanitized = xmpString.trim();
+  console.log("✅ Sanitized XMP string:", sanitized.substring(0, 200) + "...");
+  return sanitized;
 }
 
 
@@ -467,7 +457,12 @@ console.log("🔍 Forced user.plan:", user.plan);
 
       const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
 
-      const sanitizeMetadata = (str) => String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "").trim();
+     const sanitizeMetadata = (str) =>
+  String(str || "")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/[^\x20-\x7E]/g, "?") 
+    .trim();
+
       pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
       pdfDoc.setAuthor(sanitizeMetadata("PDFify User"));
       pdfDoc.setSubject(sanitizeMetadata("ZUGFeRD Invoice"));
@@ -543,9 +538,9 @@ try {
 
   const sanitizedXmp = sanitizeXmp(rawXmp);
 
-  // Prepend BOM manually — sanitizeXmp handles internal BOM logic
-  const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
-  const cleanBuffer = Buffer.concat([bom, Buffer.from(sanitizedXmp, "utf-8")]);
+ 
+ const cleanBuffer = Buffer.from(sanitizedXmp, "utf-8"); // No BOM
+
 
   const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
     Type: PDFName.of("Metadata"),

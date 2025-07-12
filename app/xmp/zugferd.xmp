@@ -1,23 +1,20 @@
-const bomUtf8 = Buffer.from([0xEF, 0xBB, 0xBF]); // UTF-8 BOM
-const rawXmpWithoutBom = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Adobe XMP Core 5.6-c140 79.164384, 2020/07/10-21:49:21'>
-  <rdf:RDF
-    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-    xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-    xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-    xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-    xmlns:pdfaAF="http://www.aiim.org/pdfa/ns/af/"
-    xmlns:afrl="http://www.aiim.org/pdfa/ns/afrelationship/"
-    xmlns:zf="urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic">
+<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.164384, 2020/07/10-21:49:21">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+           xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+           xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+           xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+           xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+           xmlns:pdfaAF="http://www.aiim.org/pdfa/ns/af/"
+           xmlns:zf="urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic">
 
-    <!-- PDF/A-3 Identification block -->
+    <!-- PDF/A-3b compliance -->
     <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
       <pdfaid:part>3</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
     </rdf:Description>
 
-    <!-- ZUGFeRD Metadata -->
+    <!-- ZUGFeRD identification -->
     <rdf:Description rdf:about="">
       <zf:DocumentFileName>zugferd-invoice.xml</zf:DocumentFileName>
       <zf:DocumentType>INVOICE</zf:DocumentType>
@@ -25,7 +22,7 @@ const rawXmpWithoutBom = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'
       <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
     </rdf:Description>
 
-    <!-- Extension Schema Declaration -->
+    <!-- Schema Extension Declaration -->
     <rdf:Description rdf:about="">
       <pdfaExtension:schemas>
         <rdf:Bag>
@@ -66,15 +63,15 @@ const rawXmpWithoutBom = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'
       </pdfaExtension:schemas>
     </rdf:Description>
 
-    <!-- Associated Files Metadata -->
+    <!-- Associated File Info -->
     <rdf:Description rdf:about="">
       <pdfaAF:attachedFile>
         <rdf:Bag>
           <rdf:li rdf:parseType="Resource">
-            <afrl:AFRelationship>Data</afrl:AFRelationship>
-            <afrl:UF>zugferd-invoice.xml</afrl:UF>
-            <afrl:MIME>application/xml</afrl:MIME>
-            <afrl:Desc>ZUGFeRD Invoice XML</afrl:Desc>
+            <pdfaAF:AFRelationship>Data</pdfaAF:AFRelationship>
+            <pdfaAF:UF>zugferd-invoice.xml</pdfaAF:UF>
+            <pdfaAF:MIME>application/xml</pdfaAF:MIME>
+            <pdfaAF:Desc>ZUGFeRD Invoice XML</pdfaAF:Desc>
           </rdf:li>
         </rdf:Bag>
       </pdfaAF:attachedFile>
@@ -82,6 +79,4 @@ const rawXmpWithoutBom = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'
 
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end='w'?>`;
-
-const fullXmpBuffer = Buffer.concat([bomUtf8, Buffer.from(rawXmpWithoutBom, "utf-8")]);
+<?xpacket end='w'?>
