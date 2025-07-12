@@ -5,7 +5,7 @@ const { PDFDocument } = require("pdf-lib");
 const embedXmpIntoPdf = require("../xmp/embedXmp");
 
 // Path setup
-const xmpPath = path.join(__dirname, "../xmp/test-xmp.xmp");
+const xmpPath = path.join(__dirname, "../xmp/zugferd.xmp");
 const outputPdfPath = path.join(__dirname, "output-with-xmp.pdf");
 
 async function testEmbedXmp() {
