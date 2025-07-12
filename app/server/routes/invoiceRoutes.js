@@ -428,31 +428,24 @@ function sanitizeXmp(xmpString) {
   console.log("📥 Raw XMP string:", xmpString?.substring(0, 200) + "...");
   if (typeof xmpString !== "string") return "";
 
-  // Preserve BOM if it occurs right after '<?xpacket begin=' (inside quotes)
-  // We'll preserve the BOM in the packet header and only sanitize the rest
 
   const xpacketBeginMatch = xmpString.match(/(<\?xpacket begin=['"])([\s\S]*?)(['"]>)/);
   let xpacketBegin = "";
   let rest = xmpString;
 
   if (xpacketBeginMatch) {
-    xpacketBegin = xpacketBeginMatch[0]; // full match like <?xpacket begin='\ufeff'?>
-    // Remove the matched header from the rest string
+    xpacketBegin = xpacketBeginMatch[0]; 
+
     rest = xmpString.slice(xpacketBegin.length);
   }
 
-  // Now sanitize the rest of the XMP safely
-  // Remove invalid XML 1.0 control characters except tab(0x09), newline(0x0A), carriage return(0x0D)
+ 
   rest = rest.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
 
-  // Escape ampersands not part of valid entities
   rest = rest.replace(/&(?!amp;|lt;|gt;|apos;|quot;)/g, "&amp;");
 
-  // Replace multiple whitespace with single space, but keep XML formatting by preserving newlines
-  // Here we only collapse multiple spaces (not newlines) for safety:
   rest = rest.replace(/[ ]{2,}/g, " ");
 
-  // Rebuild full XMP string with the preserved packet header
   const sanitizedXmp = xpacketBegin + rest;
 
   console.log("✅ Sanitized XMP string:", sanitizedXmp?.substring(0, 200) + "...");
@@ -540,7 +533,7 @@ embeddedFilesArray.push(filespecRef);
 catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
 
-const xmpPath = path.resolve(__dirname, "../utils/zugferd.xmp");
+const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
 
 
 // Prepend BOM to ensure valid <?xpacket begin='\uFEFF' ... ?>
