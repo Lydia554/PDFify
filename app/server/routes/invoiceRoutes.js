@@ -428,14 +428,18 @@ function sanitizeXmp(xmpString) {
   console.log("📥 Raw XMP string:", xmpString?.substring(0, 200) + "...");
   if (typeof xmpString !== "string") return "";
 
+  // Remove BOM if present at start (0xFEFF)
+  if (xmpString.charCodeAt(0) === 0xFEFF) {
+    xmpString = xmpString.slice(1);
+  }
+
+
   xmpString = xmpString.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
-  
 
   xmpString = xmpString.replace(/\r/g, "");
 
  
   xmpString = xmpString.replace(/&(?!amp;|lt;|gt;|apos;|quot;)/g, "&amp;");
-
 
   const sanitized = xmpString.trim();
   console.log("✅ Sanitized XMP string:", sanitized.substring(0, 200) + "...");
