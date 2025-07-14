@@ -31,35 +31,31 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
     }
 
     const now = new Date();
-   
-const resetNeeded =
-  !user.csvUsageLastReset ||
-  now.getFullYear() !== user.csvUsageLastReset.getFullYear() ||
-  now.getMonth() !== user.csvUsageLastReset.getMonth();
 
-if (resetNeeded) {
-  console.log("🔄 Resetting CSV usage count for user:", user._id);
-  user.csvUsageCount = 0;
-  user.csvUsageLastReset = now;
-}
+    const resetNeeded =
+      !user.usageLastReset ||
+      now.getFullYear() !== user.usageLastReset.getFullYear() ||
+      now.getMonth() !== user.usageLastReset.getMonth();
 
+    if (resetNeeded) {
+      console.log("🔄 Resetting CSV usage count for user:", user._id);
+      user.usageCount = 0;
+      user.usageLastReset = now;
+    }
 
-const isPro = user.isPremium || user.planType === "pro";
-const csvMonthlyLimit = 30;
+    const isPro = user.isPremium || user.planType === "pro";
+    const csvMonthlyLimit = 30;
 
-if (!isPro && user.csvUsageCount >= csvMonthlyLimit) {
-  console.log(`🚫 CSV usage limit reached for user ${user.email}`);
-  return res.status(403).json({ error: "CSV usage limit reached." });
-}
+    if (!isPro && user.usageCount >= csvMonthlyLimit) {
+      console.log(`🚫 CSV usage limit reached for user ${user.email}`);
+      return res.status(403).json({ error: "CSV usage limit reached." });
+    }
 
+    user.usageCount += 1;
+    console.log(`📊 CSV usage incremented: ${user.usageCount} for user ${user._id}`);
 
-user.csvUsageCount += 1;
-console.log(`📊 CSV usage incremented: ${user.csvUsageCount} for user ${user._id}`);
-
-await user.save();
-
-
-    console.log("💾 Saved user CSV usage successfully:", savedUser.csvUsageCount);
+    await user.save();
+    console.log("💾 Saved user CSV usage successfully:", user.usageCount);
 
     // Generate CSV
     const keys = Object.keys(normalizedData[0]);
