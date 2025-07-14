@@ -749,10 +749,6 @@ async function downloadCSV() {
   const url = '/api/generate-csv'; 
   const origin = window.location.origin;
 
-  console.log("🌐 Current origin:", origin);
-  console.log("📤 Sending request to:", url);
-  console.log("🪪 Token used:", token);
-  console.log("📦 JSON payload:", jsonData);
 
   try {
     const res = await fetch(url, {
@@ -782,7 +778,6 @@ async function downloadCSV() {
     link.click();
     link.remove();
 
-    console.log("✅ CSV downloaded successfully.");
   } catch (err) {
     console.error("❌ Fetch failed:", err);
     alert("Fetch failed. Check console for details.");
