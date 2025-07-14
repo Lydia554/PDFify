@@ -21,43 +21,43 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
   }
 
   try {
-    const userId = req.user?.userId;
-    console.log("🔐 Authenticated userId:", userId);
-
-    const user = await User.findById(userId);
+    const user = await User.findById(req.user.userId);
     if (!user) {
       console.error("❌ User not found");
       return res.status(404).json({ error: "User not found" });
     }
 
     const now = new Date();
+    const lastResetDate = user.usageLastReset ? new Date(user.usageLastReset) : null;
 
     const resetNeeded =
-      !user.usageLastReset ||
-      now.getFullYear() !== user.usageLastReset.getFullYear() ||
-      now.getMonth() !== user.usageLastReset.getMonth();
+      !lastResetDate ||
+      now.getFullYear() !== lastResetDate.getFullYear() ||
+      now.getMonth() !== lastResetDate.getMonth();
 
     if (resetNeeded) {
-      console.log("🔄 Resetting CSV usage count for user:", user._id);
+      console.log("🔄 Resetting usage count for user:", user._id);
       user.usageCount = 0;
       user.usageLastReset = now;
+      await user.save();
     }
+
+ 
+    const monthlyLimit = user.monthlyLimit ?? 30; 
 
     const isPro = user.isPremium || user.planType === "pro";
-    const csvMonthlyLimit = 30;
 
-    if (!isPro && user.usageCount >= csvMonthlyLimit) {
-      console.log(`🚫 CSV usage limit reached for user ${user.email}`);
-      return res.status(403).json({ error: "CSV usage limit reached." });
+    if (!isPro && user.usageCount >= monthlyLimit) {
+      console.log(`🚫 Monthly usage limit reached for user ${user.email}`);
+      return res.status(403).json({ error: "Monthly usage limit reached." });
     }
 
-    user.usageCount += 1;
-    console.log(`📊 CSV usage incremented: ${user.usageCount} for user ${user._id}`);
-
+    user.usageCount++;
     await user.save();
-    console.log("💾 Saved user CSV usage successfully:", user.usageCount);
 
-    // Generate CSV
+    console.log(`📊 Usage incremented: ${user.usageCount} for user ${user._id}`);
+
+ 
     const keys = Object.keys(normalizedData[0]);
     const rows = normalizedData.map((row) =>
       keys.map((k) => JSON.stringify(row[k] ?? "")).join(",")
