@@ -3,61 +3,43 @@ const router = express.Router();
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
+const fs = require("fs");
+const path = require("path");
 
 router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
-  console.log("📄 /generate-csv route hit");
-
   const { data } = req.body;
+  log("Received data for CSV generation:", data);
 
   if (!data || typeof data !== "object") {
-    console.warn("⚠️ Invalid or missing data in request body");
+    log("Invalid or missing data:", data);
     return res.status(400).json({ error: "Invalid or missing data" });
   }
 
   const normalizedData = Array.isArray(data) ? data : [data];
   if (!normalizedData.length) {
-    console.warn("⚠️ Empty data array");
+    log("Empty data array");
     return res.status(400).json({ error: "Empty data" });
   }
 
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
-      console.error("❌ User not found");
+      log("User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
 
-    const now = new Date();
-    const lastResetDate = user.usageLastReset ? new Date(user.usageLastReset) : null;
+    const rowCount = normalizedData.length;
 
-    const resetNeeded =
-      !lastResetDate ||
-      now.getFullYear() !== lastResetDate.getFullYear() ||
-      now.getMonth() !== lastResetDate.getMonth();
-
-    if (resetNeeded) {
-      console.log("🔄 Resetting usage count for user:", user._id);
-      user.usageCount = 0;
-      user.usageLastReset = now;
-      await user.save();
+    if ((user.usageCount + rowCount) > user.maxUsage) {
+      return res.status(403).json({
+        error: "Monthly usage limit reached. Upgrade to premium for more downloads.",
+      });
     }
 
- 
-    const monthlyLimit = user.monthlyLimit ?? 30; 
-
-    const isPro = user.isPremium || user.planType === "pro";
-
-    if (!isPro && user.usageCount >= monthlyLimit) {
-      console.log(`🚫 Monthly usage limit reached for user ${user.email}`);
-      return res.status(403).json({ error: "Monthly usage limit reached." });
-    }
-
-    user.usageCount++;
+    user.usageCount += rowCount;
     await user.save();
+    log("User usage count updated:", user.usageCount);
 
-    console.log(`📊 Usage incremented: ${user.usageCount} for user ${user._id}`);
-
- 
     const keys = Object.keys(normalizedData[0]);
     const rows = normalizedData.map((row) =>
       keys.map((k) => JSON.stringify(row[k] ?? "")).join(",")
@@ -65,13 +47,19 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
     const header = keys.join(",");
     const csv = [header, ...rows].join("\n");
 
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader("Content-Disposition", "attachment; filename=data.csv");
-    res.send(csv);
+    const tempDir = path.join(__dirname, "../temp");
+    if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+    const tempCsvPath = path.join(tempDir, `data_${Date.now()}.csv`);
 
-  } catch (err) {
-    console.error("❌ CSV generation error:", err);
-    res.status(500).json({ error: "Failed to generate CSV" });
+    fs.writeFileSync(tempCsvPath, csv);
+
+    res.download(tempCsvPath, "data.csv", (err) => {
+      if (err) console.error("Error sending CSV file:", err);
+      fs.unlinkSync(tempCsvPath);
+    });
+  } catch (error) {
+    console.error("CSV generation failed:", error);
+    res.status(500).json({ error: "CSV generation failed" });
   }
 });
 

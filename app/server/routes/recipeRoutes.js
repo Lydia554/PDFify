@@ -218,7 +218,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     const cleanedData = { ...data };
     if (!isPremium) delete cleanedData.ingredientBreakdown;
 
-    // Apply premium logic: no logo if premium, default logo if not
+    
     const payload = {
       ...cleanedData,
       customLogoUrl: isPremium ? null : defaultLogoUrl,
