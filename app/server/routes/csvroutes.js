@@ -2,9 +2,10 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
 
-
-router.post("/generate-csv", async (req, res) => {
+router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
   console.log("📄 /generate-csv router hit");
 
   const { data } = req.body; 
