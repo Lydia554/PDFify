@@ -745,8 +745,8 @@ async function downloadCSV() {
     return alert("Invalid JSON.");
   }
 
-  const token = localStorage.getItem("token");
-  const url = '/api/generate-csv'; // change to full URL if needed
+  const token = localStorage.getItem("apiKey"); 
+  const url = '/api/generate-csv'; 
   const origin = window.location.origin;
 
   console.log("🌐 Current origin:", origin);
