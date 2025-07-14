@@ -28,15 +28,17 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
   }
 
   try {
-    // Re-fetch user fresh from DB to ensure full Mongoose doc, or rely on req.fullUser if confident it's fresh
+    // Get user from request
     let user = req.fullUser;
+    log("User info from request (req.fullUser):", user ? user._id : "none");
 
-    // Optionally, re-fetch to be 100% sure:
-    user = await User.findById(user._id);
+    // Re-fetch user fresh from DB to ensure full Mongoose doc
+    user = await User.findById(user?._id);
     if (!user) {
-      log("User not found by ID:", req.fullUser._id);
+      log("User not found by ID:", req.fullUser?._id);
       return res.status(404).json({ error: "User not found" });
     }
+    log("User found in DB:", user._id.toString());
 
     log("User before usage update:", {
       id: user._id.toString(),
@@ -57,11 +59,20 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
       log("Resetting usage count for user:", user._id.toString());
       user.usageCount = 0;
       user.usageLastReset = now;
-      await user.save();
-      log("Usage count reset and saved");
+      try {
+        await user.save();
+        log("Usage count reset and saved");
+      } catch (resetSaveErr) {
+        log("Error saving user after usage reset:", resetSaveErr);
+        return res.status(500).json({ error: "Failed to reset usage count" });
+      }
+    } else {
+      log("No usage reset needed for user:", user._id.toString());
     }
 
     const rowCount = normalizedData.length;
+    log(`Attempting to increment usageCount by ${rowCount}`);
+
     if (user.usageCount + rowCount > user.maxUsage) {
       log(
         `Usage limit exceeded: current ${user.usageCount} + ${rowCount} > max ${user.maxUsage}`
@@ -73,11 +84,12 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
 
     // Increment usageCount
     user.usageCount += rowCount;
+    log("New usageCount after increment:", user.usageCount);
 
     // Save updated user usageCount
     try {
       await user.save();
-      log("Updated usageCount saved:", user.usageCount);
+      log("Updated usageCount saved successfully:", user.usageCount);
     } catch (saveErr) {
       log("Error saving updated usageCount:", saveErr);
       return res.status(500).json({ error: "Failed to update usage count" });
@@ -85,6 +97,7 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
 
     // Prepare CSV content
     const keys = Object.keys(normalizedData[0]);
+    log("CSV header keys:", keys);
     const rows = normalizedData.map((row) =>
       keys.map((k) => JSON.stringify(row[k] ?? "")).join(",")
     );
@@ -107,7 +120,9 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
     res.download(tempCsvPath, "data.csv", (err) => {
       if (err) {
         log("Error sending CSV file:", err);
-        // No response here, headers already sent
+        // Cannot respond here, headers already sent
+      } else {
+        log("CSV file sent successfully");
       }
       try {
         fs.unlinkSync(tempCsvPath);
