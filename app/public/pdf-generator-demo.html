@@ -208,7 +208,7 @@ async function downloadCSV() {
   }
 
   const token = localStorage.getItem("token"); 
-  const res = await fetch('/generate-csv', {
+  const res = await fetch('/api/generate-csv', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
