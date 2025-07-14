@@ -1,4 +1,4 @@
-// models/ShopConfig.js
+
 const mongoose = require("mongoose");
 
 const ShopConfigSchema = new mongoose.Schema({
