@@ -82,16 +82,21 @@
         class="w-full border border-gray-600 bg-gray-700 rounded-md p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400 transition text-gray-100"></textarea>
     </div>
 
-    <div class="flex gap-4">
-      <button onclick="sendRequest(true)" 
-        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
-        🔍 Preview
-      </button>
-      <button onclick="sendRequest(false)" 
-        class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
-        ⬇️ Download
-      </button>
-    </div>
+<div class="flex gap-4">
+  <button onclick="sendRequest(true)" 
+    class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
+    🔍 Preview
+  </button>
+  <button onclick="sendRequest(false)" 
+    class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
+    ⬇️ Download
+  </button>
+  <button onclick="downloadCSV()" 
+    class="flex-1 py-3 bg-amber-500 text-white rounded-md font-semibold hover:bg-amber-600 transition-transform hover:scale-105 shadow-md">
+    📊 CSV
+  </button>
+</div>
+
 
     <p id="result"></p>
   </div>
