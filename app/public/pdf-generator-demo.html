@@ -501,7 +501,6 @@ async function connectShopify(domain, token) {
     alert('Error connecting Shopify');
   }
 }
-
 async function sendRequest(isPreview = false, fileName = "Generated.pdf", isCsv = false) {
   const endpoint = isCsv ? "generate-csv" : document.getElementById("endpoint").value.trim();
   const apiKey = document.getElementById("apiKey").value.trim();
@@ -530,7 +529,8 @@ async function sendRequest(isPreview = false, fileName = "Generated.pdf", isCsv 
   let payload;
 
   if (isCsv) {
-    payload = { data: parsedData, isPreview };
+    // **Force isPreview = false for CSV always**
+    payload = { data: parsedData, isPreview: false };
   } else {
     if (parsedData && typeof parsedData === 'object') {
       if ('html' in parsedData) {
@@ -589,6 +589,7 @@ async function sendRequest(isPreview = false, fileName = "Generated.pdf", isCsv 
     result.innerText = `${isCsv ? "CSV" : "PDF"} ${isPreview ? "preview" : "download"} failed: ${err.message}`;
   }
 }
+
 
 
 function downloadCSV() {
