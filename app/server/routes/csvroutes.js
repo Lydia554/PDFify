@@ -1,33 +1,23 @@
-const express = require("express");
-const router = express.Router();
-const User = require("../models/User");
-const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
-const fs = require("fs");
-const path = require("path");
-
 router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
+  console.log("CSV generation request received");
   const { data } = req.body;
-  log("Received data for CSV generation:", data);
 
   if (!data || typeof data !== "object") {
-    log("Invalid or missing data:", data);
     return res.status(400).json({ error: "Invalid or missing data" });
   }
 
   const normalizedData = Array.isArray(data) ? data : [data];
   if (!normalizedData.length) {
-    log("Empty data array");
     return res.status(400).json({ error: "Empty data" });
   }
 
   try {
     const user = await User.findById(req.user.userId);
     if (!user) {
-      log("User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
 
+    console.log("User before usage update:", user);
 
     const now = new Date();
     const lastReset = user.usageLastReset ? new Date(user.usageLastReset) : null;
@@ -38,12 +28,11 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
       now.getMonth() > lastReset.getMonth();
 
     if (resetNeeded) {
-      console.log("🔄 Resetting usage count for user:", user._id);
+      console.log("Resetting usage count");
       user.usageCount = 0;
       user.usageLastReset = now;
       await user.save();
     }
- 
 
     const rowCount = normalizedData.length;
 
@@ -52,6 +41,13 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
         error: "Monthly usage limit reached. Upgrade to premium for more downloads.",
       });
     }
+
+    user.usageCount += rowCount;
+    await user.save();
+
+    console.log("User after usage update:", user);
+ 
+
 
     user.usageCount += rowCount;
     await user.save();
@@ -74,7 +70,9 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
       if (err) console.error("Error sending CSV file:", err);
       fs.unlinkSync(tempCsvPath);
     });
-  } catch (error) {
+  } 
+
+     catch (error) {
     console.error("CSV generation failed:", error);
     res.status(500).json({ error: "CSV generation failed" });
   }
