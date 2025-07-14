@@ -76,21 +76,22 @@
         class="w-full border border-gray-600 bg-gray-700 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition text-gray-100" />
     </div>
 
-<div class="flex gap-4">
-  <button onclick="sendRequest(true)" 
-    class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
-    🔍 Preview
-  </button>
-  <button onclick="sendRequest(false)" 
-    class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
-    ⬇️ Download
-  </button>
-  <button onclick="downloadCSV()" 
-    class="flex-1 py-3 bg-amber-500 text-white rounded-md font-semibold hover:bg-amber-600 transition-transform hover:scale-105 shadow-md">
-    📊 CSV
-  </button>
-</div>
+    <div>
+      <label for="json" class="block mb-1 font-semibold text-gray-100">Data (JSON):</label>
+      <textarea id="json" rows="15" required
+        class="w-full border border-gray-600 bg-gray-700 rounded-md p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400 transition text-gray-100"></textarea>
+    </div>
 
+    <div class="flex gap-4">
+      <button onclick="sendRequest(true)" 
+        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
+        🔍 Preview
+      </button>
+      <button onclick="sendRequest(false)" 
+        class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
+        ⬇️ Download
+      </button>
+    </div>
 
     <p id="result"></p>
   </div>
@@ -187,10 +188,53 @@ friendlyBtn.addEventListener('click', () => {
         setTimeout(() => el.classList.remove('opacity-0'), 50);
       });
     });
-
-
   
 });
+
+
+//Handle CSV download
+function downloadCSV() {
+    const jsonStr = document.getElementById('json').value.trim();
+    if (!jsonStr) {
+      alert("Please enter JSON data first.");
+      return;
+    }
+
+    let data;
+    try {
+      data = JSON.parse(jsonStr);
+    } catch (e) {
+      alert("Invalid JSON format.");
+      return;
+    }
+
+   
+    if (!Array.isArray(data)) {
+      data = [data];
+    }
+
+    if (data.length === 0) {
+      alert("No data to convert.");
+      return;
+    }
+
+    const keys = Object.keys(data[0]);
+    const csv = [
+      keys.join(','),
+      ...data.map(row => keys.map(k => JSON.stringify(row[k] ?? '')).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "data.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
 
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
@@ -467,6 +511,7 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
     loadingOverlay.style.display = "none";
   }
 });
+
 
 
 async function connectShopify(domain, token) {
