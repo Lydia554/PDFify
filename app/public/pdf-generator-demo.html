@@ -502,8 +502,8 @@ async function connectShopify(domain, token) {
   }
 }
 
-async function sendRequest(isPreview = false) {
-  const endpoint = document.getElementById("endpoint").value.trim();
+async function sendRequest(isPreview = false, fileName = "Generated.pdf", isCsv = false) {
+  const endpoint = isCsv ? "generate-csv" : document.getElementById("endpoint").value.trim();
   const apiKey = document.getElementById("apiKey").value.trim();
   const jsonInput = document.getElementById("json").value;
   const result = document.getElementById("result");
@@ -517,7 +517,7 @@ async function sendRequest(isPreview = false) {
     return;
   }
 
-  result.innerText = isPreview ? "Generating preview..." : "Generating PDF...";
+  result.innerText = isPreview ? "Generating preview..." : (isCsv ? "Generating CSV..." : "Generating PDF...");
 
   let parsedData;
   try {
@@ -529,29 +529,21 @@ async function sendRequest(isPreview = false) {
 
   let payload;
 
-  if (parsedData && typeof parsedData === 'object') {
-    if ('html' in parsedData) {
-    
-      payload = {
-        html: parsedData.html,
-        isPreview
-      };
-    } else if ('data' in parsedData) {
-     
-      payload = {
-        ...parsedData,
-        isPreview
-      };
-    } else {
-      
-      payload = {
-        data: parsedData,
-        isPreview
-      };
-    }
+  if (isCsv) {
+    payload = { data: parsedData, isPreview };
   } else {
-    result.innerText = "Invalid input format.";
-    return;
+    if (parsedData && typeof parsedData === 'object') {
+      if ('html' in parsedData) {
+        payload = { html: parsedData.html, isPreview };
+      } else if ('data' in parsedData) {
+        payload = { ...parsedData, isPreview };
+      } else {
+        payload = { data: parsedData, isPreview };
+      }
+    } else {
+      result.innerText = "Invalid input format.";
+      return;
+    }
   }
 
   try {
@@ -562,11 +554,11 @@ async function sendRequest(isPreview = false) {
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify(payload),
-        credentials: "include",
+      credentials: "include",
     });
 
     if (!response.ok) {
-      let errorMessage = "PDF request failed.";
+      let errorMessage = `${isCsv ? "CSV" : "PDF"} request failed.`;
       try {
         const errorJson = await response.json();
         errorMessage = errorJson.error || errorMessage;
@@ -585,7 +577,7 @@ async function sendRequest(isPreview = false) {
     } else {
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = "Generated.pdf";
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -593,9 +585,14 @@ async function sendRequest(isPreview = false) {
 
     result.innerText = "";
   } catch (err) {
-    console.error("PDF request error:", err);
-    result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`;
+    console.error(`${isCsv ? "CSV" : "PDF"} request error:`, err);
+    result.innerText = `${isCsv ? "CSV" : "PDF"} ${isPreview ? "preview" : "download"} failed: ${err.message}`;
   }
+}
+
+
+function downloadCSV() {
+  sendRequest(false, "data.csv", true);
 }
 
 
@@ -730,52 +727,6 @@ fetch('/api/get-stripe-key')
   })
   .catch(error => console.error('Error fetching Stripe key:', error));
 
-
-async function downloadCSV() {
-  const jsonStr = document.getElementById('json').value.trim();
-  if (!jsonStr) return alert("Please enter JSON data.");
-
-  let jsonData;
-  try {
-    jsonData = JSON.parse(jsonStr);
-  } catch (err) {
-    alert("Invalid JSON.");
-    return;
-  }
-
-  const apiKey = document.getElementById("apiKey").value.trim();
-  if (!apiKey) return alert("API key is required.");
-
-  try {
-    const res = await fetch("/api/generate-csv", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({ data: jsonData }),
-      credentials: "include"
-    });
-
-    if (!res.ok) {
-      const errText = await res.text();
-      alert("Failed to generate CSV: " + errText);
-      return;
-    }
-
-    const blob = await res.blob();
-    const downloadUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.setAttribute("download", "data.csv");
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-  } catch (err) {
-    alert("Fetch failed: " + err.message);
-  }
-}
 
 
 
