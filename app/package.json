@@ -21,20 +21,22 @@
     "body-parser": "^1.20.3",
     "connect-mongo": "^5.1.0",
     "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "diff": "^8.0.2",
     "dotenv": "^16.5.0",
-      "date-fns": "^4.1.0",
     "express": "^4.21.2",
-    "xmlbuilder2": "^3.1.1",
     "express-session": "^1.18.1",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.0",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0",
-    "pdf-parse": "^1.1.1",
     "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
     "puppeteer": "^24.7.2",
     "stripe": "^17.7.0",
-    "web-streams-polyfill": "^4.1.0"
+    "web-streams-polyfill": "^4.1.0",
+    "xmlbuilder2": "^3.1.1",
+    "xmldom": "^0.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"
