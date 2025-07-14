@@ -1,8 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const User = require("../models/User");
-const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
 const fs = require("fs");
 const path = require("path");
 
@@ -29,13 +26,8 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
   }
 
   try {
-    log("Looking up user by ID:", req.user.userId);
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      log("User not found with ID:", req.user.userId);
-      return res.status(404).json({ error: "User not found" });
-    }
-    log("User found:", {
+    const user = req.fullUser;  // Use fullUser directly
+    log("Using req.fullUser:", {
       id: user._id,
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
@@ -79,8 +71,14 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
     }
 
     user.usageCount += rowCount;
-    await user.save();
-    log("Updated usageCount saved:", user.usageCount);
+
+    try {
+      await user.save();
+      log("Updated usageCount saved:", user.usageCount);
+    } catch (saveErr) {
+      log("Error saving updated usageCount:", saveErr);
+      return res.status(500).json({ error: "Failed to update usage count" });
+    }
 
     // Prepare CSV content
     const keys = Object.keys(normalizedData[0]);

@@ -15,7 +15,7 @@ const dualAuth = async (req, res, next) => {
   try {
     let user = null;
 
-    // First try API key auth
+    
     if (apiKey) {
       const users = await User.find();
       user = users.find(u => {
