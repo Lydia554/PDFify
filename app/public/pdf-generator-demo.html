@@ -196,49 +196,42 @@ friendlyBtn.addEventListener('click', () => {
   
 });
 
+async function downloadCSV() {
+  const jsonStr = document.getElementById('json').value.trim();
+  if (!jsonStr) return alert("Please enter JSON data.");
 
-//Handle CSV download
-function downloadCSV() {
-    const jsonStr = document.getElementById('json').value.trim();
-    if (!jsonStr) {
-      alert("Please enter JSON data first.");
-      return;
-    }
-
-    let data;
-    try {
-      data = JSON.parse(jsonStr);
-    } catch (e) {
-      alert("Invalid JSON format.");
-      return;
-    }
-
-   
-    if (!Array.isArray(data)) {
-      data = [data];
-    }
-
-    if (data.length === 0) {
-      alert("No data to convert.");
-      return;
-    }
-
-    const keys = Object.keys(data[0]);
-    const csv = [
-      keys.join(','),
-      ...data.map(row => keys.map(k => JSON.stringify(row[k] ?? '')).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", "data.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  let jsonData;
+  try {
+    jsonData = JSON.parse(jsonStr);
+  } catch (err) {
+    return alert("Invalid JSON.");
   }
+
+  const token = localStorage.getItem("token"); 
+  const res = await fetch('/api/generate-csv', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({ data: jsonData })
+  });
+
+  if (!res.ok) {
+    alert("Failed to generate CSV.");
+    return;
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", "data.csv");
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
 
 
     document.querySelectorAll("nav a").forEach((link) => {
