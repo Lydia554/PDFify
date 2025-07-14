@@ -1,7 +1,11 @@
 const express = require("express");
 const router = express.Router();
+const User = require("../models/User");
+const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
 const fs = require("fs");
 const path = require("path");
+
 
 // Simple logger helper for consistent logs
 function log(...args) {
