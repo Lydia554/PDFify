@@ -28,6 +28,23 @@ router.post("/generate-csv", authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+
+    const now = new Date();
+    const lastReset = user.usageLastReset ? new Date(user.usageLastReset) : null;
+
+    const resetNeeded =
+      !lastReset ||
+      now.getFullYear() > lastReset.getFullYear() ||
+      now.getMonth() > lastReset.getMonth();
+
+    if (resetNeeded) {
+      console.log("🔄 Resetting usage count for user:", user._id);
+      user.usageCount = 0;
+      user.usageLastReset = now;
+      await user.save();
+    }
+ 
+
     const rowCount = normalizedData.length;
 
     if ((user.usageCount + rowCount) > user.maxUsage) {
