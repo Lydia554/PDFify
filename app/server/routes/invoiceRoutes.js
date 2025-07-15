@@ -374,10 +374,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     const user = await User.findById(req.user.userId);
 
-    // === FORCE USER TO PRO FOR TESTING ===
-user.plan = "pro";
-user.isPremium = true; // if you use this flag for premium checks elsewhere, keep consistent
-console.log("🚨 Forcing user plan to PRO for testing");
+incrementUsage(user, isPreview, "pro");
+
 
     
     if (!user) {
@@ -457,30 +455,33 @@ console.log("🚨 Forcing user plan to PRO for testing");
         invoiceData.showChart = false;
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
-    // Normalize plan string to lowercase just in case
-const plan = (user.plan || "").toLowerCase();
-
-if (isPreview && plan === "free") {
-  if (user.previewCount < 3) {
-    user.previewCount++;
-    console.log(`👀 Incremented preview count to ${user.previewCount}`);
-  } else {
-    user.usageCount++;
-    console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-  }
-} else if (["premium", "pro"].includes(plan)) {
-  user.usageCount++;
-  console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${plan}`);
-} else if (!isPreview) {
-  // For free users generating actual invoices (not previews), increment usageCount?
-  user.usageCount++;
-  console.log(`💡 Incremented usage count to ${user.usageCount} for plan ${plan} (non-preview)`);
-} else {
-  // Optional: Handle unknown plans or fallback
-  console.warn(`⚠️ Unknown plan or state, no usage increment.`);
-}
 
       
+      function incrementUsage(user, isPreview, forcedPlan) {
+  // Use forcedPlan if provided, else fallback to user's plan, normalized to lowercase
+  const plan = (forcedPlan || user.plan || "").toLowerCase();
+
+  if (isPreview && plan === "free") {
+    if (user.previewCount < 3) {
+      user.previewCount++;
+      console.log(`👀 Incremented preview count to ${user.previewCount}`);
+    } else {
+      user.usageCount++;
+      console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+    }
+  } else if (["premium", "pro"].includes(plan)) {
+    user.usageCount++;
+    console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${plan}`);
+  } else if (!isPreview) {
+    // For free users generating actual invoices (not previews), increment usageCount
+    user.usageCount++;
+    console.log(`💡 Incremented usage count to ${user.usageCount} for plan ${plan} (non-preview)`);
+  } else {
+    // Optional fallback
+    console.warn(`⚠️ Unknown plan or state, no usage increment.`);
+  }
+}
+
       console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
       if (!html || typeof html !== "string") {
