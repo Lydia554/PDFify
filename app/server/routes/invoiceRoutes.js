@@ -272,7 +272,7 @@ const watermarkHTML =
               <td>${item.quantity || ""}</td>
               <td>${item.price || ""}</td>
               <td>${item.net || "-"}</td>
-              <td>${item.tax || "-"}</td>
+              <td>${item.tax || "%"}</td>
               <td>${item.total || ""}</td>
             </tr>`
             )

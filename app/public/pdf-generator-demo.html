@@ -860,7 +860,7 @@ const endpoint = document.getElementById('endpoint');
 
     for (const row of data) {
       try {
-        const res = await fetch('api/generate-invoice', {
+        const res = await fetch('/api/generate-invoice', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
