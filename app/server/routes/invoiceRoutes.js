@@ -6,7 +6,6 @@ const fs = require("fs");
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
-const User = require("../models/User");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 
