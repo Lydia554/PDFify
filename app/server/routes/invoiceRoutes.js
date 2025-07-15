@@ -48,8 +48,9 @@ const watermarkHTML =
       datasets: [
         {
           data: [
-            Number(data.subtotal.replace(/[^\d.-]/g, '')) || 0,
-            Number(data.tax.replace(/[^\d.-]/g, '')) || 0,
+        Number(data.subtotal?.replace(/[^\d.-]/g, '') || 0),
+Number(data.tax?.replace(/[^\d.-]/g, '') || 0),
+
           ],
         },
       ],
