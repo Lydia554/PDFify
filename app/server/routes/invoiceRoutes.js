@@ -373,6 +373,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     console.log("🔢 Number of invoice requests to process:", requests.length);
 
     const user = await User.findById(req.user.userId);
+
+user.plan = "pro"; // ✅ Force pro plan regardless of DB
+user.isPremium = true;
+console.log("🚨 Forcing user plan to 'pro'");
+
+
+
     if (!user) {
       console.error("❌ User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
@@ -450,22 +457,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         invoiceData.showChart = false;
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
-      // === Usage & Preview Counting Logic ===
-      if (isPreview && user.planType === "free") {
-        if (user.previewCount < 3) {
-          user.previewCount++;
-          console.log(`👀 Incremented preview count to ${user.previewCount}`);
-        } else {
-          user.usageCount++;
-          console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-        }
-      } else if (["premium", "pro"].includes(user.plan)) {
-        user.usageCount++;
-        console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
-      }
-
-    
-      // =====================================
+     
       
       console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
@@ -646,7 +638,24 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await archive.finalize();
     }
 
-    await user.save();
+   // ✅ Moved usage tracking here — only after PDF generated
+if (isPreview && user.planType === "free") {
+  if (user.previewCount < 3) {
+    user.previewCount++;
+    console.log(`👀 Incremented preview count to ${user.previewCount}`);
+  } else {
+    user.usageCount++;
+    console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+  }
+} else if (["premium", "pro"].includes(user.plan)) {
+  user.usageCount++;
+  console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
+}
+
+await user.save();
+console.log("💾 User usage data saved after PDF generation");
+
+
     console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
   } catch (e) {
     console.error("❌ Exception in /generate-invoice:", e);
