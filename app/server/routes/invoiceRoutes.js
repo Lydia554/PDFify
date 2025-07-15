@@ -325,6 +325,7 @@ function generateInvoiceHTML(data) {
 
 
 
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
@@ -447,7 +448,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
 
-      // === Usage & Preview Counting Logic ===
       if (isPreview && user.planType === "free") {
         if (user.previewCount < 3) {
           user.previewCount++;
@@ -460,7 +460,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         user.usageCount++;
         console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
       }
-      // =====================================
 
       console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
