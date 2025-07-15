@@ -203,6 +203,8 @@
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
   <script src="js/previewFriendlyMode.js"></script>
+  <script type="module" src="js/csvHelper.js"></script>
+
 
 
 
@@ -813,87 +815,6 @@ const endpoint = document.getElementById('endpoint');
 
   endpoint.addEventListener('change', toggleCsvSection);
   document.addEventListener('DOMContentLoaded', toggleCsvSection);
-
-
-  
-  function parseCSV(text) {
-    const lines = text.trim().split("\n");
-    const headers = lines.shift().split(",");
-    return lines.map(line => {
-      const values = line.split(",");
-      return headers.reduce((obj, header, i) => {
-        obj[header.trim()] = values[i]?.trim();
-        return obj;
-      }, {});
-    });
-  }
-
- 
-  document.getElementById('csvGenerateBtn').addEventListener('click', async () => {
-    const file = document.getElementById('csvUpload').files[0];
-    if (!file) {
-      alert('Please upload a CSV file first.');
-      return;
-    }
-
-
-    document.getElementById('csvResult').textContent = '';
-    const progressBar = document.getElementById('progressBar');
-    const progressCount = document.getElementById('progressCount');
-    progressBar.style.width = '0%';
-    progressCount.textContent = '0';
-    document.getElementById('csvProgress').classList.remove('hidden');
-
-    const apiKey = document.getElementById('apiKey').value.trim();
-    if (!apiKey) {
-      alert('Please enter your API key.');
-      return;
-    }
-
-    const text = await file.text();
-    let data;
-    try {
-      data = parseCSV(text);
-    } catch (e) {
-      alert('Invalid CSV format.');
-      return;
-    }
-
-    const total = data.length;
-    let completed = 0;
-    const results = [];
-
-    for (const row of data) {
-      try {
-        const res = await fetch('/api/generate-invoice', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`
-          },
-  body: JSON.stringify({
-  requests: [{ data: row, isPreview: true }]
-})
-
-        });
-
-        if (!res.ok) throw new Error(await res.text());
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-
-        results.push(`<a href="${url}" download="${row.name || 'invoice'}.pdf">📄 ${row.name || 'Download'}</a>`);
-      } catch (err) {
-        results.push(`<span class="text-red-400">❌ Error for ${row.name || 'row'}: ${err.message}</span>`);
-      }
-
-      completed++;
-      progressBar.style.width = `${(completed / total) * 100}%`;
-      progressCount.textContent = completed;
-    }
-
-    document.getElementById('csvResult').innerHTML = results.join('<br>');
-  });
-
 
 
 
