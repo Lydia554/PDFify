@@ -373,13 +373,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     console.log("🔢 Number of invoice requests to process:", requests.length);
 
     const user = await User.findById(req.user.userId);
-
-user.plan = "pro"; // ✅ Force pro plan regardless of DB
-user.isPremium = true;
-console.log("🚨 Forcing user plan to 'pro'");
-
-
-
+    
     if (!user) {
       console.error("❌ User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
