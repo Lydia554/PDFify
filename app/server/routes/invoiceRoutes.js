@@ -325,7 +325,6 @@ function generateInvoiceHTML(data) {
 
 
 
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
@@ -382,12 +381,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     // Reset preview & usage counts monthly
     const now = new Date();
-    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth()) {
+    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
       console.log("♻️ Resetting user preview count for new month");
       user.previewCount = 0;
       user.previewLastReset = now;
     }
-    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth()) {
+    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
       console.log("♻️ Resetting user usage count for new month");
       user.usageCount = 0;
       user.usageLastReset = now;
@@ -397,12 +396,16 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
+
     for (const [index, { data, isPreview }] of requests.entries()) {
       console.log(`📝 Processing request #${index + 1}`);
+
       if (!data || typeof data !== "object") {
         console.warn(`⚠️ Skipping invalid or missing data at request #${index + 1}`);
+        results.push({ error: "Invalid or missing data" });
         continue;
       }
+
       let invoiceData = { ...data };
 
       const country = invoiceData.country?.toLowerCase() || "slovenia";
@@ -447,7 +450,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         invoiceData.showChart = false;
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
-
+      // === Usage & Preview Counting Logic ===
       if (isPreview && user.planType === "free") {
         if (user.previewCount < 3) {
           user.previewCount++;
@@ -460,7 +463,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         user.usageCount++;
         console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
       }
-
+      // =====================================
+      
       console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
       if (!html || typeof html !== "string") {
