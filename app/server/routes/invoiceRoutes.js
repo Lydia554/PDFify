@@ -453,7 +453,23 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
       // === Usage & Preview Counting Logic ===
-   
+      if (isPreview && user.planType === "free") {
+        if (user.previewCount < 3) {
+          user.previewCount++;
+          console.log(`👀 Incremented preview count to ${user.previewCount}`);
+        } else {
+          user.usageCount++;
+          console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+        }
+      } else if (["premium", "pro"].includes(user.plan)) {
+        user.usageCount++;
+        console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
+      }
+
+      // === FORCE USER TO PRO FOR TESTING ===
+user.plan = "pro";
+user.isPremium = true; // if you use this flag for premium checks elsewhere, keep consistent
+console.log("🚨 Forcing user plan to PRO for testing");
       // =====================================
       
       console.log("🧾 Generating HTML for invoice...");
@@ -637,36 +653,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     await user.save();
     console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
-
-
-
-// ✅ Moved usage tracking here — only after PDF generated
-if (isPreview && user.planType === "free") {
-  if (user.previewCount < 3) {
-    user.previewCount++;
-    console.log(`👀 Incremented preview count to ${user.previewCount}`);
-  } else {
-    user.usageCount++;
-    console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-  }
-} else if (["premium", "pro"].includes(user.plan)) {
-  user.usageCount++;
-  console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
-}
-
-await user.save();
-console.log("💾 User usage data saved after PDF generation");
-
-
-
-
-
-
-
-
-
-
-
   } catch (e) {
     console.error("❌ Exception in /generate-invoice:", e);
     res.status(500).json({ error: "Internal Server Error", details: e.message });
