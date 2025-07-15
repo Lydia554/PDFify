@@ -334,6 +334,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+  console.log("🔍 Using ICC profile path:", iccPath);
 
   // Ghostscript check
   try {
@@ -345,7 +346,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   }
 
   if (!fs.existsSync(iccPath)) {
-    console.error("❌ ICC profile not found:", iccPath);
+    console.error("❌ ICC profile not found at path:", iccPath);
     return res.status(500).json({ error: "ICC profile missing." });
   } else {
     console.log("🖨️ ICC profile found:", iccPath);
@@ -353,73 +354,95 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
   let browser;
   const tmpDir = "/tmp/pdfify-batch-" + Date.now();
+  console.log("📁 Creating temporary directory:", tmpDir);
   fs.mkdirSync(tmpDir);
 
   try {
     let requests = req.body.requests;
-if (!Array.isArray(requests)) {
-  // Accept legacy or single object format
-  if (req.body.data) {
-    requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
-  } else {
-    return res.status(400).json({ error: "You must send 1-100 requests." });
-  }
-}
-if (requests.length === 0 || requests.length > 100) {
-  return res.status(400).json({ error: "You must send 1-100 requests." });
+    console.log("📩 Raw requests received:", Array.isArray(requests) ? requests.length : "not array");
 
+    if (!Array.isArray(requests)) {
+      if (req.body.data) {
+        requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
+        console.log("📩 Converted single request to array");
+      } else {
+        console.error("⚠️ No valid requests or data sent in request body");
+        return res.status(400).json({ error: "You must send 1-100 requests." });
+      }
     }
 
+    if (requests.length === 0 || requests.length > 100) {
+      console.error("⚠️ Invalid requests count:", requests.length);
+      return res.status(400).json({ error: "You must send 1-100 requests." });
+    }
+    console.log("🔢 Number of invoice requests to process:", requests.length);
+
     const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) {
+      console.error("❌ User not found:", req.user.userId);
+      return res.status(404).json({ error: "User not found" });
+    }
+    console.log("👤 User found:", user._id, "plan:", user.plan);
 
     // Reset preview & usage counts monthly
     const now = new Date();
     if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth()) {
+      console.log("♻️ Resetting user preview count for new month");
       user.previewCount = 0;
       user.previewLastReset = now;
     }
     if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth()) {
+      console.log("♻️ Resetting user usage count for new month");
       user.usageCount = 0;
       user.usageLastReset = now;
     }
 
+    console.log("🚀 Launching Puppeteer browser...");
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
     for (const [index, { data, isPreview }] of requests.entries()) {
-      if (!data || typeof data !== "object") continue;
+      console.log(`📝 Processing request #${index + 1}`);
+      if (!data || typeof data !== "object") {
+        console.warn(`⚠️ Skipping invalid or missing data at request #${index + 1}`);
+        continue;
+      }
       let invoiceData = { ...data };
 
-
       const country = invoiceData.country?.toLowerCase() || "slovenia";
-invoiceData.country = country;
+      invoiceData.country = country;
+      console.log(`🌍 Country set to: ${country}`);
 
-if (country === "germany" && Array.isArray(invoiceData.items)) {
-  invoiceData.items = invoiceData.items.map((item) => {
-    const totalNum = parseFloat(item.total?.replace(/[^\d.]/g, "") || "0");
-    const taxRate = 0.19; // 19% VAT Germany
-    const net = totalNum / (1 + taxRate);
-    const taxAmount = totalNum - net;
-    return {
-      ...item,
-      tax: taxAmount.toFixed(2),
-      net: net.toFixed(2),
-    };
-  });
-}
-
+      if (country === "germany" && Array.isArray(invoiceData.items)) {
+        console.log("🇩🇪 Calculating German VAT for items");
+        invoiceData.items = invoiceData.items.map((item, i) => {
+          const totalNum = parseFloat(item.total?.replace(/[^\d.]/g, "") || "0");
+          const taxRate = 0.19; // 19% VAT Germany
+          const net = totalNum / (1 + taxRate);
+          const taxAmount = totalNum - net;
+          console.log(`  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(2)}, tax=${taxAmount.toFixed(2)}`);
+          return {
+            ...item,
+            tax: taxAmount.toFixed(2),
+            net: net.toFixed(2),
+          };
+        });
+      }
 
       if (typeof invoiceData.items === "string") {
         try {
           invoiceData.items = JSON.parse(invoiceData.items);
-        } catch {
+          console.log("🛠️ Parsed invoice items JSON string");
+        } catch (e) {
+          console.warn("⚠️ Failed to parse items JSON, setting empty array");
           invoiceData.items = [];
         }
       }
       if (!Array.isArray(invoiceData.items)) {
+        console.warn("⚠️ Items is not an array, setting empty array");
         invoiceData.items = [];
       }
+      console.log(`📦 Number of items to invoice: ${invoiceData.items.length}`);
 
       const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
       invoiceData.isBasicUser = !user.isPremium;
@@ -427,30 +450,49 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.customLogoUrl = null;
         invoiceData.showChart = false;
       }
+      console.log(`🆔 Using orderId: ${safeOrderId}`);
 
       if (isPreview && user.planType === "free") {
-        if (user.previewCount < 3) user.previewCount++;
-        else user.usageCount++;
-      } else {
-        if (["premium", "pro"].includes(user.plan)) user.usageCount++;
+        if (user.previewCount < 3) {
+          user.previewCount++;
+          console.log(`👀 Incremented preview count to ${user.previewCount}`);
+        } else {
+          user.usageCount++;
+          console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+        }
+      } else if (["premium", "pro"].includes(user.plan)) {
+        user.usageCount++;
+        console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
       }
 
+      console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+      if (!html || typeof html !== "string") {
+        console.error("❌ generateInvoiceHTML returned invalid content");
+      } else {
+        console.log(`✅ Generated HTML length: ${html.length}`);
+      }
+
       const page = await browser.newPage();
+      console.log("📄 Setting page content...");
       await page.setContent(html, { waitUntil: "networkidle0" });
 
+      console.log("📄 Generating PDF buffer from page...");
       const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
       });
+      console.log(`📄 PDF buffer generated, size: ${pdfBuffer.length} bytes`);
       await page.close();
 
       let finalPdfBytes = pdfBuffer;
 
       if (user.plan === "pro") {
+        console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
         const zugferdXml = generateZugferdXML(invoiceData);
         const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+
         const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
 
         const sanitizeMetadata = (str) =>
@@ -507,8 +549,11 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
         catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
         const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+        console.log("🔍 Reading XMP file:", xmpPath);
         const rawXmp = fs.readFileSync(xmpPath, "utf-8");
         const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
+        console.log("✅ XMP file sanitized");
+
         const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
           Type: PDFName.of("Metadata"),
           Subtype: PDFName.of("XML"),
@@ -534,10 +579,12 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
         catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
 
         finalPdfBytes = await pdfDoc.save();
+        console.log(`✅ PDF with embedded XML and metadata generated, size: ${finalPdfBytes.length} bytes`);
       }
 
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
+      console.log(`💾 Writing PDF input file: ${tempInput}`);
       fs.writeFileSync(tempInput, finalPdfBytes);
 
       const gsArgs = [
@@ -556,38 +603,59 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
         tempInput,
       ];
 
+      console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
       await new Promise((resolve, reject) => {
         execFile("gs", gsArgs, (err) => {
-          if (err) return reject(err);
-          resolve();
+          if (err) {
+            console.error("❌ Ghostscript failed:", err);
+            reject(err);
+          } else {
+            console.log("✅ Ghostscript finished successfully");
+            resolve();
+          }
         });
       });
 
-      results.push({ filePath: tempOutput, filename: `${safeOrderId}.pdf` });
+      console.log(`📁 Reading final PDF output from: ${tempOutput}`);
+      const finalPdf = fs.readFileSync(tempOutput);
+
+      results.push({ index, pdf: finalPdf });
+    }
+
+    if (results.length === 1) {
+      console.log("📤 Sending single PDF response");
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename=invoice.pdf`,
+        "Content-Length": results[0].pdf.length,
+      });
+      res.send(results[0].pdf);
+    } else {
+      console.log("🗜️ Zipping multiple PDFs for response");
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      res.set({
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename=invoices.zip`,
+      });
+      archive.pipe(res);
+      results.forEach(({ index, pdf }) => {
+        archive.append(pdf, { name: `invoice-${index + 1}.pdf` });
+      });
+      await archive.finalize();
     }
 
     await user.save();
-    await browser.close();
-
-    const zipPath = path.join(tmpDir, "batch-invoices.zip");
-    const output = fs.createWriteStream(zipPath);
-    const archive = archiver("zip", { zlib: { level: 9 } });
-
-    archive.pipe(output);
-    for (const r of results) {
-      archive.file(r.filePath, { name: r.filename });
+    console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
+  } catch (e) {
+    console.error("❌ Exception in /generate-invoice:", e);
+    res.status(500).json({ error: "Internal Server Error", details: e.message });
+  } finally {
+    if (browser) {
+      console.log("🧹 Closing Puppeteer browser...");
+      await browser.close();
     }
-    await archive.finalize();
-
-    output.on("close", () => {
-      res.setHeader("Content-Type", "application/zip");
-      res.setHeader("Content-Disposition", `attachment; filename="invoices-${Date.now()}.zip"`);
-      res.sendFile(zipPath);
-    });
-  } catch (err) {
-    if (browser) await browser.close();
-    console.error("❌ Batch PDF generation error:", err);
-    res.status(500).json({ error: "Internal server error during batch processing." });
+    console.log("🧹 Cleaning up temporary directory...");
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 
