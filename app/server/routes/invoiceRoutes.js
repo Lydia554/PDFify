@@ -328,6 +328,33 @@ function generateInvoiceHTML(data) {
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
+
+
+        function incrementUsage(user, isPreview, forcedPlan) {
+  // Use forcedPlan if provided, else fallback to user's plan, normalized to lowercase
+  const plan = (forcedPlan || user.plan || "").toLowerCase();
+
+  if (isPreview && plan === "free") {
+    if (user.previewCount < 3) {
+      user.previewCount++;
+      console.log(`👀 Incremented preview count to ${user.previewCount}`);
+    } else {
+      user.usageCount++;
+      console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+    }
+  } else if (["premium", "pro"].includes(plan)) {
+    user.usageCount++;
+    console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${plan}`);
+  } else if (!isPreview) {
+    // For free users generating actual invoices (not previews), increment usageCount
+    user.usageCount++;
+    console.log(`💡 Incremented usage count to ${user.usageCount} for plan ${plan} (non-preview)`);
+  } else {
+    // Optional fallback
+    console.warn(`⚠️ Unknown plan or state, no usage increment.`);
+  }
+}
+
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
   console.log("🔍 Using ICC profile path:", iccPath);
 
@@ -459,30 +486,6 @@ incrementUsage(user, isPreview, "pro");
       console.log(`🆔 Using orderId: ${safeOrderId}`);
 
       
-      function incrementUsage(user, isPreview, forcedPlan) {
-  // Use forcedPlan if provided, else fallback to user's plan, normalized to lowercase
-  const plan = (forcedPlan || user.plan || "").toLowerCase();
-
-  if (isPreview && plan === "free") {
-    if (user.previewCount < 3) {
-      user.previewCount++;
-      console.log(`👀 Incremented preview count to ${user.previewCount}`);
-    } else {
-      user.usageCount++;
-      console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-    }
-  } else if (["premium", "pro"].includes(plan)) {
-    user.usageCount++;
-    console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${plan}`);
-  } else if (!isPreview) {
-    // For free users generating actual invoices (not previews), increment usageCount
-    user.usageCount++;
-    console.log(`💡 Incremented usage count to ${user.usageCount} for plan ${plan} (non-preview)`);
-  } else {
-    // Optional fallback
-    console.warn(`⚠️ Unknown plan or state, no usage increment.`);
-  }
-}
 
       console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
