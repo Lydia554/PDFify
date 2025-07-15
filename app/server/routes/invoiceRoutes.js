@@ -355,9 +355,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   fs.mkdirSync(tmpDir);
 
   try {
-    const requests = req.body.requests;
-    if (!Array.isArray(requests) || requests.length === 0 || requests.length > 100) {
-      return res.status(400).json({ error: "You must send 1-100 requests." });
+    let requests = req.body.requests;
+if (!Array.isArray(requests)) {
+  // Accept legacy or single object format
+  if (req.body.data) {
+    requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
+  } else {
+    return res.status(400).json({ error: "You must send 1-100 requests." });
+  }
+}
+if (requests.length === 0 || requests.length > 100) {
+  return res.status(400).json({ error: "You must send 1-100 requests." });
+
     }
 
     const user = await User.findById(req.user.userId);
