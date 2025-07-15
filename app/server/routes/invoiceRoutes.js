@@ -1,4 +1,3 @@
-
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
@@ -10,7 +9,6 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
-
 
 
 
