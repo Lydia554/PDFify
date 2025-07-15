@@ -465,6 +465,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
       }
 
+      // === FORCE USER TO PRO FOR TESTING ===
+user.plan = "pro";
+user.isPremium = true; // if you use this flag for premium checks elsewhere, keep consistent
+console.log("🚨 Forcing user plan to PRO for testing");
     
       // =====================================
       
