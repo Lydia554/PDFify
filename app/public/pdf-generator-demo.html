@@ -399,7 +399,7 @@ if (endpoint === "generate-recipe") {
           "quantity": 1,
           "price": "10.00€",
           "total": "10.00",
-          "tax": "19.00",
+          "tax": "19.00%",
           "position": "1"
         },
         {
@@ -407,7 +407,7 @@ if (endpoint === "generate-recipe") {
           "quantity": 1,
           "price": "5.00€",
           "total": "5.00",
-          "tax": "7.00",
+          "tax": "7.00%",
           "position": "2"
         }
       ],
@@ -866,7 +866,10 @@ const endpoint = document.getElementById('endpoint');
             'Content-Type': 'application/json',
             'x-api-key': apiKey
           },
-          body: JSON.stringify(row)
+  body: JSON.stringify({
+  requests: [{ data: row, isPreview: true }]
+})
+
         });
 
         if (!res.ok) throw new Error(await res.text());
