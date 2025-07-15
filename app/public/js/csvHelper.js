@@ -1,5 +1,3 @@
-
-  
 function parseCSV(text) {
   const lines = text.trim().split("\n");
   const headers = lines.shift().split(",");
@@ -82,39 +80,43 @@ document.getElementById('csvGenerateBtn').addEventListener('click', async () => 
   }
 
   const groupedInvoices = groupRowsByOrderId(data);
-  const total = groupedInvoices.length;
-  let completed = 0;
-  const results = [];
+  const requests = groupedInvoices.map(rows => ({
+    data: rowsToInvoiceJson(rows),
+    isPreview: true
+  }));
 
-  for (const invoiceRows of groupedInvoices) {
-    const invoiceJson = rowsToInvoiceJson(invoiceRows);
+  try {
+    const res = await fetch('/api/generate-invoice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({ requests })
+    });
 
-    try {
-      const res = await fetch('/api/generate-invoice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          requests: [{ data: invoiceJson, isPreview: true }]
-        })
-      });
+    if (!res.ok) throw new Error(await res.text());
 
-      if (!res.ok) throw new Error(await res.text());
+    const contentType = res.headers.get('Content-Type') || '';
+    if (contentType.includes('zip')) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'invoices.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
 
-      results.push(`<a href="${url}" download="invoice-${invoiceJson.orderId}.pdf">📄 Invoice #${invoiceJson.orderId}</a>`);
-    } catch (err) {
-      results.push(`<span class="text-red-400">❌ Error for invoice #${invoiceJson.orderId}: ${err.message}</span>`);
+      progressBar.style.width = '100%';
+      progressCount.textContent = requests.length;
+      document.getElementById('csvResult').innerHTML = `<span class="text-green-600">✅ ZIP with ${requests.length} invoices downloaded.</span>`;
+    } else {
+      const text = await res.text();
+      document.getElementById('csvResult').textContent = `Unexpected response: ${text}`;
     }
-
-    completed++;
-    progressBar.style.width = `${(completed / total) * 100}%`;
-    progressCount.textContent = completed;
+  } catch (err) {
+    document.getElementById('csvResult').innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
   }
-
-  document.getElementById('csvResult').innerHTML = results.join('<br>');
 });
-
