@@ -22,7 +22,6 @@ const log = (message, data = null) => {
   }
 };
 
-
 function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
@@ -31,15 +30,12 @@ function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdfify.pro/images/Logo.png";
 
-
   const userClass = data.isBasicUser ? "basic" : "premium";
 
-const watermarkHTML =
-  data.isBasicUser && data.isPreview
-    ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
-    : "";
-
-
+  const watermarkHTML =
+    data.isBasicUser && data.isPreview
+      ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
+      : "";
 
   const chartConfig = {
     type: "pie",
@@ -48,195 +44,115 @@ const watermarkHTML =
       datasets: [
         {
           data: [
-        Number(data.subtotal?.replace(/[^\d.-]/g, '') || 0),
-Number(data.tax?.replace(/[^\d.-]/g, '') || 0),
-
+            Number(data.subtotal?.replace(/[^\d.-]/g, "")) || 0,
+            Number(data.tax?.replace(/[^\d.-]/g, "")) || 0,
           ],
         },
       ],
     },
   };
 
-
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
+
+  const itemRows = items.length
+    ? items
+        .map(
+          (item) => `
+            <tr>
+              <td>${item.name || ""}</td>
+              <td>${item.quantity || ""}</td>
+              <td>${item.price || ""}</td>
+              <td>${item.net || "-"}</td>
+              <td>${item.tax || "-"}</td>
+              <td>${item.total || ""}</td>
+            </tr>`
+        )
+        .join("")
+    : `<tr><td colspan="6">No items available</td></tr>`;
 
   return `
 <html>
   <head>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
-
-  body {
-    font-family: 'Open Sans', sans-serif;
-    color: #333;
-    background: #f4f7fb;
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    position: relative;
-  }
-
-  .container {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 30px 40px 160px;
-    background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-    box-shadow: 0 8px 25px #2a3d66;
-    border-radius: 16px;
-    border: 1px solid #e0e4ec;
-    position: relative;
-    z-index: 1;
-  }
-
-  .premium .table,
-  .basic .table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-  }
-
-  .premium .table th,
-  .premium .table td {
-    padding: 14px;
-    border: 1px solid #dee2ef;
-    text-align: left;
-  }
-
-  .premium .table th {
-    background-color: #dbe7ff;
-    color: #2a3d66;
-    font-weight: 600;
-  }
-
-  .premium .table td {
-    color: #444;
-    background-color: #fdfdff;
-  }
-
-  .premium .table tr:nth-child(even) td {
-    background-color: #f6f9fe;
-  }
-
-  .premium .table tfoot td {
-    background-color: #dbe7ff;
-    font-weight: bold;
-    color: #2a3d66;
-  }
-
-  .premium .total p {
-    font-weight: bold;
-    color: #2a3d66;
-  }
-
-  .basic .table th,
-  .basic .table td {
-    padding: 14px;
-    border: 1px solid #ccc;
-    text-align: left;
-  }
-
-  .basic .table th {
-    background-color: #fff;
-    color: #333;
-    font-weight: 600;
-  }
-
-  .basic .table td {
-    color: #444;
-    background-color: #fff;
-  }
-
-  .basic .table tr:nth-child(even) td {
-    background-color: #f9f9f9;
-  }
-
-  .basic .table tfoot td {
-    background-color: #fff;
-    font-weight: bold;
-  }
-
-  .basic .total p {
-    font-weight: normal;
-    color: #333;
-  }
-
-  .watermark {
-    position: fixed;
-    top: 40%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(-45deg);
-    font-size: 60px;
-    color: #ffcccc;
-    font-weight: 900;
-    pointer-events: none;
-    user-select: none;
-    z-index: 9999;
-    white-space: nowrap;
-  }
-
-  .footer {
-    position: static;
-    max-width: 800px;
-    margin: 40px auto 10px auto;
-    padding: 10px 20px;
-    background-color: #f0f2f7;
-    color: #555;
-    border-top: 2px solid #cbd2e1;
-    text-align: center;
-    line-height: 1.6;
-    font-size: 11px;
-    border-radius: 0 0 16px 16px;
-    box-sizing: border-box;
-  }
-
-  .footer p {
-    margin: 6px 0;
-  }
-
-  .footer a {
-    color: #4a69bd;
-    text-decoration: none;
-    word-break: break-word;
-  }
-
-  .footer a:hover {
-    text-decoration: underline;
-  }
-
-  /* ========================== */
-  /* PDF/A-3b compliant override */
-  /* ========================== */
- .pdfa-clean .container {
-    background-color: #ffffff !important;
-    box-shadow: none !important;
-    border: 1px solid #ccc !important;
-  }
-  .pdfa-clean .premium .table th {
-    background-color: #e6e6e6 !important;
-    color: #000 !important;
-  }
-  .pdfa-clean .premium .table td {
-    background-color: #ffffff !important;
-    color: #000 !important;
-  }
-  .pdfa-clean .premium .table tr:nth-child(even) td {
-    background-color: #f2f2f2 !important;
-  }
-  .pdfa-clean .footer {
-    background-color: #eaeaea !important;
-    color: #000 !important;
-    border-top: 1px solid #bbb !important;
-  }
-  .pdfa-clean .watermark {
-    display: none !important;
-  }
-</style>
-
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        padding: 0;
+        background-color: #fff;
+        color: #333;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+      h1, h2 {
+        text-align: center;
+        color: #222;
+      }
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+      .invoice-header .left, .invoice-header .right {
+        width: 48%;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+      th, td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      .total {
+        text-align: right;
+        font-size: 1.1em;
+        margin-top: 20px;
+      }
+      .footer {
+        text-align: center;
+        font-size: 0.9em;
+        margin-top: 40px;
+        color: #666;
+      }
+      .footer a {
+        color: #666;
+        text-decoration: none;
+      }
+      .chart-container {
+        margin-top: 30px;
+        text-align: center;
+      }
+      .watermark {
+        position: fixed;
+        top: 40%;
+        left: 10%;
+        width: 80%;
+        text-align: center;
+        font-size: 28px;
+        font-weight: bold;
+        color: rgba(200, 0, 0, 0.2);
+        transform: rotate(-15deg);
+        z-index: 1000;
+        pointer-events: none;
+      }
+      body.basic {
+        background-color: #fdfdfd;
+      }
+      body.premium {
+        background-color: #fefefe;
+      }
+    </style>
   </head>
   <body class="${userClass}">
     <div class="container">
-      <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
+      <img src="${logoUrl}" alt="Logo" style="height: 60px; display:block; margin: auto;" />
 
       <h1>Invoice for ${data.customerName}</h1>
 
@@ -251,64 +167,46 @@ Number(data.tax?.replace(/[^\d.-]/g, '') || 0),
         </div>
       </div>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Item</th>
-      <th>Quantity</th>
-      <th>Price</th>
-      <th>Net</th>
-      <th>Tax</th>
-      <th>Total</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${
-      items.length > 0
-        ? items
-            .map(
-              (item) => `
-            <tr>
-              <td>${item.name || ""}</td>
-              <td>${item.quantity || ""}</td>
-              <td>${item.price || ""}</td>
-              <td>${item.net || "-"}</td>
-              <td>${item.tax || "-"}</td>
-              <td>${item.total || ""}</td>
-            </tr>`
-            )
-            .join("")
-        : `<tr><td colspan="6">No items available</td></tr>`
-    }
-  </tbody>
-  <tfoot>
-    <tr>
-      <td colspan="5">Subtotal</td>
-      <td>${data.subtotal}</td>
-    </tr>
-    <tr>
-      <td colspan="5">Tax (${data.taxRate || '21%'})</td>
-      <td>${data.tax}</td>
-    </tr>
-    <tr>
-      <td colspan="5">Total</td>
-      <td>${data.total}</td>
-    </tr>
-  </tfoot>
-</table>
-
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Net</th>
+            <th>Tax</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemRows}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5">Subtotal</td>
+            <td>${data.subtotal}</td>
+          </tr>
+          <tr>
+            <td colspan="5">Tax (${data.taxRate || "21%"})</td>
+            <td>${data.tax}</td>
+          </tr>
+          <tr>
+            <td colspan="5"><strong>Total</strong></td>
+            <td><strong>${data.total}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
 
       <div class="total">
-        <p>Total Amount Due: ${data.total}</p>
+        <p><strong>Total Amount Due: ${data.total}</strong></p>
       </div>
 
       ${
         data.showChart
-          ? `
-        <div class="chart-container">
-          <h2>Breakdown</h2>
-          <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
-        </div>`
+          ? `<div class="chart-container">
+              <h2>Breakdown</h2>
+              <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
+            </div>`
           : ""
       }
     </div>
@@ -329,165 +227,32 @@ Number(data.tax?.replace(/[^\d.-]/g, '') || 0),
 `;
 }
 
-
-
-router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
-  console.log("🌐 /generate-invoice router hit");
-
-  const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
-  console.log("🔍 Using ICC profile path:", iccPath);
-
-  // Ghostscript check
-  try {
-    const gsVersion = execSync("gs --version").toString().trim();
-    console.log("📦 Ghostscript version:", gsVersion);
-  } catch (err) {
-    console.error("❌ Ghostscript not found:", err.message);
-    return res.status(500).json({ error: "Ghostscript not installed." });
-  }
-
-  if (!fs.existsSync(iccPath)) {
-    console.error("❌ ICC profile not found at path:", iccPath);
-    return res.status(500).json({ error: "ICC profile missing." });
-  } else {
-    console.log("🖨️ ICC profile found:", iccPath);
-  }
-
+router.post("/generate-invoice", upload.none(), async (req, res) => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "invoice-"));
   let browser;
-  const tmpDir = "/tmp/pdfify-batch-" + Date.now();
-  console.log("📁 Creating temporary directory:", tmpDir);
-  fs.mkdirSync(tmpDir);
 
   try {
-    let requests = req.body.requests;
-    console.log("📩 Raw requests received:", Array.isArray(requests) ? requests.length : "not array");
+    const { payload } = req.body;
+    const { data, token } = JSON.parse(payload);
+    const invoices = Array.isArray(data) ? data : [data];
 
-    if (!Array.isArray(requests)) {
-      if (req.body.data) {
-        requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
-        console.log("📩 Converted single request to array");
-      } else {
-        console.error("⚠️ No valid requests or data sent in request body");
-        return res.status(400).json({ error: "You must send 1-100 requests." });
-      }
-    }
-
-    if (requests.length === 0 || requests.length > 100) {
-      console.error("⚠️ Invalid requests count:", requests.length);
-      return res.status(400).json({ error: "You must send 1-100 requests." });
-    }
-    console.log("🔢 Number of invoice requests to process:", requests.length);
-
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      console.error("❌ User not found:", req.user.userId);
-      return res.status(404).json({ error: "User not found" });
-    }
-    console.log("👤 User found:", user._id, "plan:", user.plan);
-
-    // Reset preview & usage counts monthly
-    const now = new Date();
-    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth()) {
-      console.log("♻️ Resetting user preview count for new month");
-      user.previewCount = 0;
-      user.previewLastReset = now;
-    }
-    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth()) {
-      console.log("♻️ Resetting user usage count for new month");
-      user.usageCount = 0;
-      user.usageLastReset = now;
-    }
-
-    console.log("🚀 Launching Puppeteer browser...");
-    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const user = await User.findOne({ token });
+    if (!user) return res.status(401).json({ error: "Unauthorized" });
 
     const results = [];
-    for (const [index, { data, isPreview }] of requests.entries()) {
-      console.log(`📝 Processing request #${index + 1}`);
-      if (!data || typeof data !== "object") {
-        console.warn(`⚠️ Skipping invalid or missing data at request #${index + 1}`);
-        continue;
-      }
-      let invoiceData = { ...data };
+    browser = await puppeteer.launch({ headless: "new" });
 
-      const country = invoiceData.country?.toLowerCase() || "slovenia";
-      invoiceData.country = country;
-      console.log(`🌍 Country set to: ${country}`);
-
-      if (country === "germany" && Array.isArray(invoiceData.items)) {
-        console.log("🇩🇪 Calculating German VAT for items");
-        invoiceData.items = invoiceData.items.map((item, i) => {
-          const totalNum = parseFloat(item.total?.replace(/[^\d.]/g, "") || "0");
-          const taxRate = 0.19; // 19% VAT Germany
-          const net = totalNum / (1 + taxRate);
-          const taxAmount = totalNum - net;
-          console.log(`  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(2)}, tax=${taxAmount.toFixed(2)}`);
-          return {
-            ...item,
-            tax: taxAmount.toFixed(2),
-            net: net.toFixed(2),
-          };
-        });
-      }
-
-      if (typeof invoiceData.items === "string") {
-        try {
-          invoiceData.items = JSON.parse(invoiceData.items);
-          console.log("🛠️ Parsed invoice items JSON string");
-        } catch (e) {
-          console.warn("⚠️ Failed to parse items JSON, setting empty array");
-          invoiceData.items = [];
-        }
-      }
-      if (!Array.isArray(invoiceData.items)) {
-        console.warn("⚠️ Items is not an array, setting empty array");
-        invoiceData.items = [];
-      }
-      console.log(`📦 Number of items to invoice: ${invoiceData.items.length}`);
-
-      const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
-      invoiceData.isBasicUser = !user.isPremium;
-      if (!user.isPremium) {
-        invoiceData.customLogoUrl = null;
-        invoiceData.showChart = false;
-      }
-      console.log(`🆔 Using orderId: ${safeOrderId}`);
-
-      if (isPreview && user.planType === "free") {
-        if (user.previewCount < 3) {
-          user.previewCount++;
-          console.log(`👀 Incremented preview count to ${user.previewCount}`);
-        } else {
-          user.usageCount++;
-          console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-        }
-      } else if (["premium", "pro"].includes(user.plan)) {
-        user.usageCount++;
-        console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
-      }
-
-      console.log("🧾 Generating HTML for invoice...");
-      const html = generateInvoiceHTML({ ...invoiceData, isPreview });
-      if (!html || typeof html !== "string") {
-        console.error("❌ generateInvoiceHTML returned invalid content");
-      } else {
-        console.log(`✅ Generated HTML length: ${html.length}`);
-      }
-
+    for (let index = 0; index < invoices.length; index++) {
+      const invoiceData = invoices[index];
+      const safeOrderId = invoiceData.orderId?.replace(/[^a-zA-Z0-9_-]/g, "") || `INV-${Date.now()}`;
+      const htmlContent = await generateHTML(invoiceData);
       const page = await browser.newPage();
-      console.log("📄 Setting page content...");
-      await page.setContent(html, { waitUntil: "networkidle0" });
-
-      console.log("📄 Generating PDF buffer from page...");
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      });
-      console.log(`📄 PDF buffer generated, size: ${pdfBuffer.length} bytes`);
+      await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+      const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
       await page.close();
 
       let finalPdfBytes = pdfBuffer;
+      const now = new Date();
 
       if (user.plan === "pro") {
         console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
