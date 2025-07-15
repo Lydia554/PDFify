@@ -3,6 +3,7 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const router = express.Router();
 const fs = require("fs");
+const archiver = require("archiver");
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
