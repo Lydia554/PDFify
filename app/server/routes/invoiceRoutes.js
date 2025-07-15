@@ -374,12 +374,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     const user = await User.findById(req.user.userId);
 
-user.plan = "pro"; // ✅ Force pro plan regardless of DB
-user.isPremium = true;
-console.log("🚨 Forcing user plan to 'pro'");
-
-
-
+    
     if (!user) {
       console.error("❌ User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
@@ -458,18 +453,18 @@ console.log("🚨 Forcing user plan to 'pro'");
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
       // === Usage & Preview Counting Logic ===
-     // if (isPreview && user.planType === "free") {
-       // if (user.previewCount < 3) {
-        //  user.previewCount++;
-          // console.log(`👀 Incremented preview count to ${user.previewCount}`);
-       // } else {
-         // user.usageCount++;
-       //   console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-      //  }
-    //  } else if (["premium", "pro"].includes(user.plan)) {
-      //  user.usageCount++;
-     //   console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
-    //  }
+      if (isPreview && user.planType === "free") {
+        if (user.previewCount < 3) {
+          user.previewCount++;
+          console.log(`👀 Incremented preview count to ${user.previewCount}`);
+        } else {
+          user.usageCount++;
+          console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+        }
+      } else if (["premium", "pro"].includes(user.plan)) {
+        user.usageCount++;
+        console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
+      }
       // =====================================
       
       console.log("🧾 Generating HTML for invoice...");
