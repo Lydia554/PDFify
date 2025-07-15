@@ -410,6 +410,23 @@ router.post("/generate-invoice", upload.none(), async (req, res) => {
       await archive.finalize();
     }
 
+
+    // Usage tracking
+if (isPreview) {
+  user.previewCount += 1;
+  console.log(`👁️ Preview generated. Total previews: ${user.previewCount}`);
+} else {
+  user.usageCount += results.length;
+  console.log(`📈 Final invoices generated: ${results.length}. Total usage: ${user.usageCount}`);
+}
+
+await user.save();
+console.log("💾 User usage data saved:", {
+  usageCount: user.usageCount,
+  previewCount: user.previewCount,
+});
+
+
     await user.save();
     console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
   } catch (e) {
