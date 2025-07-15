@@ -70,6 +70,39 @@
       </select>
     </div>
 
+    <!-- Bulk Generate from CSV -->
+<div id="bulkCsvSection" class="space-y-4 mt-12 p-4 border border-indigo-500 rounded-md bg-gray-800 shadow-md">
+  <h2 class="text-lg font-bold text-indigo-300">📁 Bulk Generate from CSV (Premium & Pro)</h2>
+  <p class="text-sm text-gray-400">Generate multiple PDFs by uploading a properly formatted CSV file.</p>
+  
+  <label for="csvUpload" class="block font-semibold text-gray-200">Upload CSV File:</label>
+  <input type="file" id="csvUpload" accept=".csv" class="block w-full text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md p-2" />
+
+  <div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3">
+    Example CSV:<br/>
+    <code>
+      name,email,amount,date<br/>
+      John Doe,john@example.com,42.50,2025-07-01<br/>
+      Jane Smith,jane@example.com,23.75,2025-07-02
+    </code>
+  </div>
+
+  <button id="csvGenerateBtn"
+          class="w-full py-3 bg-fuchsia-600 text-white rounded-md font-semibold hover:bg-fuchsia-700 transition-transform hover:scale-105 shadow-md">
+    🧾 Generate from CSV
+  </button>
+
+  <div id="csvProgress" class="text-sm text-indigo-200 mt-4 hidden">
+    <div class="mb-1">Progress: <span id="progressCount">0</span>/100</div>
+    <div class="w-full bg-gray-600 rounded-full h-2.5">
+      <div id="progressBar" class="bg-indigo-500 h-2.5 rounded-full transition-all" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <p id="csvResult" class="text-sm text-gray-300 mt-4"></p>
+</div>
+
+
     <div>
       <label for="apiKey" class="block mb-1 font-semibold text-gray-100">Your API Key:</label>
       <input type="text" id="apiKey" placeholder="Paste your API key here" required 
