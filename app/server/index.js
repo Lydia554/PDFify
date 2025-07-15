@@ -27,7 +27,7 @@ const friendlyMode = require("./routes/friendlyMode");
 const foodTrekRoutes = require("./routes/foodTrekRoutes");
 const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
 const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
-const csvRoutes = require('./routes/csvroutes');
+
 
 
 const app = express();
@@ -83,7 +83,6 @@ app.use("/api", recipeRoutes);
 app.use("/api", shopOrderRoutes);
 app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
-app.use('/api', csvRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
