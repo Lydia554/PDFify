@@ -15,12 +15,12 @@ const { execSync, execFile } = require("child_process");
 
 
 
-
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
   }
 };
+
 
 function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
@@ -30,12 +30,15 @@ function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdfify.pro/images/Logo.png";
 
+
   const userClass = data.isBasicUser ? "basic" : "premium";
 
-  const watermarkHTML =
-    data.isBasicUser && data.isPreview
-      ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
-      : "";
+const watermarkHTML =
+  data.isBasicUser && data.isPreview
+    ? <div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>
+    : "";
+
+
 
   const chartConfig = {
     type: "pie",
@@ -44,115 +47,194 @@ function generateInvoiceHTML(data) {
       datasets: [
         {
           data: [
-            Number(data.subtotal?.replace(/[^\d.-]/g, "")) || 0,
-            Number(data.tax?.replace(/[^\d.-]/g, "")) || 0,
+            Number(data.subtotal.replace(/[^\d.-]/g, '')) || 0,
+            Number(data.tax.replace(/[^\d.-]/g, '')) || 0,
           ],
         },
       ],
     },
   };
 
-  const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
-  const itemRows = items.length
-    ? items
-        .map(
-          (item) => `
-            <tr>
-              <td>${item.name || ""}</td>
-              <td>${item.quantity || ""}</td>
-              <td>${item.price || ""}</td>
-              <td>${item.net || "-"}</td>
-              <td>${item.tax || "-"}</td>
-              <td>${item.total || ""}</td>
-            </tr>`
-        )
-        .join("")
-    : `<tr><td colspan="6">No items available</td></tr>`;
+  const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
   return `
 <html>
   <head>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 40px;
-        padding: 0;
-        background-color: #fff;
-        color: #333;
-      }
-      .container {
-        max-width: 800px;
-        margin: 0 auto;
-      }
-      h1, h2 {
-        text-align: center;
-        color: #222;
-      }
-      .invoice-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 20px;
-      }
-      .invoice-header .left, .invoice-header .right {
-        width: 48%;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 20px 0;
-      }
-      th, td {
-        border: 1px solid #ccc;
-        padding: 8px;
-        text-align: left;
-      }
-      th {
-        background-color: #f2f2f2;
-      }
-      .total {
-        text-align: right;
-        font-size: 1.1em;
-        margin-top: 20px;
-      }
-      .footer {
-        text-align: center;
-        font-size: 0.9em;
-        margin-top: 40px;
-        color: #666;
-      }
-      .footer a {
-        color: #666;
-        text-decoration: none;
-      }
-      .chart-container {
-        margin-top: 30px;
-        text-align: center;
-      }
-      .watermark {
-        position: fixed;
-        top: 40%;
-        left: 10%;
-        width: 80%;
-        text-align: center;
-        font-size: 28px;
-        font-weight: bold;
-        color: rgba(200, 0, 0, 0.2);
-        transform: rotate(-15deg);
-        z-index: 1000;
-        pointer-events: none;
-      }
-      body.basic {
-        background-color: #fdfdfd;
-      }
-      body.premium {
-        background-color: #fefefe;
-      }
-    </style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
+
+  body {
+    font-family: 'Open Sans', sans-serif;
+    color: #333;
+    background: #f4f7fb;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 30px 40px 160px;
+    background: linear-gradient(to bottom right, #ffffff, #f8fbff);
+    box-shadow: 0 8px 25px #2a3d66;
+    border-radius: 16px;
+    border: 1px solid #e0e4ec;
+    position: relative;
+    z-index: 1;
+  }
+
+  .premium .table,
+  .basic .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+
+  .premium .table th,
+  .premium .table td {
+    padding: 14px;
+    border: 1px solid #dee2ef;
+    text-align: left;
+  }
+
+  .premium .table th {
+    background-color: #dbe7ff;
+    color: #2a3d66;
+    font-weight: 600;
+  }
+
+  .premium .table td {
+    color: #444;
+    background-color: #fdfdff;
+  }
+
+  .premium .table tr:nth-child(even) td {
+    background-color: #f6f9fe;
+  }
+
+  .premium .table tfoot td {
+    background-color: #dbe7ff;
+    font-weight: bold;
+    color: #2a3d66;
+  }
+
+  .premium .total p {
+    font-weight: bold;
+    color: #2a3d66;
+  }
+
+  .basic .table th,
+  .basic .table td {
+    padding: 14px;
+    border: 1px solid #ccc;
+    text-align: left;
+  }
+
+  .basic .table th {
+    background-color: #fff;
+    color: #333;
+    font-weight: 600;
+  }
+
+  .basic .table td {
+    color: #444;
+    background-color: #fff;
+  }
+
+  .basic .table tr:nth-child(even) td {
+    background-color: #f9f9f9;
+  }
+
+  .basic .table tfoot td {
+    background-color: #fff;
+    font-weight: bold;
+  }
+
+  .basic .total p {
+    font-weight: normal;
+    color: #333;
+  }
+
+  .watermark {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 60px;
+    color: #ffcccc;
+    font-weight: 900;
+    pointer-events: none;
+    user-select: none;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+
+  .footer {
+    position: static;
+    max-width: 800px;
+    margin: 40px auto 10px auto;
+    padding: 10px 20px;
+    background-color: #f0f2f7;
+    color: #555;
+    border-top: 2px solid #cbd2e1;
+    text-align: center;
+    line-height: 1.6;
+    font-size: 11px;
+    border-radius: 0 0 16px 16px;
+    box-sizing: border-box;
+  }
+
+  .footer p {
+    margin: 6px 0;
+  }
+
+  .footer a {
+    color: #4a69bd;
+    text-decoration: none;
+    word-break: break-word;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ========================== */
+  /* PDF/A-3b compliant override */
+  /* ========================== */
+ .pdfa-clean .container {
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  .pdfa-clean .premium .table th {
+    background-color: #e6e6e6 !important;
+    color: #000 !important;
+  }
+  .pdfa-clean .premium .table td {
+    background-color: #ffffff !important;
+    color: #000 !important;
+  }
+  .pdfa-clean .premium .table tr:nth-child(even) td {
+    background-color: #f2f2f2 !important;
+  }
+  .pdfa-clean .footer {
+    background-color: #eaeaea !important;
+    color: #000 !important;
+    border-top: 1px solid #bbb !important;
+  }
+  .pdfa-clean .watermark {
+    display: none !important;
+  }
+</style>
+
   </head>
   <body class="${userClass}">
     <div class="container">
-      <img src="${logoUrl}" alt="Logo" style="height: 60px; display:block; margin: auto;" />
+      <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
 
       <h1>Invoice for ${data.customerName}</h1>
 
@@ -167,46 +249,64 @@ function generateInvoiceHTML(data) {
         </div>
       </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Quantity</th>
-            <th>Price</th>
-            <th>Net</th>
-            <th>Tax</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemRows}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5">Subtotal</td>
-            <td>${data.subtotal}</td>
-          </tr>
-          <tr>
-            <td colspan="5">Tax (${data.taxRate || "21%"})</td>
-            <td>${data.tax}</td>
-          </tr>
-          <tr>
-            <td colspan="5"><strong>Total</strong></td>
-            <td><strong>${data.total}</strong></td>
-          </tr>
-        </tfoot>
-      </table>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Quantity</th>
+      <th>Price</th>
+      <th>Net</th>
+      <th>Tax</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${
+      items.length > 0
+        ? items
+            .map(
+              (item) => 
+            <tr>
+              <td>${item.name || ""}</td>
+              <td>${item.quantity || ""}</td>
+              <td>${item.price || ""}</td>
+              <td>${item.net || "-"}</td>
+              <td>${item.tax || "-"}</td>
+              <td>${item.total || ""}</td>
+            </tr>
+            )
+            .join("")
+        : <tr><td colspan="6">No items available</td></tr>
+    }
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="5">Subtotal</td>
+      <td>${data.subtotal}</td>
+    </tr>
+    <tr>
+      <td colspan="5">Tax (${data.taxRate || '21%'})</td>
+      <td>${data.tax}</td>
+    </tr>
+    <tr>
+      <td colspan="5">Total</td>
+      <td>${data.total}</td>
+    </tr>
+  </tfoot>
+</table>
+
 
       <div class="total">
-        <p><strong>Total Amount Due: ${data.total}</strong></p>
+        <p>Total Amount Due: ${data.total}</p>
       </div>
 
       ${
         data.showChart
-          ? `<div class="chart-container">
-              <h2>Breakdown</h2>
-              <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
-            </div>`
+          ? 
+        <div class="chart-container">
+          <h2>Breakdown</h2>
+          <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
+        </div>
           : ""
       }
     </div>
@@ -229,14 +329,14 @@ function generateInvoiceHTML(data) {
 
 
 
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
-  const iccPath =
-    process.env.ICC_PROFILE_PATH ||
-    path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+  const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
   console.log("🔍 Using ICC profile path:", iccPath);
 
+  // Ghostscript check
   try {
     const gsVersion = execSync("gs --version").toString().trim();
     console.log("📦 Ghostscript version:", gsVersion);
@@ -252,17 +352,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     console.log("🖨️ ICC profile found:", iccPath);
   }
 
+  let browser;
   const tmpDir = "/tmp/pdfify-batch-" + Date.now();
   console.log("📁 Creating temporary directory:", tmpDir);
   fs.mkdirSync(tmpDir);
 
-  let browser;
   try {
     let requests = req.body.requests;
-    console.log(
-      "📩 Raw requests received:",
-      Array.isArray(requests) ? requests.length : "not array"
-    );
+    console.log("📩 Raw requests received:", Array.isArray(requests) ? requests.length : "not array");
 
     if (!Array.isArray(requests)) {
       if (req.body.data) {
@@ -278,7 +375,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       console.error("⚠️ Invalid requests count:", requests.length);
       return res.status(400).json({ error: "You must send 1-100 requests." });
     }
-
     console.log("🔢 Number of invoice requests to process:", requests.length);
 
     const user = await User.findById(req.user.userId);
@@ -286,16 +382,15 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       console.error("❌ User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
-
     console.log("👤 User found:", user._id, "plan:", user.plan);
 
+    // Reset preview & usage counts monthly
     const now = new Date();
     if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth()) {
       console.log("♻️ Resetting user preview count for new month");
       user.previewCount = 0;
       user.previewLastReset = now;
     }
-
     if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth()) {
       console.log("♻️ Resetting user usage count for new month");
       user.usageCount = 0;
@@ -306,15 +401,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
-
     for (const [index, { data, isPreview }] of requests.entries()) {
       console.log(`📝 Processing request #${index + 1}`);
       if (!data || typeof data !== "object") {
         console.warn(`⚠️ Skipping invalid or missing data at request #${index + 1}`);
         continue;
       }
-
       let invoiceData = { ...data };
+
       const country = invoiceData.country?.toLowerCase() || "slovenia";
       invoiceData.country = country;
       console.log(`🌍 Country set to: ${country}`);
@@ -323,7 +417,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         console.log("🇩🇪 Calculating German VAT for items");
         invoiceData.items = invoiceData.items.map((item, i) => {
           const totalNum = parseFloat(item.total?.replace(/[^\d.]/g, "") || "0");
-          const taxRate = 0.19;
+          const taxRate = 0.19; // 19% VAT Germany
           const net = totalNum / (1 + taxRate);
           const taxAmount = totalNum - net;
           console.log(`  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(2)}, tax=${taxAmount.toFixed(2)}`);
@@ -344,20 +438,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           invoiceData.items = [];
         }
       }
-
       if (!Array.isArray(invoiceData.items)) {
         console.warn("⚠️ Items is not an array, setting empty array");
         invoiceData.items = [];
       }
-
       console.log(`📦 Number of items to invoice: ${invoiceData.items.length}`);
+
       const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
       invoiceData.isBasicUser = !user.isPremium;
       if (!user.isPremium) {
         invoiceData.customLogoUrl = null;
         invoiceData.showChart = false;
       }
-
       console.log(`🆔 Using orderId: ${safeOrderId}`);
 
       if (isPreview && user.planType === "free") {
@@ -375,10 +467,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
-
       if (!html || typeof html !== "string") {
         console.error("❌ generateInvoiceHTML returned invalid content");
-        continue;
       } else {
         console.log(`✅ Generated HTML length: ${html.length}`);
       }
@@ -402,6 +492,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
         const zugferdXml = generateZugferdXML(invoiceData);
         const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+
         const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
 
         const sanitizeMetadata = (str) =>
@@ -422,7 +513,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         });
         const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
         const fileName = "zugferd-invoice.xml";
-
         const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
         const filespecDict = pdfDoc.context.obj({
           Type: PDFName.of("Filespec"),
@@ -455,6 +545,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
         embeddedFilesArray.push(PDFHexString.of(fileName));
         embeddedFilesArray.push(filespecRef);
+
         catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
         const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
@@ -485,25 +576,85 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           Info: PDFHexString.of("sRGB IEC61966-2.1"),
           DestOutputProfile: iccRef,
         });
-        catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentDict]));
+        catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
 
-        finalPdfBytes = await pdfDoc.save({ useObjectStreams: false });
+        finalPdfBytes = await pdfDoc.save();
+        console.log(`✅ PDF with embedded XML and metadata generated, size: ${finalPdfBytes.length} bytes`);
       }
 
-      const filePath = path.join(tmpDir, `${safeOrderId}.pdf`);
-      fs.writeFileSync(filePath, finalPdfBytes);
-      results.push({ orderId: safeOrderId, path: filePath });
+      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
+      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
+      console.log(`💾 Writing PDF input file: ${tempInput}`);
+      fs.writeFileSync(tempInput, finalPdfBytes);
+
+      const gsArgs = [
+        "-dPDFA=3",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-sDEVICE=pdfwrite",
+        "-dNOOUTERSAVE",
+        "-sProcessColorModel=DeviceRGB",
+        "-sColorConversionStrategy=RGB",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dPreserveDocInfo=false",
+        "-dPDFACompatibilityPolicy=1",
+        `-sOutputFile=${tempOutput}`,
+        tempInput,
+      ];
+
+      console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
+      await new Promise((resolve, reject) => {
+        execFile("gs", gsArgs, (err) => {
+          if (err) {
+            console.error("❌ Ghostscript failed:", err);
+            reject(err);
+          } else {
+            console.log("✅ Ghostscript finished successfully");
+            resolve();
+          }
+        });
+      });
+
+      console.log(`📁 Reading final PDF output from: ${tempOutput}`);
+      const finalPdf = fs.readFileSync(tempOutput);
+
+      results.push({ index, pdf: finalPdf });
+    }
+
+    if (results.length === 1) {
+      console.log("📤 Sending single PDF response");
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename=invoice.pdf`,
+        "Content-Length": results[0].pdf.length,
+      });
+      res.send(results[0].pdf);
+    } else {
+      console.log("🗜️ Zipping multiple PDFs for response");
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      res.set({
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename=invoices.zip`,
+      });
+      archive.pipe(res);
+      results.forEach(({ index, pdf }) => {
+        archive.append(pdf, { name: `invoice-${index + 1}.pdf` });
+      });
+      await archive.finalize();
     }
 
     await user.save();
-    res.status(200).json({ success: true, results });
-
-  } catch (err) {
-    console.error("❌ Error in /generate-invoice:", err);
-    res.status(500).json({ error: "Internal server error." });
+    console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
+  } catch (e) {
+    console.error("❌ Exception in /generate-invoice:", e);
+    res.status(500).json({ error: "Internal Server Error", details: e.message });
   } finally {
-    if (browser) await browser.close();
+    if (browser) {
+      console.log("🧹 Closing Puppeteer browser...");
+      await browser.close();
+    }
+    console.log("🧹 Cleaning up temporary directory...");
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
-
-module.exports = router;
