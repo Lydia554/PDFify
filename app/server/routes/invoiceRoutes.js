@@ -457,7 +457,22 @@ console.log("🚨 Forcing user plan to 'pro'");
         invoiceData.showChart = false;
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
-     
+      // === Usage & Preview Counting Logic ===
+      if (isPreview && user.planType === "free") {
+        if (user.previewCount < 3) {
+          user.previewCount++;
+          console.log(`👀 Incremented preview count to ${user.previewCount}`);
+        } else {
+          user.usageCount++;
+          console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+        }
+      } else if (["premium", "pro"].includes(user.plan)) {
+        user.usageCount++;
+        console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
+      }
+
+    
+      // =====================================
       
       console.log("🧾 Generating HTML for invoice...");
       const html = generateInvoiceHTML({ ...invoiceData, isPreview });
@@ -638,24 +653,7 @@ console.log("🚨 Forcing user plan to 'pro'");
       await archive.finalize();
     }
 
-   // ✅ Moved usage tracking here — only after PDF generated
-if (isPreview && user.planType === "free") {
-  if (user.previewCount < 3) {
-    user.previewCount++;
-    console.log(`👀 Incremented preview count to ${user.previewCount}`);
-  } else {
-    user.usageCount++;
-    console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-  }
-} else if (["premium", "pro"].includes(user.plan)) {
-  user.usageCount++;
-  console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
-}
-
-await user.save();
-console.log("💾 User usage data saved after PDF generation");
-
-
+    await user.save();
     console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
   } catch (e) {
     console.error("❌ Exception in /generate-invoice:", e);
