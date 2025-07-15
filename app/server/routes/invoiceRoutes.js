@@ -323,20 +323,6 @@ function generateInvoiceHTML(data) {
 `;
 }
 
-const express = require("express");
-const router = express.Router();
-const path = require("path");
-const fs = require("fs");
-const puppeteer = require("puppeteer");
-const { execSync } = require("child_process");
-const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
-
-const User = require("../models/User"); // Your User model
-const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
-
-const generateInvoiceHTML = require("../utils/generateInvoiceHTML");
-const generateZugferdXML = require("../utils/generateZugferdXML");
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
