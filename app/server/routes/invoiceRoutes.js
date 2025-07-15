@@ -457,19 +457,28 @@ console.log("🚨 Forcing user plan to PRO for testing");
         invoiceData.showChart = false;
       }
       console.log(`🆔 Using orderId: ${safeOrderId}`);
-      // === Usage & Preview Counting Logic ===
-     // if (isPreview && user.planType === "free") {
-      //  if (user.previewCount < 3) {
-       //   user.previewCount++;
-       //   console.log(`👀 Incremented preview count to ${user.previewCount}`);
-      //  } else {
-      //    user.usageCount++;
-      //    console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-      //  }
-    //  } else if (["premium", "pro"].includes(user.plan)) {
-    //    user.usageCount++;
-    //    console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${user.plan}`);
-    //  }
+    // Normalize plan string to lowercase just in case
+const plan = (user.plan || "").toLowerCase();
+
+if (isPreview && plan === "free") {
+  if (user.previewCount < 3) {
+    user.previewCount++;
+    console.log(`👀 Incremented preview count to ${user.previewCount}`);
+  } else {
+    user.usageCount++;
+    console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
+  }
+} else if (["premium", "pro"].includes(plan)) {
+  user.usageCount++;
+  console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${plan}`);
+} else if (!isPreview) {
+  // For free users generating actual invoices (not previews), increment usageCount?
+  user.usageCount++;
+  console.log(`💡 Incremented usage count to ${user.usageCount} for plan ${plan} (non-preview)`);
+} else {
+  // Optional: Handle unknown plans or fallback
+  console.warn(`⚠️ Unknown plan or state, no usage increment.`);
+}
 
       
       console.log("🧾 Generating HTML for invoice...");
