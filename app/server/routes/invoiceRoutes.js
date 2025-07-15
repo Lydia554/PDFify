@@ -21,7 +21,6 @@ const log = (message, data = null) => {
   }
 };
 
-
 function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
@@ -30,15 +29,12 @@ function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdfify.pro/images/Logo.png";
 
-
   const userClass = data.isBasicUser ? "basic" : "premium";
 
-const watermarkHTML =
-  data.isBasicUser && data.isPreview
-    ? <div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>
-    : "";
-
-
+  const watermarkHTML =
+    data.isBasicUser && data.isPreview
+      ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
+      : "";
 
   const chartConfig = {
     type: "pie",
@@ -54,7 +50,6 @@ const watermarkHTML =
       ],
     },
   };
-
 
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
@@ -265,7 +260,7 @@ const watermarkHTML =
       items.length > 0
         ? items
             .map(
-              (item) => 
+              (item) => `
             <tr>
               <td>${item.name || ""}</td>
               <td>${item.quantity || ""}</td>
@@ -274,9 +269,10 @@ const watermarkHTML =
               <td>${item.tax || "-"}</td>
               <td>${item.total || ""}</td>
             </tr>
+            `
             )
             .join("")
-        : <tr><td colspan="6">No items available</td></tr>
+        : `<tr><td colspan="6">No items available</td></tr>`
     }
   </tbody>
   <tfoot>
@@ -295,18 +291,18 @@ const watermarkHTML =
   </tfoot>
 </table>
 
-
       <div class="total">
         <p>Total Amount Due: ${data.total}</p>
       </div>
 
       ${
         data.showChart
-          ? 
+          ? `
         <div class="chart-container">
           <h2>Breakdown</h2>
           <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
         </div>
+          `
           : ""
       }
     </div>
