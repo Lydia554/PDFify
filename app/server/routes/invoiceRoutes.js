@@ -322,11 +322,9 @@ const watermarkHTML =
 
 
 
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
-  const { execSync, execFile } = require("child_process");
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
 
   // Ghostscript check
@@ -346,22 +344,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   }
 
   let browser;
-  try {
-    const { data, isPreview } = req.body;
-    if (!data || typeof data !== "object") {
-      return res.status(400).json({ error: "Invalid or missing data" });
-    }
+  const tmpDir = "/tmp/pdfify-batch-" + Date.now();
+  fs.mkdirSync(tmpDir);
 
-    let invoiceData = { ...data };
-    if (typeof invoiceData.items === "string") {
-      try {
-        invoiceData.items = JSON.parse(invoiceData.items);
-      } catch {
-        invoiceData.items = [];
-      }
-    }
-    if (!Array.isArray(invoiceData.items)) {
-      invoiceData.items = [];
+  try {
+    const requests = req.body.requests;
+    if (!Array.isArray(requests) || requests.length === 0 || requests.length > 100) {
+      return res.status(400).json({ error: "You must send 1-100 requests." });
     }
 
     const user = await User.findById(req.user.userId);
@@ -378,184 +367,191 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       user.usageLastReset = now;
     }
 
-    if (!user.isPremium) {
-      invoiceData.customLogoUrl = null;
-      invoiceData.showChart = false;
-      invoiceData.isBasicUser = true;
-    } else {
-      invoiceData.isBasicUser = false;
-    }
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
-    if (isPreview) {
-      if (user.planType === "free") {
-        if (user.previewCount < 3) {
-          user.previewCount += 1;
-        } else {
-          user.usageCount += 1;
+    const results = [];
+    for (const [index, { data, isPreview }] of requests.entries()) {
+      if (!data || typeof data !== "object") continue;
+      let invoiceData = { ...data };
+
+      if (typeof invoiceData.items === "string") {
+        try {
+          invoiceData.items = JSON.parse(invoiceData.items);
+        } catch {
+          invoiceData.items = [];
         }
       }
-    } else {
-      user.usageCount += 1;
+      if (!Array.isArray(invoiceData.items)) {
+        invoiceData.items = [];
+      }
+
+      const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
+      invoiceData.isBasicUser = !user.isPremium;
+      if (!user.isPremium) {
+        invoiceData.customLogoUrl = null;
+        invoiceData.showChart = false;
+      }
+
+      if (isPreview && user.planType === "free") {
+        if (user.previewCount < 3) user.previewCount++;
+        else user.usageCount++;
+      } else {
+        if (["premium", "pro"].includes(user.plan)) user.usageCount++;
+      }
+
+      const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: "networkidle0" });
+
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+      });
+      await page.close();
+
+      let finalPdfBytes = pdfBuffer;
+
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+        const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
+
+        const sanitizeMetadata = (str) =>
+          String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "?").trim();
+
+        pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
+        pdfDoc.setAuthor("PDFify User");
+        pdfDoc.setSubject("ZUGFeRD Invoice");
+        pdfDoc.setProducer("PDFify API");
+        pdfDoc.setCreator("PDFify");
+        pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
+        pdfDoc.setCreationDate(now);
+        pdfDoc.setModificationDate(now);
+
+        const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
+          Type: PDFName.of("EmbeddedFile"),
+          Subtype: PDFName.of("application/xml"),
+        });
+        const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
+        const fileName = "zugferd-invoice.xml";
+        const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
+        const filespecDict = pdfDoc.context.obj({
+          Type: PDFName.of("Filespec"),
+          F: PDFHexString.of(fileName),
+          UF: PDFHexString.of(fileName),
+          EF: efDict,
+          Desc: PDFHexString.of("ZUGFeRD invoice XML"),
+          AFRelationship: PDFName.of("Data"),
+        });
+        const filespecRef = pdfDoc.context.register(filespecDict);
+
+        const catalog = pdfDoc.catalog;
+        let namesDict = catalog.lookup(PDFName.of("Names"));
+        if (!namesDict) {
+          namesDict = pdfDoc.context.obj({});
+          catalog.set(PDFName.of("Names"), namesDict);
+        }
+
+        let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"));
+        if (!embeddedFilesDict) {
+          embeddedFilesDict = pdfDoc.context.obj({ Names: [] });
+          namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
+        }
+
+        let embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"));
+        if (!embeddedFilesArray) {
+          embeddedFilesArray = pdfDoc.context.obj([]);
+          embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
+        }
+
+        embeddedFilesArray.push(PDFHexString.of(fileName));
+        embeddedFilesArray.push(filespecRef);
+
+        catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+
+        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+        const rawXmp = fs.readFileSync(xmpPath, "utf-8");
+        const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
+        const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
+          Type: PDFName.of("Metadata"),
+          Subtype: PDFName.of("XML"),
+          Filter: PDFName.of("FlateDecode"),
+        });
+        const metadataRef = pdfDoc.context.register(metadataStream);
+        catalog.set(PDFName.of("Metadata"), metadataRef);
+
+        const iccData = fs.readFileSync(iccPath);
+        const iccStream = pdfDoc.context.flateStream(iccData, {
+          N: 3,
+          Alternate: PDFName.of("DeviceRGB"),
+          Filter: PDFName.of("FlateDecode"),
+        });
+        const iccRef = pdfDoc.context.register(iccStream);
+        const outputIntentDict = pdfDoc.context.obj({
+          Type: PDFName.of("OutputIntent"),
+          S: PDFName.of("GTS_PDFA3"),
+          OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
+          Info: PDFHexString.of("sRGB IEC61966-2.1"),
+          DestOutputProfile: iccRef,
+        });
+        catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
+
+        finalPdfBytes = await pdfDoc.save();
+      }
+
+      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
+      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
+      fs.writeFileSync(tempInput, finalPdfBytes);
+
+      const gsArgs = [
+        "-dPDFA=3",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-sDEVICE=pdfwrite",
+        "-dNOOUTERSAVE",
+        "-sProcessColorModel=DeviceRGB",
+        "-sColorConversionStrategy=RGB",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dPreserveDocInfo=false",
+        "-dPDFACompatibilityPolicy=1",
+        `-sOutputFile=${tempOutput}`,
+        tempInput,
+      ];
+
+      await new Promise((resolve, reject) => {
+        execFile("gs", gsArgs, (err) => {
+          if (err) return reject(err);
+          resolve();
+        });
+      });
+
+      results.push({ filePath: tempOutput, filename: `${safeOrderId}.pdf` });
     }
 
     await user.save();
-
-    const safeOrderId = invoiceData.orderId || `preview-${Date.now()}`;
-    const html = generateInvoiceHTML({ ...invoiceData, isPreview: true });
-    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    });
-
     await browser.close();
-    let finalPdfBytes = pdfBuffer;
 
-    // Force pro plan for testing
-    user.plan = "pro";
+    const zipPath = path.join(tmpDir, "batch-invoices.zip");
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver("zip", { zlib: { level: 9 } });
 
-    if (user.plan === "pro") {
-      const zugferdXml = generateZugferdXML(invoiceData);
-      const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-      const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
-
-      const sanitizeMetadata = (str) =>
-        String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "?").trim();
-
-      const now = new Date();
-      pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
-      pdfDoc.setAuthor("PDFify User");
-      pdfDoc.setSubject("ZUGFeRD Invoice");
-      pdfDoc.setProducer("PDFify API");
-      pdfDoc.setCreator("PDFify");
-      pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
-      pdfDoc.setCreationDate(now);
-      pdfDoc.setModificationDate(now);
-
-      // Embed XML
-      const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-        Type: PDFName.of("EmbeddedFile"),
-        Subtype: PDFName.of("application/xml"),
-      });
-      const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
-      const fileName = "zugferd-invoice.xml";
-      const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
-      const filespecDict = pdfDoc.context.obj({
-        Type: PDFName.of("Filespec"),
-        F: PDFHexString.of(fileName),
-        UF: PDFHexString.of(fileName),
-        EF: efDict,
-        Desc: PDFHexString.of("ZUGFeRD invoice XML"),
-        AFRelationship: PDFName.of("Data"),
-      });
-      const filespecRef = pdfDoc.context.register(filespecDict);
-
-      const catalog = pdfDoc.catalog;
-      let namesDict = catalog.lookup(PDFName.of("Names"));
-      if (!namesDict) {
-        namesDict = pdfDoc.context.obj({});
-        catalog.set(PDFName.of("Names"), namesDict);
-      } else {
-        namesDict = namesDict.asDict();
-      }
-
-      let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"));
-      if (!embeddedFilesDict) {
-        embeddedFilesDict = pdfDoc.context.obj({ Names: [] });
-        namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-      } else {
-        embeddedFilesDict = embeddedFilesDict.asDict();
-      }
-
-      let embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"));
-      if (!embeddedFilesArray) {
-        embeddedFilesArray = pdfDoc.context.obj([]);
-        embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-      } else {
-        embeddedFilesArray = embeddedFilesArray.asArray();
-      }
-
-      embeddedFilesArray.push(PDFHexString.of(fileName));
-      embeddedFilesArray.push(filespecRef);
-
-      catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
-
-      // Embed XMP metadata
-      const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-      const rawXmp = fs.readFileSync(xmpPath, "utf-8");
-      const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
-      const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
-        Type: PDFName.of("Metadata"),
-        Subtype: PDFName.of("XML"),
-        Filter: PDFName.of("FlateDecode"),
-      });
-      const metadataRef = pdfDoc.context.register(metadataStream);
-      catalog.set(PDFName.of("Metadata"), metadataRef);
-
-      // Embed ICC profile
-      const iccData = fs.readFileSync(iccPath);
-      const iccStream = pdfDoc.context.flateStream(iccData, {
-        N: 3,
-        Alternate: PDFName.of("DeviceRGB"),
-        Filter: PDFName.of("FlateDecode"),
-      });
-      const iccRef = pdfDoc.context.register(iccStream);
-      const outputIntentDict = pdfDoc.context.obj({
-        Type: PDFName.of("OutputIntent"),
-        S: PDFName.of("GTS_PDFA3"),
-        OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
-        Info: PDFHexString.of("sRGB IEC61966-2.1"),
-        DestOutputProfile: iccRef,
-      });
-      catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
-
-      finalPdfBytes = await pdfDoc.save();
+    archive.pipe(output);
+    for (const r of results) {
+      archive.file(r.filePath, { name: r.filename });
     }
+    await archive.finalize();
 
-    // Final Ghostscript Validation
-    const tempInput = `/tmp/input-${Date.now()}.pdf`;
-    const tempOutput = `/tmp/output-${Date.now()}.pdf`;
-
-    fs.writeFileSync(tempInput, finalPdfBytes);
-
-    const gsArgs = [
-      "-dPDFA=3",
-      "-dBATCH",
-      "-dNOPAUSE",
-      "-sDEVICE=pdfwrite",
-      "-dNOOUTERSAVE",
-      "-sProcessColorModel=DeviceRGB",
-      "-sColorConversionStrategy=RGB",
-      "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
-      "-dPreserveDocInfo=false",
-      "-dPDFACompatibilityPolicy=1",
-      `-sOutputFile=${tempOutput}`,
-      tempInput,
-    ];
-
-    await new Promise((resolve, reject) => {
-      execFile("gs", gsArgs, (err, stdout, stderr) => {
-        if (err) {
-          console.error("❌ Ghostscript error:", err);
-          return reject(err);
-        }
-        resolve();
-      });
+    output.on("close", () => {
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="invoices-${Date.now()}.zip"`);
+      res.sendFile(zipPath);
     });
-
-    const validatedPdf = fs.readFileSync(tempOutput);
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="${safeOrderId}.pdf"`);
-    res.send(validatedPdf);
   } catch (err) {
     if (browser) await browser.close();
-    console.error("❌ PDF generation error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("❌ Batch PDF generation error:", err);
+    res.status(500).json({ error: "Internal server error during batch processing." });
   }
 });
 
