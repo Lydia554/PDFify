@@ -658,3 +658,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
+
+module.exports = router;
