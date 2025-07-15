@@ -247,47 +247,52 @@ const watermarkHTML =
         </div>
       </div>
 
-      <table class="table">
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Quantity</th>
-            <th>Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${
-            items.length > 0
-              ? items
-                  .map(
-                    (item) => `
-                  <tr>
-                    <td>${item.name || ""}</td>
-                    <td>${item.quantity || ""}</td>
-                    <td>${item.price || ""}</td>
-                    <td>${item.total || ""}</td>
-                  </tr>`
-                  )
-                  .join("")
-              : `<tr><td colspan="4">No items available</td></tr>`
-          }
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="3">Subtotal</td>
-            <td>${data.subtotal}</td>
-          </tr>
-          <tr>
-            <td colspan="3">Tax (21%)</td>
-            <td>${data.tax}</td>
-          </tr>
-          <tr>
-            <td colspan="3">Total</td>
-            <td>${data.total}</td>
-          </tr>
-        </tfoot>
-      </table>
+<table class="table">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Quantity</th>
+      <th>Price</th>
+      <th>Net</th>
+      <th>Tax</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${
+      items.length > 0
+        ? items
+            .map(
+              (item) => `
+            <tr>
+              <td>${item.name || ""}</td>
+              <td>${item.quantity || ""}</td>
+              <td>${item.price || ""}</td>
+              <td>${item.net || "-"}</td>
+              <td>${item.tax || "-"}</td>
+              <td>${item.total || ""}</td>
+            </tr>`
+            )
+            .join("")
+        : `<tr><td colspan="6">No items available</td></tr>`
+    }
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="5">Subtotal</td>
+      <td>${data.subtotal}</td>
+    </tr>
+    <tr>
+      <td colspan="5">Tax (${data.taxRate || '21%'})</td>
+      <td>${data.tax}</td>
+    </tr>
+    <tr>
+      <td colspan="5">Total</td>
+      <td>${data.total}</td>
+    </tr>
+  </tfoot>
+</table>
+
 
       <div class="total">
         <p>Total Amount Due: ${data.total}</p>
@@ -373,6 +378,25 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     for (const [index, { data, isPreview }] of requests.entries()) {
       if (!data || typeof data !== "object") continue;
       let invoiceData = { ...data };
+
+
+      const country = invoiceData.country?.toLowerCase() || "slovenia";
+invoiceData.country = country;
+
+if (country === "germany" && Array.isArray(invoiceData.items)) {
+  invoiceData.items = invoiceData.items.map((item) => {
+    const totalNum = parseFloat(item.total?.replace(/[^\d.]/g, "") || "0");
+    const taxRate = 0.19; // 19% VAT Germany
+    const net = totalNum / (1 + taxRate);
+    const taxAmount = totalNum - net;
+    return {
+      ...item,
+      tax: taxAmount.toFixed(2),
+      net: net.toFixed(2),
+    };
+  });
+}
+
 
       if (typeof invoiceData.items === "string") {
         try {
