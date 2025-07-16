@@ -301,4 +301,4 @@ function generateSloveniaInvoice(data) {
 }
 
 
-module.exports = generateSloveniaInvoice;
+module.exports.generateInvoiceHTML = generateSloveniaInvoice;

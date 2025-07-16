@@ -301,4 +301,4 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
 `;
 }
 
-module.exports = generateInvoiceHTML;
+module.exports.generateInvoiceHTML = generateInvoiceHTML;
