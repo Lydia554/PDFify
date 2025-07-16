@@ -10,6 +10,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
+const generateSloveniaInvoice = require('../templates/slovenia.js');
 
 
 
@@ -427,35 +428,33 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
         results.push({ error: "Invalid or missing data" });
         continue;
       }
+let invoiceData = { ...data };
+const country = invoiceData.country?.toLowerCase() || "slovenia";
+invoiceData.country = country;
+console.log(`🌍 Country set to: ${country}`);
 
-      let invoiceData = { ...data };
-      const country = invoiceData.country?.toLowerCase() || "slovenia";
-      invoiceData.country = country;
-      console.log(`🌍 Country set to: ${country}`);
+function parseSafeNumber(value) {
+  if (typeof value === "string") {
+    return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
+  }
+  return parseFloat(value) || 0;
+}
 
-      function parseSafeNumber(value) {
-        if (typeof value === "string") {
-          return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
-        }
-        return parseFloat(value) || 0;
-      }
-
-      if (country === "germany" && Array.isArray(invoiceData.items)) {
-        console.log("🇩🇪 Calculating German VAT for items");
-        invoiceData.items = invoiceData.items.map((item, i) => {
-          const totalNum = parseSafeNumber(item.total);
-          const taxRate = 0.19;
-          const net = totalNum / (1 + taxRate);
-          const taxAmount = totalNum - net;
-          console.log(`  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(2)}, tax=${taxAmount.toFixed(2)}`);
-          return {
-            ...item,
-            tax: taxAmount.toFixed(2),
-            net: net.toFixed(2),
-          };
-        });
-      }
-
+if (country === "germany" && Array.isArray(invoiceData.items)) {
+  console.log("🇩🇪 Calculating German VAT for items");
+  invoiceData.items = invoiceData.items.map((item, i) => {
+    const totalNum = parseSafeNumber(item.total);
+    const taxRate = 0.19;
+    const net = totalNum / (1 + taxRate);
+    const taxAmount = totalNum - net;
+    console.log(`  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(2)}, tax=${taxAmount.toFixed(2)}`);
+    return {
+      ...item,
+      tax: taxAmount.toFixed(2),
+      net: net.toFixed(2),
+    };
+  });
+}
       if (typeof invoiceData.items === "string") {
         try {
           invoiceData.items = JSON.parse(invoiceData.items);
