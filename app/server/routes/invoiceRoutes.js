@@ -10,7 +10,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
-const generateSloveniaInvoice = require('../templates/slovenia.js');
+const generateSloveniaInvoice = require('../slovenia.js');
 
 
 
