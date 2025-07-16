@@ -70,6 +70,22 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
     console.log("🖨️ ICC profile found:", iccPath);
   }
 
+
+  function formatTaxRate(rate) {
+    if (typeof rate === 'string') {
+      return rate.includes('%') ? rate : `${rate}%`;
+    }
+    if (typeof rate === 'number') {
+      return `${(rate * 100).toFixed(0)}%`;
+    }
+    return '21%';
+  }
+
+  // Normalize taxRate before generating HTML
+  data.taxRate = formatTaxRate(data.taxRate || '21%');
+
+
+
   let browser;
   const tmpDir = "/tmp/pdfify-batch-" + Date.now();
   console.log("📁 Creating temporary directory:", tmpDir);
