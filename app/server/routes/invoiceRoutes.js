@@ -71,18 +71,6 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
   }
 
 
-  function formatTaxRate(rate) {
-    if (typeof rate === 'string') {
-      return rate.includes('%') ? rate : `${rate}%`;
-    }
-    if (typeof rate === 'number') {
-      return `${(rate * 100).toFixed(0)}%`;
-    }
-    return '21%';
-  }
-
-  // Normalize taxRate before generating HTML
-  data.taxRate = formatTaxRate(data.taxRate || '21%');
 
 
 
