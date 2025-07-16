@@ -502,9 +502,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       let finalPdfBytes = pdfBuffer;
 
-      // Increment usage by pages: assuming one page per invoice here
-      incrementUsage(user, isPreview, null, 1);
-      totalPagesForUsage++;
+   // after you generate pdfBuffer for an invoice
+const pdfDoc = await PDFDocument.load(pdfBuffer);
+const pageCount = pdfDoc.getPageCount();
+
+// pass pageCount when incrementing usage
+incrementUsage(user, isPreview, null, pageCount);
 
     
 
