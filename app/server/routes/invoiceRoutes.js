@@ -428,6 +428,8 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
         results.push({ error: "Invalid or missing data" });
         continue;
       }
+
+
 let invoiceData = { ...data };
 const country = invoiceData.country?.toLowerCase() || "slovenia";
 invoiceData.country = country;
@@ -455,6 +457,23 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
     };
   });
 }
+
+// Generate invoice HTML based on country:
+let invoiceHTML;
+if (country === "slovenia") {
+  invoiceHTML = generateSloveniaInvoice(invoiceData);
+} else if (country === "germany") {
+  // Your Germany HTML generation function or code here
+  // For example:
+  // invoiceHTML = generateGermanyInvoice(invoiceData);
+} else {
+  // fallback or default template
+  invoiceHTML = generateSloveniaInvoice(invoiceData); // or another default
+}
+
+
+
+
       if (typeof invoiceData.items === "string") {
         try {
           invoiceData.items = JSON.parse(invoiceData.items);
