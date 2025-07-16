@@ -507,7 +507,8 @@ const pageCount = pdfDoc.getPageCount();
 
 
 // pass pageCount when incrementing usage
-incrementUsage(user, isPreview, null, pageCount);
+incrementUsage(user, isPreview, process.env.FORCE_PLAN, pageCount);
+
 
 
 
