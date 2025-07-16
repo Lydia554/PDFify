@@ -325,41 +325,16 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
 }
 
 
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
-
-
-        function incrementUsage(user, isPreview, forcedPlan) {
-  // Use forcedPlan if provided, else fallback to user's plan, normalized to lowercase
-  const plan = (forcedPlan || user.plan || "").toLowerCase();
-
-  if (isPreview && plan === "free") {
-    if (user.previewCount < 3) {
-      user.previewCount++;
-      console.log(`👀 Incremented preview count to ${user.previewCount}`);
-    } else {
-      user.usageCount++;
-      console.log(`⚠️ Preview limit reached, incremented usage count to ${user.usageCount}`);
-    }
-  } else if (["premium", "pro"].includes(plan)) {
-    user.usageCount++;
-    console.log(`🔥 Incremented usage count to ${user.usageCount} for plan ${plan}`);
-  } else if (!isPreview) {
-    // For free users generating actual invoices (not previews), increment usageCount
-    user.usageCount++;
-    console.log(`💡 Incremented usage count to ${user.usageCount} for plan ${plan} (non-preview)`);
-  } else {
-    // Optional fallback
-    console.warn(`⚠️ Unknown plan or state, no usage increment.`);
-  }
-}
-
-  const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+  // Path to ICC profile for PDF/A compliance
+  const iccPath =
+    process.env.ICC_PROFILE_PATH ||
+    path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
   console.log("🔍 Using ICC profile path:", iccPath);
 
-  // Ghostscript check
+  // Check Ghostscript availability for PDF/A conversion
   try {
     const gsVersion = execSync("gs --version").toString().trim();
     console.log("📦 Ghostscript version:", gsVersion);
@@ -371,107 +346,120 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   if (!fs.existsSync(iccPath)) {
     console.error("❌ ICC profile not found at path:", iccPath);
     return res.status(500).json({ error: "ICC profile missing." });
-  } else {
-    console.log("🖨️ ICC profile found:", iccPath);
   }
 
-  let browser;
-  const tmpDir = "/tmp/pdfify-batch-" + Date.now();
+  // Create a temp directory to hold PDFs during processing
+  const tmpDir = path.join("/tmp", `pdfify-batch-${Date.now()}`);
   console.log("📁 Creating temporary directory:", tmpDir);
-  fs.mkdirSync(tmpDir);
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  // Usage increment function with preview and plan logic
+  function incrementUsage(user, isPreview, pageCount, forcedPlan) {
+    const plan = (forcedPlan || user.plan || "").toLowerCase();
+
+    if (isPreview && plan === "free") {
+      if (user.previewCount < 3) {
+        user.previewCount++;
+        console.log(`👀 Incremented preview count to ${user.previewCount}`);
+      } else {
+        user.usageCount += pageCount;
+        console.log(
+          `⚠️ Preview limit reached, incremented usage count by ${pageCount} to ${user.usageCount}`
+        );
+      }
+    } else if (["premium", "pro"].includes(plan)) {
+      user.usageCount += pageCount;
+      console.log(`🔥 Incremented usage count by ${pageCount} for plan ${plan}`);
+    } else if (!isPreview) {
+      user.usageCount += pageCount;
+      console.log(
+        `💡 Incremented usage count by ${pageCount} for plan ${plan} (non-preview)`
+      );
+    } else {
+      console.warn(`⚠️ Unknown plan or state, no usage increment.`);
+    }
+  }
 
   try {
+    // Validate and normalize requests array (1–100)
     let requests = req.body.requests;
-    console.log("📩 Raw requests received:", Array.isArray(requests) ? requests.length : "not array");
-
     if (!Array.isArray(requests)) {
       if (req.body.data) {
-        requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
+        requests = [{ data: req.body.data, isPreview: req.body.isPreview || false }];
         console.log("📩 Converted single request to array");
       } else {
-        console.error("⚠️ No valid requests or data sent in request body");
         return res.status(400).json({ error: "You must send 1-100 requests." });
       }
     }
 
     if (requests.length === 0 || requests.length > 100) {
-      console.error("⚠️ Invalid requests count:", requests.length);
       return res.status(400).json({ error: "You must send 1-100 requests." });
     }
+
     console.log("🔢 Number of invoice requests to process:", requests.length);
 
+    // Load user info from DB to access plan and usage counts
     const user = await User.findById(req.user.userId);
-
-const isPreview = req.body.isPreview === true; // or some logic
-
-incrementUsage(user, isPreview, "pro");
-
-
-    
     if (!user) {
-      console.error("❌ User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
     console.log("👤 User found:", user._id, "plan:", user.plan);
 
-    // Reset preview & usage counts monthly
+    // Reset preview and usage counts monthly
     const now = new Date();
-    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
-      console.log("♻️ Resetting user preview count for new month");
+    if (
+      !user.previewLastReset ||
+      now.getMonth() !== user.previewLastReset.getMonth() ||
+      now.getFullYear() !== user.previewLastReset.getFullYear()
+    ) {
       user.previewCount = 0;
       user.previewLastReset = now;
+      console.log("🔄 Preview count reset for new month");
     }
-    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
-      console.log("♻️ Resetting user usage count for new month");
+    if (
+      !user.usageLastReset ||
+      now.getMonth() !== user.usageLastReset.getMonth() ||
+      now.getFullYear() !== user.usageLastReset.getFullYear()
+    ) {
       user.usageCount = 0;
       user.usageLastReset = now;
+      console.log("🔄 Usage count reset for new month");
     }
 
-    console.log("🚀 Launching Puppeteer browser...");
-    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    // Dev-only forced plan override (ignored in production)
+    const isDev = process.env.NODE_ENV !== "production";
+    const forcedPlan = isDev && req.body.forcedPlan ? req.body.forcedPlan.toLowerCase() : null;
+    if (!isDev && req.body.forcedPlan) {
+      console.warn("⚠️ Forced plan override ignored in production mode");
+    }
+    if (forcedPlan) {
+      console.log(`🧪 DEV MODE: Forced plan override: ${forcedPlan}`);
+    }
 
+    // Launch Puppeteer browser instance
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+
+    // Store results to respond with PDFs and page counts
     const results = [];
 
-    for (const [index, { data, isPreview }] of requests.entries()) {
+    for (const [index, { data, isPreview = false }] of requests.entries()) {
       console.log(`📝 Processing request #${index + 1}`);
 
+      // Validate incoming invoice data object
       if (!data || typeof data !== "object") {
-        console.warn(`⚠️ Skipping invalid or missing data at request #${index + 1}`);
         results.push({ error: "Invalid or missing data" });
         continue;
       }
 
-      let invoiceData = { ...data };
-
-      const country = invoiceData.country?.toLowerCase() || "slovenia";
+      // Normalize country (default Slovenia)
+      const invoiceData = { ...data };
+      const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
-      console.log(`🌍 Country set to: ${country}`);
 
-      function parseSafeNumber(value) {
-  if (typeof value === "string") {
-    return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
-  }
-  return parseFloat(value) || 0;
-}
-
-
-      if (country === "germany" && Array.isArray(invoiceData.items)) {
-        console.log("🇩🇪 Calculating German VAT for items");
-        invoiceData.items = invoiceData.items.map((item, i) => {
-         const totalNum = parseSafeNumber(item.total);
-
-          const taxRate = 0.19; // 19% VAT Germany
-          const net = totalNum / (1 + taxRate);
-          const taxAmount = totalNum - net;
-          console.log(`  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(2)}, tax=${taxAmount.toFixed(2)}`);
-          return {
-            ...item,
-            tax: taxAmount.toFixed(2),
-            net: net.toFixed(2),
-          };
-        });
-      }
-
+      // Parse and sanitize invoice items if sent as JSON string
       if (typeof invoiceData.items === "string") {
         try {
           invoiceData.items = JSON.parse(invoiceData.items);
@@ -487,209 +475,199 @@ incrementUsage(user, isPreview, "pro");
       }
       console.log(`📦 Number of items to invoice: ${invoiceData.items.length}`);
 
-      const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
+      // Calculate item-level VAT and net for Germany
+      if (country === "germany" && Array.isArray(invoiceData.items)) {
+        console.log("🇩🇪 Calculating German VAT for items");
+        const taxRate = 0.19; // 19% VAT Germany
+        invoiceData.items = invoiceData.items.map((item, i) => {
+          const totalNum = parseSafeNumber(item.total);
+          const net = totalNum / (1 + taxRate);
+          const taxAmount = totalNum - net;
+          console.log(
+            `  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(
+              2
+            )}, tax=${taxAmount.toFixed(2)}`
+          );
+          return {
+            ...item,
+            tax: taxAmount.toFixed(2),
+            net: net.toFixed(2),
+          };
+        });
+      }
+
+      // Basic user restrictions (no logo, no charts)
       invoiceData.isBasicUser = !user.isPremium;
       if (!user.isPremium) {
         invoiceData.customLogoUrl = null;
         invoiceData.showChart = false;
       }
+
+      // Unique order ID fallback
+      const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
       console.log(`🆔 Using orderId: ${safeOrderId}`);
 
-      
-
+      // Generate invoice HTML (your function returns string HTML)
       console.log("🧾 Generating HTML for invoice...");
-      const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
       if (!html || typeof html !== "string") {
         console.error("❌ generateInvoiceHTML returned invalid content");
-      } else {
-        console.log(`✅ Generated HTML length: ${html.length}`);
+        results.push({ error: "Failed to generate invoice HTML" });
+        continue;
       }
+      console.log(`✅ Generated HTML length: ${html.length}`);
 
+      // Puppeteer render PDF buffer
       const page = await browser.newPage();
-      console.log("📄 Setting page content...");
       await page.setContent(html, { waitUntil: "networkidle0" });
+      await page.emulateMediaType("screen");
 
-      console.log("📄 Generating PDF buffer from page...");
+      // PDF options, embed ICC profile for PDF/A compliance
       const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
-        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        preferCSSPageSize: true,
       });
-      console.log(`📄 PDF buffer generated, size: ${pdfBuffer.length} bytes`);
       await page.close();
 
-      let finalPdfBytes = pdfBuffer;
+      // Save PDF to tmp
+      const pdfPath = path.join(tmpDir, `${safeOrderId}.pdf`);
+      fs.writeFileSync(pdfPath, pdfBuffer);
+      console.log(`💾 PDF saved to ${pdfPath}`);
 
-      if (user.plan === "pro") {
-        console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+      // Get page count for usage and further processing
+      const pageCount = await getPdfPageCount(pdfBuffer);
+      console.log(`📄 PDF page count: ${pageCount}`);
 
-        const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
+      // Usage counting
+      incrementUsage(user, isPreview, pageCount, forcedPlan);
 
-        const sanitizeMetadata = (str) =>
-          String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "?").trim();
+      // If user is Pro and not preview, embed ZUGFeRD XML and metadata
+      if (user.plan?.toLowerCase() === "pro" && !isPreview) {
+        console.log("⚙️ Embedding ZUGFeRD XML and metadata for Pro user...");
 
-        pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
-        pdfDoc.setAuthor("PDFify User");
-        pdfDoc.setSubject("ZUGFeRD Invoice");
-        pdfDoc.setProducer("PDFify API");
-        pdfDoc.setCreator("PDFify");
-        pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
-        pdfDoc.setCreationDate(now);
-        pdfDoc.setModificationDate(now);
+        const zugferdXml = await generateZugferdXML(invoiceData);
+        // Load PDF with pdf-lib
+        const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-        const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-          Type: PDFName.of("EmbeddedFile"),
-          Subtype: PDFName.of("application/xml"),
-        });
-        const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
-        const fileName = "zugferd-invoice.xml";
-        const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
-        const filespecDict = pdfDoc.context.obj({
-          Type: PDFName.of("Filespec"),
-          F: PDFHexString.of(fileName),
-          UF: PDFHexString.of(fileName),
-          EF: efDict,
-          Desc: PDFHexString.of("ZUGFeRD invoice XML"),
-          AFRelationship: PDFName.of("Data"),
-        });
-        const filespecRef = pdfDoc.context.register(filespecDict);
+        // Attach ZUGFeRD XML as embedded file
+        const embeddedFile = await pdfDoc.attach(
+          Buffer.from(zugferdXml, "utf-8"),
+          "zugferd-invoice.xml",
+          {
+            mimeType: "application/xml",
+            description: "ZUGFeRD invoice XML",
+            creationDate: new Date(),
+          }
+        );
 
-        const catalog = pdfDoc.catalog;
-        let namesDict = catalog.lookup(PDFName.of("Names"));
-        if (!namesDict) {
-          namesDict = pdfDoc.context.obj({});
-          catalog.set(PDFName.of("Names"), namesDict);
-        }
+        // Add XMP metadata (example minimal, extend as needed)
+        const xmpString = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+          <x:xmpmeta xmlns:x="adobe:ns:meta/">
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+              <rdf:Description rdf:about=""
+                xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+                pdfaid:part="3"
+                pdfaid:conformance="B"/>
+            </rdf:RDF>
+          </x:xmpmeta>
+          <?xpacket end="w"?>`;
 
-        let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"));
-        if (!embeddedFilesDict) {
-          embeddedFilesDict = pdfDoc.context.obj({ Names: [] });
-          namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-        }
+        pdfDoc.setXmpMetadata(xmpString);
 
-        let embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"));
-        if (!embeddedFilesArray) {
-          embeddedFilesArray = pdfDoc.context.obj([]);
-          embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-        }
+        const pdfBytes = await pdfDoc.save();
 
-        embeddedFilesArray.push(PDFHexString.of(fileName));
-        embeddedFilesArray.push(filespecRef);
-
-        catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
-
-        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-        console.log("🔍 Reading XMP file:", xmpPath);
-        const rawXmp = fs.readFileSync(xmpPath, "utf-8");
-        const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
-        console.log("✅ XMP file sanitized");
-
-        const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
-          Type: PDFName.of("Metadata"),
-          Subtype: PDFName.of("XML"),
-          Filter: PDFName.of("FlateDecode"),
-        });
-        const metadataRef = pdfDoc.context.register(metadataStream);
-        catalog.set(PDFName.of("Metadata"), metadataRef);
-
-        const iccData = fs.readFileSync(iccPath);
-        const iccStream = pdfDoc.context.flateStream(iccData, {
-          N: 3,
-          Alternate: PDFName.of("DeviceRGB"),
-          Filter: PDFName.of("FlateDecode"),
-        });
-        const iccRef = pdfDoc.context.register(iccStream);
-        const outputIntentDict = pdfDoc.context.obj({
-          Type: PDFName.of("OutputIntent"),
-          S: PDFName.of("GTS_PDFA3"),
-          OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
-          Info: PDFHexString.of("sRGB IEC61966-2.1"),
-          DestOutputProfile: iccRef,
-        });
-        catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
-
-        finalPdfBytes = await pdfDoc.save();
-        console.log(`✅ PDF with embedded XML and metadata generated, size: ${finalPdfBytes.length} bytes`);
+        // Overwrite original PDF with embedded ZUGFeRD PDF
+        fs.writeFileSync(pdfPath, pdfBytes);
+        console.log("📎 ZUGFeRD XML and XMP metadata embedded");
       }
 
-      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
-      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
-      console.log(`💾 Writing PDF input file: ${tempInput}`);
-      fs.writeFileSync(tempInput, finalPdfBytes);
+      // Ghostscript convert to PDF/A-3 and validate
+      const pdfA3Path = path.join(tmpDir, `${safeOrderId}-pdfa3.pdf`);
+      try {
+        const gsArgs = [
+          "-dPDFA=3",
+          "-dBATCH",
+          "-dNOPAUSE",
+          "-dNOOUTERSAVE",
+          "-sProcessColorModel=DeviceRGB",
+          "-sDEVICE=pdfwrite",
+          "-sPDFACompatibilityPolicy=1",
+          `-sOutputFile=${pdfA3Path}`,
+          `-dEmbedAllFonts=true`,
+          `-dSubsetFonts=true`,
+          `-dCompressFonts=true`,
+          `-dUseCIEColor=true`,
+          `-dAutoRotatePages=/None`,
+          `-dColorConversionStrategy=/sRGB`,
+          `-dColorConversionStrategyForImages=/sRGB`,
+          `-dDownsampleColorImages=false`,
+          `-dDownsampleGrayImages=false`,
+          `-dDownsampleMonoImages=false`,
+          `-dPrinted=false`,
+          `-dPDFACompatibilityPolicy=1`,
+          `-sOutputICCProfile=${iccPath}`,
+          pdfPath,
+        ];
 
-      const gsArgs = [
-        "-dPDFA=3",
-        "-dBATCH",
-        "-dNOPAUSE",
-        "-sDEVICE=pdfwrite",
-        "-dNOOUTERSAVE",
-        "-sProcessColorModel=DeviceRGB",
-        "-sColorConversionStrategy=RGB",
-        "-dEmbedAllFonts=true",
-        "-dSubsetFonts=true",
-        "-dPreserveDocInfo=false",
-        "-dPDFACompatibilityPolicy=1",
-        `-sOutputFile=${tempOutput}`,
-        tempInput,
-      ];
+        execFileSync("gs", gsArgs);
+        console.log(`✔️ Ghostscript PDF/A-3 conversion done: ${pdfA3Path}`);
+      } catch (gsErr) {
+        console.error("❌ Ghostscript PDF/A-3 conversion failed:", gsErr.message);
+        // fallback: use original pdfPath if conversion failed
+      }
 
-      console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
-      await new Promise((resolve, reject) => {
-        execFile("gs", gsArgs, (err) => {
-          if (err) {
-            console.error("❌ Ghostscript failed:", err);
-            reject(err);
-          } else {
-            console.log("✅ Ghostscript finished successfully");
-            resolve();
-          }
-        });
-      });
-
-      console.log(`📁 Reading final PDF output from: ${tempOutput}`);
-      const finalPdf = fs.readFileSync(tempOutput);
-
-      results.push({ index, pdf: finalPdf });
+      // Add final file path to results
+      const finalPdfPath = fs.existsSync(pdfA3Path) ? pdfA3Path : pdfPath;
+      results.push({ path: finalPdfPath, fileName: `${safeOrderId}.pdf`, pageCount });
     }
 
-    if (results.length === 1) {
-      console.log("📤 Sending single PDF response");
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=invoice.pdf`,
-        "Content-Length": results[0].pdf.length,
-      });
-      res.send(results[0].pdf);
-    } else {
-      console.log("🗜️ Zipping multiple PDFs for response");
-      const archive = archiver("zip", { zlib: { level: 9 } });
-      res.set({
-        "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename=invoices.zip`,
-      });
-      archive.pipe(res);
-      results.forEach(({ index, pdf }) => {
-        archive.append(pdf, { name: `invoice-${index + 1}.pdf` });
-      });
-      await archive.finalize();
-    }
+    await browser.close();
 
+    // Save usage increments to user document
     await user.save();
-    console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
-  } catch (e) {
-    console.error("❌ Exception in /generate-invoice:", e);
-    res.status(500).json({ error: "Internal Server Error", details: e.message });
-  } finally {
-    if (browser) {
-      console.log("🧹 Closing Puppeteer browser...");
-      await browser.close();
+
+    // If single invoice, send PDF directly
+    if (results.length === 1 && !results[0].error) {
+      const filePath = results[0].path;
+      console.log(`📤 Sending single PDF file: ${filePath}`);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${results[0].fileName}"`
+      );
+      fs.createReadStream(filePath).pipe(res);
+      // Cleanup temp after stream ends
+      res.on("finish", () => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        console.log(`🧹 Cleaned temp directory: ${tmpDir}`);
+      });
+    } else {
+      // Multiple PDFs => zip them
+      console.log("🗜️ Creating ZIP archive for multiple PDFs...");
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", "attachment; filename=invoices.zip");
+
+      const archive = archiver("zip");
+      archive.pipe(res);
+
+      results.forEach(({ path: pdfPath, fileName }) => {
+        if (pdfPath && fs.existsSync(pdfPath)) {
+          archive.file(pdfPath, { name: fileName });
+        }
+      });
+
+      archive.finalize();
+
+      res.on("finish", () => {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        console.log(`🧹 Cleaned temp directory: ${tmpDir}`);
+      });
     }
-    console.log("🧹 Cleaning up temporary directory...");
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+  } catch (error) {
+    console.error("❌ /generate-invoice error:", error);
+    res.status(500).json({ error: "Internal server error." });
   }
 });
-
 
 module.exports = router;
