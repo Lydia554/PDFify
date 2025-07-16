@@ -1,4 +1,4 @@
-function generateSlovenianInvoice(data) {
+function generateSloveniaInvoice(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
   const logoUrl =
@@ -301,4 +301,4 @@ function generateSlovenianInvoice(data) {
 }
 
 
-module.exports = generateSlovenianInvoice;
+module.exports = generateSloveniaInvoice;

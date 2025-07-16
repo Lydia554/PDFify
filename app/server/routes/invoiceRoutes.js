@@ -134,6 +134,9 @@ let invoiceData = { ...data };
 
 // 🌍 Normalize and set country
 const country = invoiceData.country?.toLowerCase() || "slovenia";
+
+
+
 invoiceData.country = country;
 console.log(`🌍 Country set to: ${country}`);
 
@@ -162,11 +165,11 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
   });
 }
 
-const { generateInvoiceHTML: generateSlovenianInvoice } = require('../../templates/slovenian.js');
+const { generateInvoiceHTML: generateSloveniaInvoice } = require('../../templates/slovenia.js');
 const { generateInvoiceHTML: generateEnglishInvoice } = require('../../templates/english.js');
 
 const templates = {
-  slovenian: generateSlovenianInvoice,
+  slovenian: generateSloveniaInvoice,
   english: generateEnglishInvoice,
 };
 
