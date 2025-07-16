@@ -502,6 +502,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       let finalPdfBytes = pdfBuffer;
 
+      // Increment usage by pages: assuming one page per invoice here
+      incrementUsage(user, isPreview, null, 1);
+      totalPagesForUsage++;
+
+    
+
       if (user.plan === "pro") {
         console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
         const zugferdXml = generateZugferdXML(invoiceData);
