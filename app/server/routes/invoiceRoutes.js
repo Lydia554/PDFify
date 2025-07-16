@@ -447,12 +447,19 @@ incrementUsage(user, isPreview, "pro");
       invoiceData.country = country;
       console.log(`🌍 Country set to: ${country}`);
 
-      
+      function parseSafeNumber(value) {
+  if (typeof value === "string") {
+    return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
+  }
+  return parseFloat(value) || 0;
+}
+
 
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         console.log("🇩🇪 Calculating German VAT for items");
         invoiceData.items = invoiceData.items.map((item, i) => {
-          const totalNum = parseFloat(item.total?.replace(/[^\d.]/g, "") || "0");
+         const totalNum = parseSafeNumber(item.total);
+
           const taxRate = 0.19; // 19% VAT Germany
           const net = totalNum / (1 + taxRate);
           const taxAmount = totalNum - net;
