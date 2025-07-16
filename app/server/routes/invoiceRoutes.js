@@ -10,7 +10,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
-const generateSloveniaInvoice = require('../../templates/slovenia.js');
+
 
 
 
@@ -432,16 +432,14 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
       }
 
 
-// Incoming data
 let invoiceData = { ...data };
 
-// Normalize country (default to 'slovenia')
-const country = (invoiceData.country || "slovenia").toLowerCase();
+// 🌍 Normalize and set country
+const country = invoiceData.country?.toLowerCase() || "slovenia";
 invoiceData.country = country;
-
 console.log(`🌍 Country set to: ${country}`);
 
-// Safe number parser (handles strings with non-numeric chars)
+// 🔐 Safe parsing helper
 function parseSafeNumber(value) {
   if (typeof value === "string") {
     return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
@@ -449,7 +447,7 @@ function parseSafeNumber(value) {
   return parseFloat(value) || 0;
 }
 
-// German VAT calculations
+
 if (country === "germany" && Array.isArray(invoiceData.items)) {
   console.log("🇩🇪 Calculating German VAT for items");
   invoiceData.items = invoiceData.items.map((item, i) => {
@@ -466,18 +464,17 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
   });
 }
 
-// Generate invoice HTML based on country
-let invoiceHTML;
-if (country === "slovenia") {
-  invoiceHTML = generateSloveniaInvoice(invoiceData);
-} else if (country === "germany") {
-  // TODO: Replace with your Germany invoice template generator once ready
-  invoiceHTML = generateSloveniaInvoice(invoiceData); // fallback to Slovenia for now
-} else {
-  // fallback or default template
-  invoiceHTML = generateSloveniaInvoice(invoiceData);
-}
 
+const generateSloveniaInvoice = require('../../templates/slovenia.js');
+
+
+const templates = {
+  slovenia: generateSloveniaInvoice,
+
+};
+
+// 📄 Generate invoice HTML using country-specific function
+const templateFn = templates[country] || templates["slovenia"];
 
 
 
@@ -505,7 +502,7 @@ if (country === "slovenia") {
       console.log(`🆔 Using orderId: ${safeOrderId}`);
 
       console.log("🧾 Generating HTML for invoice...");
-      const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+      const html = templateFn({ ...invoiceData, isPreview });
       if (!html || typeof html !== "string") {
         console.error("❌ generateInvoiceHTML returned invalid content");
       } else {
