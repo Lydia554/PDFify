@@ -432,11 +432,16 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
       }
 
 
+// Incoming data
 let invoiceData = { ...data };
-const country = invoiceData.country?.toLowerCase() || "slovenia";
+
+// Normalize country (default to 'slovenia')
+const country = (invoiceData.country || "slovenia").toLowerCase();
 invoiceData.country = country;
+
 console.log(`🌍 Country set to: ${country}`);
 
+// Safe number parser (handles strings with non-numeric chars)
 function parseSafeNumber(value) {
   if (typeof value === "string") {
     return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
@@ -444,6 +449,7 @@ function parseSafeNumber(value) {
   return parseFloat(value) || 0;
 }
 
+// German VAT calculations
 if (country === "germany" && Array.isArray(invoiceData.items)) {
   console.log("🇩🇪 Calculating German VAT for items");
   invoiceData.items = invoiceData.items.map((item, i) => {
@@ -460,17 +466,16 @@ if (country === "germany" && Array.isArray(invoiceData.items)) {
   });
 }
 
-// Generate invoice HTML based on country:
+// Generate invoice HTML based on country
 let invoiceHTML;
 if (country === "slovenia") {
   invoiceHTML = generateSloveniaInvoice(invoiceData);
 } else if (country === "germany") {
-  // Your Germany HTML generation function or code here
-  // For example:
-  // invoiceHTML = generateGermanyInvoice(invoiceData);
+  // TODO: Replace with your Germany invoice template generator once ready
+  invoiceHTML = generateSloveniaInvoice(invoiceData); // fallback to Slovenia for now
 } else {
   // fallback or default template
-  invoiceHTML = generateSloveniaInvoice(invoiceData); // or another default
+  invoiceHTML = generateSloveniaInvoice(invoiceData);
 }
 
 
