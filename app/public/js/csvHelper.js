@@ -82,7 +82,8 @@ document.getElementById('csvGenerateBtn').addEventListener('click', async () => 
   const groupedInvoices = groupRowsByOrderId(data);
   const requests = groupedInvoices.map(rows => ({
     data: rowsToInvoiceJson(rows),
-    isPreview: true
+    isPreview: false,
+    customLogoUrl: rows[0].customLogoUrl,
   }));
 
   try {

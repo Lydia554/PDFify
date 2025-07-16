@@ -505,6 +505,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 const pdfDoc = await PDFDocument.load(pdfBuffer);
 const pageCount = pdfDoc.getPageCount();
 
+
 // pass pageCount when incrementing usage
 incrementUsage(user, isPreview, null, pageCount);
 
