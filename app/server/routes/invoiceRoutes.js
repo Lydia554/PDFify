@@ -417,7 +417,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
-    let totalPagesForUsage = 0;
 
     for (const [index, { data, isPreview }] of requests.entries()) {
       console.log(`📝 Processing request #${index + 1}`);
@@ -509,7 +508,7 @@ const pageCount = pdfDoc.getPageCount();
 // pass pageCount when incrementing usage
 incrementUsage(user, isPreview, null, pageCount);
 
-    
+    results.push({ index, pdf: finalPdf });
 
       if (user.plan === "pro") {
         console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
