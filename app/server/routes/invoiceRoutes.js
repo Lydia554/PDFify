@@ -179,8 +179,9 @@ const templates = {
 
 
 // 📄 Generate invoice HTML using country-specific function
-const templateKey = countryToTemplate[country] || "english";
-const templateFn = templates[templateKey] || templates["english"];
+const templateFn = templates[country] || templates["english"];
+
+
 
 
 
