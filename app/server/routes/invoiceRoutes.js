@@ -169,13 +169,14 @@ const { generateInvoiceHTML: generateSloveniaInvoice } = require('../../template
 const { generateInvoiceHTML: generateEnglishInvoice } = require('../../templates/english.js');
 
 const templates = {
-  slovenian: generateSloveniaInvoice,
+  slovenia: generateSloveniaInvoice,
   english: generateEnglishInvoice,
 };
 
 
 // 📄 Generate invoice HTML using country-specific function
-const templateFn = templates[country] || templates["english"];
+const templateKey = countryToTemplate[country] || "english";
+const templateFn = templates[templateKey] || templates["english"];
 
 
 
