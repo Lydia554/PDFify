@@ -508,7 +508,7 @@ const pageCount = pdfDoc.getPageCount();
 // pass pageCount when incrementing usage
 incrementUsage(user, isPreview, null, pageCount);
 
-    results.push({ index, pdf: finalPdf });
+
 
       if (user.plan === "pro") {
         console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
@@ -665,6 +665,8 @@ incrementUsage(user, isPreview, null, pageCount);
       });
       await archive.finalize();
     }
+
+      
 
     await user.save();
     console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
