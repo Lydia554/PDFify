@@ -67,115 +67,175 @@ function generateInvoiceHTML(data, locale = {}) {
 <head>
   <meta charset="UTF-8" />
   <title>${t("invoiceTitle")} ${data.customerName || ""}</title>
-  <style>
-    /* Reset */
-    * {
-      margin: 0; padding: 0; box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-        Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-      color: #333;
-    }
-    body {
-      background: #fff;
-      padding: 20px;
-    }
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      border: 1px solid #ddd;
-      padding: 20px;
-      position: relative;
-      background: white;
-    }
-    h1 {
-      font-weight: 500;
-      font-size: 1.8rem;
-      margin-bottom: 15px;
-      color: #222;
-    }
-    .invoice-header {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .invoice-header .left p,
-    .invoice-header .right p {
-      margin-bottom: 6px;
-      font-size: 0.95rem;
-    }
-    .invoice-header .right {
-      text-align: right;
-    }
-    .invoice-header strong {
-      color: #555;
-    }
-    table.table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 30px;
-      font-size: 0.9rem;
-    }
-    table.table thead tr {
-      background: #f7f7f7;
-      border-bottom: 2px solid #ddd;
-    }
-    table.table th,
-    table.table td {
-      padding: 10px 8px;
-      text-align: left;
-      border: 1px solid #ddd;
-    }
-    table.table tfoot td {
-      font-weight: 600;
-      font-size: 1rem;
-      background: #f4f4f4;
-    }
-    .total {
-      text-align: right;
-      font-size: 1.2rem;
-      font-weight: 600;
-      margin-bottom: 30px;
-    }
-    .chart-container {
-      width: 300px;
-      margin: 0 auto 40px;
-      text-align: center;
-    }
-    .chart-container h2 {
-      margin-bottom: 15px;
-      color: #444;
-      font-weight: 600;
-    }
-    .footer {
-      font-size: 0.85rem;
-      text-align: center;
-      color: #999;
-      border-top: 1px solid #eee;
-      padding-top: 15px;
-      margin-top: 40px;
-    }
-    .footer a {
-      color: #2980b9;
-      text-decoration: none;
-    }
-    .watermark {
-      position: fixed;
-      top: 40%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-35deg);
-      font-size: 2rem;
-      color: rgba(255, 0, 0, 0.15);
-      pointer-events: none;
-      user-select: none;
-      font-weight: 900;
-      letter-spacing: 2px;
-      z-index: 9999;
-      white-space: nowrap;
-    }
-    body.basic .container {
-      border-color: #f39c12;
-    }
-  </style>
+ <style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
+
+  body {
+    font-family: 'Open Sans', sans-serif;
+    color: #333;
+    background: #f4f7fb;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 30px 40px 160px;
+    background: linear-gradient(to bottom right, #ffffff, #f8fbff);
+    box-shadow: 0 8px 25px #2a3d66;
+    border-radius: 16px;
+    border: 1px solid #e0e4ec;
+    position: relative;
+    z-index: 1;
+  }
+
+  .premium .table,
+  .basic .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+
+  .premium .table th,
+  .premium .table td {
+    padding: 14px;
+    border: 1px solid #dee2ef;
+    text-align: left;
+  }
+
+  .premium .table th {
+    background-color: #dbe7ff;
+    color: #2a3d66;
+    font-weight: 600;
+  }
+
+  .premium .table td {
+    color: #444;
+    background-color: #fdfdff;
+  }
+
+  .premium .table tr:nth-child(even) td {
+    background-color: #f6f9fe;
+  }
+
+  .premium .table tfoot td {
+    background-color: #dbe7ff;
+    font-weight: bold;
+    color: #2a3d66;
+  }
+
+  .premium .total p {
+    font-weight: bold;
+    color: #2a3d66;
+  }
+
+  .basic .table th,
+  .basic .table td {
+    padding: 14px;
+    border: 1px solid #ccc;
+    text-align: left;
+  }
+
+  .basic .table th {
+    background-color: #fff;
+    color: #333;
+    font-weight: 600;
+  }
+
+  .basic .table td {
+    color: #444;
+    background-color: #fff;
+  }
+
+  .basic .table tr:nth-child(even) td {
+    background-color: #f9f9f9;
+  }
+
+  .basic .table tfoot td {
+    background-color: #fff;
+    font-weight: bold;
+  }
+
+  .basic .total p {
+    font-weight: normal;
+    color: #333;
+  }
+
+  .watermark {
+    position: fixed;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 60px;
+    color: #ffcccc;
+    font-weight: 900;
+    pointer-events: none;
+    user-select: none;
+    z-index: 9999;
+    white-space: nowrap;
+  }
+
+  .footer {
+    position: static;
+    max-width: 800px;
+    margin: 40px auto 10px auto;
+    padding: 10px 20px;
+    background-color: #f0f2f7;
+    color: #555;
+    border-top: 2px solid #cbd2e1;
+    text-align: center;
+    line-height: 1.6;
+    font-size: 11px;
+    border-radius: 0 0 16px 16px;
+    box-sizing: border-box;
+  }
+
+  .footer p {
+    margin: 6px 0;
+  }
+
+  .footer a {
+    color: #4a69bd;
+    text-decoration: none;
+    word-break: break-word;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+  /* ========================== */
+  /* PDF/A-3b compliant override */
+  /* ========================== */
+ .pdfa-clean .container {
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+  .pdfa-clean .premium .table th {
+    background-color: #e6e6e6 !important;
+    color: #000 !important;
+  }
+  .pdfa-clean .premium .table td {
+    background-color: #ffffff !important;
+    color: #000 !important;
+  }
+  .pdfa-clean .premium .table tr:nth-child(even) td {
+    background-color: #f2f2f2 !important;
+  }
+  .pdfa-clean .footer {
+    background-color: #eaeaea !important;
+    color: #000 !important;
+    border-top: 1px solid #bbb !important;
+  }
+  .pdfa-clean .watermark {
+    display: none !important;
+  }
+</style>
 </head>
 <body class="${userClass}">
   <div class="container">
