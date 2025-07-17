@@ -1,29 +1,4 @@
-const defaultTranslations = {
-  invoiceTitle: "Invoice for",
-  orderId: "Order ID",
-  date: "Date",
-  customer: "Customer",
-  email: "Email",
-  item: "Item",
-  quantity: "Quantity",
-  price: "Price",
-  net: "Net",
-  tax: "Tax",
-  total: "Total",
-  subtotal: "Subtotal",
-  taxLabel: "Tax",
-  totalAmountDue: "Total Amount Due",
-  breakdown: "Breakdown",
-  thanks: "Thanks for using our service!",
-  contact: "If you have questions, contact us at",
-  copyright: "All rights reserved.",
-  generated: "Generated using",
-  visitSite: "Visit our site for more."
-};
-
-function generateInvoiceHTML(data, locale = {}) {
-  const t = (key) => locale[key] || defaultTranslations[key] || key;
-
+function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
   const logoUrl =
@@ -38,36 +13,28 @@ function generateInvoiceHTML(data, locale = {}) {
       ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
       : "";
 
-  // Prepare chart config data safely parsing amounts
-  const subtotalNumber = Number(String(data.subtotal).replace(/[^\d.-]/g, '')) || 0;
-  const taxNumber = Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0;
-
   const chartConfig = {
     type: "pie",
     data: {
-      labels: [t("subtotal"), t("taxLabel")],
+      labels: ["Subtotal", "Tax"],
       datasets: [
         {
-          data: [subtotalNumber, taxNumber],
-          backgroundColor: ["#f39c12", "#2980b9"]
-        }
-      ]
+          data: [
+  Number(String(data.subtotal).replace(/[^\d.-]/g, '')) || 0,
+Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
+
+          ],
+        },
+      ],
     },
-    options: {
-      plugins: {
-        legend: { position: 'bottom' }
-      }
-    }
   };
 
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>${t("invoiceTitle")} ${data.customerName || ""}</title>
- <style>
+  return `
+<html>
+  <head>
+<style>
   @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
 
@@ -236,39 +203,42 @@ function generateInvoiceHTML(data, locale = {}) {
     display: none !important;
   }
 </style>
-</head>
-<body class="${userClass}">
-  <div class="container">
-    <img src="${logoUrl}" alt="Logo" style="height: 60px; margin-bottom: 20px;" />
-    <h1>${t("invoiceTitle")} ${data.customerName || ""}</h1>
-    <div class="invoice-header">
-      <div class="left">
-        <p><strong>${t("orderId")}:</strong> ${data.orderId || "-"}</p>
-        <p><strong>${t("date")}:</strong> ${data.date || "-"}</p>
-      </div>
-      <div class="right">
-        <p><strong>${t("customer")}:</strong><br/>${data.customerName || "-"}</p>
-        <p><strong>${t("email")}:</strong><br/><a href="mailto:${data.customerEmail || ''}">${data.customerEmail || '-'}</a></p>
-      </div>
-    </div>
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th>${t("item")}</th>
-          <th>${t("quantity")}</th>
-          <th>${t("price")}</th>
-          <th>${t("net")}</th>
-          <th>${t("tax")}</th>
-          <th>${t("total")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${
-          items.length > 0
-            ? items
-                .map(
-                  (item) => `
+  </head>
+  <body class="${userClass}">
+    <div class="container">
+      <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
+
+      <h1>Invoice for ${data.customerName}</h1>
+
+      <div class="invoice-header">
+        <div class="left">
+          <p><strong>Order ID:</strong> ${data.orderId}</p>
+          <p><strong>Date:</strong> ${data.date}</p>
+        </div>
+        <div class="right">
+          <p><strong>Customer:</strong><br>${data.customerName}</p>
+          <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
+        </div>
+      </div>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Item</th>
+      <th>Quantity</th>
+      <th>Price</th>
+      <th>Net</th>
+      <th>Tax</th>
+      <th>Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    ${
+      items.length > 0
+        ? items
+            .map(
+              (item) => `
             <tr>
               <td>${item.name || ""}</td>
               <td>${item.quantity || ""}</td>
@@ -277,50 +247,58 @@ function generateInvoiceHTML(data, locale = {}) {
               <td>${item.tax || "-"}</td>
               <td>${item.total || ""}</td>
             </tr>
-          `
-                )
-                .join("")
-            : `<tr><td colspan="6">No items available</td></tr>`
-        }
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="5">${t("subtotal")}</td>
-          <td>${data.subtotal || "-"}</td>
-        </tr>
-        <tr>
-          <td colspan="5">${t("taxLabel")} (${data.taxRate || "21%"})</td>
-          <td>${data.tax || "-"}</td>
-        </tr>
-        <tr>
-          <td colspan="5">${t("total")}</td>
-          <td>${data.total || "-"}</td>
-        </tr>
-      </tfoot>
-    </table>
-
-    <div class="total">${t("totalAmountDue")}: ${data.total || "-"}</div>
-
-    ${
-      data.showChart
-        ? `<div class="chart-container">
-      <h2>${t("breakdown")}</h2>
-      <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown Chart" />
-    </div>`
-        : ""
+            `
+            )
+            .join("")
+        : `<tr><td colspan="6">No items available</td></tr>`
     }
-  </div>
+  </tbody>
+  <tfoot>
+    <tr>
+      <td colspan="5">Subtotal</td>
+      <td>${data.subtotal}</td>
+    </tr>
+    <tr>
+      <td colspan="5">Tax (${data.taxRate || '21%'})</td>
+      <td>${data.tax}</td>
+    </tr>
+    <tr>
+      <td colspan="5">Total</td>
+      <td>${data.total}</td>
+    </tr>
+  </tfoot>
+</table>
 
-  ${watermarkHTML}
+      <div class="total">
+        <p>Total Amount Due: ${data.total}</p>
+      </div>
 
-  <div class="footer">
-    <p>${t("thanks")}</p>
-    <p>${t("contact")} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-    <p>&copy; 2025 🧾PDFify — ${t("copyright")}</p>
-    <p>${t("generated")} <strong>PDFify</strong>. <a href="https://pdfify.pro/" target="_blank" rel="noopener">${t("visitSite")}</a></p>
-  </div>
-</body>
-</html>`;
+      ${
+        data.showChart
+          ? `
+        <div class="chart-container">
+          <h2>Breakdown</h2>
+          <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
+        </div>
+          `
+          : ""
+      }
+    </div>
+
+    ${watermarkHTML}
+
+    <div class="footer">
+      <p>Thanks for using our service!</p>
+      <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+      <p>
+        Generated using <strong>PDFify</strong>. Visit
+        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
+      </p>
+    </div>
+  </body>
+</html>
+`;
 }
 
-module.exports = { generateInvoiceHTML };
+module.exports.generateInvoiceHTML = generateInvoiceHTML;
