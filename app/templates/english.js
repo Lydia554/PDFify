@@ -224,7 +224,7 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
       </div>
     </div>
 
-    <table>
+    <table class="table">
       <thead>
         <tr>
           <th>${locale.item || "Item"}</th>
