@@ -12,10 +12,15 @@ const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
 
 
+// 🌐 Localization files
+const locales = {
+  sl: require('../../locales/sl.json'),
+  de: require('../../locales/de.json'),
+  en: require('../../locales/en.json'), // fallback
+};
 
-
-
-
+// English template used for all, but localized via locale
+const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 
 
 const log = (message, data = null) => {
@@ -133,73 +138,67 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
         continue;
       }
 
+  let invoiceData = { ...data };
 
-let invoiceData = { ...data };
+      // 🌍 Normalize and set country
+      const countryRaw = invoiceData.country || "slovenia";
+      const country = countryRaw.toLowerCase();
+      invoiceData.country = country;
 
-// 🌍 Normalize and set country
-const country = invoiceData.country?.toLowerCase() || "slovenia";
+      // 🔐 Safe parsing helper
+      function parseSafeNumber(value) {
+        if (typeof value === "string") {
+          return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
+        }
+        return parseFloat(value) || 0;
+      }
 
+      if (country === "germany" && Array.isArray(invoiceData.items)) {
+        invoiceData.items = invoiceData.items.map((item, i) => {
+          const totalNum = parseSafeNumber(item.total);
+          const taxRate = 0.19;
+          const net = totalNum / (1 + taxRate);
+          const taxAmount = totalNum - net;
+          return {
+            ...item,
+            tax: taxAmount.toFixed(2),
+            net: net.toFixed(2),
+          };
+        });
+      }
 
+      // 🏷️ Format tax rate for consistency (always show %)
+      function formatTaxRate(rate) {
+        if (typeof rate === 'string') {
+          return rate.includes('%') ? rate : `${rate}%`;
+        }
+        if (typeof rate === 'number') {
+          return `${(rate * 100).toFixed(0)}%`;
+        }
+        return '21%';
+      }
+      invoiceData.taxRate = formatTaxRate(invoiceData.taxRate || '21%');
 
-invoiceData.country = country;
-console.log(`🌍 Country set to: ${country}`);
+      // 🌐 Localization: map country to language code
+      const supportedLocales = {
+        slovenia: "sl",
+        germany: "de",
+      };
+      const langCode = supportedLocales[country] || "en";
+      const locale = locales[langCode] || locales["en"];
+      invoiceData.locale = locale;
 
-// 🔐 Safe parsing helper
-function parseSafeNumber(value) {
-  if (typeof value === "string") {
-    return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
-  }
-  return parseFloat(value) || 0;
-}
-
-
-if (country === "germany" && Array.isArray(invoiceData.items)) {
-  console.log("🇩🇪 Calculating German VAT for items");
-  invoiceData.items = invoiceData.items.map((item, i) => {
-    const totalNum = parseSafeNumber(item.total);
-    const taxRate = 0.19;
-    const net = totalNum / (1 + taxRate);
-    const taxAmount = totalNum - net;
-    console.log(`  Item #${i + 1}: total=${totalNum}, net=${net.toFixed(2)}, tax=${taxAmount.toFixed(2)}`);
-    return {
-      ...item,
-      tax: taxAmount.toFixed(2),
-      net: net.toFixed(2),
-    };
-  });
-}
-
-const { generateInvoiceHTML: generateSloveniaInvoice } = require('../../templates/slovenia.js');
-const { generateInvoiceHTML: generateEnglishInvoice } = require('../../templates/english.js');
-
-const templates = {
-  slovenia: generateSloveniaInvoice,
-  english: generateEnglishInvoice,
-};
-
-
-// 📄 Generate invoice HTML using country-specific function
-const templateFn = templates[country] || templates["english"];
-
-
-
-
-
-
+      // 📦 Parse items if string
       if (typeof invoiceData.items === "string") {
         try {
           invoiceData.items = JSON.parse(invoiceData.items);
-          console.log("🛠️ Parsed invoice items JSON string");
-        } catch (e) {
-          console.warn("⚠️ Failed to parse items JSON, setting empty array");
+        } catch {
           invoiceData.items = [];
         }
       }
       if (!Array.isArray(invoiceData.items)) {
-        console.warn("⚠️ Items is not an array, setting empty array");
         invoiceData.items = [];
       }
-      console.log(`📦 Number of items to invoice: ${invoiceData.items.length}`);
 
       const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
       invoiceData.isBasicUser = !user.isPremium;
@@ -207,27 +206,22 @@ const templateFn = templates[country] || templates["english"];
         invoiceData.customLogoUrl = null;
         invoiceData.showChart = false;
       }
-      console.log(`🆔 Using orderId: ${safeOrderId}`);
 
-      console.log("🧾 Generating HTML for invoice...");
-      const html = templateFn({ ...invoiceData, isPreview });
+      // 📄 Generate HTML using fixed English template and localized text
+      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       if (!html || typeof html !== "string") {
-        console.error("❌ generateInvoiceHTML returned invalid content");
-      } else {
-        console.log(`✅ Generated HTML length: ${html.length}`);
+        results.push({ error: "Failed to generate HTML" });
+        continue;
       }
 
       const page = await browser.newPage();
-      console.log("📄 Setting page content...");
       await page.setContent(html, { waitUntil: "networkidle0" });
 
-      console.log("📄 Generating PDF buffer from page...");
       const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
       });
-      console.log(`📄 PDF buffer generated, size: ${pdfBuffer.length} bytes`);
       await page.close();
 
       let finalPdfBytes = pdfBuffer;

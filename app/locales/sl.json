@@ -1,0 +1,22 @@
+{
+  "invoiceTitle": "Račun za",
+  "orderId": "ID naročila",
+  "date": "Datum",
+  "customer": "Stranka",
+  "email": "E-pošta",
+  "item": "Izdelek",
+  "quantity": "Količina",
+  "price": "Cena",
+  "net": "Neto",
+  "tax": "DDV",
+  "total": "Skupaj",
+  "subtotal": "Vmesna vsota",
+  "taxWithRate": "DDV ({rate})",
+  "totalAmountDue": "Skupni znesek za plačilo",
+  "breakdown": "Razčlenitev",
+  "noItems": "Ni razpoložljivih izdelkov",
+  "footerThanks": "Hvala, ker uporabljate našo storitev!",
+  "footerContact": "Če imate vprašanja, nas kontaktirajte na",
+  "footerCopyright": "🧾PDFify — Vse pravice pridržane.",
+  "footerGenerated": "Ustvarjeno z uporabo PDFify. Obiščite našo spletno stran na"
+}
