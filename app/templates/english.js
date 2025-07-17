@@ -205,40 +205,40 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
 </style>
 
   </head>
-  <body class="${userClass}">
+ <body class="${userClass}">
     <div class="container">
       <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
 
-      <h1>Invoice for ${data.customerName}</h1>
+      <h1>${locale.invoiceFor} ${data.customerName || "Customer"}</h1>
 
       <div class="invoice-header">
         <div class="left">
-          <p><strong>Order ID:</strong> ${data.orderId}</p>
-          <p><strong>Date:</strong> ${data.date}</p>
+          <p><strong>${locale.orderId}:</strong> ${data.orderId || ""}</p>
+          <p><strong>${locale.date}:</strong> ${data.date || ""}</p>
         </div>
         <div class="right">
-          <p><strong>Customer:</strong><br>${data.customerName}</p>
-          <p><strong>Email:</strong><br><a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
+          <p><strong>${locale.customer}:</strong><br>${data.customerName || ""}</p>
+          <p><strong>${locale.email}:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || ""}</a></p>
         </div>
       </div>
 
-<table class="table">
-  <thead>
-    <tr>
-      <th>Item</th>
-      <th>Quantity</th>
-      <th>Price</th>
-      <th>Net</th>
-      <th>Tax</th>
-      <th>Total</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${
-      items.length > 0
-        ? items
-            .map(
-              (item) => `
+      <table>
+        <thead>
+          <tr>
+            <th>${locale.item}</th>
+            <th>${locale.quantity}</th>
+            <th>${locale.price}</th>
+            <th>${locale.net}</th>
+            <th>${locale.tax}</th>
+            <th>${locale.total}</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${
+            items.length > 0
+              ? items
+                  .map(
+                    (item) => `
             <tr>
               <td>${item.name || ""}</td>
               <td>${item.quantity || ""}</td>
@@ -248,39 +248,39 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
               <td>${item.total || ""}</td>
             </tr>
             `
-            )
-            .join("")
-        : `<tr><td colspan="6">No items available</td></tr>`
-    }
-  </tbody>
-  <tfoot>
-    <tr>
-      <td colspan="5">Subtotal</td>
-      <td>${data.subtotal}</td>
-    </tr>
-    <tr>
-      <td colspan="5">Tax (${data.taxRate || '21%'})</td>
-      <td>${data.tax}</td>
-    </tr>
-    <tr>
-      <td colspan="5">Total</td>
-      <td>${data.total}</td>
-    </tr>
-  </tfoot>
-</table>
+                  )
+                  .join("")
+              : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5">${locale.subtotal}</td>
+            <td>${data.subtotal || ""}</td>
+          </tr>
+          <tr>
+            <td colspan="5">${locale.tax} (${data.taxRate || "21%"})</td>
+            <td>${data.tax || ""}</td>
+          </tr>
+          <tr>
+            <td colspan="5">${locale.total}</td>
+            <td>${data.total || ""}</td>
+          </tr>
+        </tfoot>
+      </table>
 
       <div class="total">
-        <p>Total Amount Due: ${data.total}</p>
+        <p>${locale.totalAmountDue}: ${data.total || ""}</p>
       </div>
 
       ${
         data.showChart
           ? `
         <div class="chart-container">
-          <h2>Breakdown</h2>
-          <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
+          <h2>${locale.breakdown}</h2>
+          <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="${locale.invoiceBreakdown || 'Invoice Breakdown'}" style="max-width:500px;display:block;margin:auto;" />
         </div>
-          `
+        `
           : ""
       }
     </div>
@@ -288,17 +288,17 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
     ${watermarkHTML}
 
     <div class="footer">
-      <p>Thanks for using our service!</p>
-      <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+      <p>${locale.thanksForUsing}</p>
+      <p>${locale.questionsContact} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+      <p>&copy; 2025 🧾PDFify — ${locale.allRightsReserved}</p>
       <p>
-        Generated using <strong>PDFify</strong>. Visit
-        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
+        ${locale.generatedUsing} <strong>PDFify</strong>. Visit
+        <a href="https://pdfify.pro/" target="_blank">${locale.siteLinkText}</a> for more.
       </p>
     </div>
   </body>
-</html>
-`;
+  </html>
+  `;
 }
 
 module.exports.generateInvoiceHTML = generateInvoiceHTML;
