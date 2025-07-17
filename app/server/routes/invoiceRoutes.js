@@ -14,7 +14,7 @@ const { execSync, execFile } = require("child_process");
 
 // 🌐 Localization files
 const locales = {
-  slovenia: require('../../locales/sl.json'),
+  sl: require('../../locales/sl.json'),
   
 };
 
@@ -181,7 +181,7 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
       // 🌐 Localization: map country to language code
       const supportedLocales = {
         slovenia: "sl",
-        germany: "de",
+        
       };
       const langCode = supportedLocales[country] || "en";
       const locale = locales[langCode] || locales["en"];
