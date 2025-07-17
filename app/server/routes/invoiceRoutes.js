@@ -14,7 +14,7 @@ const { execSync, execFile } = require("child_process");
 
 // 🌐 Localization files
 const locales = {
-  sl: require('../../locales/sl.json'),
+  slovenia: require('../../locales/sl.json'),
   
 };
 
