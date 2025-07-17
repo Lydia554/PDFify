@@ -15,7 +15,7 @@ const { execSync, execFile } = require("child_process");
 // 🌐 Localization files
 const locales = {
   sl: require('../../locales/sl.json'),
-  en: require('../../locales/en.json'), 
+  
 };
 
 // English template used for all, but localized via locale
