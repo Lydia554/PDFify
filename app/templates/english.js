@@ -1,4 +1,6 @@
 function generateInvoiceHTML(data) {
+  const locale = data.locale || {};
+
   const items = Array.isArray(data.items) ? data.items : [];
 
   const logoUrl =
@@ -10,7 +12,7 @@ function generateInvoiceHTML(data) {
 
   const watermarkHTML =
     data.isBasicUser && data.isPreview
-      ? `<div class="watermark">FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION</div>`
+      ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
       : "";
 
   const chartConfig = {
