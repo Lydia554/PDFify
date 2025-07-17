@@ -207,99 +207,99 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
 </style>
 
   </head>
- <body class="${userClass}">
-    <div class="container">
-      <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
+<body class="${userClass}">
+  <div class="container">
+    <img src="${logoUrl}" alt="Logo" style="height: 60px;" />
 
-      <h1>${locale.invoiceFor} ${data.customerName || "Customer"}</h1>
+    <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
 
-      <div class="invoice-header">
-        <div class="left">
-          <p><strong>${locale.orderId}:</strong> ${data.orderId || ""}</p>
-          <p><strong>${locale.date}:</strong> ${data.date || ""}</p>
-        </div>
-        <div class="right">
-          <p><strong>${locale.customer}:</strong><br>${data.customerName || ""}</p>
-          <p><strong>${locale.email}:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || ""}</a></p>
-        </div>
+    <div class="invoice-header">
+      <div class="left">
+        <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
+        <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
       </div>
-
-      <table>
-        <thead>
-          <tr>
-            <th>${locale.item}</th>
-            <th>${locale.quantity}</th>
-            <th>${locale.price}</th>
-            <th>${locale.net}</th>
-            <th>${locale.tax}</th>
-            <th>${locale.total}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${
-            items.length > 0
-              ? items
-                  .map(
-                    (item) => `
-            <tr>
-              <td>${item.name || ""}</td>
-              <td>${item.quantity || ""}</td>
-              <td>${item.price || ""}</td>
-              <td>${item.net || "-"}</td>
-              <td>${item.tax || "-"}</td>
-              <td>${item.total || ""}</td>
-            </tr>
-            `
-                  )
-                  .join("")
-              : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
-          }
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5">${locale.subtotal}</td>
-            <td>${data.subtotal || ""}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.tax} (${data.taxRate || "21%"})</td>
-            <td>${data.tax || ""}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.total}</td>
-            <td>${data.total || ""}</td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div class="total">
-        <p>${locale.totalAmountDue}: ${data.total || ""}</p>
+      <div class="right">
+        <p><strong>${locale.customer || "Customer"}:</strong><br>${data.customerName || ""}</p>
+        <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || ""}</a></p>
       </div>
-
-      ${
-        data.showChart
-          ? `
-        <div class="chart-container">
-          <h2>${locale.breakdown}</h2>
-          <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="${locale.invoiceBreakdown || 'Invoice Breakdown'}" style="max-width:500px;display:block;margin:auto;" />
-        </div>
-        `
-          : ""
-      }
     </div>
 
-    ${watermarkHTML}
+    <table>
+      <thead>
+        <tr>
+          <th>${locale.item || "Item"}</th>
+          <th>${locale.quantity || "Quantity"}</th>
+          <th>${locale.price || "Price"}</th>
+          <th>${locale.net || "Net"}</th>
+          <th>${locale.tax || "Tax"}</th>
+          <th>${locale.total || "Total"}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${
+          items.length > 0
+            ? items
+                .map(
+                  (item) => `
+          <tr>
+            <td>${item.name || ""}</td>
+            <td>${item.quantity || ""}</td>
+            <td>${item.price || ""}</td>
+            <td>${item.net || "-"}</td>
+            <td>${item.tax || "-"}</td>
+            <td>${item.total || ""}</td>
+          </tr>
+          `
+                )
+                .join("")
+            : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
+        }
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5">${locale.subtotal || "Subtotal"}</td>
+          <td>${data.subtotal || ""}</td>
+        </tr>
+        <tr>
+          <td colspan="5">${locale.tax || "Tax"} (${data.taxRate || "21%"})</td>
+          <td>${data.tax || ""}</td>
+        </tr>
+        <tr>
+          <td colspan="5">${locale.total || "Total"}</td>
+          <td>${data.total || ""}</td>
+        </tr>
+      </tfoot>
+    </table>
 
-    <div class="footer">
-      <p>${locale.thanksForUsing}</p>
-      <p>${locale.questionsContact} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-      <p>&copy; 2025 🧾PDFify — ${locale.allRightsReserved}</p>
-      <p>
-        ${locale.generatedUsing} <strong>PDFify</strong>. Visit
-        <a href="https://pdfify.pro/" target="_blank">${locale.siteLinkText}</a> for more.
-      </p>
+    <div class="total">
+      <p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p>
     </div>
-  </body>
-  </html>
+
+    ${
+      data.showChart
+        ? `
+      <div class="chart-container">
+        <h2>${locale.breakdown || "Breakdown"}</h2>
+        <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="${locale.invoiceBreakdown || "Invoice Breakdown"}" style="max-width:500px;display:block;margin:auto;" />
+      </div>
+      `
+        : ""
+    }
+  </div>
+
+  ${watermarkHTML}
+
+  <div class="footer">
+    <p>${locale.thanks || "Thanks for using our service!"}</p>
+    <p>${locale.contact || "If you have questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+    <p>&copy; 2025 🧾PDFify — ${locale.copyright || "All rights reserved."}</p>
+    <p>
+      ${locale.generated || "Generated using"} <strong>PDFify</strong>. ${locale.visitSite || '<a href="https://pdfify.pro/" target="_blank">Visit our site for more.</a>'}
+    </p>
+  </div>
+</body>
+</html>
+
   `;
 }
 
