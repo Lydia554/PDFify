@@ -12,13 +12,15 @@ const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
 
 
-// 🌐 Localization files
+
 const locales = {
   sl: require('../../locales/sl.json'),
+  en: require('./locales/en.json'),
+  de: require('./locales/de.json'),
   
 };
 
-// English template used for all, but localized via locale
+
 const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 
 
@@ -110,7 +112,7 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
     }
     console.log("👤 User found:", user._id, "plan:", user.plan);
 
-    // Reset preview & usage counts monthly
+  
     const now = new Date();
     if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
       console.log("♻️ Resetting user preview count for new month");
@@ -139,12 +141,12 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
 
   let invoiceData = { ...data };
 
-      // 🌍 Normalize and set country
+     
       const countryRaw = invoiceData.country || "slovenia";
       const country = countryRaw.toLowerCase();
       invoiceData.country = country;
 
-      // 🔐 Safe parsing helper
+      
       function parseSafeNumber(value) {
         if (typeof value === "string") {
           return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
@@ -166,7 +168,7 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
         });
       }
 
-      // 🏷️ Format tax rate for consistency (always show %)
+
       function formatTaxRate(rate) {
         if (typeof rate === 'string') {
           return rate.includes('%') ? rate : `${rate}%`;
@@ -178,16 +180,17 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
       }
       invoiceData.taxRate = formatTaxRate(invoiceData.taxRate || '21%');
 
-      // 🌐 Localization: map country to language code
+      
       const supportedLocales = {
         slovenia: "sl",
+        germany: "de",
         
       };
       const langCode = supportedLocales[country] || "en";
       const locale = locales[langCode] || locales["en"];
       invoiceData.locale = locale;
 
-      // 📦 Parse items if string
+     
       if (typeof invoiceData.items === "string") {
         try {
           invoiceData.items = JSON.parse(invoiceData.items);
@@ -206,7 +209,6 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
         invoiceData.showChart = false;
       }
 
-      // 📄 Generate HTML using fixed English template and localized text
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       if (!html || typeof html !== "string") {
         results.push({ error: "Failed to generate HTML" });
@@ -225,12 +227,12 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
 
       let finalPdfBytes = pdfBuffer;
 
-   // after you generate pdfBuffer for an invoice
+   
 const pdfDoc = await PDFDocument.load(pdfBuffer);
 const pageCount = pdfDoc.getPageCount();
 
 
-// pass pageCount when incrementing usage
+
 incrementUsage(user, isPreview, process.env.FORCE_PLAN, pageCount);
 
 
