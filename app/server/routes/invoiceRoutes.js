@@ -15,8 +15,8 @@ const { execSync, execFile } = require("child_process");
 
 const locales = {
   sl: require('../../locales/sl.json'),
-  en: require('./locales/en.json'),
-  de: require('./locales/de.json'),
+  en: require('../../locales/en.json'),
+  de: require('../../locales/de.json'),
   
 };
 
