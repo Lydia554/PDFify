@@ -9,10 +9,8 @@ const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
-
 const recipeTemplateBasic = require('../templates-friendly-mode/recipe');
 const recipeTemplatePremium = require('../templates-friendly-mode/recipe-premium');
-
 
 const templates = {
   invoice: {
@@ -25,16 +23,18 @@ const templates = {
   },
 };
 
-
+// Check Access Route
 router.get('/check-access', authenticate, dualAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Uncomment the next line to simulate premium access during development:
-  return res.json({ accessType: 'pro' });
+    // Simulate access level from environment variable
+    if (process.env.FORCE_PLAN) {
+      return res.json({ accessType: process.env.FORCE_PLAN });
+    }
 
-    const accessType = user.plan === 'premium' ? 'premium' : 'basic';
+    const accessType = ['premium', 'pro'].includes(user.plan) ? 'premium' : 'basic';
     res.json({ accessType });
   } catch (err) {
     console.error(err);
@@ -44,24 +44,21 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
 
 router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
-
   const templateConfig = templates[template];
+
   if (!templateConfig) {
     return res.status(400).json({ error: 'Invalid template' });
   }
 
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-
-    const isDev = process.env.NODE_ENV !== 'production';
-const isPremium = isDev ? true : (user.plan === 'premium' || user.plan === 'pro');
-
- // For dev testing
-    // let isPremium = user.plan === 'premium';
+    // Determine if user is premium or pro
+    const forcedPlan = process.env.FORCE_PLAN;
+    const isPremium = forcedPlan
+      ? ['premium', 'pro'].includes(forcedPlan)
+      : ['premium', 'pro'].includes(user.plan);
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
@@ -90,13 +87,10 @@ const isPremium = isDev ? true : (user.plan === 'premium' || user.plan === 'pro'
     }
 
     if (typeof formData.instructions === 'string') {
-      formData.instructions = formData.instructions
-        .split(';')
-        .map(i => i.trim())
-        .filter(Boolean);
+      formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
     }
 
-    // 🌍 Load locale ONLY for premium invoice
+    // 🌍 Load locale for premium or pro users
     if (template === 'invoice' && isPremium && formData.invoiceLanguage) {
       const langCode = formData.invoiceLanguage;
       const localesPath = path.join(__dirname, '..', 'locales-friendly', `${langCode}.json`);
@@ -133,9 +127,7 @@ const isPremium = isDev ? true : (user.plan === 'premium' || user.plan === 'pro'
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
         fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
-        });
+        return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
       }
 
       user.usageCount += pageCount;
@@ -154,6 +146,5 @@ const isPremium = isDev ? true : (user.plan === 'premium' || user.plan === 'pro'
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
-
 
 module.exports = router;
