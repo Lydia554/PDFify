@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     payload.template = selectedTemplate;
     payload.isPreview = true;
 
-    // Add logo field here as well
+    
     payload.logo = logobase64;
 
     if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {

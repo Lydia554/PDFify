@@ -56,7 +56,11 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    let isPremium = true; // For dev testing
+
+    const isDev = process.env.NODE_ENV !== 'production';
+const isPremium = isDev ? true : (user.plan === 'premium' || user.plan === 'pro');
+
+ // For dev testing
     // let isPremium = user.plan === 'premium';
 
     if (templateConfig.premiumOnly && !isPremium) {
