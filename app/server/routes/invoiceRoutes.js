@@ -246,7 +246,8 @@ const pageCount = pdfDoc.getPageCount();
 
 
 
-incrementUsage(user, isPreview, process.env.FORCE_PLAN, pageCount);
+incrementUsage(user, isPreview, pageCount);
+
 
 
 
@@ -362,6 +363,7 @@ incrementUsage(user, isPreview, process.env.FORCE_PLAN, pageCount);
         "-dSubsetFonts=true",
         "-dPreserveDocInfo=false",
         "-dPDFACompatibilityPolicy=1",
+        "-dUseCIEColor",
         `-sOutputFile=${tempOutput}`,
         tempInput,
       ];
@@ -385,35 +387,33 @@ incrementUsage(user, isPreview, process.env.FORCE_PLAN, pageCount);
       results.push({ index, pdf: finalPdf });
     }
 
-    if (results.length === 1) {
-      console.log("📤 Sending single PDF response");
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=invoice.pdf`,
-        "Content-Length": results[0].pdf.length,
-      });
-      res.send(results[0].pdf);
-    } else {
-      console.log("🗜️ Zipping multiple PDFs for response");
-      const archive = archiver("zip", { zlib: { level: 9 } });
-      res.set({
-        "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename=invoices.zip`,
-      });
-      archive.pipe(res);
-      results.forEach(({ index, pdf }) => {
-        archive.append(pdf, { name: `invoice-${index + 1}.pdf` });
-      });
-      await archive.finalize();
-    }
+if (results.length === 1) {
+  console.log("📤 Sending single PDF response");
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `inline; filename=invoice.pdf`,
+    "Content-Length": results[0].pdf.length,
+  });
+  res.send(results[0].pdf);
 
-      
-
+  // Save usage count after sending, but handle errors silently
+  try {
     await user.save();
     console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
-  } catch (e) {
-    console.error("❌ Exception in /generate-invoice:", e);
-    res.status(500).json({ error: "Internal Server Error", details: e.message });
+  } catch (saveErr) {
+    console.warn("⚠️ Could not save usage data after response:", saveErr.message);
+  }
+}
+
+
+
+if (!res.headersSent) {
+  res.status(500).json({ error: "Internal Server Error", details: e.message });
+} else {
+  console.error("📨 Response already sent, error occurred afterward:", e.message);
+}
+
+
   } finally {
     if (browser) {
       console.log("🧹 Closing Puppeteer browser...");
