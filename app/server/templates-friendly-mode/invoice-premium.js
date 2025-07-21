@@ -12,7 +12,6 @@ function generateInvoicePremiumHtml(data) {
     date = '',
     invoiceNumber = '',
     companyName = 'Your Company Name',
-    companyAddress = '123 Business Rd, City',
     companyEmail = 'info@company.com',
     senderAddress = '',
     includeTitle = true,
@@ -211,33 +210,33 @@ function generateInvoicePremiumHtml(data) {
         }
       </style>
     </head>
-   <body>
-  <div class="header">
+    <body>
+      <div class="header">
     ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" style="max-height: 60px; max-width: 200px;" />` : ''}
-    ${includeTitle ? `<div class="invoice-title">${t.invoiceTitle} ${customerName}</div>` : ''}
+    ${includeTitle ? `<div class="invoice-title">${t.invoice}</div>` : ''}
   </div>
 
   <div class="info-grid">
     <div class="info-box">
       <p><strong>${t.customer}:</strong> ${customerName}</p>
-      ${recipientAddress ? `<p><strong>${t.recipientAddress || 'Recipient Address'}:</strong> ${recipientAddress}</p>` : ''}
+      ${recipientAddress ? `<p><strong>${t.recipientAddress}:</strong> ${recipientAddress}</p>` : ''}
       <p><strong>${t.date}:</strong> ${date}</p>
-      <p><strong>${t.orderId || t.invoiceNumber || 'Invoice Number'}:</strong> ${invoiceNumber}</p>
+      <p><strong>${t.invoiceNumber}:</strong> ${invoiceNumber}</p>
     </div>
     <div class="info-box">
-      <p><strong>${t.company || 'Company'}:</strong> ${companyName}</p>
-      <p><strong>${t.companyAddress || t.senderAddress || 'Address'}:</strong> ${senderAddress || companyAddress}</p>
-      <p><strong>${t.email || t.companyEmail || 'Email'}:</strong> ${companyEmail}</p>
+      <p><strong>${t.company}:</strong> ${companyName}</p>
+      <p><strong>${t.senderAddress}:</strong> ${senderAddress || companyAddress}</p>
+      <p><strong>${t.companyEmail}:</strong> ${companyEmail}</p>
     </div>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th>${t.item || t.description || 'Description'}</th>
-        <th>${t.quantity || 'Quantity'}</th>
-        <th>${t.price || t.unitPrice || 'Unit Price'}</th>
-        <th>${t.net || t.total || 'Total'}</th>
+        <th>${t.description}</th>
+        <th>${t.qty}</th>
+        <th>${t.unitPrice}</th>
+        <th>${t.total}</th>
         <th>${t.tax}</th>
       </tr>
     </thead>
@@ -250,29 +249,28 @@ function generateInvoicePremiumHtml(data) {
         <td>${computedSubtotal.toFixed(2)}</td>
       </tr>
       <tr>
-        <td colspan="4" style="text-align:right;">${t.taxLabel} (${Number(taxRate).toFixed(2)} %):</td>
+        <td colspan="4" style="text-align:right;">${t.tax} (${Number(taxRate).toFixed(2)} %):</td>
         <td>${computedTaxAmount.toFixed(2)}</td>
       </tr>
       <tr>
-        <td colspan="4" style="text-align:right;">${t.totalAmountDue || t.total}:</td>
+        <td colspan="4" style="text-align:right;">${t.total}:</td>
         <td>${computedTotal.toFixed(2)}</td>
       </tr>
     </tfoot>
   </table>
 
-  ${notes ? `<div class="notes"><strong>${t.notes || 'Notes'}:</strong> ${notes}</div>` : ''}
+  ${notes ? `<div class="notes"><strong>${t.notes}:</strong> ${notes}</div>` : ''}
 
   <div class="footer">
     <p>${t.thanks}</p>
-    <p>${t.contact} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-    <p>&copy; 2025 🧾PDFify — ${t.copyright}</p>
+    <p>${t.questions} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+    <p>&copy; 2025 🧾PDFify — ${t.rights}</p>
     <p>
-      ${t.generated} <strong>PDFify</strong>. ${t.visitSite}
-      <a href="https://pdfify.pro/" target="_blank">https://pdfify.pro/</a>.
-    </p>
+      ${t.generatedUsing} <strong>PDFify</strong>. Visit
+        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
+      </p>
   </div>
 </body>
-
 </html>
 `;
 }
