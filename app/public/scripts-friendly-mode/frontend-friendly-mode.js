@@ -39,13 +39,7 @@ function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
     html = `
-     <label class="block text-white mb-1 font-semibold">Invoice Language:
-    <select id="invoiceLanguage" name="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
-      <option value="en">English</option>
-      <option value="de">Deutsch</option>
-      <option value="sl">Slovenščina</option>
-    </select>
-  </label>
+  
       <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
@@ -55,6 +49,13 @@ function renderForm(template) {
 
       <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Business Details</legend>
+           <label class="block text-white mb-1 font-semibold">Invoice Language:
+    <select id="invoiceLanguage" name="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+      <option value="sl">Slovenščina</option>
+    </select>
+  </label>
         <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Company Address: <input id="companyAddress" name="companyAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Company Email: <input id="companyEmail" name="companyEmail" type="email" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
