@@ -1,13 +1,11 @@
-const en = require('../../locales/en.json');
-const de = require('../../locales/de.json');
-const sl = require('../../locales/sl.json');
+const en = require('../../locales-friendly/en.json');
+const de = require('../../locales-friendly/de.json');
+const sl = require('../../locales-friendly/sl.json');
 
 const locales = { en, de, sl };
 
-
-
-function generateInvoicePremiumHtml(data, mode = 'friendlyMode') {
-  console.log('generateInvoicePremiumHtml data:', data);
+function generateInvoicePremiumHtml(data) {
+  console.log('generateInvoiceFriendlyHtml data:', data);
   const {
     customerName = 'Valued Customer',
     recipientAddress = '',
@@ -22,12 +20,10 @@ function generateInvoicePremiumHtml(data, mode = 'friendlyMode') {
     taxRate = 0,
     notes = '',
     logo = '',
-    language = 'en', 
+    language = 'en',
   } = data;
 
-    const t = (locales[language] && locales[language][mode]) 
-              ? locales[language][mode] 
-              : locales['en'][mode];
+  const t = locales[language] || locales['en'];
 
 
   let itemsArray;
