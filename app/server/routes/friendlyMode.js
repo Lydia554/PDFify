@@ -59,7 +59,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     // Uncomment and use real user plan check in production
     let isPremium = true; 
-    //let isPremium = user.plan === 'premium';
+    //  let isPremium = (user.plan === 'premium' || user.plan === 'pro');
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
