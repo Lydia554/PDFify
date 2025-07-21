@@ -180,7 +180,6 @@ generatePdfBtn.addEventListener('click', async () => {
           invoiceLanguage: document.getElementById('invoiceLanguage')?.value || 'en',
         senderAddress: userAccessType === 'premium' ? document.getElementById('senderAddress')?.value : undefined,
         companyName: document.getElementById('companyName')?.value,
-        companyAddress: document.getElementById('companyAddress')?.value,
         companyEmail: document.getElementById('companyEmail')?.value,
         recipientAddress: userAccessType === 'premium' ? document.getElementById('recipientAddress')?.value : undefined,
         notes: userAccessType === 'premium' ? document.getElementById('notes')?.value : undefined,
