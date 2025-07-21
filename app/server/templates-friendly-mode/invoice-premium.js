@@ -19,11 +19,12 @@ function generateInvoicePremiumHtml(data) {
     taxRate = 0,
     notes = '',
     logo = '',
+    invoiceLanguage,
     language = 'en',
   } = data;
 
-  // Add this fallback:
-const lang = language || data.invoiceLanguage || 'en';
+  
+const lang = invoiceLanguage || language || 'en';
 const t = locales[lang] || locales['en'];
 
 

@@ -7,7 +7,7 @@
   "customer": "Customer",
   "recipientAddress": "Recipient Address",
   "company": "Company",
-  "senderAddress": "Address",
+  "senderAddress": "Sender Address",
   "companyEmail": "Email",
   "description": "Description",
   "qty": "Qty",
