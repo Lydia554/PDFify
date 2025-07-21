@@ -1,6 +1,5 @@
-// xmp/embedXmp.js
 const fs = require("fs");
-const { PDFDocument, PDFName } = require("pdf-lib");
+const { PDFName } = require("pdf-lib");
 
 function embedXmpIntoPdf(pdfDoc, xmpPath) {
   const catalog = pdfDoc.catalog;
@@ -9,11 +8,11 @@ function embedXmpIntoPdf(pdfDoc, xmpPath) {
     const rawXmp = fs.readFileSync(xmpPath, "utf-8");
     console.log("📂 Raw XMP loaded:", rawXmp.slice(0, 100), "...");
 
-    // Optional: sanitize here if needed
-    const sanitizedXmp = rawXmp; // or sanitizeXmp(rawXmp);
+    
+    const sanitizedXmp = rawXmp.trim();
 
-    const bom = Buffer.from([0xEF, 0xBB, 0xBF]);
-    const cleanBuffer = Buffer.concat([bom, Buffer.from(sanitizedXmp, "utf-8")]);
+
+    const cleanBuffer = Buffer.from(sanitizedXmp, "utf-8");
 
     console.log("📦 Clean XMP buffer created, length:", cleanBuffer.length);
 
