@@ -32,15 +32,16 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Uncomment the next line to simulate premium access during development:
-  return res.json({ accessType: 'premium' });
+  return res.json({ accessType: 'pro' });
 
-    const accessType = user.plan === 'premium' ? 'premium' : 'basic';
+    const accessType = (user.plan === 'premium' || user.plan === 'pro') ? user.plan : 'basic';
     res.json({ accessType });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to determine access type' });
   }
 });
+
 
 router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
