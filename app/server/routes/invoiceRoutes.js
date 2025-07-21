@@ -62,6 +62,17 @@ async function sanitizePdfMetadata(pdfBuffer) {
 }
 
 
+async function removeInfoDict(pdfBuffer) {
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const trailer = pdfDoc.context.trailer;
+  if (trailer.has(PDFName.of("Info"))) {
+    trailer.delete(PDFName.of("Info"));
+    console.log("✅ Removed Info dictionary");
+  }
+  return await pdfDoc.save();
+}
+
+
 
 
 
@@ -293,6 +304,7 @@ await page.close();
 
 // Sanitize metadata in the generated PDF buffer
 const sanitizedPdfBuffer = await sanitizePdfMetadata(pdfBuffer);
+pdfBuffer = await removeInfoDict(pdfBuffer);
 
 // Use the sanitized buffer from now on
 let finalPdfBytes = sanitizedPdfBuffer;
