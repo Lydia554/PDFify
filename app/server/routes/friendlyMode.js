@@ -26,15 +26,18 @@ const templates = {
 };
 
 
+const FORCE_PLAN = process.env.FORCE_PLAN; 
 router.get('/check-access', authenticate, dualAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    // Uncomment the next line to simulate premium access during development:
-  return res.json({ accessType: 'premium' });
+    // Use forced plan if set, else user.plan
+    const plan = FORCE_PLAN || user.plan;
 
-    const accessType = user.plan === 'premium' ? 'premium' : 'basic';
+    // Treat both 'premium' and 'pro' as premium access
+    const accessType = (plan === 'premium' || plan === 'pro') ? 'premium' : 'basic';
+
     res.json({ accessType });
   } catch (err) {
     console.error(err);
@@ -56,19 +59,19 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Uncomment and use real user plan check in production
-    let isPremium = true; 
-    //let isPremium = user.plan === 'premium';
+    // Use forced plan if set, else user.plan
+    const plan = FORCE_PLAN || user.plan;
+
+    // Treat 'premium' and 'pro' the same here
+    const isPremium = (plan === 'premium' || plan === 'pro');
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
-    
     if (!isPremium) {
-      formData.logoBase64 = null; 
+      formData.logoBase64 = null;
     }
-    
 
   
     if (typeof formData.items === 'string') {
