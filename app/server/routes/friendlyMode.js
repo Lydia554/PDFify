@@ -32,16 +32,15 @@ router.get('/check-access', authenticate, dualAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' });
 
     // Uncomment the next line to simulate premium access during development:
-  //return res.json({ accessType: 'pro' });
+  //return res.json({ accessType: 'premium' });
 
-    const accessType = (user.plan === 'premium' || user.plan === 'pro') ? user.plan : 'basic';
+    const accessType = user.plan === 'premium' ? 'premium' : 'basic';
     res.json({ accessType });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to determine access type' });
   }
 });
-
 
 router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
@@ -59,10 +58,10 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     // Uncomment and use real user plan check in production
     //let isPremium = true; 
-    let isPremium = (user.plan === 'premium' || user.plan === 'pro');
+    let isPremium = user.plan === 'premium';
 
     if (templateConfig.premiumOnly && !isPremium) {
-      return res.status(403).json({ error: 'This template is available for premium and pro users only.' });
+      return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
     
