@@ -30,6 +30,12 @@ const log = (message, data = null) => {
   }
 };
 
+const FORCE_PLAN = process.env.FORCE_PLAN || null;
+if (FORCE_PLAN) {
+  user.plan = FORCE_PLAN;
+  console.log(`🧪 Forced plan applied: ${FORCE_PLAN}`);
+}
+
 
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
@@ -37,7 +43,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
 
 
-  const FORCE_PLAN = process.env.FORCE_PLAN;
+
 
 function incrementUsage(user, isPreview, pages = 1) {
   const plan = (FORCE_PLAN || user.plan || "").toLowerCase();
@@ -399,7 +405,10 @@ if (results.length === 1) {
   // Save usage count after sending, but handle errors silently
   try {
     await user.save();
-    console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
+    console.log("💾 User usage data saved:", {
+      usageCount: user.usageCount,
+      previewCount: user.previewCount,
+    });
   } catch (saveErr) {
     console.warn("⚠️ Could not save usage data after response:", saveErr.message);
   }
