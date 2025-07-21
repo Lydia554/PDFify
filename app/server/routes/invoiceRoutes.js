@@ -123,12 +123,6 @@ function incrementUsage(user, isPreview, pages = 1) {
     }
     console.log("👤 User found:", user._id, "plan:", user.plan);
 
-if (FORCE_PLAN) {
-  user.plan = FORCE_PLAN.toLowerCase();  
-  user.isPremium = ["premium", "pro"].includes(user.plan);
-  console.log(`🧪 Forced plan applied: ${user.plan}, isPremium: ${user.isPremium}`);
-}
-
 
   
     const now = new Date();
