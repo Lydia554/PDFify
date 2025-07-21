@@ -100,10 +100,11 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     }
 
 
-    const generateHtml = templateConfig.fn(isPremium);
-    const language = formData.language || 'en';
-    formData.language = language; 
-const html = generateHtml(formData, language);
+   const generateHtml = templateConfig.fn(isPremium);
+const language = formData.language || 'en';
+formData.language = language; 
+const html = generateHtml(formData);  
+
 
 
     const pdfDir = path.join(__dirname, '../../pdfs');
