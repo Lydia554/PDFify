@@ -225,7 +225,7 @@ function generateInvoicePremiumHtml(data) {
     </div>
     <div class="info-box">
       <p><strong>${t.company}:</strong> ${companyName}</p>
-      <p><strong>${t.senderAddress}:</strong> ${senderAddress || companyAddress}</p>
+      <p><strong>${t.senderAddress}:</strong> ${senderAddress}</p>
       <p><strong>${t.companyEmail}:</strong> ${companyEmail}</p>
     </div>
   </div>
