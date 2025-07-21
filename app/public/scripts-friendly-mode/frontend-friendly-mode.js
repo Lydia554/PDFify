@@ -28,18 +28,22 @@ async function fetchAccessType() {
     }
     if (res.ok) {
       const data = await res.json();
-      userAccessType = data.accessType === 'premium' ? 'premium' : 'basic';
+      const type = data.accessType;
+      userAccessType = (type === 'premium' || type === 'pro') ? type : 'basic';
     }
   } catch (err) {
     console.warn('Access check failed, falling back to basic.');
   }
 }
 
+function hasAdvancedAccess() {
+  return userAccessType === 'premium' || userAccessType === 'pro';
+}
+
 function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
     html = `
-   
       <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
@@ -47,24 +51,21 @@ function renderForm(template) {
       <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
       <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" class="p-1 rounded border border-gray-400 text-black"/></label>
 
-   <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
-  <legend class="font-semibold mb-2">Business Details</legend>
-
-  <label class="block mb-1">Invoice Language:
-    <select id="invoiceLanguage" name="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
-      <option value="en">English</option>
-      <option value="de">Deutsch</option>
-      <option value="sl">Slovenščina</option>
-    </select>
-  </label>
-
+      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+        <legend class="font-semibold mb-2">Business Details</legend>
+        <label class="block mb-1">Invoice Language:
+          <select id="invoiceLanguage" name="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
+            <option value="en">English</option>
+            <option value="de">Deutsch</option>
+            <option value="sl">Slovenščina</option>
+          </select>
+        </label>
         <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Company Email: <input id="companyEmail" name="companyEmail" type="email" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Sender Address: <input id="senderAddress" name="senderAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Recipient Address: <input id="recipientAddress" name="recipientAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" class="w-full text-white"/></label>
         <label class="block mb-1">Extra Notes: <textarea id="notes" name="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
-      
       </fieldset>
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
@@ -73,12 +74,10 @@ function renderForm(template) {
       <label class="block text-white mb-1 font-semibold">Recipe Name: <input id="recipeName" name="recipeName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" name="prepTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" name="cookTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-     <label class="block text-white mb-1 font-semibold">Ingredients (comma separated):</label>
-<textarea id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Flour, Sugar, Eggs"></textarea>
-
-<label class="block text-white mb-1 font-semibold">Instructions (semicolon separated):</label>
-<textarea id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Preheat oven; Mix ingredients; Bake for 30 minutes"></textarea>
-
+      <label class="block text-white mb-1 font-semibold">Ingredients (comma separated):</label>
+      <textarea id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Flour, Sugar, Eggs"></textarea>
+      <label class="block text-white mb-1 font-semibold">Instructions (semicolon separated):</label>
+      <textarea id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Preheat oven; Mix ingredients; Bake for 30 minutes"></textarea>
 
       <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Media & Nutrition</legend>
@@ -96,23 +95,24 @@ function renderForm(template) {
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
   }
+
   formContainer.innerHTML = html;
   allSelectedFiles = [];
   updateImagePreview();
 
-  if (template === 'recipe' && userAccessType === 'premium') {
+  if (template === 'recipe' && hasAdvancedAccess()) {
     const imageInput = document.getElementById('imageUpload');
     if (imageInput) {
       imageInput.addEventListener('change', onImagesSelected);
     }
   }
 
-  if (userAccessType === 'basic') {
+  if (!hasAdvancedAccess()) {
     const premiumFields = formContainer.querySelectorAll('.premium-only input, .premium-only textarea, .premium-only select, .premium-only button');
     premiumFields.forEach(el => {
       el.disabled = true;
       el.style.opacity = '0.5';
-      el.title = 'Available in Premium only';
+      el.title = 'Available in Premium or Pro only';
     });
   }
 }
@@ -152,7 +152,7 @@ generatePdfBtn.addEventListener('click', async () => {
     if (template === 'invoice') {
       const logoInput = document.getElementById('logoUpload');
       let base64Logo = '';
-      if (userAccessType === 'premium' && logoInput?.files.length > 0) {
+      if (hasAdvancedAccess() && logoInput?.files.length > 0) {
         const file = logoInput.files[0];
         base64Logo = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -177,23 +177,24 @@ generatePdfBtn.addEventListener('click', async () => {
           };
         }).filter(item => item.description && !isNaN(item.quantity) && !isNaN(item.unitPrice)),
         logoBase64: base64Logo || undefined,
-          invoiceLanguage: document.getElementById('invoiceLanguage')?.value || 'en',
-        senderAddress: userAccessType === 'premium' ? document.getElementById('senderAddress')?.value : undefined,
+        invoiceLanguage: document.getElementById('invoiceLanguage')?.value || 'en',
+        senderAddress: hasAdvancedAccess() ? document.getElementById('senderAddress')?.value : undefined,
         companyName: document.getElementById('companyName')?.value,
         companyEmail: document.getElementById('companyEmail')?.value,
-        recipientAddress: userAccessType === 'premium' ? document.getElementById('recipientAddress')?.value : undefined,
-        notes: userAccessType === 'premium' ? document.getElementById('notes')?.value : undefined,
+        recipientAddress: hasAdvancedAccess() ? document.getElementById('recipientAddress')?.value : undefined,
+        notes: hasAdvancedAccess() ? document.getElementById('notes')?.value : undefined,
       };
       if (formData.logoBase64) {
         formData.logo = formData.logoBase64;
         delete formData.logoBase64;
       }
     } else if (template === 'recipe') {
-      const videoUrl = userAccessType === 'premium' ? document.getElementById('videoUrl')?.value.trim() : '';
+      const videoUrl = hasAdvancedAccess() ? document.getElementById('videoUrl')?.value.trim() : '';
       if (videoUrl && !isValidYouTubeUrl(videoUrl)) {
         throw new Error('Please enter a valid YouTube video URL.');
       }
-      const base64Images = userAccessType === 'premium'
+
+      const base64Images = hasAdvancedAccess()
         ? await Promise.all(allSelectedFiles.map(file =>
             new Promise((resolve, reject) => {
               const reader = new FileReader();
@@ -213,7 +214,7 @@ generatePdfBtn.addEventListener('click', async () => {
         imageUrls: base64Images,
         includeTitle: document.getElementById('includeTitle')?.checked ?? false,
         videoUrl: videoUrl || undefined,
-        nutrition: userAccessType === 'premium' ? {
+        nutrition: hasAdvancedAccess() ? {
           Calories: document.getElementById('calories')?.value || undefined,
           Protein: document.getElementById('protein')?.value || undefined,
           Fat: document.getElementById('fat')?.value || undefined,
@@ -272,5 +273,3 @@ templateSelect.addEventListener('change', () => {
   await fetchAccessType();
   renderForm(templateSelect.value);
 })();
-
-
