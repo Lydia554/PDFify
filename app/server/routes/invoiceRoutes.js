@@ -36,10 +36,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
 
-const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
-
-
+  const FORCE_PLAN = process.env.FORCE_PLAN;
 
 function incrementUsage(user, isPreview, pages = 1) {
   const plan = (FORCE_PLAN || user.plan || "").toLowerCase();
@@ -124,13 +122,6 @@ function incrementUsage(user, isPreview, pages = 1) {
       return res.status(404).json({ error: "User not found" });
     }
     console.log("👤 User found:", user._id, "plan:", user.plan);
-
-if (FORCE_PLAN) {
-  user.plan = FORCE_PLAN;
-  user.isPremium = ["premium", "pro"].includes(FORCE_PLAN.toLowerCase());
-  console.log(`🧪 Forced plan applied: ${FORCE_PLAN}, isPremium: ${user.isPremium}`);
-}
-
 
   
     const now = new Date();
@@ -396,7 +387,7 @@ incrementUsage(user, isPreview, pageCount);
       results.push({ index, pdf: finalPdf });
     }
 
-   if (results.length === 1) {
+if (results.length === 1) {
       console.log("📤 Sending single PDF response");
       res.set({
         "Content-Type": "application/pdf",
@@ -405,7 +396,7 @@ incrementUsage(user, isPreview, pageCount);
       });
       res.send(results[0].pdf);
 
-     
+    
       try {
         await user.save();
         console.log("💾 User usage data saved:", {
