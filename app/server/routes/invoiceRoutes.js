@@ -28,8 +28,15 @@ async function sanitizePdfMetadata(pdfBuffer) {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
     if (!pdfDoc.context || !pdfDoc.context.trailer) {
-      console.warn("⚠️ PDF context or trailer missing — skipping metadata sanitization");
-      return pdfBuffer; // return original buffer if no metadata found
+      console.warn("⚠️ PDF context or trailer missing — attempting to remove Info dictionary manually");
+
+      // Try to forcibly remove Info ref from trailer, if possible
+      if (pdfDoc.context?.trailer) {
+        pdfDoc.context.trailer.delete(PDFName.of("Info"));
+        return await pdfDoc.save();
+      }
+
+      return pdfBuffer;
     }
 
     const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
@@ -41,16 +48,10 @@ async function sanitizePdfMetadata(pdfBuffer) {
             const decoded = value.decodeText();
             const sanitized = sanitizePdfString(decoded);
             infoDict.set(key, PDFString.of(sanitized));
-          } else {
-            console.log(`ℹ️ Skipping non-PDFString metadata key ${key.toString()}`);
           }
         }
         console.log("✅ Sanitized PDF Info dictionary metadata");
-      } else {
-        console.log("ℹ️ No Info dictionary found");
       }
-    } else {
-      console.log("ℹ️ No Info ref found in trailer");
     }
 
     return await pdfDoc.save();
