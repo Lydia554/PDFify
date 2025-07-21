@@ -12,15 +12,6 @@ const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
 
 
-
-const locales = {
-  sl: require('../../locales/sl.json'),
-  en: require('../../locales/en.json'),
-  de: require('../../locales/de.json'),
-  
-};
-
-
 const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 
 
@@ -77,6 +68,25 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
   }
 
 
+   const locales = {
+    sl: require('../../locales/sl.json'),
+    en: require('../../locales/en.json'),
+    de: require('../../locales/de.json'),
+  };
+
+  const data = req.body;
+
+  // Default to 'en' if language not provided or unsupported
+  const language = data.language && locales[data.language] ? data.language : 'en';
+
+  // Default to 'friendlyMode' if mode not provided or invalid
+  const mode = data.mode && ['friendlyMode', 'devMode'].includes(data.mode) ? data.mode : 'friendlyMode';
+
+  // Defensive fallback: get translations for selected language and mode
+  const t = locales[language] && locales[language][mode] ? locales[language][mode] : locales['en']['friendlyMode'];
+
+  // Log detected language and mode
+  console.log(`🌍 Language: ${language}, Mode: ${mode}`);
 
 
 

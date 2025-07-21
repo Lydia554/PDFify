@@ -1,8 +1,10 @@
+const en = require('./locales/en.json');
+const de = require('./locales/de.json');
+const sl = require('./locales/sl.json');
 
+const locales = { en, de, sl };
 
-
-
-function generateInvoicePremiumHtml(data) {
+function generateInvoicePremiumHtml(data, mode = 'friendlyMode') {
   console.log('generateInvoicePremiumHtml data:', data);
   const {
     customerName = 'Valued Customer',
@@ -18,44 +20,67 @@ function generateInvoicePremiumHtml(data) {
     taxRate = 0,
     notes = '',
     logo = '',
+    language = 'en', 
   } = data;
+
+    const t = (locales[language] && locales[language][mode]) 
+              ? locales[language][mode] 
+              : locales['en'][mode];
 
 
   let itemsArray;
   if (typeof items === 'string') {
     itemsArray = items.split('\n').map(line => {
-      const [description, quantity, unitPrice] = line.split(',');
+      const [description, quantity, unitPrice, itemTaxRate] = line.split(',');
       return {
         description: description?.trim() || '',
         quantity: Number(quantity) || 0,
-        unitPrice: Number(unitPrice) || 0
+        unitPrice: Number(unitPrice) || 0,
+        taxRate: itemTaxRate !== undefined ? Number(itemTaxRate) : undefined,
       };
     });
   } else {
     itemsArray = items;
   }
 
-  const renderItems = itemsArray.length
-    ? itemsArray.map(item => `
+
+
+    const renderItems = itemsArray.length
+    ? itemsArray.map(item => {
+      const qty = Number(item.quantity) || 0;
+      const price = Number(item.unitPrice) || 0;
+      const itemTotal = qty * price;
+
+      // Use item-specific taxRate or fallback
+      const itemTaxRate = Number(item.taxRate ?? taxRate) || 0;
+      const itemTaxAmount = itemTotal * (itemTaxRate / 100);
+
+      return `
       <tr>
         <td>${item.description || ''}</td>
-        <td>${item.quantity || 0}</td>
-        <td>${typeof item.unitPrice === 'number' ? item.unitPrice.toFixed(2) : '0.00'}</td>
-        <td>${(Number(item.quantity) * Number(item.unitPrice) || 0).toFixed(2)}</td>
+        <td>${qty}</td>
+        <td>${price.toFixed(2)}</td>
+        <td>${itemTotal.toFixed(2)}</td>
+        <td>${itemTaxAmount.toFixed(2)}</td>
       </tr>
-    `).join('')
-    : `<tr><td colspan="4" style="text-align:center;">No items</td></tr>`;
+      `;
+    }).join('')
+    : `<tr><td colspan="5" style="text-align:center;">${t.noItems || 'No items'}</td></tr>`;
 
+  const computedSubtotal = itemsArray.reduce((sum, item) => {
+    const qty = Number(item.quantity) || 0;
+    const price = Number(item.unitPrice) || 0;
+    return sum + qty * price;
+  }, 0);
 
-    const computedSubtotal = itemsArray.reduce((sum, item) => {
-  const qty = Number(item.quantity) || 0;
-  const price = Number(item.unitPrice) || 0;
-  return sum + qty * price;
-}, 0);
+  const computedTaxAmount = itemsArray.reduce((sum, item) => {
+    const qty = Number(item.quantity) || 0;
+    const price = Number(item.unitPrice) || 0;
+    const itemTaxRate = Number(item.taxRate ?? taxRate) || 0;
+    return sum + qty * price * (itemTaxRate / 100);
+  }, 0);
 
-const computedTaxAmount = (Number(taxRate) || 0) / 100 * computedSubtotal;
-const computedTotal = computedSubtotal + computedTaxAmount;
-
+  const computedTotal = computedSubtotal + computedTaxAmount;
 
   return `
  
@@ -190,70 +215,68 @@ const computedTotal = computedSubtotal + computedTaxAmount;
     </head>
     <body>
       <div class="header">
-       ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" style="max-height: 60px; max-width: 200px;" />` : ''}
-        ${includeTitle ? `<div class="invoice-title">Invoice</div>` : ''}
-       
+    ${logo ? `<img src="${logo}" alt="Company Logo" class="logo" style="max-height: 60px; max-width: 200px;" />` : ''}
+    ${includeTitle ? `<div class="invoice-title">${t.invoice}</div>` : ''}
+  </div>
 
-      </div>
-  
-      <div class="info-grid">
-        <div class="info-box">
-          <p><strong>Customer:</strong> ${customerName}</p>
-          ${recipientAddress ? `<p><strong>Recipient Address:</strong> ${recipientAddress}</p>` : ''}
-          <p><strong>Date:</strong> ${date}</p>
-          <p><strong>Invoice #:</strong> ${invoiceNumber}</p>
-        </div>
-        <div class="info-box">
-          <p><strong>Company:</strong> ${companyName}</p>
-          <p><strong>Sender Address:</strong> ${senderAddress || companyAddress}</p>
-          <p><strong>Company Email:</strong> ${companyEmail}</p>
-        </div>
-      </div>
-  
-      <table>
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>Qty</th>
-            <th>Unit Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${renderItems}
-        </tbody>
-   <tfoot>
-  <tr>
-    <td colspan="3" style="text-align:right;">Subtotal:</td>
-    <td>${computedSubtotal.toFixed(2)}</td>
-  </tr>
-  <tr>
-    <td colspan="3" style="text-align:right;">Tax (${Number(taxRate).toFixed(2)} %):</td>
-    <td>${computedTaxAmount.toFixed(2)}</td>
-  </tr>
-  <tr>
-    <td colspan="3" style="text-align:right;">Total:</td>
-    <td>${computedTotal.toFixed(2)}</td>
-  </tr>
-</tfoot>
-
-      </table>
-  
-      ${notes ? `<div class="notes"><strong>Notes:</strong> ${notes}</div>` : ''}
-  
-     <div class="footer">
-      <p>Thanks for using our service!</p>
-      <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-      <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-      <p>
-        Generated using <strong>PDFify</strong>. Visit
-        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
-      </p>
+  <div class="info-grid">
+    <div class="info-box">
+      <p><strong>${t.customer}:</strong> ${customerName}</p>
+      ${recipientAddress ? `<p><strong>${t.recipientAddress}:</strong> ${recipientAddress}</p>` : ''}
+      <p><strong>${t.date}:</strong> ${date}</p>
+      <p><strong>${t.invoiceNumber}:</strong> ${invoiceNumber}</p>
     </div>
-    </body>
-    </html>
-    `;
-  }
+    <div class="info-box">
+      <p><strong>${t.company}:</strong> ${companyName}</p>
+      <p><strong>${t.senderAddress}:</strong> ${senderAddress || companyAddress}</p>
+      <p><strong>${t.companyEmail}:</strong> ${companyEmail}</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>${t.description}</th>
+        <th>${t.qty}</th>
+        <th>${t.unitPrice}</th>
+        <th>${t.total}</th>
+        <th>${t.tax}</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${renderItems}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="text-align:right;">${t.subtotal}:</td>
+        <td>${computedSubtotal.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td colspan="4" style="text-align:right;">${t.tax} (${Number(taxRate).toFixed(2)} %):</td>
+        <td>${computedTaxAmount.toFixed(2)}</td>
+      </tr>
+      <tr>
+        <td colspan="4" style="text-align:right;">${t.total}:</td>
+        <td>${computedTotal.toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  ${notes ? `<div class="notes"><strong>${t.notes}:</strong> ${notes}</div>` : ''}
+
+  <div class="footer">
+    <p>${t.thanks}</p>
+    <p>${t.questions} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+    <p>&copy; 2025 🧾PDFify — ${t.rights}</p>
+    <p>
+      ${t.generatedUsing} <strong>PDFify</strong>. Visit
+      <a href="https://pdfify.kro.kr">pdfify.kro.kr</a>
+    </p>
+  </div>
+</body>
+</html>
+`;
+}
   
   module.exports = generateInvoicePremiumHtml;
   
