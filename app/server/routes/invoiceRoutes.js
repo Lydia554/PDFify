@@ -30,17 +30,17 @@ const log = (message, data = null) => {
   }
 };
 
-const FORCE_PLAN = process.env.FORCE_PLAN || null;
-if (FORCE_PLAN) {
-  user.plan = FORCE_PLAN;
-  console.log(`🧪 Forced plan applied: ${FORCE_PLAN}`);
-}
-
 
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
+
+const FORCE_PLAN = process.env.FORCE_PLAN || null;
+if (FORCE_PLAN) {
+  user.plan = FORCE_PLAN;
+  console.log(`🧪 Forced plan applied: ${FORCE_PLAN}`);
+}
 
 
 
