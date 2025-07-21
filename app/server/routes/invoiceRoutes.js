@@ -239,7 +239,8 @@ const pageCount = pdfDoc.getPageCount();
 
 
 
-incrementUsage(user, isPreview, process.env.FORCE_PLAN, pageCount);
+incrementUsage(user, isPreview, pageCount);
+
 
 
 
