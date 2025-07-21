@@ -37,10 +37,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
 
 const FORCE_PLAN = process.env.FORCE_PLAN || null;
-if (FORCE_PLAN) {
-  user.plan = FORCE_PLAN;
-  console.log(`🧪 Forced plan applied: ${FORCE_PLAN}`);
-}
 
 
 
@@ -128,6 +124,11 @@ function incrementUsage(user, isPreview, pages = 1) {
       return res.status(404).json({ error: "User not found" });
     }
     console.log("👤 User found:", user._id, "plan:", user.plan);
+
+    if (FORCE_PLAN) {
+  user.plan = FORCE_PLAN;
+  console.log(`🧪 Forced plan applied: ${FORCE_PLAN}`);
+}
 
   
     const now = new Date();
