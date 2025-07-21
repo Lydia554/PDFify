@@ -67,9 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
     payload.isPreview = true;
     payload.logo = logobase64;
 
-
-      const language = document.getElementById('languageSelect')?.value || 'en';
-  payload.language = language;
+const language = document.getElementById('invoiceLanguage')?.value || 'en';
+payload.language = language;
 
     
 
