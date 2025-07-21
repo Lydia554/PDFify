@@ -24,28 +24,36 @@ function sanitizePdfString(str) {
 // Inside your /generate-invoice route, after generating PDF buffer, for example:
 
 async function sanitizePdfMetadata(pdfBuffer) {
-  console.log("🧼 Starting PDF metadata sanitization...");
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-  const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
-  if (infoRef) {
-    const infoDict = pdfDoc.context.lookup(infoRef);
-    if (infoDict) {
-      for (const [key, value] of infoDict.entries()) {
-        if (value instanceof PDFString) {
-          const originalText = value.decodeText();
-          const sanitized = sanitizePdfString(originalText);
-          infoDict.set(key, PDFString.of(sanitized));
-          console.log(`Sanitized key: ${key}, original: "${originalText}", sanitized: "${sanitized}"`);
+  try {
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+    const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
+    if (infoRef) {
+      const infoDict = pdfDoc.context.lookup(infoRef);
+      if (infoDict) {
+        for (const [key, value] of infoDict.entries()) {
+          // Defensive check: some values might not be PDFString
+          if (value && value.constructor && value.constructor.name === "PDFString") {
+            const decoded = value.decodeText();
+            const sanitized = sanitizePdfString(decoded);
+            infoDict.set(key, PDFString.of(sanitized));
+          } else {
+            console.log(`ℹ️ Skipping non-PDFString metadata key ${key.toString()}`);
+          }
         }
+        console.log("✅ Sanitized PDF Info dictionary metadata");
+      } else {
+        console.log("ℹ️ No Info dictionary found");
       }
-      console.log("✅ PDF Info dictionary metadata sanitized");
+    } else {
+      console.log("ℹ️ No Info ref found in trailer");
     }
-  } else {
-    console.log("ℹ️ No Info dictionary found in PDF");
+
+    return await pdfDoc.save();
+  } catch (error) {
+    console.error("❌ Error in sanitizePdfMetadata:", error);
+    throw error;
   }
-  const savedBytes = await pdfDoc.save();
-  console.log("🧼 PDF metadata sanitization complete");
-  return savedBytes;
 }
 
 
