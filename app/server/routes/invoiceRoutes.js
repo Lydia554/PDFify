@@ -27,12 +27,16 @@ async function sanitizePdfMetadata(pdfBuffer) {
   try {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
 
+    if (!pdfDoc.context || !pdfDoc.context.trailer) {
+      console.warn("⚠️ PDF context or trailer missing — skipping metadata sanitization");
+      return pdfBuffer; // return original buffer if no metadata found
+    }
+
     const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
     if (infoRef) {
       const infoDict = pdfDoc.context.lookup(infoRef);
       if (infoDict) {
         for (const [key, value] of infoDict.entries()) {
-          // Defensive check: some values might not be PDFString
           if (value && value.constructor && value.constructor.name === "PDFString") {
             const decoded = value.decodeText();
             const sanitized = sanitizePdfString(decoded);
@@ -55,6 +59,7 @@ async function sanitizePdfMetadata(pdfBuffer) {
     throw error;
   }
 }
+
 
 
 
