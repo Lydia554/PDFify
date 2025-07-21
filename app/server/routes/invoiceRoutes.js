@@ -327,7 +327,8 @@ incrementUsage(user, isPreview, pageCount);
         const zugferdXml = generateZugferdXML(invoiceData);
         const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-        const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
+        const pdfDoc = await PDFDocument.load(finalPdfBytes, { updateMetadata: false });
+
 
         const sanitizeMetadata = (str) =>
           String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "?").trim();
