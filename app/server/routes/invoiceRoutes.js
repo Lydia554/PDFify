@@ -369,6 +369,7 @@ const gsArgs = [
   "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc", 
   `-sOutputFile=${tempOutput}`,
   tempInput,
+   "/app/PDFA_def.ps",
 ];
 
 
