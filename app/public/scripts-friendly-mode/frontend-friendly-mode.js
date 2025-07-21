@@ -1,65 +1,38 @@
-const templateSelect = document.getElementById('templateSelect');
+const templateSelect = document.getElementById('friendly-endpoint-select');
 const formContainer = document.getElementById('formContainer');
-const generatePdfBtn = document.getElementById('generatePdfBtn');
+const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
 let allSelectedFiles = [];
-let userAccessType = 'basic'; // default
-
-// Change this variable to force a plan in production for testing ONLY
-// E.g. 'basic', 'premium', 'pro' or null to disable forcing
-// This override only activates if NODE_ENV === 'production'
-const forcePlan = 'pro'; // set to 'basic' or 'premium' or 'pro' for forced plan in production, null to disable
-
-async function fetchAccessType() {
-  try {
-    const res = await fetch('/api/friendly/check-access', { credentials: 'include' });
-    if (res.ok) {
-      const data = await res.json();
-      userAccessType = data.accessType || 'basic';
-    } else {
-      userAccessType = 'basic';
-    }
-  } catch {
-    userAccessType = 'basic';
-  }
-
-  // Override userAccessType if forced plan active and in production env
-  // (simulate production check, replace with your actual env check if needed)
-  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production') {
-    if (forcePlan && ['basic', 'premium', 'pro'].includes(forcePlan)) {
-      userAccessType = forcePlan;
-      console.log(`[DEBUG] User access forced to: ${forcePlan}`);
-    }
-  }
-
-  togglePremiumFields();
-}
-
-function togglePremiumFields() {
-  // Premium + Pro users get enabled premium fields
-  const premiumFields = document.querySelectorAll('.premium-only');
-  premiumFields.forEach(fieldset => {
-    if (userAccessType === 'premium' || userAccessType === 'pro') {
-      fieldset.querySelectorAll('input, select, textarea, button').forEach(el => {
-        el.disabled = false;
-      });
-      fieldset.style.opacity = '1';
-      fieldset.title = '';
-    } else {
-      // basic users disabled premium fields
-      fieldset.querySelectorAll('input, select, textarea, button').forEach(el => {
-        el.disabled = true;
-      });
-      fieldset.style.opacity = '0.6';
-      fieldset.title = 'Available in Premium and Pro plans only';
-    }
-  });
-}
+let userAccessType = 'basic';
 
 function isValidYouTubeUrl(url) {
-  const ytRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
-  return ytRegex.test(url);
+  const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}(\S*)?$/;
+  return regex.test(url.trim());
+}
+
+async function fetchAccessType() {
+  const apiKey =
+    new URLSearchParams(window.location.search).get('apiKey') ||
+    localStorage.getItem('apiKey');
+  if (!apiKey) return;
+  try {
+    const res = await fetch('/api/friendly/check-access', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      credentials: "include",
+    });
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem("apiKey");
+      window.location.href = "/login.html";
+      return;
+    }
+    if (res.ok) {
+      const data = await res.json();
+      userAccessType = data.accessType === 'premium' ? 'premium' : 'basic';
+    }
+  } catch (err) {
+    console.warn('Access check failed, falling back to basic.');
+  }
 }
 
 function renderForm(template) {
@@ -124,10 +97,6 @@ function renderForm(template) {
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
   }
-
-
-
-  
   formContainer.innerHTML = html;
   allSelectedFiles = [];
   updateImagePreview();
