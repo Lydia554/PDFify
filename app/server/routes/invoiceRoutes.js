@@ -8,7 +8,7 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
-const { PDFDocument, PDFName, PDFHexString  } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
 
 
