@@ -242,7 +242,37 @@ function incrementUsage(user, isPreview, pages = 1) {
       let finalPdfBytes = pdfBuffer;
 
    
+
+
+// Sanitize string by removing non-ASCII, control chars, line breaks, tabs, etc.
+function sanitizePdfString(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/[\r\n\t]+/g, ' ')       // replace newlines/tabs with space
+    .replace(/[^\x20-\x7E]/g, '?')    // replace non-ASCII printable with ?
+    .trim();
+}
+
+// Load the PDF document
 const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+// Access the Info dictionary from the trailer
+const infoRef = pdfDoc.context.trailer.get(PDFName.of('Info'));
+if (infoRef) {
+  const infoDict = pdfDoc.context.lookup(infoRef);
+  if (infoDict) {
+    // Loop through all keys in Info dictionary and sanitize string values
+    for (const [key, value] of infoDict.entries()) {
+      if (value instanceof PDFString) {
+        const sanitized = sanitizePdfString(value.decodeText());
+        infoDict.set(key, PDFString.of(sanitized));
+      }
+    }
+    console.log('✅ Sanitized PDF Info dictionary metadata');
+  }
+}
+
+// Continue with the rest of your flow using this sanitized pdfDoc
 const pageCount = pdfDoc.getPageCount();
 
 
