@@ -352,23 +352,25 @@ incrementUsage(user, isPreview, pageCount);
       console.log(`💾 Writing PDF input file: ${tempInput}`);
       fs.writeFileSync(tempInput, finalPdfBytes);
 
-      const gsArgs = [
-        "-dPDFA=3",
-        "-dBATCH",
-        "-dNOPAUSE",
-        "-sDEVICE=pdfwrite",
-        "-dNOOUTERSAVE",
-        "-sProcessColorModel=DeviceRGB",
-        "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
-        "-sColorConversionStrategy=RGB",
-        "-dEmbedAllFonts=true",
-        "-dSubsetFonts=true",
-        "-dPreserveDocInfo=false",
-        "-dPDFACompatibilityPolicy=1",
-        "-dUseCIEColor",
-        `-sOutputFile=${tempOutput}`,
-        tempInput,
-      ];
+const gsArgs = [
+  "-dPDFA=3", 
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-sDEVICE=pdfwrite",
+  "-dNOOUTERSAVE",
+  "-sProcessColorModel=DeviceRGB",
+  "-sColorConversionStrategy=RGB",
+  "-dEmbedAllFonts=true",
+  "-dSubsetFonts=true",
+  "-dPreserveDocInfo=false",
+  "-dPDFACompatibilityPolicy=1",
+  "-dUseCIEColor",
+  "-dFlattenTransparency=true", 
+  "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc", 
+  `-sOutputFile=${tempOutput}`,
+  tempInput,
+];
+
 
       console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
       await new Promise((resolve, reject) => {
