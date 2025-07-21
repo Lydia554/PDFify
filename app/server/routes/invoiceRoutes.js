@@ -394,36 +394,33 @@ incrementUsage(user, isPreview, pageCount);
       results.push({ index, pdf: finalPdf });
     }
 
-if (results.length === 1) {
-  console.log("📤 Sending single PDF response");
-  res.set({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": `inline; filename=invoice.pdf`,
-    "Content-Length": results[0].pdf.length,
-  });
-  res.send(results[0].pdf);
+   if (results.length === 1) {
+      console.log("📤 Sending single PDF response");
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename=invoice.pdf`,
+        "Content-Length": results[0].pdf.length,
+      });
+      res.send(results[0].pdf);
 
-  // Save usage count after sending, but handle errors silently
-  try {
-    await user.save();
-    console.log("💾 User usage data saved:", {
-      usageCount: user.usageCount,
-      previewCount: user.previewCount,
-    });
-  } catch (saveErr) {
-    console.warn("⚠️ Could not save usage data after response:", saveErr.message);
-  }
-}
+     
+      try {
+        await user.save();
+        console.log("💾 User usage data saved:", {
+          usageCount: user.usageCount,
+          previewCount: user.previewCount,
+        });
+      } catch (saveErr) {
+        console.warn("⚠️ Could not save usage data after response:", saveErr.message);
+      }
+    }
 
-
-
-if (!res.headersSent) {
-  res.status(500).json({ error: "Internal Server Error", details: e.message });
-} else {
-  console.error("📨 Response already sent, error occurred afterward:", e.message);
-}
-
-
+  } catch (error) {
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal Server Error", details: error.message });
+    } else {
+      console.error("📨 Response already sent, error occurred afterward:", error.message);
+    }
   } finally {
     if (browser) {
       console.log("🧹 Closing Puppeteer browser...");
