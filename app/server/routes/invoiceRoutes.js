@@ -22,25 +22,32 @@ function sanitizePdfString(str) {
 }
 
 // Inside your /generate-invoice route, after generating PDF buffer, for example:
-async function sanitizePdfMetadata(pdfBuffer) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  const infoRef = pdfDoc.context.trailer.get(PDFName.of('Info'));
+async function sanitizePdfMetadata(pdfBuffer) {
+  console.log("🧼 Starting PDF metadata sanitization...");
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
   if (infoRef) {
     const infoDict = pdfDoc.context.lookup(infoRef);
     if (infoDict) {
       for (const [key, value] of infoDict.entries()) {
         if (value instanceof PDFString) {
-          const sanitized = sanitizePdfString(value.decodeText());
+          const originalText = value.decodeText();
+          const sanitized = sanitizePdfString(originalText);
           infoDict.set(key, PDFString.of(sanitized));
+          console.log(`Sanitized key: ${key}, original: "${originalText}", sanitized: "${sanitized}"`);
         }
       }
-      console.log('✅ Sanitized PDF Info dictionary metadata');
+      console.log("✅ PDF Info dictionary metadata sanitized");
     }
+  } else {
+    console.log("ℹ️ No Info dictionary found in PDF");
   }
-
-  return await pdfDoc.save();
+  const savedBytes = await pdfDoc.save();
+  console.log("🧼 PDF metadata sanitization complete");
+  return savedBytes;
 }
+
 
 
 
