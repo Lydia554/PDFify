@@ -22,7 +22,9 @@ function generateInvoicePremiumHtml(data) {
     language = 'en',
   } = data;
 
-  const t = locales[language] || locales['en'];
+  // Add this fallback:
+const lang = language || data.invoiceLanguage || 'en';
+const t = locales[lang] || locales['en'];
 
 
   let itemsArray;

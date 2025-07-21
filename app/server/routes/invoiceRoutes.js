@@ -34,28 +34,35 @@ const log = (message, data = null) => {
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
-function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
+
   const plan = (forcedPlan || user.plan || "").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
 
-  if (isPreview && plan === "free") {
-    if (user.previewCount < 3) {
-      user.previewCount++;
-      console.log(`👀 Incremented preview count to ${user.previewCount}`);
-    } else {
-      user.usageCount += pages;
-      console.log(`⚠️ Preview limit reached, incremented usage count by ${pages} to ${user.usageCount}`);
-    }
-  } else if (["premium", "pro"].includes(plan)) {
-    user.usageCount += pages;
-    console.log(`🔥 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan}`);
-  } else if (!isPreview) {
-    user.usageCount += pages;
-    console.log(`💡 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
+if (isPreview && plan === "free") {
+  // Free user previews increment previewCount up to 3
+  if (user.previewCount < 3) {
+    user.previewCount++;
+    console.log(`👀 Incremented preview count to ${user.previewCount}`);
   } else {
-    console.warn(`⚠️ Unknown plan or state, no usage increment.`);
+    user.usageCount += pages;
+    console.log(`⚠️ Preview limit reached, incremented usage count by ${pages} to ${user.usageCount}`);
   }
+} else if (["premium", "pro"].includes(plan)) {
+  // Premium and Pro users: only increment usageCount for non-preview (actual downloads)
+  if (!isPreview) {
+    user.usageCount += pages;
+    console.log(`🔥 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
+  } else {
+    console.log(`ℹ️ Preview for premium/pro user - usage count not incremented`);
+  }
+} else if (!isPreview) {
+  // Other plans: only increment usage for non-preview downloads
+  user.usageCount += pages;
+  console.log(`💡 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
+} else {
+  console.warn(`⚠️ Unknown plan or state, no usage increment.`);
 }
+
 
 
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
