@@ -1,22 +1,22 @@
+// xmp/embedXmp.js
 const fs = require("fs");
+
 const { PDFName } = require("pdf-lib");
 
-function embedXmpIntoPdf(pdfDoc, xmpPath) {
+/**
+ * Embed sanitized XMP metadata from a file into a PDFDocument's catalog.
+ * @param {PDFDocument} pdfDoc - The pdf-lib PDFDocument instance.
+ * @param {string} xmpFilePath - Path to the XMP XML file.
+ */
+async function embedXmp(pdfDoc, xmpFilePath) {
   const catalog = pdfDoc.catalog;
 
   try {
-    const rawXmp = fs.readFileSync(xmpPath, "utf-8");
-    console.log("📂 Raw XMP loaded:", rawXmp.slice(0, 100), "...");
+    const rawXmp = fs.readFileSync(xmpFilePath, "utf-8");
+    // Sanitize non-printable chars, allow tabs/newlines, trim spaces
+    const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
 
-    
-    const sanitizedXmp = rawXmp.trim();
-
-
-    const cleanBuffer = Buffer.from(sanitizedXmp, "utf-8");
-
-    console.log("📦 Clean XMP buffer created, length:", cleanBuffer.length);
-
-    const metadataStream = pdfDoc.context.flateStream(cleanBuffer, {
+    const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
       Type: PDFName.of("Metadata"),
       Subtype: PDFName.of("XML"),
       Filter: PDFName.of("FlateDecode"),
@@ -25,11 +25,11 @@ function embedXmpIntoPdf(pdfDoc, xmpPath) {
     const metadataRef = pdfDoc.context.register(metadataStream);
     catalog.set(PDFName.of("Metadata"), metadataRef);
 
-    console.log("✅ XMP embedded successfully");
+    console.log("✅ XMP metadata embedded successfully");
   } catch (err) {
-    console.error("❌ XMP embedding failed:", err);
+    console.error("❌ Error embedding XMP metadata:", err);
     throw err;
   }
 }
 
-module.exports = embedXmpIntoPdf;
+module.exports = embedXmp;

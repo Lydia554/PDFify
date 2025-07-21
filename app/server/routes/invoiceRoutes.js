@@ -8,53 +8,9 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
-const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
+const embedXmp = require("../xmp/embedXmp");
+const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
-
-
-
-function sanitizePdfString(str) {
-  if (typeof str !== 'string') return str;
-  return str
-    .replace(/[\r\n\t]+/g, ' ')      
-    .replace(/[^\x20-\x7E]/g, '?')    
-    .trim();
-}
-
-
-async function sanitizePdfMetadata(pdfBuffer) {
-  try {
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-    const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
-    if (infoRef) {
-      const infoDict = pdfDoc.context.lookup(infoRef);
-      if (infoDict) {
-        for (const [key, value] of infoDict.entries()) {
-          
-          if (value && value.constructor && value.constructor.name === "PDFString") {
-            const decoded = value.decodeText();
-            const sanitized = sanitizePdfString(decoded);
-            infoDict.set(key, PDFString.of(sanitized));
-          } else {
-            console.log(`ℹ️ Skipping non-PDFString metadata key ${key.toString()}`);
-          }
-        }
-        console.log("✅ Sanitized PDF Info dictionary metadata");
-      } else {
-        console.log("ℹ️ No Info dictionary found");
-      }
-    } else {
-      console.log("ℹ️ No Info ref found in trailer");
-    }
-
-    return await pdfDoc.save();
-  } catch (error) {
-    console.error("❌ Error in sanitizePdfMetadata:", error);
-    throw error;
-  }
-}
-
 
 
 
@@ -76,14 +32,10 @@ const log = (message, data = null) => {
 };
 
 
+  const FORCE_PLAN = process.env.FORCE_PLAN;
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
-
-
-
-  const FORCE_PLAN = process.env.FORCE_PLAN;
-
 function incrementUsage(user, isPreview, pages = 1) {
   const plan = (FORCE_PLAN || user.plan || "").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
@@ -97,12 +49,8 @@ function incrementUsage(user, isPreview, pages = 1) {
       console.log(`⚠️ Preview limit reached, incremented usage count by ${pages} to ${user.usageCount}`);
     }
   } else if (["premium", "pro"].includes(plan)) {
-    if (!isPreview) {
-      user.usageCount += pages;
-      console.log(`🔥 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
-    } else {
-      console.log(`ℹ️ Preview for premium/pro user - usage count not incremented`);
-    }
+    user.usageCount += pages;
+    console.log(`🔥 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan}`);
   } else if (!isPreview) {
     user.usageCount += pages;
     console.log(`💡 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
@@ -110,8 +58,6 @@ function incrementUsage(user, isPreview, pages = 1) {
     console.warn(`⚠️ Unknown plan or state, no usage increment.`);
   }
 }
-
-
 
 
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
@@ -167,7 +113,6 @@ function incrementUsage(user, isPreview, pages = 1) {
       return res.status(404).json({ error: "User not found" });
     }
     console.log("👤 User found:", user._id, "plan:", user.plan);
-
 
   
     const now = new Date();
@@ -241,8 +186,6 @@ function incrementUsage(user, isPreview, pages = 1) {
       const supportedLocales = {
         slovenia: "sl",
         germany: "de",
-        usa: "en",
-        uk: "en",
         
       };
       const langCode = supportedLocales[country] || "en";
@@ -277,26 +220,26 @@ function incrementUsage(user, isPreview, pages = 1) {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "networkidle0" });
 
-    const pdfBuffer = await page.pdf({
-  format: "A4",
-  printBackground: true,
-  margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-});
-await page.close();
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+      });
+      await page.close();
 
-// Sanitize metadata in the generated PDF buffer
-const sanitizedPdfBuffer = await sanitizePdfMetadata(pdfBuffer);
+      let finalPdfBytes = pdfBuffer;
 
-// Use the sanitized buffer from now on
-let finalPdfBytes = sanitizedPdfBuffer;
+   
+const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-const pdfDoc = await PDFDocument.load(finalPdfBytes);
+
+
 
 const pageCount = pdfDoc.getPageCount();
 
-incrementUsage(user, isPreview, pageCount);
 
 
+incrementUsage(user, isPreview, process.env.FORCE_PLAN, pageCount);
 
 
 
@@ -361,19 +304,9 @@ incrementUsage(user, isPreview, pageCount);
 
         catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-        console.log("🔍 Reading XMP file:", xmpPath);
-        const rawXmp = fs.readFileSync(xmpPath, "utf-8");
-        const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
-        console.log("✅ XMP file sanitized");
+     const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+await embedXmp(pdfDoc, xmpPath);
 
-        const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
-          Type: PDFName.of("Metadata"),
-          Subtype: PDFName.of("XML"),
-          Filter: PDFName.of("FlateDecode"),
-        });
-        const metadataRef = pdfDoc.context.register(metadataStream);
-        catalog.set(PDFName.of("Metadata"), metadataRef);
 
         const iccData = fs.readFileSync(iccPath);
         const iccStream = pdfDoc.context.flateStream(iccData, {
@@ -401,7 +334,7 @@ incrementUsage(user, isPreview, pageCount);
       fs.writeFileSync(tempInput, finalPdfBytes);
 
 const gsArgs = [
-  "-dPDFA=3", 
+  "-dPDFA=3",                        
   "-dBATCH",
   "-dNOPAUSE",
   "-sDEVICE=pdfwrite",
@@ -410,13 +343,13 @@ const gsArgs = [
   "-sColorConversionStrategy=RGB",
   "-dEmbedAllFonts=true",
   "-dSubsetFonts=true",
-  "-dPreserveDocInfo=false",
+  "-dPreserveDocInfo=false",          
   "-dPDFACompatibilityPolicy=1",
-  "-dFlattenTransparency=true", 
-  "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc", 
+  "-dFlattenTransparency=true",       
+  "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
   `-sOutputFile=${tempOutput}`,
   tempInput,
-   "/app/PDFA_def.ps",
+  "/app/PDFA_def.ps",                
 ];
 
 
@@ -439,7 +372,7 @@ const gsArgs = [
       results.push({ index, pdf: finalPdf });
     }
 
-if (results.length === 1) {
+    if (results.length === 1) {
       console.log("📤 Sending single PDF response");
       res.set({
         "Content-Type": "application/pdf",
@@ -447,25 +380,27 @@ if (results.length === 1) {
         "Content-Length": results[0].pdf.length,
       });
       res.send(results[0].pdf);
-
-    
-      try {
-        await user.save();
-        console.log("💾 User usage data saved:", {
-          usageCount: user.usageCount,
-          previewCount: user.previewCount,
-        });
-      } catch (saveErr) {
-        console.warn("⚠️ Could not save usage data after response:", saveErr.message);
-      }
-    }
-
-  } catch (error) {
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Internal Server Error", details: error.message });
     } else {
-      console.error("📨 Response already sent, error occurred afterward:", error.message);
+      console.log("🗜️ Zipping multiple PDFs for response");
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      res.set({
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename=invoices.zip`,
+      });
+      archive.pipe(res);
+      results.forEach(({ index, pdf }) => {
+        archive.append(pdf, { name: `invoice-${index + 1}.pdf` });
+      });
+      await archive.finalize();
     }
+
+      
+
+    await user.save();
+    console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
+  } catch (e) {
+    console.error("❌ Exception in /generate-invoice:", e);
+    res.status(500).json({ error: "Internal Server Error", details: e.message });
   } finally {
     if (browser) {
       console.log("🧹 Closing Puppeteer browser...");
