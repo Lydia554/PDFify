@@ -13,6 +13,37 @@ const { execSync, execFile } = require("child_process");
 
 
 
+function sanitizePdfString(str) {
+  if (typeof str !== 'string') return str;
+  return str
+    .replace(/[\r\n\t]+/g, ' ')       // replace newlines/tabs with space
+    .replace(/[^\x20-\x7E]/g, '?')    // replace non-ASCII printable with ?
+    .trim();
+}
+
+// Inside your /generate-invoice route, after generating PDF buffer, for example:
+async function sanitizePdfMetadata(pdfBuffer) {
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+  const infoRef = pdfDoc.context.trailer.get(PDFName.of('Info'));
+  if (infoRef) {
+    const infoDict = pdfDoc.context.lookup(infoRef);
+    if (infoDict) {
+      for (const [key, value] of infoDict.entries()) {
+        if (value instanceof PDFString) {
+          const sanitized = sanitizePdfString(value.decodeText());
+          infoDict.set(key, PDFString.of(sanitized));
+        }
+      }
+      console.log('✅ Sanitized PDF Info dictionary metadata');
+    }
+  }
+
+  return await pdfDoc.save();
+}
+
+
+
 const locales = {
   sl: require('../../locales/sl.json'),
   en: require('../../locales/en.json'),
@@ -232,52 +263,25 @@ function incrementUsage(user, isPreview, pages = 1) {
       const page = await browser.newPage();
       await page.setContent(html, { waitUntil: "networkidle0" });
 
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      });
-      await page.close();
+    const pdfBuffer = await page.pdf({
+  format: "A4",
+  printBackground: true,
+  margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+});
+await page.close();
 
-      let finalPdfBytes = pdfBuffer;
+// Sanitize metadata in the generated PDF buffer
+const sanitizedPdfBuffer = await sanitizePdfMetadata(pdfBuffer);
 
-   
+// Use the sanitized buffer from now on
+let finalPdfBytes = sanitizedPdfBuffer;
 
+const pdfDoc = await PDFDocument.load(finalPdfBytes);
 
-// Sanitize string by removing non-ASCII, control chars, line breaks, tabs, etc.
-function sanitizePdfString(str) {
-  if (typeof str !== 'string') return str;
-  return str
-    .replace(/[\r\n\t]+/g, ' ')       // replace newlines/tabs with space
-    .replace(/[^\x20-\x7E]/g, '?')    // replace non-ASCII printable with ?
-    .trim();
-}
-
-// Load the PDF document
-const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-// Access the Info dictionary from the trailer
-const infoRef = pdfDoc.context.trailer.get(PDFName.of('Info'));
-if (infoRef) {
-  const infoDict = pdfDoc.context.lookup(infoRef);
-  if (infoDict) {
-    // Loop through all keys in Info dictionary and sanitize string values
-    for (const [key, value] of infoDict.entries()) {
-      if (value instanceof PDFString) {
-        const sanitized = sanitizePdfString(value.decodeText());
-        infoDict.set(key, PDFString.of(sanitized));
-      }
-    }
-    console.log('✅ Sanitized PDF Info dictionary metadata');
-  }
-}
-
-// Continue with the rest of your flow using this sanitized pdfDoc
 const pageCount = pdfDoc.getPageCount();
 
-
-
 incrementUsage(user, isPreview, pageCount);
+
 
 
 
