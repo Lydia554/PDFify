@@ -1,8 +1,10 @@
-const en = require('./locales/en.json');
-const de = require('./locales/de.json');
-const sl = require('./locales/sl.json');
+const en = require('../../locales/en.json');
+const de = require('../../locales/de.json');
+const sl = require('../../locales/sl.json');
 
 const locales = { en, de, sl };
+
+
 
 function generateInvoicePremiumHtml(data, mode = 'friendlyMode') {
   console.log('generateInvoicePremiumHtml data:', data);
