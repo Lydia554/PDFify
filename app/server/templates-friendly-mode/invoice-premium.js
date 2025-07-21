@@ -268,10 +268,10 @@ const t = locales[lang] || locales['en'];
     <p>${t.thanks}</p>
     <p>${t.questions} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
     <p>&copy; 2025 🧾PDFify — ${t.rights}</p>
-    <p>
-      ${t.generatedUsing} <strong>PDFify</strong>. Visit
-        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
-      </p>
+  <p>
+  ${t.generatedUsing} <strong>PDFify</strong>. ${t.visitSite}
+</p>
+
   </div>
 </body>
 </html>
