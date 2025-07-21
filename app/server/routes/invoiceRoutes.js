@@ -302,19 +302,21 @@ function incrementUsage(user, isPreview, pages = 1) {
 });
 await page.close();
 
-// Sanitize metadata in the generated PDF buffer
-const sanitizedPdfBuffer = await sanitizePdfMetadata(pdfBuffer);
-pdfBuffer = await removeInfoDict(pdfBuffer);
 
-// Use the sanitized buffer from now on
+
+// Sanitize metadata in the generated PDF buffer
+let sanitizedPdfBuffer = await sanitizePdfMetadata(pdfBuffer);
+
+// Remove Info dictionary from the sanitized PDF buffer
+sanitizedPdfBuffer = await removeInfoDict(sanitizedPdfBuffer);
+
+// Use the sanitized and cleaned buffer from now on
 let finalPdfBytes = sanitizedPdfBuffer;
 
 const pdfDoc = await PDFDocument.load(finalPdfBytes);
-
 const pageCount = pdfDoc.getPageCount();
 
 incrementUsage(user, isPreview, pageCount);
-
 
 
 
