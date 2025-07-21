@@ -102,6 +102,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     const generateHtml = templateConfig.fn(isPremium);
     const language = formData.language || 'en';
+    formData.language = language; 
 const html = generateHtml(formData, language);
 
 
