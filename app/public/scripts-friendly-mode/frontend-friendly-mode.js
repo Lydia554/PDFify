@@ -39,6 +39,13 @@ function renderForm(template) {
   let html = '';
   if (template === 'invoice') {
     html = `
+     <label class="block text-white mb-1 font-semibold">Invoice Language:
+    <select id="invoiceLanguage" name="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
+      <option value="en">English</option>
+      <option value="de">Deutsch</option>
+      <option value="sl">Slovenščina</option>
+    </select>
+  </label>
       <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
@@ -55,6 +62,7 @@ function renderForm(template) {
         <label class="block mb-1">Recipient Address: <input id="recipientAddress" name="recipientAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" class="w-full text-white"/></label>
         <label class="block mb-1">Extra Notes: <textarea id="notes" name="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
+      
       </fieldset>
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
     `;
