@@ -184,6 +184,8 @@ function incrementUsage(user, isPreview, forcedPlan, pages = 1) {
       const supportedLocales = {
         slovenia: "sl",
         germany: "de",
+        usa: "en",
+        uk: "en",
         
       };
       const langCode = supportedLocales[country] || "en";
