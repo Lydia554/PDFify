@@ -65,9 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     payload.template = selectedTemplate;
     payload.isPreview = true;
+    payload.logo = logobase64;
+
+
+      const language = document.getElementById('languageSelect')?.value || 'en';
+  payload.language = language;
 
     
-    payload.logo = logobase64;
 
     if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
       alert('This is a premium template. Upgrade your plan to preview it.');
