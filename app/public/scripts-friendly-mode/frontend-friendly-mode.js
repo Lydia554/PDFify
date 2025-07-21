@@ -47,15 +47,17 @@ function renderForm(template) {
       <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
       <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" class="p-1 rounded border border-gray-400 text-black"/></label>
 
-      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
-        <legend class="font-semibold mb-2">Business Details</legend>
-           <label class="block text-white mb-1 font-semibold">Invoice Language:
+   <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+  <legend class="font-semibold mb-2">Business Details</legend>
+
+  <label class="block mb-1">Invoice Language:
     <select id="invoiceLanguage" name="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
       <option value="en">English</option>
       <option value="de">Deutsch</option>
       <option value="sl">Slovenščina</option>
     </select>
   </label>
+
         <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Company Address: <input id="companyAddress" name="companyAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <label class="block mb-1">Company Email: <input id="companyEmail" name="companyEmail" type="email" class="w-full p-1 rounded border border-gray-400 text-black"/></label>

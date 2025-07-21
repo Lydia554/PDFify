@@ -268,8 +268,8 @@ function generateInvoicePremiumHtml(data) {
     <p>&copy; 2025 🧾PDFify — ${t.rights}</p>
     <p>
       ${t.generatedUsing} <strong>PDFify</strong>. Visit
-      <a href="https://pdfify.kro.kr">pdfify.kro.kr</a>
-    </p>
+        <a href="https://pdfify.pro/" target="_blank">our site</a> for more.
+      </p>
   </div>
 </body>
 </html>
