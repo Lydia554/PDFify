@@ -16,42 +16,36 @@ const { execSync, execFile } = require("child_process");
 function sanitizePdfString(str) {
   if (typeof str !== 'string') return str;
   return str
-    .replace(/[\r\n\t]+/g, ' ')       // replace newlines/tabs with space
-    .replace(/[^\x20-\x7E]/g, '?')    // replace non-ASCII printable with ?
+    .replace(/[\r\n\t]+/g, ' ')      
+    .replace(/[^\x20-\x7E]/g, '?')    
     .trim();
 }
 
-// Inside your /generate-invoice route, after generating PDF buffer, for example:
 
 async function sanitizePdfMetadata(pdfBuffer) {
   try {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-    if (!pdfDoc.context || !pdfDoc.context.trailer) {
-      console.warn("⚠️ PDF context or trailer missing — attempting to remove Info dictionary manually");
-
-      // Try to forcibly remove Info ref from trailer, if possible
-      if (pdfDoc.context?.trailer) {
-        pdfDoc.context.trailer.delete(PDFName.of("Info"));
-        return await pdfDoc.save();
-      }
-
-      return pdfBuffer;
-    }
 
     const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
     if (infoRef) {
       const infoDict = pdfDoc.context.lookup(infoRef);
       if (infoDict) {
         for (const [key, value] of infoDict.entries()) {
+          
           if (value && value.constructor && value.constructor.name === "PDFString") {
             const decoded = value.decodeText();
             const sanitized = sanitizePdfString(decoded);
             infoDict.set(key, PDFString.of(sanitized));
+          } else {
+            console.log(`ℹ️ Skipping non-PDFString metadata key ${key.toString()}`);
           }
         }
         console.log("✅ Sanitized PDF Info dictionary metadata");
+      } else {
+        console.log("ℹ️ No Info dictionary found");
       }
+    } else {
+      console.log("ℹ️ No Info ref found in trailer");
     }
 
     return await pdfDoc.save();
@@ -60,18 +54,6 @@ async function sanitizePdfMetadata(pdfBuffer) {
     throw error;
   }
 }
-
-
-async function removeInfoDict(pdfBuffer) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-  const trailer = pdfDoc.context.trailer;
-  if (trailer.has(PDFName.of("Info"))) {
-    trailer.delete(PDFName.of("Info"));
-    console.log("✅ Removed Info dictionary");
-  }
-  return await pdfDoc.save();
-}
-
 
 
 
@@ -302,21 +284,18 @@ function incrementUsage(user, isPreview, pages = 1) {
 });
 await page.close();
 
-
-
 // Sanitize metadata in the generated PDF buffer
-let sanitizedPdfBuffer = await sanitizePdfMetadata(pdfBuffer);
+const sanitizedPdfBuffer = await sanitizePdfMetadata(pdfBuffer);
 
-// Remove Info dictionary from the sanitized PDF buffer
-sanitizedPdfBuffer = await removeInfoDict(sanitizedPdfBuffer);
-
-// Use the sanitized and cleaned buffer from now on
+// Use the sanitized buffer from now on
 let finalPdfBytes = sanitizedPdfBuffer;
 
 const pdfDoc = await PDFDocument.load(finalPdfBytes);
+
 const pageCount = pdfDoc.getPageCount();
 
 incrementUsage(user, isPreview, pageCount);
+
 
 
 
@@ -327,8 +306,7 @@ incrementUsage(user, isPreview, pageCount);
         const zugferdXml = generateZugferdXML(invoiceData);
         const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
-        const pdfDoc = await PDFDocument.load(finalPdfBytes, { updateMetadata: false });
-
+        const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
 
         const sanitizeMetadata = (str) =>
           String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "?").trim();
