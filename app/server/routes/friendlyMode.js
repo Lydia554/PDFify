@@ -56,21 +56,18 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Uncomment and use real user plan check in production
-    let isPremium = true; 
-    //let isPremium = user.plan === 'premium';
+    let isPremium = true; // For dev testing
+    // let isPremium = user.plan === 'premium';
 
     if (templateConfig.premiumOnly && !isPremium) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
 
-    
     if (!isPremium) {
-      formData.logoBase64 = null; 
+      formData.logoBase64 = null;
     }
-    
 
-  
+    // 🧾 Parse invoice items
     if (typeof formData.items === 'string') {
       const rows = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean);
       formData.items = rows.map(row => {
@@ -78,23 +75,36 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
         return {
           description: description || 'Item',
           quantity: Number(quantity) || 1,
-          unitPrice: Number(unitPrice) || 0
+          unitPrice: Number(unitPrice) || 0,
         };
       });
     }
 
+    // 🍲 Recipe-specific parsing
     if (typeof formData.ingredients === 'string') {
       formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
     }
 
     if (typeof formData.instructions === 'string') {
       formData.instructions = formData.instructions
-  .split(';')       
-  .map(i => i.trim())
-  .filter(Boolean);
-
+        .split(';')
+        .map(i => i.trim())
+        .filter(Boolean);
     }
 
+    // 🌍 Load locale ONLY for premium invoice
+    if (template === 'invoice' && isPremium && formData.invoiceLanguage) {
+      const langCode = formData.invoiceLanguage;
+      const localesPath = path.join(__dirname, '..', 'locales-friendly', `${langCode}.json`);
+      try {
+        const localeData = fs.readFileSync(localesPath, 'utf8');
+        formData.locale = JSON.parse(localeData);
+      } catch (err) {
+        console.warn(`⚠️ Could not load locale for '${langCode}', falling back to English.`);
+        const fallback = fs.readFileSync(path.join(__dirname, '..', 'locales-friendly', 'en.json'), 'utf8');
+        formData.locale = JSON.parse(fallback);
+      }
+    }
 
     const generateHtml = templateConfig.fn(isPremium);
     const html = generateHtml(formData);
@@ -130,13 +140,13 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     res.download(pdfPath, (err) => {
       if (err) {
-     
+        console.error('Download error:', err);
       }
       fs.unlinkSync(pdfPath);
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('PDF generation failed:', err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
