@@ -35,33 +35,37 @@ const log = (message, data = null) => {
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
-  const plan = (forcedPlan || user.plan || "").toLowerCase();
+
+
+  const FORCE_PLAN = process.env.FORCE_PLAN;
+
+function incrementUsage(user, isPreview, pages = 1) {
+  const plan = (FORCE_PLAN || user.plan || "").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
 
-if (isPreview && plan === "free") {
-  // Free user previews increment previewCount up to 3
-  if (user.previewCount < 3) {
-    user.previewCount++;
-    console.log(`👀 Incremented preview count to ${user.previewCount}`);
-  } else {
+  if (isPreview && plan === "free") {
+    if (user.previewCount < 3) {
+      user.previewCount++;
+      console.log(`👀 Incremented preview count to ${user.previewCount}`);
+    } else {
+      user.usageCount += pages;
+      console.log(`⚠️ Preview limit reached, incremented usage count by ${pages} to ${user.usageCount}`);
+    }
+  } else if (["premium", "pro"].includes(plan)) {
+    if (!isPreview) {
+      user.usageCount += pages;
+      console.log(`🔥 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
+    } else {
+      console.log(`ℹ️ Preview for premium/pro user - usage count not incremented`);
+    }
+  } else if (!isPreview) {
     user.usageCount += pages;
-    console.log(`⚠️ Preview limit reached, incremented usage count by ${pages} to ${user.usageCount}`);
-  }
-} else if (["premium", "pro"].includes(plan)) {
-  // Premium and Pro users: only increment usageCount for non-preview (actual downloads)
-  if (!isPreview) {
-    user.usageCount += pages;
-    console.log(`🔥 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
+    console.log(`💡 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
   } else {
-    console.log(`ℹ️ Preview for premium/pro user - usage count not incremented`);
+    console.warn(`⚠️ Unknown plan or state, no usage increment.`);
   }
-} else if (!isPreview) {
-  // Other plans: only increment usage for non-preview downloads
-  user.usageCount += pages;
-  console.log(`💡 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
-} else {
-  console.warn(`⚠️ Unknown plan or state, no usage increment.`);
 }
+
 
 
 
