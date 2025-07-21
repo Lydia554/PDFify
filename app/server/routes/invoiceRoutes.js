@@ -359,6 +359,7 @@ incrementUsage(user, isPreview, pageCount);
         "-sDEVICE=pdfwrite",
         "-dNOOUTERSAVE",
         "-sProcessColorModel=DeviceRGB",
+        "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
         "-sColorConversionStrategy=RGB",
         "-dEmbedAllFonts=true",
         "-dSubsetFonts=true",
