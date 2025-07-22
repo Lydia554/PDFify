@@ -6,6 +6,8 @@ const axios = require("axios");
 const sendEmail = require("../sendEmail");
 const { getTranslations } = require("../utils/i18n");
 const { enrichLineItemsWithImages } = require("../utils/shopifyHelpers");
+const { resolveLanguage } = require("../utils/resolveLanguage");
+
 
 function verifyShopifyWebhook(req, res, next) {
   if (process.env.NODE_ENV !== "production") {
@@ -64,36 +66,29 @@ router.post(
 
     res.status(200).send("Webhook received");
 
-    try {
-      const connectedShopDomain = shopDomain.trim().toLowerCase();
+ try {
+  const connectedShopDomain = shopDomain.trim().toLowerCase();
 
-      const user = await User.findOne({ connectedShopDomain });
-      if (!user) {
-        console.error(`❌ No user found for connectedShopDomain: ${connectedShopDomain}`);
-        return;
-      }
+  const user = await User.findOne({ connectedShopDomain });
+  if (!user) {
+    console.error(`❌ No user found for connectedShopDomain: ${connectedShopDomain}`);
+    return;
+  }
 
-      // Language detection
-      let lang = order.customer?.locale?.slice(0, 2); 
-      if (!lang && order.shipping_address?.country_code) {
-        const cc = order.shipping_address.country_code;
-        if (cc === "DE") lang = "de";
-        else if (cc === "SI") lang = "sl";
-      }
-      if (!lang) lang = user.language || "en"; 
+ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig: {} });
 
-      const t = getTranslations(lang); 
 
-      await processOrderAsync({
-        order,
-        user,
-        accessToken: user.shopifyAccessToken,
-        shopDomain: connectedShopDomain,
-        lang,
-      });
-    } catch (err) {
-      console.error("❌ Error in webhook async handler:", err);
-    }
+  await processOrderAsync({
+    order,
+    user,
+    accessToken: user.shopifyAccessToken,
+    shopDomain: connectedShopDomain,
+    lang,
+  });
+} catch (err) {
+  console.error("❌ Error in webhook async handler:", err);
+}
+
   }
 );
 

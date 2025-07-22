@@ -9,14 +9,15 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
-const { getTranslations } = require("../utils/i18n");
+const { resolveLanguage } = require("../utils/resolveLanguage");
+
 
 
 const router = express.Router();
 require('dotenv').config();
 
 
-function generateInvoiceHTML(invoiceData, t,  isPremium) {
+function generateInvoiceHTML(invoiceData, isPremium, t) {
   const premium = FORCE_PREMIUM || isPremium;
 
   const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
@@ -213,22 +214,12 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
-const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
-// Determine language for translations
-let lang = req.body.lang || req.query.lang || shopConfig?.language;
 
-if (!lang && order?.shipping_address?.country_code) {
-  const cc = order.shipping_address.country_code;
-  if (cc === "DE") lang = "de";
-  else if (cc === "SI") lang = "sl";
-}
-
-if (!lang) lang = "en";
-
-const t = getTranslations(lang);
+    const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
+const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig });
 
 
-
+    
     if (!orderId && order?.id) {
       orderId = order.id;
     }
@@ -239,7 +230,7 @@ const t = getTranslations(lang);
 
     if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
-    
+
     const isPreview = req.query.preview === "true";
     const isPremium = true; 
 
@@ -268,7 +259,8 @@ const enrichedItems = order.line_items;
     });
     const page = await browser.newPage();
 
-    const html = generateInvoiceHTML(invoiceData, isPremium);
+   const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
+
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
