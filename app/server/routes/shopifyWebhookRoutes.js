@@ -4,7 +4,6 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const axios = require("axios");
 const sendEmail = require("../sendEmail");
-const { getTranslations } = require("../utils/i18n");
 const { enrichLineItemsWithImages } = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 
