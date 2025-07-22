@@ -93,14 +93,17 @@
     <input type="file" id="csvUpload" accept=".csv"
       class="block w-full text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md p-2" />
 
-    <div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3">
-      Example CSV:<br />
-      <code>
-        name,email,amount,date<br />
-        John Doe,john@example.com,42.50,2025-07-01<br />
-        Jane Smith,jane@example.com,23.75,2025-07-02
-      </code>
-    </div>
+ <div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3">
+  Example CSV:<br />
+  <code>
+    customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium<br />
+    Anna Moore,anna@example.com,12345,Germany,2025-03-25,PDF Template,1,10.00€,10.00,19.00%,1,15.00€,3.15€,18.15€,https://example.com/custom-logo.png,False,False<br />
+    John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.00,22.00%,1,110.00€,22.00€,132.00€,https://example.com/logo2.png,True,True<br />
+    Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.00,19.00%,1,95.00€,18.05€,113.05€,https://example.com/logo3.png,False,True<br />
+    Michael Brown,michael@example.com,12348,Slovenia,2025-06-01,Training,4,25.00€,100.00,22.00%,1,120.00€,26.40€,146.40€,https://example.com/logo4.png,True,False<br />
+    Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00€,70.00,19.00%,1,80.00€,15.20€,95.20€,https://example.com/logo5.png,False,False<br />
+  </code>
+</div>
 
     <button id="csvGenerateBtn"
       class="w-full py-3 bg-fuchsia-600 text-white rounded-md font-semibold hover:bg-fuchsia-700 transition-transform hover:scale-105 shadow-md">
