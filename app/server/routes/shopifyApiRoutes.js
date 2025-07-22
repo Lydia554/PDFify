@@ -289,17 +289,18 @@ const enrichedItems = order.line_items;
 
     try {
       if (order.email) {
-        await sendEmailWithAttachment({
-          to: order.email,
-          subject: `Your Invoice from ${invoiceData.shopName}`,
-          text: "Please find your invoice attached.",
-          attachments: [
-            {
-              filename: `Invoice_${safeOrderId}.pdf`,
-              content: pdfBuffer,
-            },
-          ],
-        });
+     await sendEmail({
+  to: order.email,
+  subject: `Your Invoice from ${invoiceData.shopName}`,
+  text: "Please find your invoice attached.",
+  attachments: [
+    {
+      filename: `Invoice_${safeOrderId}.pdf`,
+      content: pdfBuffer,
+    },
+  ],
+});
+
         console.log("✅ Invoice emailed to:", order.email);
       } else {
         console.warn("⚠️ No email found on order, skipping email");
