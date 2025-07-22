@@ -10,7 +10,8 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
-const FORCE_PRO = process.env.FORCE_PRO || null;
+require('dotenv').config();
+const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
 
 
@@ -19,8 +20,9 @@ const router = express.Router();
 require('dotenv').config();
 
 
-function generateInvoiceHTML(invoiceData, isPremium, t) {
-  
+function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
+
+
 
   const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
 
@@ -235,7 +237,8 @@ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig }
 
     
 const isPreview = req.query.preview === "true";
-const isPremium = FORCE_PRO === "pro" || FORCE_PRO === "true" || FORCE_PRO === "1" || true;
+const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
+
 
 
 const enrichedItems = order.line_items;
