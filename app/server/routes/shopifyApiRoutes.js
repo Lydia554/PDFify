@@ -213,7 +213,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
-
+const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
 // Determine language for translations
 let lang = req.body.lang || req.query.lang || shopConfig?.language;
 
@@ -239,7 +239,7 @@ const t = getTranslations(lang);
 
     if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
-    const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
+    
     const isPreview = req.query.preview === "true";
     const isPremium = true; 
 
