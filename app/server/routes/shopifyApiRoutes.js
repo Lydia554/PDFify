@@ -21,11 +21,13 @@ const router = express.Router();
 require('dotenv').config();
 
 
+
+
 function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
 
 
 
-  const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
+  const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl, orderId } = invoiceData;
 
   const basicTemplate = `
     <html>
@@ -140,6 +142,8 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
         <div class="container">
           <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
           <h1>${t.invoiceTitle}</h1>
+        <h2>${t.orderLabel}${orderId}</h2>
+
           <div class="invoice-header">
             <div><strong>${t.from}</strong><br>${shopName}</div>
             <div><strong>${t.date}</strong><br>${date}</div>
@@ -254,6 +258,7 @@ const enrichedItems = order.line_items;
       showChart: isPremium && shopConfig?.showChart,
       customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
       fallbackLogoUrl: "/assets/default-logo.png",
+      orderId: order.id,
     };
 
     const safeOrderId = `shopify-${order.id}`;
