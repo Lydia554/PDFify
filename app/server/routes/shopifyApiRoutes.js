@@ -10,6 +10,8 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
+const FORCE_PRO = process.env.FORCE_PRO || null;
+
 
 
 
@@ -18,7 +20,7 @@ require('dotenv').config();
 
 
 function generateInvoiceHTML(invoiceData, isPremium, t) {
-  const premium = FORCE_PREMIUM || isPremium;
+  
 
   const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
 
@@ -231,8 +233,9 @@ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig }
     if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
 
-    const isPreview = req.query.preview === "true";
-    const isPremium = true; 
+    
+const isPreview = req.query.preview === "true";
+const isPremium = FORCE_PRO === "pro" || FORCE_PRO === "true" || FORCE_PRO === "1" || true;
 
 
 const enrichedItems = order.line_items;
