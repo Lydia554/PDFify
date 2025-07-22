@@ -175,7 +175,8 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     </html>
   `;
 
-  return premium ? premiumTemplate : basicTemplate;
+  return isPremium ? premiumTemplate : basicTemplate;
+
 }
 
 
