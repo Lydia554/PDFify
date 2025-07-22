@@ -1,0 +1,16 @@
+{
+  "invoice.title": "Račun",
+  "invoice.date": "Datum",
+  "invoice.total": "Skupni znesek",
+  "invoice.items": "Izdelki",
+  "invoice.quantity": "Količina",
+  "invoice.price": "Cena",
+  "invoice.tax": "Davek",
+  "invoice.position": "Pozicija",
+  "invoice.subtotal": "Delni znesek",
+  "invoice.logoFallbackAlt": "Privzeti logotip",
+  "invoice.sentFrom": "Poslano iz",
+  "invoice.thankYou": "Hvala za vaš nakup!",
+  "invoice.download": "Prenesi račun",
+  "invoice.chart.title": "Porazdelitev izdelkov"
+}

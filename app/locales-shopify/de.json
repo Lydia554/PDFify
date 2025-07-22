@@ -1,0 +1,16 @@
+{
+  "invoice.title": "Rechnung",
+  "invoice.date": "Datum",
+  "invoice.total": "Gesamtbetrag",
+  "invoice.items": "Artikel",
+  "invoice.quantity": "Menge",
+  "invoice.price": "Preis",
+  "invoice.tax": "Steuer",
+  "invoice.position": "Position",
+  "invoice.subtotal": "Zwischensumme",
+  "invoice.logoFallbackAlt": "Standard-Logo",
+  "invoice.sentFrom": "Gesendet von",
+  "invoice.thankYou": "Vielen Dank für Ihren Einkauf!",
+  "invoice.download": "Rechnung herunterladen",
+  "invoice.chart.title": "Produktverteilung"
+}

@@ -4,6 +4,8 @@ const crypto = require("crypto");
 const User = require("../models/User");
 const axios = require("axios");
 const sendEmail = require("../sendEmail");
+const { getTranslations } = require("../utils/i18n");
+
 const {
   enrichLineItemsWithImages,
 } = require("../utils/shopifyHelpers");
@@ -75,6 +77,9 @@ router.post(
 
     try {
       const connectedShopDomain = shopDomain.trim().toLowerCase();
+      const lang = (order.customer?.locale || 'en').slice(0, 2);
+const t = getTranslations(lang);
+
 
       const user = await User.findOne({ connectedShopDomain });
       if (!user) {
@@ -107,6 +112,7 @@ async function processOrderAsync({ order, user, accessToken, shopDomain }) {
         order,
         shopDomain,
         shopifyAccessToken: accessToken,
+        lang
       },
       {
         headers: {
