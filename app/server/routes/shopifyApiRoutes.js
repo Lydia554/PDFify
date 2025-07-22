@@ -6,7 +6,7 @@ const axios = require("axios");
 const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
-const sendEmail = require("../sendEmail");
+
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
@@ -21,13 +21,11 @@ const router = express.Router();
 require('dotenv').config();
 
 
-
-
 function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
 
 
 
-  const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl, orderId } = invoiceData;
+  const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
 
   const basicTemplate = `
     <html>
@@ -142,8 +140,6 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
         <div class="container">
           <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
           <h1>${t.invoiceTitle}</h1>
-        <h2>${t.orderLabel}${orderId}</h2>
-
           <div class="invoice-header">
             <div><strong>${t.from}</strong><br>${shopName}</div>
             <div><strong>${t.date}</strong><br>${date}</div>
@@ -258,7 +254,6 @@ const enrichedItems = order.line_items;
       showChart: isPremium && shopConfig?.showChart,
       customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
       fallbackLogoUrl: "/assets/default-logo.png",
-      orderId: order.id,
     };
 
     const safeOrderId = `shopify-${order.id}`;
@@ -281,6 +276,7 @@ const enrichedItems = order.line_items;
     const pdfBuffer = fs.readFileSync(pdfPath);
     const parsed = await pdfParse(pdfBuffer);
     const pageCount = parsed.numpages;
+    const { sendEmail: shouldSendEmail = true } = req.body;
 
     if (!isPreview) {
       if (user.usageCount + pageCount > user.maxUsage) {
@@ -294,18 +290,19 @@ const enrichedItems = order.line_items;
     }
 
     try {
-      if (order.email) {
-     await sendEmail({
-  to: order.email,
-  subject: `Your Invoice from ${invoiceData.shopName}`,
-  text: "Please find your invoice attached.",
-  attachments: [
-    {
-      filename: `Invoice_${safeOrderId}.pdf`,
-      content: pdfBuffer,
-    },
-  ],
-});
+    if (order.email && shouldSendEmail) {
+  await sendEmail({
+    to: order.email,
+    subject: `Your Invoice from ${invoiceData.shopName}`,
+    text: "Please find your invoice attached.",
+    attachments: [
+      {
+        filename: `Invoice_${safeOrderId}.pdf`,
+        content: pdfBuffer,
+      },
+    ],
+  });
+
 
         console.log("✅ Invoice emailed to:", order.email);
       } else {

@@ -1,6 +1,5 @@
 {
   "invoiceTitle": "Invoice",
-   "invoice.orderLabel": "Invoice for Shopify Order #",
   "date": "Date",
   "total": "Total",
   "item": "Item",

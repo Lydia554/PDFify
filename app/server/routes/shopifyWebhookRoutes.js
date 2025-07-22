@@ -103,6 +103,7 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang })
         shopDomain,
         shopifyAccessToken: accessToken,
         lang,
+        sendEmail: false,
       },
       {
         headers: {
