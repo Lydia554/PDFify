@@ -160,11 +160,11 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
       <tbody>
         ${items
           .map((item) => {
-            // Safely convert price to number
+            
             const priceNum = Number(item.price);
-            // Safely get tax rate
+          
             const taxRateNum = item.taxLines?.[0]?.rate;
-            // Safely get tax amount price
+         
             const taxAmountNum = item.taxLines?.[0]?.price ? Number(item.taxLines[0].price) : 0;
 
             return `
@@ -191,10 +191,9 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     </table>
 
     <div class="summary">
-    <p>${t.subtotal}: $${subtotal}</p>
-<p>${t.taxTotal}: $${taxTotal}</p>
-<p><strong>${t.totalGross}: $${total}</strong></p>
-
+      <p>${t.subtotal}: $${typeof subtotal === "number" && !isNaN(subtotal) ? subtotal.toFixed(2) : "0.00"}</p>
+      <p>${t.taxTotal}: $${typeof taxTotal === "number" && !isNaN(taxTotal) ? taxTotal.toFixed(2) : "0.00"}</p>
+      <p><strong>${t.totalGross}: $${typeof total === "number" && !isNaN(total) ? total.toFixed(2) : "0.00"}</strong></p>
     </div>
 
     ${
@@ -313,7 +312,7 @@ const rawSubtotal = subtotal;
 const rawTaxTotal = taxTotal;
 const rawTotal = rawSubtotal + rawTaxTotal;
 
-// Debug log to catch any invalid number before calling toFixed
+
 console.log({
   rawSubtotal,
   rawTaxTotal,
@@ -335,13 +334,14 @@ const invoiceData = {
   shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
   date: new Date(order.created_at).toISOString().slice(0, 10),
   items: enrichedItems,
-  subtotal: rawSubtotal.toFixed(2),
-  taxTotal: rawTaxTotal.toFixed(2),
-  total: rawTotal.toFixed(2),
+  subtotal: rawSubtotal,   
+  taxTotal: rawTaxTotal,
+  total: rawTotal,
   showChart: isPremium && shopConfig?.showChart,
   customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
   fallbackLogoUrl: "/assets/default-logo.png",
 };
+
 
 
 
