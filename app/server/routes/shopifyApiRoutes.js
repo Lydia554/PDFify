@@ -273,31 +273,29 @@ const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN ==
 
 
 
-
 let subtotal = 0;
 let taxTotal = 0;
 
 const enrichedItems = order.line_items.map(item => {
-  const price = parseFloat(item.price || 0);
-  const quantity = parseFloat(item.quantity || 0);
-  const itemTotal = price * quantity;
+  const price = parseFloat(item.price);
+  const quantity = parseFloat(item.quantity);
+  const safePrice = isNaN(price) ? 0 : price;
+  const safeQuantity = isNaN(quantity) ? 0 : quantity;
+  const itemTotal = safePrice * safeQuantity;
   subtotal += itemTotal;
 
-  let taxRate = null;
   let taxAmount = 0;
-
   if (item.tax_lines?.length) {
-    taxRate = parseFloat(item.tax_lines[0].rate || 0);
-    taxAmount = parseFloat(item.tax_lines[0].price || 0);
+    const taxPrice = parseFloat(item.tax_lines[0].price);
+    taxAmount = isNaN(taxPrice) ? 0 : taxPrice;
     taxTotal += taxAmount;
   }
 
   return {
     ...item,
-    price,
-    quantity,
+    price: safePrice,
+    quantity: safeQuantity,
     taxLines: item.tax_lines,
-    taxRate,
     taxAmount,
   };
 });
@@ -305,6 +303,24 @@ const enrichedItems = order.line_items.map(item => {
 const rawSubtotal = subtotal;
 const rawTaxTotal = taxTotal;
 const rawTotal = rawSubtotal + rawTaxTotal;
+
+// Debug log to catch any invalid number before calling toFixed
+console.log({
+  rawSubtotal,
+  rawTaxTotal,
+  rawTotal,
+  rawSubtotalType: typeof rawSubtotal,
+  rawTaxTotalType: typeof rawTaxTotal,
+  rawTotalType: typeof rawTotal,
+});
+
+if (
+  typeof rawSubtotal !== "number" || isNaN(rawSubtotal) ||
+  typeof rawTaxTotal !== "number" || isNaN(rawTaxTotal) ||
+  typeof rawTotal !== "number" || isNaN(rawTotal)
+) {
+  throw new Error(`Invalid numeric values: subtotal=${rawSubtotal}, taxTotal=${rawTaxTotal}, total=${rawTotal}`);
+}
 
 const invoiceData = {
   shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
