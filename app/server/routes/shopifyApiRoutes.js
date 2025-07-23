@@ -298,20 +298,22 @@ const enrichedItems = order.line_items.map(item => {
   };
 });
 
-const total = subtotal + taxTotal;
-
+const rawSubtotal = subtotal;
+const rawTaxTotal = taxTotal;
+const rawTotal = rawSubtotal + rawTaxTotal;
 
 const invoiceData = {
   shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
   date: new Date(order.created_at).toISOString().slice(0, 10),
   items: enrichedItems,
-  subtotal: subtotal.toFixed(2),
-  taxTotal: taxTotal.toFixed(2),
-  total: total.toFixed(2),
+  subtotal: rawSubtotal.toFixed(2),
+  taxTotal: rawTaxTotal.toFixed(2),
+  total: rawTotal.toFixed(2),
   showChart: isPremium && shopConfig?.showChart,
   customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
   fallbackLogoUrl: "/assets/default-logo.png",
 };
+
 
 
     const safeOrderId = `shopify-${order.id}`;
