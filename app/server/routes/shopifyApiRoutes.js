@@ -274,6 +274,10 @@ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig }
 const isPreview = req.query.preview === "true";
 const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
 
+
+console.log("🧾 Shopify order currency:", order.currency);
+
+
 const currency = order.currency || "EUR";
 
 const localeMap = {
