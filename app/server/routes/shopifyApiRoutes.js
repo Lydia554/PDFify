@@ -294,7 +294,8 @@ const enrichedItems = order.line_items.map(item => {
 
 const rawSubtotal = subtotal;
 const rawTaxTotal = taxTotal;
-const rawTotal = rawSubtotal; 
+const rawTotal = rawSubtotal + rawTaxTotal;
+
 
 
 if (
@@ -310,7 +311,7 @@ const invoiceData = {
   items: enrichedItems,
   subtotal: rawSubtotal,
   taxTotal: rawTaxTotal,
-  total: rawSubtotal, 
+  total: rawTotal,
   showChart: isPremium && shopConfig?.showChart,
   customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
   fallbackLogoUrl: "/assets/default-logo.png",
