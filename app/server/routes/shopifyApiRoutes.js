@@ -28,7 +28,17 @@ const router = express.Router();
 require('dotenv').config();
 
 function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
-  const { shopName, date, items, subtotal, taxTotal, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
+  const {
+    shopName,
+    date,
+    items,
+    formattedSubtotal,
+    formattedTaxTotal,
+    formattedTotal,
+    showChart,
+    customLogoUrl,
+    fallbackLogoUrl,
+  } = invoiceData;
 
   const basicTemplate = `
     <html>
@@ -139,65 +149,60 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
           }
         </style>
       </head>
- <body>
-  <div class="container">
-    <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
-    <h1>${t.invoiceTitle}</h1>
-
-    <div class="invoice-header">
-      <div><strong>${t.from}</strong><br>${shopName}</div>
-      <div><strong>${t.date}</strong><br>${date}</div>
-    </div>
-
-    <table class="table">
-      <thead>
-        <tr>
-          <th>${t.image}</th>
-          <th>${t.item}</th>
-          <th>${t.quantity}</th>
-          <th>${t.price}</th>
-          <th>${t.taxIncluded}</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${items
-          .map(
-            (item) => `
-          <tr>
-            <td>${
-              item.imageUrl
-                ? `<img src="${item.imageUrl}" class="product-image" />`
-                : ""
-            }</td>
-            <td>${item.name}</td>
-            <td>${item.quantity}</td>
-            <td>${item.formattedPrice}</td>
-            <td>${t.taxIncluded}</td>
-          </tr>
-        `
-          )
-          .join("")}
-      </tbody>
-    </table>
-
-    <div class="summary">
-      <p>${t.subtotal}: ${formattedSubtotal}</p>
-      <p>${t.taxTotal}: ${formattedTaxTotal}</p>
-      <p><strong>${t.totalGross}: ${formattedTotal}</strong></p>
-    </div>
-
-    ${
-      showChart
-        ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>`
-        : ""
-    }
-  </div>
-
-  <div class="footer">
-    <p>${t.footerNote}</p>
-    <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
-  </div>
-</body>
+  <body>
+      <div class="container">
+        <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
+        <h1>${t.invoiceTitle}</h1>
+        <div class="invoice-header">
+          <div><strong>${t.from}</strong><br>${shopName}</div>
+          <div><strong>${t.date}</strong><br>${date}</div>
+        </div>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>${t.image}</th>
+              <th>${t.item}</th>
+              <th>${t.quantity}</th>
+              <th>${t.price}</th>
+              <th>${t.taxIncluded}</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items
+              .map(
+                (item) => `
+              <tr>
+                <td>${
+                  item.imageUrl
+                    ? `<img src="${item.imageUrl}" class="product-image" />`
+                    : ""
+                }</td>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>${item.formattedPrice}</td>
+                <td>${t.taxIncluded}</td>
+              </tr>
+            `
+              )
+              .join("")}
+          </tbody>
+        </table>
+        <div class="summary">
+          <p>${t.subtotal}: ${formattedSubtotal}</p>
+          <p>${t.taxTotal}: ${formattedTaxTotal}</p>
+          <p><strong>${t.totalGross}: ${formattedTotal}</strong></p>
+        </div>
+        ${
+          showChart
+            ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>`
+            : ""
+        }
+      </div>
+      <div class="footer">
+        <p>${t.footerNote}</p>
+        <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
+      </div>
+    </body>
 
 
     </html>
@@ -268,77 +273,60 @@ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig }
 const isPreview = req.query.preview === "true";
 const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
 
+const currency = order.currency || "EUR";
 
- 
-    const currency = order.currency || "EUR";
+const localeMap = {
+  de: "de-DE",
+  en: "en-US",
+  sl: "sl-SI",
+};
+const locale = localeMap[lang] || "en-US";
 
-    const localeMap = {
-      de: "de-DE",
-      en: "en-US",
-      sl: "sl-SI",
-    };
-    const locale = localeMap[lang] || "en-US";
+let subtotal = 0;
+let taxTotal = 0;
 
-    
-    let subtotal = 0;
-    let taxTotal = 0;
-    if (Array.isArray(order.tax_lines)) {
-      taxTotal = order.tax_lines.reduce((sum, line) => {
-        const price = parseFloat(line.price);
-        return sum + (isNaN(price) ? 0 : price);
-      }, 0);
-    }
+if (Array.isArray(order.tax_lines)) {
+  taxTotal = order.tax_lines.reduce((sum, line) => {
+    const price = parseFloat(line.price);
+    return sum + (isNaN(price) ? 0 : price);
+  }, 0);
+}
 
-    const enrichedItems = order.line_items.map(item => {
-      const price = parseFloat(item.price);
-      const quantity = parseFloat(item.quantity);
-      const safePrice = isNaN(price) ? 0 : price;
-      const safeQuantity = isNaN(quantity) ? 0 : quantity;
-      const itemTotal = safePrice * safeQuantity;
-      subtotal += itemTotal;
+const enrichedItems = order.line_items.map(item => {
+  const price = parseFloat(item.price);
+  const quantity = parseFloat(item.quantity);
+  const safePrice = isNaN(price) ? 0 : price;
+  const safeQuantity = isNaN(quantity) ? 0 : quantity;
+  const itemTotal = safePrice * safeQuantity;
+  subtotal += itemTotal;
 
-      return {
-        ...item,
-        price: safePrice,
-        quantity: safeQuantity,
-        taxLines: item.tax_lines || [],
-        taxAmount: 0,
-        formattedPrice: formatPrice(safePrice, currency, locale),
-        formattedTotal: formatPrice(itemTotal, currency, locale),
-      };
-    });
+  return {
+    ...item,
+    price: safePrice,
+    quantity: safeQuantity,
+    formattedPrice: formatPrice(safePrice, currency, locale),
+    formattedTotal: formatPrice(itemTotal, currency, locale),
+  };
+});
 
-    const rawSubtotal = subtotal;
-    const rawTaxTotal = taxTotal;
-    const rawTotal = rawSubtotal + rawTaxTotal;
+const rawTotal = subtotal + taxTotal;
 
-    if (
-      typeof rawSubtotal !== "number" || isNaN(rawSubtotal) ||
-      typeof rawTaxTotal !== "number" || isNaN(rawTaxTotal)
-    ) {
-      throw new Error(`Invalid numeric values: subtotal=${rawSubtotal}, taxTotal=${rawTaxTotal}`);
-    }
-
-    const formattedSubtotal = formatPrice(rawSubtotal, currency, locale);
-    const formattedTaxTotal = formatPrice(rawTaxTotal, currency, locale);
-    const formattedTotal = formatPrice(rawTotal, currency, locale);
-
-    const invoiceData = {
-      shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
-      date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: enrichedItems,
-      subtotal: rawSubtotal,
-      taxTotal: rawTaxTotal,
-      total: rawTotal,
-      formattedSubtotal,
-      formattedTaxTotal,
-      formattedTotal,
-      showChart: isPremium && shopConfig?.showChart,
-      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-      fallbackLogoUrl: "/assets/default-logo.png",
-      currency,
-      locale,
-    };
+const invoiceData = {
+  shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
+  date: new Date(order.created_at).toISOString().slice(0, 10),
+  items: enrichedItems,
+  subtotal,
+  taxTotal,
+  total: rawTotal,
+  formattedSubtotal: formatPrice(subtotal, currency, locale),
+  formattedTaxTotal: formatPrice(taxTotal, currency, locale),
+  formattedTotal: formatPrice(rawTotal, currency, locale),
+  showChart: isPremium && shopConfig?.showChart,
+  customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+  fallbackLogoUrl: "/assets/default-logo.png",
+  currency,
+  locale,
+};
 
 
 
