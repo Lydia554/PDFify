@@ -187,11 +187,11 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
               .join("")}
           </tbody>
         </table>
-        <div class="summary">
-          <p>${t.subtotal}: ${formattedSubtotal}</p>
-          <p>${t.taxTotal}: ${formattedTaxTotal}</p>
-          <p><strong>${t.totalGross}: ${formattedTotal}</strong></p>
-        </div>
+       <div class="summary">
+      <p>${t.subtotal}: ${formattedSubtotal}</p>
+      <p>${t.taxTotal}: ${formattedTaxTotal}</p>
+      <p><strong>${t.totalGross}: ${formattedTotal}</strong></p>
+    </div>
         ${
           showChart
             ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>`
