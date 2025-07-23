@@ -136,43 +136,72 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
           }
         </style>
       </head>
-      <body>
-        <div class="container">
-          <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
-          <h1>${t.invoiceTitle}</h1>
-          <div class="invoice-header">
-            <div><strong>${t.from}</strong><br>${shopName}</div>
-            <div><strong>${t.date}</strong><br>${date}</div>
-          </div>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>${t.image}</th>
-                <th>${t.item}</th>
-                <th>${t.quantity}</th>
-                <th>${t.price}</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${items.map(item => `
-                <tr>
-                  <td>${item.imageUrl ? `<img src="${item.imageUrl}" class="product-image" />` : ""}</td>
-                  <td>${item.name}</td>
-                  <td>${item.quantity}</td>
-                  <td>$${item.price.toFixed(2)}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-          <div class="total">${t.total}: $${total.toFixed(2)}</div>
+     <body>
+  <div class="container">
+    <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
+    <h1>${t.invoiceTitle}</h1>
 
-          ${showChart ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>` : ""}
-        </div>
-        <div class="footer">
-          <p>${t.footerNote}</p>
-          <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
-        </div>
-      </body>
+    <div class="invoice-header">
+      <div><strong>${t.from}</strong><br>${shopName}</div>
+      <div><strong>${t.date}</strong><br>${date}</div>
+    </div>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>${t.image}</th>
+          <th>${t.item}</th>
+          <th>${t.quantity}</th>
+          <th>${t.price}</th>
+          <th>${t.taxRate}</th>
+          <th>${t.taxAmount}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map(
+            (item) => `
+          <tr>
+            <td>${
+              item.imageUrl
+                ? `<img src="${item.imageUrl}" class="product-image" />`
+                : ""
+            }</td>
+            <td>${item.name}</td>
+            <td>${item.quantity}</td>
+            <td>$${item.price.toFixed(2)}</td>
+            <td>${
+              item.taxLines?.[0]?.rate
+                ? (item.taxLines[0].rate * 100).toFixed(0) + "%"
+                : "—"
+            }</td>
+            <td>${
+              item.taxLines?.[0]?.price
+                ? "$" + parseFloat(item.taxLines[0].price).toFixed(2)
+                : "$0.00"
+            }</td>
+          </tr>
+        `
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <div class="summary">
+      <p>${t.subtotal}: $${subtotal.toFixed(2)}</p>
+      <p>${t.taxTotal}: $${taxTotal.toFixed(2)}</p>
+      <p><strong>${t.totalGross}: $${total.toFixed(2)}</strong></p>
+    </div>
+
+    ${showChart ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>` : ""}
+  </div>
+
+  <div class="footer">
+    <p>${t.footerNote}</p>
+    <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
+  </div>
+</body>
+
     </html>
   `;
 
@@ -243,18 +272,47 @@ const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN ==
 
 
 
-const enrichedItems = order.line_items;
 
 
-    const invoiceData = {
-      shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
-      date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: enrichedItems,
-      total: Number(order.total_price) || 0,
-      showChart: isPremium && shopConfig?.showChart,
-      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-      fallbackLogoUrl: "/assets/default-logo.png",
-    };
+let subtotal = 0;
+let taxTotal = 0;
+
+const enrichedItems = order.line_items.map(item => {
+  const itemTotal = item.price * item.quantity;
+  subtotal += itemTotal;
+
+  let taxRate = null;
+  let taxAmount = 0;
+
+  if (item.tax_lines?.length) {
+    taxRate = item.tax_lines[0].rate;
+    taxAmount = parseFloat(item.tax_lines[0].price || 0);
+    taxTotal += taxAmount;
+  }
+
+  return {
+    ...item,
+    taxLines: item.tax_lines,
+    taxRate,
+    taxAmount,
+  };
+});
+
+const total = subtotal + taxTotal;
+
+
+const invoiceData = {
+  shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
+  date: new Date(order.created_at).toISOString().slice(0, 10),
+  items: enrichedItems,
+  subtotal: subtotal.toFixed(2),
+  taxTotal: taxTotal.toFixed(2),
+  total: total.toFixed(2),
+  showChart: isPremium && shopConfig?.showChart,
+  customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+  fallbackLogoUrl: "/assets/default-logo.png",
+};
+
 
     const safeOrderId = `shopify-${order.id}`;
     const pdfDir = path.join(__dirname, "../pdfs");
