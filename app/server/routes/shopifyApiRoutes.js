@@ -59,7 +59,8 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
             `).join("")}
           </tbody>
         </table>
-        <h3>Total: $${total.toFixed(2)}</h3>
+        <h3>Total: ${formattedTotal}
+</h3>
       </body>
     </html>
   `;
