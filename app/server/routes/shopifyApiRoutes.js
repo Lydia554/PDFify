@@ -20,12 +20,8 @@ const FORCE_PLAN = process.env.FORCE_PLAN || null;
 const router = express.Router();
 require('dotenv').config();
 
-
 function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
-
-
-
-  const { shopName, date, items, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
+  const { shopName, date, items, subtotal, taxTotal, total, showChart, customLogoUrl, fallbackLogoUrl } = invoiceData;
 
   const basicTemplate = `
     <html>
