@@ -153,47 +153,34 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
           <th>${t.item}</th>
           <th>${t.quantity}</th>
           <th>${t.price}</th>
-          <th>${t.taxRate}</th>
-          <th>${t.taxAmount}</th>
+          <th>${t.taxIncluded}</th>
         </tr>
       </thead>
       <tbody>
         ${items
-          .map((item) => {
-            
-            const priceNum = Number(item.price);
-          
-            const taxRateNum = item.taxLines?.[0]?.rate;
-         
-            const taxAmountNum = item.taxLines?.[0]?.price ? Number(item.taxLines[0].price) : 0;
-
-            return `
-              <tr>
-                <td>${
-                  item.imageUrl
-                    ? `<img src="${item.imageUrl}" class="product-image" />`
-                    : ""
-                }</td>
-                <td>${item.name}</td>
-                <td>${item.quantity}</td>
-                <td>$${!isNaN(priceNum) ? priceNum.toFixed(2) : "0.00"}</td>
-                <td>${
-                  typeof taxRateNum === "number"
-                    ? (taxRateNum * 100).toFixed(0) + "%"
-                    : "—"
-                }</td>
-                <td>$${!isNaN(taxAmountNum) ? taxAmountNum.toFixed(2) : "0.00"}</td>
-              </tr>
-            `;
-          })
+          .map(
+            (item) => `
+          <tr>
+            <td>${
+              item.imageUrl
+                ? `<img src="${item.imageUrl}" class="product-image" />`
+                : ""
+            }</td>
+            <td>${item.name}</td>
+            <td>${item.quantity}</td>
+            <td>$${(item.price || 0).toFixed(2)}</td>
+            <td>inkl. MwSt</td>
+          </tr>
+        `
+          )
           .join("")}
       </tbody>
     </table>
 
     <div class="summary">
-      <p>${t.subtotal}: $${typeof subtotal === "number" && !isNaN(subtotal) ? subtotal.toFixed(2) : "0.00"}</p>
-      <p>${t.taxTotal}: $${typeof taxTotal === "number" && !isNaN(taxTotal) ? taxTotal.toFixed(2) : "0.00"}</p>
-      <p><strong>${t.totalGross}: $${typeof total === "number" && !isNaN(total) ? total.toFixed(2) : "0.00"}</strong></p>
+      <p>${t.subtotal}: $${subtotal.toFixed(2)}</p>
+      <p>${t.taxTotal}: $${taxTotal.toFixed(2)}</p>
+      <p><strong>${t.totalGross}: $${total.toFixed(2)}</strong></p>
     </div>
 
     ${
@@ -208,7 +195,6 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
   </div>
 </body>
-
 
     </html>
   `;
@@ -278,11 +264,16 @@ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig }
 const isPreview = req.query.preview === "true";
 const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
 
-
-
-
 let subtotal = 0;
+
+
 let taxTotal = 0;
+if (Array.isArray(order.tax_lines)) {
+  taxTotal = order.tax_lines.reduce((sum, line) => {
+    const price = parseFloat(line.price);
+    return sum + (isNaN(price) ? 0 : price);
+  }, 0);
+}
 
 const enrichedItems = order.line_items.map(item => {
   const price = parseFloat(item.price);
@@ -292,51 +283,34 @@ const enrichedItems = order.line_items.map(item => {
   const itemTotal = safePrice * safeQuantity;
   subtotal += itemTotal;
 
-  let taxAmount = 0;
-  if (item.tax_lines?.length) {
-    const taxPrice = parseFloat(item.tax_lines[0].price);
-    taxAmount = isNaN(taxPrice) ? 0 : taxPrice;
-    taxTotal += taxAmount;
-  }
-
   return {
     ...item,
     price: safePrice,
     quantity: safeQuantity,
-    taxLines: item.tax_lines,
-    taxAmount,
+    taxLines: item.tax_lines || [],
+    taxAmount: 0 
   };
 });
 
 const rawSubtotal = subtotal;
 const rawTaxTotal = taxTotal;
-const rawTotal = rawSubtotal + rawTaxTotal;
+const rawTotal = rawSubtotal; 
 
-
-console.log({
-  rawSubtotal,
-  rawTaxTotal,
-  rawTotal,
-  rawSubtotalType: typeof rawSubtotal,
-  rawTaxTotalType: typeof rawTaxTotal,
-  rawTotalType: typeof rawTotal,
-});
 
 if (
   typeof rawSubtotal !== "number" || isNaN(rawSubtotal) ||
-  typeof rawTaxTotal !== "number" || isNaN(rawTaxTotal) ||
-  typeof rawTotal !== "number" || isNaN(rawTotal)
+  typeof rawTaxTotal !== "number" || isNaN(rawTaxTotal)
 ) {
-  throw new Error(`Invalid numeric values: subtotal=${rawSubtotal}, taxTotal=${rawTaxTotal}, total=${rawTotal}`);
+  throw new Error(`Invalid numeric values: subtotal=${rawSubtotal}, taxTotal=${rawTaxTotal}`);
 }
 
 const invoiceData = {
   shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
   date: new Date(order.created_at).toISOString().slice(0, 10),
   items: enrichedItems,
-  subtotal: rawSubtotal,   
+  subtotal: rawSubtotal,
   taxTotal: rawTaxTotal,
-  total: rawTotal,
+  total: rawSubtotal, 
   showChart: isPremium && shopConfig?.showChart,
   customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
   fallbackLogoUrl: "/assets/default-logo.png",
