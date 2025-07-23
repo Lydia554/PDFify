@@ -8,6 +8,7 @@
   "taxRate": "Tax Rate",
   "taxAmount": "Tax Amount",
   "taxTotal": "Total Tax",
+  "taxIncluded": "incl. VAT",
   "item": "Item",
   "quantity": "Quantity",
   "price": "Price",

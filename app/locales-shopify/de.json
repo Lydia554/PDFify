@@ -8,6 +8,7 @@
   "taxRate": "Steuersatz",
   "taxAmount": "Steuerbetrag",
   "taxTotal": "Steuer gesamt",
+  "taxIncluded": "inkl. MwSt",
   "item": "Artikel",
   "quantity": "Menge",
   "price": "Preis",

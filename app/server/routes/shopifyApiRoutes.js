@@ -16,6 +16,13 @@ const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
 
 
+function formatPrice(amount, currency = "EUR", locale = "de-DE") {
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
+
+
+
+
 
 const router = express.Router();
 require('dotenv').config();
@@ -164,8 +171,8 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
             }</td>
             <td>${item.name}</td>
             <td>${item.quantity}</td>
-            <td>$${(item.price || 0).toFixed(2)}</td>
-            <td>inkl. MwSt</td>
+            <td>${item.formattedPrice}</td>
+            <td>${t.taxIncluded}</td>
           </tr>
         `
           )
@@ -174,9 +181,9 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     </table>
 
     <div class="summary">
-      <p>${t.subtotal}: $${subtotal.toFixed(2)}</p>
-      <p>${t.taxTotal}: $${taxTotal.toFixed(2)}</p>
-      <p><strong>${t.totalGross}: $${total.toFixed(2)}</strong></p>
+      <p>${t.subtotal}: ${formattedSubtotal}</p>
+      <p>${t.taxTotal}: ${formattedTaxTotal}</p>
+      <p><strong>${t.totalGross}: ${formattedTotal}</strong></p>
     </div>
 
     ${
@@ -191,6 +198,7 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
   </div>
 </body>
+
 
     </html>
   `;
@@ -260,59 +268,77 @@ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig }
 const isPreview = req.query.preview === "true";
 const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
 
-let subtotal = 0;
 
+ 
+    const currency = order.currency || "EUR";
 
-let taxTotal = 0;
-if (Array.isArray(order.tax_lines)) {
-  taxTotal = order.tax_lines.reduce((sum, line) => {
-    const price = parseFloat(line.price);
-    return sum + (isNaN(price) ? 0 : price);
-  }, 0);
-}
+    const localeMap = {
+      de: "de-DE",
+      en: "en-US",
+      sl: "sl-SI",
+    };
+    const locale = localeMap[lang] || "en-US";
 
-const enrichedItems = order.line_items.map(item => {
-  const price = parseFloat(item.price);
-  const quantity = parseFloat(item.quantity);
-  const safePrice = isNaN(price) ? 0 : price;
-  const safeQuantity = isNaN(quantity) ? 0 : quantity;
-  const itemTotal = safePrice * safeQuantity;
-  subtotal += itemTotal;
+    
+    let subtotal = 0;
+    let taxTotal = 0;
+    if (Array.isArray(order.tax_lines)) {
+      taxTotal = order.tax_lines.reduce((sum, line) => {
+        const price = parseFloat(line.price);
+        return sum + (isNaN(price) ? 0 : price);
+      }, 0);
+    }
 
-  return {
-    ...item,
-    price: safePrice,
-    quantity: safeQuantity,
-    taxLines: item.tax_lines || [],
-    taxAmount: 0 
-  };
-});
+    const enrichedItems = order.line_items.map(item => {
+      const price = parseFloat(item.price);
+      const quantity = parseFloat(item.quantity);
+      const safePrice = isNaN(price) ? 0 : price;
+      const safeQuantity = isNaN(quantity) ? 0 : quantity;
+      const itemTotal = safePrice * safeQuantity;
+      subtotal += itemTotal;
 
-const rawSubtotal = subtotal;
-const rawTaxTotal = taxTotal;
-const rawTotal = rawSubtotal + rawTaxTotal;
+      return {
+        ...item,
+        price: safePrice,
+        quantity: safeQuantity,
+        taxLines: item.tax_lines || [],
+        taxAmount: 0,
+        formattedPrice: formatPrice(safePrice, currency, locale),
+        formattedTotal: formatPrice(itemTotal, currency, locale),
+      };
+    });
 
+    const rawSubtotal = subtotal;
+    const rawTaxTotal = taxTotal;
+    const rawTotal = rawSubtotal + rawTaxTotal;
 
+    if (
+      typeof rawSubtotal !== "number" || isNaN(rawSubtotal) ||
+      typeof rawTaxTotal !== "number" || isNaN(rawTaxTotal)
+    ) {
+      throw new Error(`Invalid numeric values: subtotal=${rawSubtotal}, taxTotal=${rawTaxTotal}`);
+    }
 
-if (
-  typeof rawSubtotal !== "number" || isNaN(rawSubtotal) ||
-  typeof rawTaxTotal !== "number" || isNaN(rawTaxTotal)
-) {
-  throw new Error(`Invalid numeric values: subtotal=${rawSubtotal}, taxTotal=${rawTaxTotal}`);
-}
+    const formattedSubtotal = formatPrice(rawSubtotal, currency, locale);
+    const formattedTaxTotal = formatPrice(rawTaxTotal, currency, locale);
+    const formattedTotal = formatPrice(rawTotal, currency, locale);
 
-const invoiceData = {
-  shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
-  date: new Date(order.created_at).toISOString().slice(0, 10),
-  items: enrichedItems,
-  subtotal: rawSubtotal,
-  taxTotal: rawTaxTotal,
-  total: rawTotal,
-  showChart: isPremium && shopConfig?.showChart,
-  customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-  fallbackLogoUrl: "/assets/default-logo.png",
-};
-
+    const invoiceData = {
+      shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
+      date: new Date(order.created_at).toISOString().slice(0, 10),
+      items: enrichedItems,
+      subtotal: rawSubtotal,
+      taxTotal: rawTaxTotal,
+      total: rawTotal,
+      formattedSubtotal,
+      formattedTaxTotal,
+      formattedTotal,
+      showChart: isPremium && shopConfig?.showChart,
+      customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+      fallbackLogoUrl: "/assets/default-logo.png",
+      currency,
+      locale,
+    };
 
 
 
