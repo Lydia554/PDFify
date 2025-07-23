@@ -136,7 +136,7 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
           }
         </style>
       </head>
-     <body>
+ <body>
   <div class="container">
     <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
     <h1>${t.invoiceTitle}</h1>
@@ -159,41 +159,48 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
       </thead>
       <tbody>
         ${items
-          .map(
-            (item) => `
-          <tr>
-            <td>${
-              item.imageUrl
-                ? `<img src="${item.imageUrl}" class="product-image" />`
-                : ""
-            }</td>
-            <td>${item.name}</td>
-            <td>${item.quantity}</td>
-            <td>$${item.price.toFixed(2)}</td>
-            <td>${
-              item.taxLines?.[0]?.rate
-                ? (item.taxLines[0].rate * 100).toFixed(0) + "%"
-                : "—"
-            }</td>
-            <td>${
-              item.taxLines?.[0]?.price
-                ? "$" + parseFloat(item.taxLines[0].price).toFixed(2)
-                : "$0.00"
-            }</td>
-          </tr>
-        `
-          )
+          .map((item) => {
+            // Safely convert price to number
+            const priceNum = Number(item.price);
+            // Safely get tax rate
+            const taxRateNum = item.taxLines?.[0]?.rate;
+            // Safely get tax amount price
+            const taxAmountNum = item.taxLines?.[0]?.price ? Number(item.taxLines[0].price) : 0;
+
+            return `
+              <tr>
+                <td>${
+                  item.imageUrl
+                    ? `<img src="${item.imageUrl}" class="product-image" />`
+                    : ""
+                }</td>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>$${!isNaN(priceNum) ? priceNum.toFixed(2) : "0.00"}</td>
+                <td>${
+                  typeof taxRateNum === "number"
+                    ? (taxRateNum * 100).toFixed(0) + "%"
+                    : "—"
+                }</td>
+                <td>$${!isNaN(taxAmountNum) ? taxAmountNum.toFixed(2) : "0.00"}</td>
+              </tr>
+            `;
+          })
           .join("")}
       </tbody>
     </table>
 
     <div class="summary">
-      <p>${t.subtotal}: $${subtotal.toFixed(2)}</p>
-      <p>${t.taxTotal}: $${taxTotal.toFixed(2)}</p>
-      <p><strong>${t.totalGross}: $${total.toFixed(2)}</strong></p>
+      <p>${t.subtotal}: $${typeof subtotal === "number" && !isNaN(subtotal) ? subtotal.toFixed(2) : "0.00"}</p>
+      <p>${t.taxTotal}: $${typeof taxTotal === "number" && !isNaN(taxTotal) ? taxTotal.toFixed(2) : "0.00"}</p>
+      <p><strong>${t.totalGross}: $${typeof total === "number" && !isNaN(total) ? total.toFixed(2) : "0.00"}</strong></p>
     </div>
 
-    ${showChart ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>` : ""}
+    ${
+      showChart
+        ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>`
+        : ""
+    }
   </div>
 
   <div class="footer">
@@ -201,6 +208,7 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
   </div>
 </body>
+
 
     </html>
   `;
