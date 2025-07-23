@@ -187,7 +187,7 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
               .join("")}
           </tbody>
         </table>
-       <div class="summary">
+      <div class="summary">
       <p>${t.subtotal}: ${formattedSubtotal}</p>
       <p>${t.taxTotal}: ${formattedTaxTotal}</p>
       <p><strong>${t.totalGross}: ${formattedTotal}</strong></p>
