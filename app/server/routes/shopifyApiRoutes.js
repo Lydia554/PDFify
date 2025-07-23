@@ -278,7 +278,8 @@ const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN ==
 console.log("🧾 Shopify order currency:", order.currency);
 
 
-const currency = order.currency || "EUR";
+const currency = order.currency === "EUR" && simulateUK ? "GBP" : order.currency || "EUR";
+
 
 const localeMap = {
   de: "de-DE",
