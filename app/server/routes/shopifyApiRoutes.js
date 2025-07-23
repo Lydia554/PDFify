@@ -191,9 +191,10 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     </table>
 
     <div class="summary">
-      <p>${t.subtotal}: $${typeof subtotal === "number" && !isNaN(subtotal) ? subtotal.toFixed(2) : "0.00"}</p>
-      <p>${t.taxTotal}: $${typeof taxTotal === "number" && !isNaN(taxTotal) ? taxTotal.toFixed(2) : "0.00"}</p>
-      <p><strong>${t.totalGross}: $${typeof total === "number" && !isNaN(total) ? total.toFixed(2) : "0.00"}</strong></p>
+    <p>${t.subtotal}: $${subtotal}</p>
+<p>${t.taxTotal}: $${taxTotal}</p>
+<p><strong>${t.totalGross}: $${total}</strong></p>
+
     </div>
 
     ${
