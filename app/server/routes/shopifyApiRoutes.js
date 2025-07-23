@@ -278,20 +278,24 @@ let subtotal = 0;
 let taxTotal = 0;
 
 const enrichedItems = order.line_items.map(item => {
-  const itemTotal = item.price * item.quantity;
+  const price = parseFloat(item.price || 0);
+  const quantity = parseFloat(item.quantity || 0);
+  const itemTotal = price * quantity;
   subtotal += itemTotal;
 
   let taxRate = null;
   let taxAmount = 0;
 
   if (item.tax_lines?.length) {
-    taxRate = item.tax_lines[0].rate;
+    taxRate = parseFloat(item.tax_lines[0].rate || 0);
     taxAmount = parseFloat(item.tax_lines[0].price || 0);
     taxTotal += taxAmount;
   }
 
   return {
     ...item,
+    price,
+    quantity,
     taxLines: item.tax_lines,
     taxRate,
     taxAmount,
