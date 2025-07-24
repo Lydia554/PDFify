@@ -189,14 +189,6 @@ const premiumTemplate = `
 }
 
 
-.page-break {
-  page-break-before: always;
-  break-before: always;
-}
-
-
-
-
 
 .table {
   width: 100%;
@@ -296,7 +288,6 @@ const premiumTemplate = `
         </tr>
       </thead>
 
-<div class="page-break"></div>
 
       <tbody>
         ${items
@@ -504,7 +495,6 @@ await page.pdf({
   format: "A4",
   printBackground: true,
   margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
-  displayHeaderFooter: true,
 
 });
 
