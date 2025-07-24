@@ -176,19 +176,19 @@ const premiumTemplate = `
   margin: 6px 0;
 }
 
-/* Shopify green for shipping info */
+
 .shipping-info {
   background: linear-gradient(135deg, #e0ffe8 0%, #c8f7df 100%);
-  border-left: 6px solid #96bf48; /* Shopify green */
+  border-left: 6px solid #04754aff; 
 }
 
-/* Different background & border for billing info */
+
 .billing-info {
   background: linear-gradient(135deg, #fffbe6 0%, #fff4c2 100%);
-  border-left: 6px solid #ffb200;
+  border-left: 6px solid #95BF47;
 }
 
-/* Page break for Puppeteer */
+
 .page-break {
   page-break-before: always;
   break-before: always;
@@ -212,7 +212,7 @@ const premiumTemplate = `
   background-color: #f7faff;
   vertical-align: middle;
   color: #036b32ff;
-  box-shadow: inset 0 -1px 0 #95BF47;;
+  box-shadow: inset 0 -1px 0 #95BF47;
   border-radius: 8px;
 }
 
