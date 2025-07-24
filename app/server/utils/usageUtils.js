@@ -1,26 +1,26 @@
 // utils/usageUtils.js
-function incrementUsage(user, isPreview, pages = 1, forcePlan = null) {
+const User = require("../models/User"); 
+
+async function incrementUsage(user, isPreview, pages = 1, forcePlan = null) {
   const plan = (forcePlan || user.plan || "").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
 
   if (isPreview && plan === "free") {
     if (user.previewCount < 3) {
       user.previewCount++;
+      await user.save(); 
       console.log(`👀 Incremented preview count to ${user.previewCount}`);
     } else {
-      // usageCount increment handled atomically outside
-      console.log(`⚠️ Preview limit reached, usage should increment outside`);
+      
+      await User.findByIdAndUpdate(user._id, { $inc: { usageCount: pages } });
+      console.log(`⚠️ Preview limit reached, bumped usage by ${pages}`);
     }
-  } else if (["premium", "pro"].includes(plan)) {
-    // usageCount increment handled atomically outside
-    console.log(`🔥 Usage increment should happen outside for ${plan}`);
-  } else if (!isPreview) {
-    // usageCount increment handled atomically outside
-    console.log(`💡 Usage increment should happen outside for non-preview`);
+  } else if (["premium", "pro"].includes(plan) || !isPreview) {
+    await User.findByIdAndUpdate(user._id, { $inc: { usageCount: pages } });
+    console.log(`🔥 Usage incremented for ${plan || "free"} plan by ${pages}`);
   } else {
     console.warn(`⚠️ Unknown plan or preview state — no usage increment.`);
   }
 }
-
 
 module.exports = { incrementUsage };
