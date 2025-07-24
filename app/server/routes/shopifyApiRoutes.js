@@ -28,17 +28,20 @@ const router = express.Router();
 require('dotenv').config();
 
 function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
-  const {
-    shopName,
-    date,
-    items,
-    formattedSubtotal,
-    formattedTaxTotal,
-    formattedTotal,
-    showChart,
-    customLogoUrl,
-    fallbackLogoUrl,
-  } = invoiceData;
+const {
+  shopName,
+  date,
+  items,
+  formattedSubtotal,
+  formattedTaxTotal,
+  formattedTotal,
+  showChart,
+  customLogoUrl,
+  fallbackLogoUrl,
+  customerName,
+  shippingAddress,
+  billingAddress,
+} = invoiceData;
 
   const basicTemplate = `
     <html>
