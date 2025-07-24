@@ -535,20 +535,14 @@ if (!isPreview && user.usageCount + pageCount > user.maxUsage) {
 }
 
 
-
-console.log(`🧮 Before increment: usageCount=${user.usageCount}`);
-
 incrementUsage(user, isPreview, pageCount);
+await user.save();
+console.log("✅ User saved successfully to DB");
 
-console.log(`🧮 After increment: usageCount=${user.usageCount} (added ${pageCount})`);
+const freshUser = await User.findById(user._id);
+console.log("🧾 Confirmed fresh usage count from DB:", freshUser.usageCount);
 
-try {
-  await user.save();
-  console.log("✅ User saved successfully to DB");
-} catch (err) {
-  console.error("❌ Error saving user:", err);
-}
-
+await user.save();
 
 
     try {
