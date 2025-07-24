@@ -476,36 +476,48 @@ const invoiceData = {
 
 
 
-    const safeOrderId = `shopify-${order.id}`;
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
+const safeOrderId = `shopify-${order.id}`;
+const pdfDir = path.join(__dirname, "../pdfs");
+if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
 
-    const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-    const page = await browser.newPage();
+const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
+const browser = await puppeteer.launch({
+  headless: true,
+  args: ["--no-sandbox", "--disable-setuid-sandbox"],
+});
+const page = await browser.newPage();
 
-   const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
+const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
 
-    await page.setContent(html, { waitUntil: "networkidle0" });
+await page.setContent(html, { waitUntil: "networkidle0" });
 await page.pdf({
   path: pdfPath,
   format: "A4",
   printBackground: true,
   margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
   displayHeaderFooter: false,
-
 });
 
-    await browser.close();
+await browser.close();
 
 
-    const pdfBuffer = fs.readFileSync(pdfPath);
+await new Promise((res) => setTimeout(res, 100));
+
+
+let pdfBuffer = fs.readFileSync(pdfPath);
+let retries = 0;
+while (pdfBuffer.length < 1000 && retries < 5) {
+  await new Promise((res) => setTimeout(res, 100)); 
+  pdfBuffer = fs.readFileSync(pdfPath);
+  retries++;
+}
+
 const pdfDoc = await PDFDocument.load(pdfBuffer);
 const pageCount = pdfDoc.getPageCount();
+console.log(`📄 Shopify invoice page count: ${pageCount}`);
+
 const { sendEmail: shouldSendEmail = true } = req.body;
+
 
 if (!isPreview) {
   if (user.usageCount + pageCount > user.maxUsage) {
@@ -517,6 +529,7 @@ if (!isPreview) {
   user.usageCount += pageCount;
   await user.save();
 }
+
 
 
     try {
