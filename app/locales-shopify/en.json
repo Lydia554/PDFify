@@ -23,5 +23,7 @@
   "billTo": "Bill To",
   "shipTo": "Ship To",
   "customerName": "Customer Name",
-  "customerAddress": "Customer Address"
+  "customerAddress": "Customer Address",
+  "shippingAddress": "Shipping Address",
+  "billingAddress": "Billing Address"
 }

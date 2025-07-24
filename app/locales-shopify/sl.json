@@ -23,5 +23,7 @@
   "billTo": "Račun za",
   "shipTo": "Dostava na",
   "customerName": "Ime kupca",
-  "customerAddress": "Naslov kupca"
+  "customerAddress": "Naslov kupca",
+  "shippingAddress": "Naslov za dostavo",
+  "billingAddress": "Naslov za račun"
 }

@@ -23,5 +23,7 @@
   "billTo": "Rechnung an",
   "shipTo": "Lieferung an",
   "customerName": "Kundenname",
-  "customerAddress": "Kundenadresse"
+  "customerAddress": "Kundenadresse",
+  "shippingAddress": "Lieferadresse",
+  "billingAddress": "Rechnungsadresse"
 }
