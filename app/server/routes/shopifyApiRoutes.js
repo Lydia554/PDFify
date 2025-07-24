@@ -535,18 +535,11 @@ if (!isPreview && user.usageCount + pageCount > user.maxUsage) {
 
 
 
-
-await incrementUsage(user, isPreview, pageCount);
-
 if (isPreview) {
-  await user.save(); 
+  await incrementUsage(user, true, pageCount);
+  await user.save();
   console.log("✅ Preview count incremented and saved:", user.previewCount);
-} else {
-  const freshUser = await User.findById(user._id).lean().exec();
-  console.log("✅ Atomic usage increment, new usageCount from DB:", freshUser.usageCount);
 }
-
-
 
 
 

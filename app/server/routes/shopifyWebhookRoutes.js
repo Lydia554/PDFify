@@ -6,19 +6,17 @@ const axios = require("axios");
 const sendEmail = require("../sendEmail");
 const { enrichLineItemsWithImages } = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
-
+const { incrementUsage } = require("../utils/usageUtils"); 
 
 function verifyShopifyWebhook(req, res, next) {
-  if (process.env.NODE_ENV !== "production") {
-    return next();
-  }
+  if (process.env.NODE_ENV !== "production") return next();
 
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
 
   if (!hmacHeader || !body) {
     console.error("❌ Missing HMAC header or raw body");
-    return res.status(200).send("OK"); 
+    return res.status(200).send("OK");
   }
 
   const generatedHmac = crypto
@@ -42,9 +40,6 @@ router.post(
       req.rawBody = buf;
     },
   }),
-  (req, res, next) => {
-    next();
-  },
   verifyShopifyWebhook,
   async (req, res) => {
     let parsedPayload;
@@ -65,29 +60,27 @@ router.post(
 
     res.status(200).send("Webhook received");
 
- try {
-  const connectedShopDomain = shopDomain.trim().toLowerCase();
+    try {
+      const connectedShopDomain = shopDomain.trim().toLowerCase();
+      const user = await User.findOne({ connectedShopDomain });
 
-  const user = await User.findOne({ connectedShopDomain });
-  if (!user) {
-    console.error(`❌ No user found for connectedShopDomain: ${connectedShopDomain}`);
-    return;
-  }
+      if (!user) {
+        console.error(`❌ No user found for connectedShopDomain: ${connectedShopDomain}`);
+        return;
+      }
 
- const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig: {} });
+      const { lang } = await resolveLanguage({ req, order, shopDomain, shopConfig: {} });
 
-
-  await processOrderAsync({
-    order,
-    user,
-    accessToken: user.shopifyAccessToken,
-    shopDomain: connectedShopDomain,
-    lang,
-  });
-} catch (err) {
-  console.error("❌ Error in webhook async handler:", err);
-}
-
+      await processOrderAsync({
+        order,
+        user,
+        accessToken: user.shopifyAccessToken,
+        shopDomain: connectedShopDomain,
+        lang,
+      });
+    } catch (err) {
+      console.error("❌ Error in webhook async handler:", err);
+    }
   }
 );
 
@@ -109,12 +102,23 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang })
         headers: {
           Authorization: `Bearer ${user.getDecryptedApiKey()}`,
         },
-        responseType: "arraybuffer",
       }
     );
 
-    const pdfBuffer = Buffer.from(invoiceResponse.data, "binary");
-    console.log("📄 Received PDF invoice buffer");
+    const { pageCount, pdfBase64 } = invoiceResponse.data; 
+
+    if (!pageCount) {
+      console.warn("⚠️ No pageCount returned from invoice route");
+    } else {
+      console.log(`📄 Shopify invoice page count: ${pageCount}`);
+
+      
+      await incrementUsage(user, false, pageCount);
+      await user.save();
+      console.log("💾 User usage count incremented and saved");
+    }
+
+    const pdfBuffer = Buffer.from(pdfBase64, "base64");
 
     await sendEmail({
       to: order.email,
@@ -130,10 +134,6 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang })
     });
 
     console.log(`✉️ Email sent to ${order.email}`);
-
-   console.log("ℹ️ Usage already incremented by /invoice route");
-
-
     console.log("✅ Finished processing order:", order.id);
   } catch (err) {
     console.error("❌ Error during async order processing:", err);
