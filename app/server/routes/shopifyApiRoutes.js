@@ -489,14 +489,24 @@ const invoiceData = {
 
    const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
 
-    await page.setContent(html, { waitUntil: "networkidle0" });
 await page.pdf({
   path: pdfPath,
   format: "A4",
   printBackground: true,
-  margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
-
+  margin: { top: "60px", bottom: "60px", left: "40px", right: "40px" },
+  displayHeaderFooter: true,
+  headerTemplate: `
+    <div style="font-size:10px; width:100%; text-align:left; padding-left: 40px; color: #555;">
+      Invoice for ${invoiceData.shopName}
+    </div>
+  `,
+  footerTemplate: `
+    <div style="font-size:10px; width:100%; text-align:center; color:#555;">
+      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+    </div>
+  `,
 });
+
 
     await browser.close();
 
