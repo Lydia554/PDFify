@@ -6,7 +6,7 @@ const axios = require("axios");
 const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
-
+const { PDFDocument } = require("pdf-lib");
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
@@ -115,7 +115,7 @@ const premiumTemplate = `
         }
 
 
-        /* Tax summary styling */
+   
 .summary {
   margin-top: 30px;
   border-top: 2px solid #cbd2e1;
@@ -145,7 +145,7 @@ const premiumTemplate = `
   color: #1b2a56;
 }
 
-/* Optional: subtle background highlight for total */
+
 .summary-line.total {
   background: #e9f0ff;
   border-radius: 4px;
@@ -153,7 +153,7 @@ const premiumTemplate = `
   padding-right: 10px;
 }
 
-/* Customer info styling */
+
 .customer-info {
   margin: 30px 0;
   padding: 20px 25px;
@@ -178,7 +178,7 @@ const premiumTemplate = `
   letter-spacing: 0.02em;
 }
 
-/* Table styling */
+
 .table {
   width: 100%;
   border-collapse: separate;
@@ -193,7 +193,7 @@ const premiumTemplate = `
   background-color: #f7faff;
   vertical-align: middle;
   color: #334466;
-  box-shadow: inset 0 -1px 0 #dee2ef;
+  box-shadow: inset 0 -1px 0 #0a5e2fff;
   border-radius: 8px;
 }
 
@@ -204,7 +204,6 @@ const premiumTemplate = `
   text-align: left;
 }
 
-/* Add subtle hover effect on rows */
 .table tbody tr:hover td {
   background-color: #e6f0ff;
   cursor: default;
@@ -476,8 +475,9 @@ const invoiceData = {
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
+const pdfDoc = await PDFDocument.load(pdfBuffer);
+const pageCount = pdfDoc.getPageCount();
+
     const { sendEmail: shouldSendEmail = true } = req.body;
 
     if (!isPreview) {
