@@ -131,9 +131,8 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang })
 
     console.log(`✉️ Email sent to ${order.email}`);
 
-    user.usageCount = (user.usageCount || 0) + 1;
-    await user.save();
-    console.log("💾 User usage count incremented and saved");
+   console.log("ℹ️ Usage already incremented by /invoice route");
+
 
     console.log("✅ Finished processing order:", order.id);
   } catch (err) {
