@@ -11,6 +11,7 @@ const { generateZugferdXML } = require('../utils/zugferdHelper');
 const embedXmp = require("../xmp/embedXmp");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
+const { incrementUsage } = require("../utils/usageUtils");
 
 
 
@@ -36,28 +37,6 @@ const log = (message, data = null) => {
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
-function incrementUsage(user, isPreview, pages = 1) {
-  const plan = (FORCE_PLAN || user.plan || "").toLowerCase();
-  console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
-
-  if (isPreview && plan === "free") {
-    if (user.previewCount < 3) {
-      user.previewCount++;
-      console.log(`👀 Incremented preview count to ${user.previewCount}`);
-    } else {
-      user.usageCount += pages;
-      console.log(`⚠️ Preview limit reached, incremented usage count by ${pages} to ${user.usageCount}`);
-    }
-  } else if (["premium", "pro"].includes(plan)) {
-    user.usageCount += pages;
-    console.log(`🔥 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan}`);
-  } else if (!isPreview) {
-    user.usageCount += pages;
-    console.log(`💡 Incremented usage count by ${pages} to ${user.usageCount} for plan ${plan} (non-preview)`);
-  } else {
-    console.warn(`⚠️ Unknown plan or state, no usage increment.`);
-  }
-}
 
 
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
@@ -239,7 +218,7 @@ const pageCount = pdfDoc.getPageCount();
 
 
 
-incrementUsage(user, isPreview, pageCount);
+incrementUsage(user, isPreview, pageCount, FORCE_PLAN);
 
 
 

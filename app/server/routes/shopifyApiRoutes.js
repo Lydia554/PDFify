@@ -12,6 +12,8 @@ const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
+const { incrementUsage } = require("../utils/usageUtils");
+
 const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
 
@@ -525,17 +527,16 @@ console.log(`📄 Shopify invoice page count: ${pageCount}`);
 const { sendEmail: shouldSendEmail = true } = req.body;
 
 
-if (!isPreview) {
-  if (user.usageCount + pageCount > user.maxUsage) {
-    fs.unlinkSync(pdfPath);
-    return res.status(403).json({
-      error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-    });
-  }
-  user.usageCount += pageCount;
-  console.log(`✅ Adding ${pageCount} pages. New total: ${user.usageCount}`);
-  await user.save();
+if (!isPreview && user.usageCount + pageCount > user.maxUsage) {
+  fs.unlinkSync(pdfPath);
+  return res.status(403).json({
+    error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+  });
 }
+
+incrementUsage(user, isPreview, pageCount);
+await user.save();
+
 
     try {
     if (order.email && shouldSendEmail) {
