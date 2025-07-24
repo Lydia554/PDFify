@@ -295,6 +295,9 @@ const premiumTemplate = `
           <th>${t.taxIncluded}</th>
         </tr>
       </thead>
+
+<div class="page-break"></div>
+
       <tbody>
         ${items
           .map(
@@ -323,7 +326,7 @@ const premiumTemplate = `
       <div class="summary-line total"><strong>${t.totalGross}:</strong><strong>${formattedTotal}</strong></div>
     </div>
 
-    <div class="page-break"></div>
+
 
     ${
       showChart
