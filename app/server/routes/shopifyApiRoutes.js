@@ -102,7 +102,7 @@ const premiumTemplate = `
         h1 {
           font-family: 'Playfair Display', serif;
           font-size: 32px;
-          color: #2a3d66;
+          color: #95BF47;;
           text-align: center;
         }
 
@@ -124,7 +124,7 @@ const premiumTemplate = `
   margin-left: auto;
   font-size: 1em;
   font-family: 'Open Sans', sans-serif;
-  color: #2a3d66;
+  color: #95BF47;
 }
 
 .summary-line {
@@ -132,7 +132,7 @@ const premiumTemplate = `
   justify-content: space-between;
   margin-bottom: 12px;
   font-weight: 600;
-  color: #445a8e;
+  color: ##95BF47;;
   letter-spacing: 0.02em;
 }
 
@@ -142,7 +142,7 @@ const premiumTemplate = `
   padding-top: 12px;
   margin-top: 14px;
   font-weight: 700;
-  color: #1b2a56;
+  color: #95BF47;;
 }
 
 
@@ -159,9 +159,9 @@ const premiumTemplate = `
   padding: 20px 25px;
   background: linear-gradient(135deg, #f3f7ff 0%, #e1e9ff 100%);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(74, 105, 189, 0.15);
+  box-shadow: 0 4px 12px rgba(8, 121, 77, 0.15);
   font-family: 'Open Sans', sans-serif;
-  color: #2a3d66;
+  color: #95BF47;;
   font-size: 1em;
   line-height: 1.5;
   border-left: 6px solid #4a69bd;
@@ -169,7 +169,7 @@ const premiumTemplate = `
 }
 
 .customer-info:hover {
-  box-shadow: 0 8px 24px rgba(74, 105, 189, 0.3);
+  box-shadow: 0 8px 24px rgba(4, 87, 18, 0.3);
 }
 
 .customer-info p {
@@ -192,15 +192,15 @@ const premiumTemplate = `
   border: none;
   background-color: #f7faff;
   vertical-align: middle;
-  color: #334466;
-  box-shadow: inset 0 -1px 0 #0a5e2fff;
+  color: #036b32ff;
+  box-shadow: inset 0 -1px 0 #95BF47;;
   border-radius: 8px;
 }
 
 .table th {
   background-color: #dbe7ff;
   font-weight: 700;
-  color: #2a3d66;
+  color: #04754aff;
   text-align: left;
 }
 
@@ -209,6 +209,17 @@ const premiumTemplate = `
   cursor: default;
 }
 
+ .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  @media print {
+    .page-break {
+      display: block;
+      height: 0;
+    }
+  }
 
        
 
@@ -299,6 +310,8 @@ const premiumTemplate = `
       <div class="summary-line"><span>${t.taxTotal}:</span><span>${formattedTaxTotal}</span></div>
       <div class="summary-line total"><strong>${t.totalGross}:</strong><strong>${formattedTotal}</strong></div>
     </div>
+
+    <div class="page-break"></div>
 
     ${
       showChart
@@ -471,25 +484,32 @@ const invoiceData = {
    const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
 
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4" });
+await page.pdf({
+  path: pdfPath,
+  format: "A4",
+  printBackground: true,
+  margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+});
+
     await browser.close();
+
 
     const pdfBuffer = fs.readFileSync(pdfPath);
 const pdfDoc = await PDFDocument.load(pdfBuffer);
 const pageCount = pdfDoc.getPageCount();
+const { sendEmail: shouldSendEmail = true } = req.body;
 
-    const { sendEmail: shouldSendEmail = true } = req.body;
+if (!isPreview) {
+  if (user.usageCount + pageCount > user.maxUsage) {
+    fs.unlinkSync(pdfPath);
+    return res.status(403).json({
+      error: "Monthly usage limit reached. Upgrade to premium for more pages.",
+    });
+  }
+  user.usageCount += pageCount;
+  await user.save();
+}
 
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-      user.usageCount += pageCount;
-      await user.save();
-    }
 
     try {
     if (order.email && shouldSendEmail) {
