@@ -157,14 +157,14 @@ const premiumTemplate = `
 .customer-info {
   margin: 30px 0;
   padding: 20px 25px;
-  background: linear-gradient(135deg, #f3f7ff 0%, #e1e9ff 100%);
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(23, 177, 118, 0.15);
   font-family: 'Open Sans', sans-serif;
-  color: #010201ff;;
+  color: #010201ff;
   font-size: 1em;
   line-height: 1.5;
-  border-left: 6px solid #20ac76ff;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   transition: box-shadow 0.3s ease;
 }
 
@@ -174,9 +174,28 @@ const premiumTemplate = `
 
 .customer-info p {
   margin: 6px 0;
-  font-weight: 600;
-  letter-spacing: 0.02em;
 }
+
+/* Shopify green for shipping info */
+.shipping-info {
+  background: linear-gradient(135deg, #e0ffe8 0%, #c8f7df 100%);
+  border-left: 6px solid #96bf48; /* Shopify green */
+}
+
+/* Different background & border for billing info */
+.billing-info {
+  background: linear-gradient(135deg, #fffbe6 0%, #fff4c2 100%);
+  border-left: 6px solid #ffb200;
+}
+
+/* Page break for Puppeteer */
+.page-break {
+  page-break-before: always;
+  break-before: always;
+}
+
+
+
 
 
 .table {
@@ -209,17 +228,6 @@ const premiumTemplate = `
   cursor: default;
 }
 
- .page-break {
-    page-break-before: always;
-    break-before: page;
-  }
-
-  @media print {
-    .page-break {
-      display: block;
-      height: 0;
-    }
-  }
 
        
 
@@ -265,12 +273,16 @@ const premiumTemplate = `
       <div><strong>${t.date}</strong><br>${date}</div>
     </div>
 
-    <!-- 👤 Customer Info -->
-    <div class="customer-info">
-      <p><strong>${t.customerName}:</strong> ${customerName}</p>
-      <p><strong>${t.shippingAddress}:</strong> ${shippingAddress}</p>
-      <p><strong>${t.billingAddress}:</strong> ${billingAddress}</p>
-    </div>
+ <!-- 👤 Customer Info -->
+<div class="customer-info shipping-info">
+  <p><strong>${t.customerName}:</strong> ${customerName}</p>
+  <p><strong>${t.shippingAddress}:</strong> ${shippingAddress}</p>
+</div>
+
+<div class="customer-info billing-info">
+  <p><strong>${t.billingAddress}:</strong> ${billingAddress}</p>
+</div>
+
 
     <!-- 🛒 Item Table -->
     <table class="table">
@@ -489,6 +501,8 @@ await page.pdf({
   format: "A4",
   printBackground: true,
   margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+  displayHeaderFooter: true,
+
 });
 
     await browser.close();
