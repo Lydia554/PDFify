@@ -3,7 +3,6 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios");
-const pdfParse = require("pdf-parse");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
 const { PDFDocument } = require("pdf-lib");
@@ -535,8 +534,23 @@ if (!isPreview && user.usageCount + pageCount > user.maxUsage) {
 }
 
 incrementUsage(user, isPreview, pageCount);
-await user.save();
-console.log("✅ User saved successfully to DB");
+
+
+if (!isPreview) {
+ 
+  const updatedUser = await User.findByIdAndUpdate(
+    user._id,
+    { $inc: { usageCount: pageCount } },
+    { new: true }
+  );
+  console.log("✅ Atomic usage increment, new usageCount:", updatedUser.usageCount);
+  user = updatedUser; 
+} else {
+  
+  await user.save();
+  console.log("✅ Preview count incremented and saved:", user.previewCount);
+}
+
 
 const freshUser = await User.findById(user._id);
 console.log("🧾 Confirmed fresh usage count from DB:", freshUser.usageCount);
