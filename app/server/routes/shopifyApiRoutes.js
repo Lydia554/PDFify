@@ -65,146 +65,210 @@ function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
     </html>
   `;
 
-  const premiumTemplate = `
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-        <title>Invoice</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
-          body {
-            font-family: 'Open Sans', sans-serif;
-            color: #333;
-            background: #f4f7fb;
-            margin: 0;
-            padding: 0;
-          }
-          .container {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 30px 40px 160px;
-            background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            border-radius: 16px;
-          }
-          .logo {
-            width: 150px;
-            margin-bottom: 20px;
-          }
-          h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 32px;
-            color: #2a3d66;
-            text-align: center;
-          }
-          .invoice-header {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #4a69bd;
-          }
-          .table {
-            width: 100%;
-            border-collapse: collapse;
-          }
-          .table th,
-          .table td {
-            padding: 14px;
-            border: 1px solid #dee2ef;
-            vertical-align: middle;
-          }
-          .table th {
-            background-color: #dbe7ff;
-          }
-          .product-image {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-            background: white;
-          }
-          .total {
-            text-align: right;
-            font-size: 20px;
-            font-weight: bold;
-            margin-top: 20px;
-          }
-          .chart-container {
-            margin-top: 30px;
-            text-align: center;
-          }
-          .footer {
-            max-width: 800px;
-            margin: 40px auto 10px auto;
-            padding: 10px 20px;
-            background-color: #f0f2f7;
-            color: #555;
-            text-align: center;
-            font-size: 11px;
-            border-top: 2px solid #cbd2e1;
-            border-radius: 0 0 16px 16px;
-            position: static;
-          }
-        </style>
-      </head>
-  <body>
-      <div class="container">
-        <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
-        <h1>${t.invoiceTitle}</h1>
-        <div class="invoice-header">
-          <div><strong>${t.from}</strong><br>${shopName}</div>
-          <div><strong>${t.date}</strong><br>${date}</div>
-        </div>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>${t.image}</th>
-              <th>${t.item}</th>
-              <th>${t.quantity}</th>
-              <th>${t.price}</th>
-              <th>${t.taxIncluded}</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items
-              .map(
-                (item) => `
-              <tr>
-                <td>${
-                  item.imageUrl
-                    ? `<img src="${item.imageUrl}" class="product-image" />`
-                    : ""
-                }</td>
-                <td>${item.name}</td>
-                <td>${item.quantity}</td>
-                <td>${item.formattedPrice}</td>
-                <td>${t.taxIncluded}</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </tbody>
-        </table>
-      <div class="summary">
-      <p>${t.subtotal}: ${formattedSubtotal}</p>
-      <p>${t.taxTotal}: ${formattedTaxTotal}</p>
-      <p><strong>${t.totalGross}: ${formattedTotal}</strong></p>
-    </div>
-        ${
-          showChart
-            ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>`
-            : ""
-        }
-      </div>
-      <div class="footer">
-        <p>${t.footerNote}</p>
-        <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
-      </div>
-    </body>
+const premiumTemplate = `
+  <html>
+    <head>
+      <meta charset="UTF-8" />
+      <title>Invoice</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
 
+        body {
+          font-family: 'Open Sans', sans-serif;
+          color: #333;
+          background: #f4f7fb;
+          margin: 0;
+          padding: 0;
+        }
+
+        .container {
+          max-width: 800px;
+          margin: 20px auto;
+          padding: 30px 40px 160px;
+          background: linear-gradient(to bottom right, #ffffff, #f8fbff);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+          border-radius: 16px;
+        }
+
+        .logo {
+          width: 150px;
+          margin-bottom: 20px;
+        }
+
+        h1 {
+          font-family: 'Playfair Display', serif;
+          font-size: 32px;
+          color: #2a3d66;
+          text-align: center;
+        }
+
+        .invoice-header {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 30px;
+          padding-bottom: 20px;
+          border-bottom: 2px solid #4a69bd;
+        }
+
+        .customer-info {
+          margin: 20px 0;
+          padding: 15px 20px;
+          background-color: #eef3fb;
+          border-left: 4px solid #4a69bd;
+          border-radius: 8px;
+          font-size: 0.95em;
+          line-height: 1.6;
+        }
+
+        .customer-info p {
+          margin: 4px 0;
+        }
+
+        .table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+          padding: 14px;
+          border: 1px solid #dee2ef;
+          vertical-align: middle;
+        }
+
+        .table th {
+          background-color: #dbe7ff;
+        }
+
+        .product-image {
+          width: 60px;
+          height: 60px;
+          object-fit: contain;
+          border-radius: 8px;
+          border: 1px solid #ccc;
+          background: white;
+        }
+
+        .summary {
+          margin-top: 30px;
+          border-top: 2px solid #cbd2e1;
+          padding-top: 15px;
+          max-width: 400px;
+          margin-left: auto;
+          font-size: 1em;
+        }
+
+        .summary-line {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+
+        .summary-line.total {
+          font-size: 1.2em;
+          border-top: 1px solid #aaa;
+          padding-top: 10px;
+          margin-top: 10px;
+          font-weight: bold;
+        }
+
+        .total {
+          text-align: right;
+          font-size: 20px;
+          font-weight: bold;
+          margin-top: 20px;
+        }
+
+        .chart-container {
+          margin-top: 30px;
+          text-align: center;
+        }
+
+        .footer {
+          max-width: 800px;
+          margin: 40px auto 10px auto;
+          padding: 10px 20px;
+          background-color: #f0f2f7;
+          color: #555;
+          text-align: center;
+          font-size: 11px;
+          border-top: 2px solid #cbd2e1;
+          border-radius: 0 0 16px 16px;
+          position: static;
+        }
+      </style>
+
+      </head>
+<body>
+  <div class="container">
+    <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
+
+    <h1>${t.invoiceTitle}</h1>
+
+    <div class="invoice-header">
+      <div><strong>${t.from}</strong><br>${shopName}</div>
+      <div><strong>${t.date}</strong><br>${date}</div>
+    </div>
+
+    <!-- 👤 Customer Info -->
+    <div class="customer-info">
+      <p><strong>${t.customerName}:</strong> ${customerName}</p>
+      <p><strong>${t.shippingAddress}:</strong> ${shippingAddress}</p>
+      <p><strong>${t.billingAddress}:</strong> ${billingAddress}</p>
+    </div>
+
+    <!-- 🛒 Item Table -->
+    <table class="table">
+      <thead>
+        <tr>
+          <th>${t.image}</th>
+          <th>${t.item}</th>
+          <th>${t.quantity}</th>
+          <th>${t.price}</th>
+          <th>${t.taxIncluded}</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items
+          .map(
+            (item) => `
+            <tr>
+              <td>${
+                item.imageUrl
+                  ? `<img src="${item.imageUrl}" class="product-image" />`
+                  : ""
+              }</td>
+              <td>${item.name}</td>
+              <td>${item.quantity}</td>
+              <td>${item.formattedPrice}</td>
+              <td>${t.taxIncluded}</td>
+            </tr>
+          `
+          )
+          .join("")}
+      </tbody>
+    </table>
+
+    <!-- 💰 Summary Section -->
+    <div class="summary">
+      <div class="summary-line"><span>${t.subtotal}:</span><span>${formattedSubtotal}</span></div>
+      <div class="summary-line"><span>${t.taxTotal}:</span><span>${formattedTaxTotal}</span></div>
+      <div class="summary-line total"><strong>${t.totalGross}:</strong><strong>${formattedTotal}</strong></div>
+    </div>
+
+    ${
+      showChart
+        ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>`
+        : ""
+    }
+  </div>
+
+  <div class="footer">
+    <p>${t.footerNote}</p>
+    <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
+  </div>
+</body>
 
     </html>
   `;
@@ -316,6 +380,18 @@ const enrichedItems = order.line_items.map(item => {
 
 const rawTotal = subtotal + taxTotal;
 
+
+const customerName = `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim();
+
+const shippingAddress = order.shipping_address
+  ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.zip || ""} ${order.shipping_address.city || ""}, ${order.shipping_address.country || ""}`
+  : "N/A";
+
+const billingAddress = order.billing_address
+  ? `${order.billing_address.address1 || ""}, ${order.billing_address.zip || ""} ${order.billing_address.city || ""}, ${order.billing_address.country || ""}`
+  : "N/A";
+
+
 const invoiceData = {
   shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
   date: new Date(order.created_at).toISOString().slice(0, 10),
@@ -329,6 +405,9 @@ const invoiceData = {
   showChart: isPremium && shopConfig?.showChart,
   customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
   fallbackLogoUrl: "/assets/default-logo.png",
+   customerName,
+  shippingAddress,
+  billingAddress,
   currency,
   locale,
 };

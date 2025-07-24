@@ -19,5 +19,9 @@
   "download": "Download Invoice",
   "spendingOverview": "Spending Overview",
   "visitSite": "Visit our website",
-  "image": "Image"
+  "image": "Image",
+  "billTo": "Bill To",
+  "shipTo": "Ship To",
+  "customerName": "Customer Name",
+  "customerAddress": "Customer Address"
 }
