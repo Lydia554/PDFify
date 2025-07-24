@@ -534,8 +534,21 @@ if (!isPreview && user.usageCount + pageCount > user.maxUsage) {
   });
 }
 
+
+
+console.log(`🧮 Before increment: usageCount=${user.usageCount}`);
+
 incrementUsage(user, isPreview, pageCount);
-await user.save();
+
+console.log(`🧮 After increment: usageCount=${user.usageCount} (added ${pageCount})`);
+
+try {
+  await user.save();
+  console.log("✅ User saved successfully to DB");
+} catch (err) {
+  console.error("❌ Error saving user:", err);
+}
+
 
 
     try {
