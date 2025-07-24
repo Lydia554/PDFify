@@ -572,6 +572,8 @@ if (isPreview) {
         ? "inline"
         : `attachment; filename=Invoice_${safeOrderId}.pdf`,
     });
+
+    res.setHeader("X-PDF-Page-Count", pageCount);
     res.send(pdfBuffer);
 
     fs.unlinkSync(pdfPath);

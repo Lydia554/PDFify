@@ -84,6 +84,7 @@ router.post(
   }
 );
 
+
 async function processOrderAsync({ order, user, accessToken, shopDomain, lang }) {
   try {
     order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
@@ -102,38 +103,49 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang })
         headers: {
           Authorization: `Bearer ${user.getDecryptedApiKey()}`,
         },
+        responseType: "arraybuffer",
       }
     );
 
-    const { pageCount, pdfBase64 } = invoiceResponse.data; 
-
-    if (!pageCount) {
-      console.warn("⚠️ No pageCount returned from invoice route");
-    } else {
-      console.log(`📄 Shopify invoice page count: ${pageCount}`);
-
-      
-      await incrementUsage(user, false, pageCount);
-      await user.save();
-      console.log("💾 User usage count incremented and saved");
+    const rawBuffer = invoiceResponse.data;
+    if (!rawBuffer) {
+      console.warn("⚠️ Invoice response returned no data");
+      return;
     }
 
-    const pdfBuffer = Buffer.from(pdfBase64, "base64");
+    const pdfBuffer = Buffer.from(rawBuffer); 
+    console.log("📄 Received PDF invoice buffer");
 
-    await sendEmail({
-      to: order.email,
-      subject: `Invoice for Shopify Order ${order.name || order.id}`,
-      text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
-      attachments: [
-        {
-          filename: `Invoice-${order.name || order.id}.pdf`,
-          content: pdfBuffer,
-          contentType: "application/pdf",
-        },
-      ],
-    });
+    const pageCountHeader = invoiceResponse.headers["x-pdf-page-count"];
+    const pageCount = pageCountHeader ? parseInt(pageCountHeader, 10) : null;
 
-    console.log(`✉️ Email sent to ${order.email}`);
+    if (!pageCount || isNaN(pageCount)) {
+      console.warn("⚠️ No pageCount returned from invoice route");
+    } else {
+      console.log("📄 Shopify invoice page count:", pageCount);
+      await incrementUsage(user, false, pageCount);
+      const freshUser = await User.findById(user._id).lean().exec();
+      console.log("✅ Atomic usage increment, new usageCount from DB:", freshUser.usageCount);
+    }
+
+    if (order.email) {
+      await sendEmail({
+        to: order.email,
+        subject: `Invoice for Shopify Order ${order.name || order.id}`,
+        text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
+        attachments: [
+          {
+            filename: `Invoice-${order.name || order.id}.pdf`,
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ],
+      });
+      console.log(`✉️ Email sent to ${order.email}`);
+    } else {
+      console.warn("⚠️ No email found on order, skipping email");
+    }
+
     console.log("✅ Finished processing order:", order.id);
   } catch (err) {
     console.error("❌ Error during async order processing:", err);
