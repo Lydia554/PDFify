@@ -102,7 +102,7 @@ const premiumTemplate = `
         h1 {
           font-family: 'Playfair Display', serif;
           font-size: 32px;
-          color: #95BF47;;
+          color: #04754aff;;
           text-align: center;
         }
 
@@ -111,7 +111,7 @@ const premiumTemplate = `
           justify-content: space-between;
           margin-bottom: 30px;
           padding-bottom: 20px;
-          border-bottom: 2px solid #4a69bd;
+          border-bottom: 2px solid #04754aff;
         }
 
 
@@ -142,7 +142,7 @@ const premiumTemplate = `
   padding-top: 12px;
   margin-top: 14px;
   font-weight: 700;
-  color: #95BF47;;
+  color: #04754aff;;
 }
 
 
@@ -159,12 +159,12 @@ const premiumTemplate = `
   padding: 20px 25px;
   background: linear-gradient(135deg, #f3f7ff 0%, #e1e9ff 100%);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(8, 121, 77, 0.15);
+  box-shadow: 0 4px 12px rgba(23, 177, 118, 0.15);
   font-family: 'Open Sans', sans-serif;
-  color: #95BF47;;
+  color: #010201ff;;
   font-size: 1em;
   line-height: 1.5;
-  border-left: 6px solid #4a69bd;
+  border-left: 6px solid #20ac76ff;
   transition: box-shadow 0.3s ease;
 }
 
