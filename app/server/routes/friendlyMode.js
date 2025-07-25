@@ -3,7 +3,8 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const pdfParse = require('pdf-parse');
+const { PDFDocument } = require("pdf-lib");
+const { incrementUsage } = require("../utils/usageUtils");
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
@@ -60,10 +61,10 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Use forced plan if set, else user.plan
+  
     const plan = FORCE_PLAN || user.plan;
 
-    // Treat 'premium' and 'pro' the same here
+   
     const isPremium = (plan === 'premium' || plan === 'pro');
 
     if (templateConfig.premiumOnly && !isPremium) {
@@ -121,20 +122,17 @@ const html = generateHtml(formData);
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+const pageCount = pdfDoc.getPageCount();
 
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
-        });
-      }
+  const usageAllowed = await incrementUsage(user, pageCount, isPreview);
+if (!usageAllowed) {
+  fs.unlinkSync(pdfPath);
+  return res.status(403).json({
+    error: 'Monthly usage limit reached. Upgrade to premium for more pages.',
+  });
+}
 
-      user.usageCount += pageCount;
-      await user.save();
-    }
 
     res.download(pdfPath, (err) => {
       if (err) {
