@@ -5,7 +5,6 @@ async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = nu
   const plan = (forcePlan || user.plan || "").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
 
-  // Free preview mode
   if (isPreview && plan === "free") {
     if (user.previewCount < 3) {
       user.previewCount++;
@@ -19,14 +18,13 @@ async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = nu
     }
   }
 
-  // Premium or Pro plans skip limit
   if (["premium", "pro"].includes(plan)) {
     await User.findByIdAndUpdate(user._id, { $inc: { usageCount: pages } });
     console.log(`🔥 Usage incremented for ${plan} plan by ${pages}`);
     return true;
   }
 
-  // Free plan limits
+  // Handle free usage limits
   const now = new Date();
   const currentMonth = now.getMonth();
   const resetNeeded = !user.usageLastReset || new Date(user.usageLastReset).getMonth() !== currentMonth;
