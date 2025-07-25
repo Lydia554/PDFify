@@ -144,15 +144,17 @@ function onImagesSelected(event) {
   event.target.value = '';
   updateImagePreview();
 }
-
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
   try {
+    console.log("🔄 PDF generation started for template:", template);
+
     if (template === 'invoice') {
       const logoInput = document.getElementById('logoUpload');
       let base64Logo = '';
       if (hasAdvancedAccess() && logoInput?.files.length > 0) {
+        console.log("📷 Reading logo file for invoice...");
         const file = logoInput.files[0];
         base64Logo = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -160,6 +162,7 @@ generatePdfBtn.addEventListener('click', async () => {
           reader.onerror = err => reject(err);
           reader.readAsDataURL(file);
         });
+        console.log("✅ Logo file read as base64");
       }
 
       formData = {
@@ -188,12 +191,14 @@ generatePdfBtn.addEventListener('click', async () => {
         formData.logo = formData.logoBase64;
         delete formData.logoBase64;
       }
+      console.log("🧾 Invoice form data prepared:", formData);
     } else if (template === 'recipe') {
       const videoUrl = hasAdvancedAccess() ? document.getElementById('videoUrl')?.value.trim() : '';
       if (videoUrl && !isValidYouTubeUrl(videoUrl)) {
         throw new Error('Please enter a valid YouTube video URL.');
       }
 
+      console.log("🍳 Preparing recipe form data...");
       const base64Images = hasAdvancedAccess()
         ? await Promise.all(allSelectedFiles.map(file =>
             new Promise((resolve, reject) => {
@@ -221,69 +226,51 @@ generatePdfBtn.addEventListener('click', async () => {
           Carbs: document.getElementById('carbs')?.value || undefined,
         } : undefined
       };
+      console.log("🍳 Recipe form data prepared:", formData);
     }
 
     friendlyResult.textContent = 'Generating PDF...';
-  
 
     const apiKey =
-  new URLSearchParams(window.location.search).get('apiKey') ||
-  localStorage.getItem('apiKey');
-if (!apiKey) throw new Error('API key missing. Please log in or use a valid access link.');
+      new URLSearchParams(window.location.search).get('apiKey') ||
+      localStorage.getItem('apiKey');
 
-postDownload('/api/friendly/generate', {
-  template,
-  isPreview: true,
-  ...formData
-}, apiKey);
+    if (!apiKey) {
+      console.warn("❌ API key missing. Redirecting to login.");
+      throw new Error('API key missing. Please log in or use a valid access link.');
+    }
 
+    console.log("🔐 Using API key:", apiKey);
+    console.log("📤 Sending PDF generation request with payload:", { template, ...formData });
 
+    const response = await fetch('/api/friendly/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ template, ...formData }),
+      credentials: "include",
+    });
 
-
-function postDownload(url, data, apiKey) {
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = url;
-  form.target = '_blank'; 
-  form.style.display = 'none';
-
-  if (apiKey) {
-    const authInput = document.createElement('input');
-    authInput.name = 'apiKey';
-    authInput.value = apiKey;
-    form.appendChild(authInput);
-  }
-
-  for (const key in data) {
-    const input = document.createElement('input');
-    input.name = key;
-    input.value = typeof data[key] === 'object'
-      ? JSON.stringify(data[key])
-      : data[key];
-    form.appendChild(input);
-  }
-
-  document.body.appendChild(form);
-  form.submit();
-  document.body.removeChild(form);
-}
-
-
-
-
+    console.log("📥 Response status:", response.status);
 
     if (response.status === 401 || response.status === 403) {
+      console.warn("⚠️ Unauthorized (401/403). Clearing apiKey and redirecting to login.");
       localStorage.removeItem("apiKey");
       window.location.href = "/login.html";
       return;
     }
 
     if (!response.ok) {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
+      console.error("❌ PDF generation failed with error:", errorData);
       throw new Error(errorData.error || 'Failed to generate PDF');
     }
 
     const blob = await response.blob();
+    console.log("✅ PDF blob received, preparing download...");
+
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -292,9 +279,12 @@ function postDownload(url, data, apiKey) {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+
     friendlyResult.textContent = '✅ PDF downloaded!';
+    console.log("🎉 PDF download triggered successfully.");
+
   } catch (error) {
-    console.error('PDF Generation Error:', error);
+    console.error('❌ PDF Generation Error:', error);
     friendlyResult.textContent = `❌ Error: ${error.message}`;
   }
 });
@@ -304,6 +294,7 @@ templateSelect.addEventListener('change', () => {
 });
 
 (async () => {
+  console.log("🔄 Fetching access type and rendering form...");
   await fetchAccessType();
   renderForm(templateSelect.value);
 })();
