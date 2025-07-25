@@ -125,7 +125,7 @@ function generateRecipeHTML(data) {
     border-top: 2px solid #cbd2e1;
     text-align: center;
     line-height: 1.6;
-    font-size: 11px;
+    font-size: 9px;
     border-radius: 0 0 16px 16px;
     box-sizing: border-box;
   }
