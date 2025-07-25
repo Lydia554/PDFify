@@ -6,7 +6,9 @@ const router = express.Router();
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
 const User = require('../models/User');
-const pdfParse = require("pdf-parse");
+const { PDFDocument } = require("pdf-lib");
+const { incrementUsage } = require("../utils/usageUtils");
+
 
 const logoUrl = "https://pdfify.pro/images/Logo.png";
 
@@ -128,6 +130,8 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
   `;
 }
 
+
+
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
   const { html, isPreview } = req.body;
 
@@ -137,10 +141,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
 
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const now = new Date();
     if (!user.usageLastReset) {
@@ -161,26 +162,18 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
       }
     }
 
-    if (isPreview && !user.isPremium) {
-      if (user.previewCount >= 3) {
-        if (user.usageCount >= user.maxUsage) {
-          return res.status(403).json({
-            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
-          });
-        }
-      } else {
-        user.previewCount++;
-        await user.save();
-      }
-    }
-
     const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
     const safeId = `htmlpdf_${Date.now()}`;
     const pdfPath = path.join(pdfDir, `${safeId}.pdf`);
+
+    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
+
+    if (isPreview && !user.isPremium && user.previewCount < 3) {
+      user.previewCount++;
+      await user.save();
+    }
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -188,49 +181,29 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     });
 
     const page = await browser.newPage();
-    const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
     const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
-
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
 
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-      user.usageCount += pageCount;
-      await user.save();
-    } else if (isPreview && user.previewCount >= 3 && !user.isPremium) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-      user.usageCount += pageCount;
-      await user.save();
-    }
+    
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
+
+    
+    await incrementUsage(user, isPreview, pageCount);
 
     res.download(pdfPath, (err) => {
-      if (err) {
-        console.error("Error sending file:", err);
-      }
-      if (fs.existsSync(pdfPath)) {
-        fs.unlinkSync(pdfPath);
-      }
+      if (err) console.error("Error sending file:", err);
+      if (fs.existsSync(pdfPath)) fs.unlinkSync(pdfPath);
     });
   } catch (error) {
     console.error("PDF generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
