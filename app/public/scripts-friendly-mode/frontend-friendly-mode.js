@@ -257,15 +257,12 @@ generatePdfBtn.addEventListener('click', async () => {
 
     console.log("📥 Response status:", response.status);
 
-
-
     if (response.status === 401 || response.status === 403) {
-  console.warn("⚠️ Unauthorized (401/403). Clearing apiKey.");
-  localStorage.removeItem("apiKey");
-  // window.location.href = "/login"; // ⛔️ TEMP: disable auto redirect
-}
-
-
+      console.warn("⚠️ Unauthorized (401/403). Clearing apiKey and redirecting to login.");
+      localStorage.removeItem("apiKey");
+      window.location.href = "/login.html";
+      return;
+    }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
