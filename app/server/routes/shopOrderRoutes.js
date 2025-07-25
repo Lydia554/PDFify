@@ -7,6 +7,9 @@ const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
 const pdfParse = require("pdf-parse");
 const dualAuth = require('../middleware/dualAuth');
+const { PDFDocument } = require("pdf-lib");
+const { incrementUsage } = require("../utils/usageUtils");
+
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -170,7 +173,7 @@ function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
 }
 
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
-  const { data, isPreview } = req.body;
+  const { data, isPreview = false } = req.body;
   if (!data || !data.shopName) {
     return res.status(400).json({ error: "Missing shop order data" });
   }
@@ -182,41 +185,14 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const now = new Date();
-    if (!user.usageLastReset) {
-      user.usageLastReset = now;
+    if (!user.usageLastReset || now.getMonth() !== new Date(user.usageLastReset).getMonth()) {
       user.usageCount = 0;
       user.previewCount = 0;
+      user.usageLastReset = now;
       await user.save();
-    } else {
-      const lastReset = new Date(user.usageLastReset);
-      if (
-        now.getFullYear() > lastReset.getFullYear() ||
-        now.getMonth() > lastReset.getMonth()
-      ) {
-        user.usageCount = 0;
-        user.previewCount = 0;
-        user.usageLastReset = now;
-        await user.save();
-      }
-    }
-
-  
-    if (isPreview && !user.isPremium) {
-      if (user.previewCount >= 3) {
-        if (user.usageCount >= user.maxUsage) {
-          return res.status(403).json({
-            error: "Monthly usage limit reached. Upgrade to premium for more previews.",
-          });
-        }
-      } else {
-        user.previewCount++;
-        await user.save();
-      }
     }
 
     const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
@@ -235,20 +211,13 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
+
+ 
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
 
 
-    if (!isPreview || (isPreview && user.previewCount >= 3 && !user.isPremium)) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-      user.usageCount += pageCount;
-      await user.save();
-    }
+    await incrementUsage(user, isPreview, pageCount);
 
     res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
@@ -256,5 +225,6 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 module.exports = router;
