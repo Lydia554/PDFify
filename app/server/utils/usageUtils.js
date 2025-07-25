@@ -1,4 +1,4 @@
-// utils/usageUtils.js
+
 const User = require("../models/User");
 
 async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = null) {
@@ -24,7 +24,7 @@ async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = nu
     return true;
   }
 
-  // Handle free usage limits
+
   const now = new Date();
   const currentMonth = now.getMonth();
   const resetNeeded = !user.usageLastReset || new Date(user.usageLastReset).getMonth() !== currentMonth;
