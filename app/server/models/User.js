@@ -113,4 +113,7 @@ userSchema.methods.getDecryptedApiKey = function () {
   return decrypt(this.apiKey);
 };
 
+
+
+
 module.exports = mongoose.model("User", userSchema);

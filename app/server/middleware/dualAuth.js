@@ -4,7 +4,7 @@ const dualAuth = async (req, res, next) => {
   let apiKey;
 
   const authHeader = req.headers.authorization;
-  if (authHeader?.startsWith("Bearer ")) {
+  if (authHeader && authHeader.startsWith("Bearer ")) {
     apiKey = authHeader.split(" ")[1];
   }
 
@@ -15,28 +15,44 @@ const dualAuth = async (req, res, next) => {
   try {
     let user = null;
 
-    // ✅ Try API key first
+    
     if (apiKey) {
-      user = await User.findByDecryptedApiKey(apiKey);
+      const users = await User.find();
+      user = users.find(u => {
+        try {
+          const decrypted = u.getDecryptedApiKey();
+          return decrypted === apiKey;
+        } catch (e) {
+          return false;
+        }
+      });
+
       if (!user || user.deleted) {
-        return res.status(403).json({ error: "User not found or inactive (via API key)" });
+        return res.status(403).json({ error: "User not found or inactive" });
       }
     }
 
-    // ✅ Fallback to session if no user yet
+
+    if (!user && req.session && typeof req.session.userId === "string") {
+  user = await User.findById(req.session.userId);
+  if (!user || user.deleted) {
+    return res.status(403).json({ error: "User not found or inactive" });
+  }
+}
+
+
+
     if (!user && req.session?.userId) {
       user = await User.findById(req.session.userId);
       if (!user || user.deleted) {
-        return res.status(403).json({ error: "User not found or inactive (via session)" });
+        return res.status(403).json({ error: "User not found or inactive" });
       }
     }
 
-    // ❌ Still no user
     if (!user) {
       return res.status(403).json({ error: "Authentication failed" });
     }
 
-    // ✅ Attach to request
     req.user = {
       userId: user._id,
       email: user.email,
@@ -44,13 +60,12 @@ const dualAuth = async (req, res, next) => {
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
-      planType: user.planType || "free",
     };
 
     req.fullUser = user;
     next();
   } catch (err) {
-    console.error("🔐 DualAuth error:", err);
+    console.error("DualAuth error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 };
