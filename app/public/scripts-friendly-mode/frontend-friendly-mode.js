@@ -144,6 +144,8 @@ function onImagesSelected(event) {
   event.target.value = '';
   updateImagePreview();
 }
+
+
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
@@ -255,12 +257,22 @@ generatePdfBtn.addEventListener('click', async () => {
 
     console.log("📥 Response status:", response.status);
 
-    if (response.status === 401 || response.status === 403) {
-      console.warn("⚠️ Unauthorized (401/403). Clearing apiKey and redirecting to login.");
-      localStorage.removeItem("apiKey");
-      window.location.href = "/login.html";
-      return;
-    }
+if (response.status === 401 || response.status === 403) {
+  console.warn("⚠️ Unauthorized (401/403). Clearing apiKey.");
+
+  // For debugging: comment out the redirect line temporarily
+  // window.location.href = "/login.html";
+
+  // Instead, show a visible error message on page
+  friendlyResult.textContent = "⚠️ Unauthorized: Your session expired or you are not logged in. Please refresh and log in again.";
+
+  // Optionally clear the API key to prevent further requests with it
+  localStorage.removeItem("apiKey");
+
+  // Stop further execution here
+  return;
+}
+
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
