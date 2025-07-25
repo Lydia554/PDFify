@@ -224,19 +224,53 @@ generatePdfBtn.addEventListener('click', async () => {
     }
 
     friendlyResult.textContent = 'Generating PDF...';
+  
+
     const apiKey =
-      new URLSearchParams(window.location.search).get('apiKey') ||
-      localStorage.getItem('apiKey');
-    if (!apiKey) throw new Error('API key missing. Please log in or use a valid access link.');
-    const response = await fetch('/api/friendly/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ template, ...formData }),
-      credentials: "include",
-    });
+  new URLSearchParams(window.location.search).get('apiKey') ||
+  localStorage.getItem('apiKey');
+if (!apiKey) throw new Error('API key missing. Please log in or use a valid access link.');
+
+postDownload('/api/friendly/generate', {
+  template,
+  isPreview: true,
+  ...formData
+}, apiKey);
+
+
+
+
+function postDownload(url, data, apiKey) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = url;
+  form.target = '_blank'; 
+  form.style.display = 'none';
+
+  if (apiKey) {
+    const authInput = document.createElement('input');
+    authInput.name = 'apiKey';
+    authInput.value = apiKey;
+    form.appendChild(authInput);
+  }
+
+  for (const key in data) {
+    const input = document.createElement('input');
+    input.name = key;
+    input.value = typeof data[key] === 'object'
+      ? JSON.stringify(data[key])
+      : data[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+}
+
+
+
+
 
     if (response.status === 401 || response.status === 403) {
       localStorage.removeItem("apiKey");
