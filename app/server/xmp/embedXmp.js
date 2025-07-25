@@ -13,7 +13,7 @@ async function embedXmp(pdfDoc, xmpFilePath) {
 
   try {
     const rawXmp = fs.readFileSync(xmpFilePath, "utf-8");
-    // Sanitize non-printable chars, allow tabs/newlines, trim spaces
+    
     const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
 
     const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
