@@ -62,7 +62,8 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     }
 
   
-    const plan = FORCE_PLAN || user.plan;
+    const plan = FORCE_PLAN && FORCE_PLAN.trim() !== "" ? FORCE_PLAN : user.plan;
+
 
    
     const isPremium = (plan === 'premium' || plan === 'pro');
@@ -125,7 +126,8 @@ const html = generateHtml(formData);
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 const pageCount = pdfDoc.getPageCount();
 
-  const usageAllowed = await incrementUsage(user, pageCount, isPreview);
+const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
+
 if (!usageAllowed) {
   fs.unlinkSync(pdfPath);
   return res.status(403).json({
