@@ -216,7 +216,12 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     const pageCount = pdfDoc.getPageCount();
 
 
-    await incrementUsage(user, isPreview, pageCount);
+ // Correct usage in any route
+const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
+if (!usageAllowed) {
+  return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
+}
+
 
     res.download(pdfPath, () => fs.unlinkSync(pdfPath));
   } catch (error) {
