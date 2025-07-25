@@ -176,6 +176,7 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
   .footer a:hover {
     text-decoration: underline;
   }
+    
 
   /* ========================== */
   /* PDF/A-3b compliant override */

@@ -63,13 +63,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
   let browser;
   const tmpDir = "/tmp/pdfify-batch-" + Date.now();
-  console.log("📁 Creating temporary directory:", tmpDir);
   fs.mkdirSync(tmpDir);
 
   try {
     let requests = req.body.requests;
-    console.log("📩 Raw requests received:", Array.isArray(requests) ? requests.length : "not array");
-
+    
     if (!Array.isArray(requests)) {
       if (req.body.data) {
         requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
@@ -84,29 +82,26 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       console.error("⚠️ Invalid requests count:", requests.length);
       return res.status(400).json({ error: "You must send 1-100 requests." });
     }
-    console.log("🔢 Number of invoice requests to process:", requests.length);
+    
 
     const user = await User.findById(req.user.userId);
     if (!user) {
       console.error("❌ User not found:", req.user.userId);
       return res.status(404).json({ error: "User not found" });
     }
-    console.log("👤 User found:", user._id, "plan:", user.plan);
+    
 
   
     const now = new Date();
     if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
-      console.log("♻️ Resetting user preview count for new month");
       user.previewCount = 0;
       user.previewLastReset = now;
     }
     if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
-      console.log("♻️ Resetting user usage count for new month");
       user.usageCount = 0;
       user.usageLastReset = now;
     }
 
-    console.log("🚀 Launching Puppeteer browser...");
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
@@ -228,7 +223,6 @@ if (!usageAllowed) {
 
 
       if (user.plan === "pro") {
-        console.log("⚙️ User plan is pro, embedding ZUGFeRD XML and metadata...");
         const zugferdXml = generateZugferdXML(invoiceData);
         const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
 
@@ -308,12 +302,10 @@ await embedXmp(pdfDoc, xmpPath);
         catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
 
         finalPdfBytes = await pdfDoc.save();
-        console.log(`✅ PDF with embedded XML and metadata generated, size: ${finalPdfBytes.length} bytes`);
       }
 
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
-      console.log(`💾 Writing PDF input file: ${tempInput}`);
       fs.writeFileSync(tempInput, finalPdfBytes);
 
 const gsArgs = [
@@ -380,7 +372,6 @@ const gsArgs = [
       
 
     await user.save();
-    console.log("💾 User usage data saved:", { usageCount: user.usageCount, previewCount: user.previewCount });
   } catch (e) {
     console.error("❌ Exception in /generate-invoice:", e);
     res.status(500).json({ error: "Internal Server Error", details: e.message });
