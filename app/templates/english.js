@@ -151,7 +151,7 @@ Number(String(data.tax).replace(/[^\d.-]/g, '')) || 0,
   .footer {
     position: static;
     max-width: 800px;
-    margin: 40px auto 10px auto;
+    margin: 100px auto 10px auto;
     padding: 10px 20px;
     background-color: #f0f2f7;
     color: #555;
