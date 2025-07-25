@@ -112,34 +112,40 @@ function generateRecipeHTML(data) {
           .ingredients li, .instructions li { margin-bottom: 8px; font-size: 1.05em; }
           .chart-container { text-align: center; margin: 40px 0 20px; }
           .chart-container h2 { font-size: 18px; color: #2a3d66; margin-bottom: 10px; }
-         .footer {
-        position: static;
-        max-width: 800px;
-        margin: 40px auto 10px auto;
-        padding: 10px 20px;
-        background-color: #f0f2f7;
-        color: #555;
-        border-top: 2px solid #cbd2e1;
-        text-align: center;
-        line-height: 1.6;
-        font-size: 11px;
-        border-radius: 0 0 16px 16px;
-        box-sizing: border-box;
-      }
 
-      .footer p {
-        margin: 6px 0;
-      }
 
-      .footer a {
-        color: #4a69bd;
-        text-decoration: none;
-        word-break: break-word;
-      }
 
-      .footer a:hover {
-        text-decoration: underline;
-      }
+  .footer {
+    position: static;
+    max-width: 800px;
+    margin: 40px auto 10px auto;
+    padding: 10px 20px;
+    background-color: #f0f2f7;
+    color: #555;
+    border-top: 2px solid #cbd2e1;
+    text-align: center;
+    line-height: 1.6;
+    font-size: 11px;
+    border-radius: 0 0 16px 16px;
+    box-sizing: border-box;
+  }
+
+  .footer p {
+    margin: 6px 0;
+  }
+
+  .footer a {
+    color: #4a69bd;
+    text-decoration: none;
+    word-break: break-word;
+  }
+
+  .footer a:hover {
+    text-decoration: underline;
+  }
+
+
+  
           .terms { margin-top: 15px; font-size: 11px; color: #aaa; }
           .logo { display: block; margin: 0 auto 30px; max-width: 100px; }
           .watermark { color: #c44; font-weight: bold; }
