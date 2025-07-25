@@ -333,8 +333,10 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const pageCount = pdfDoc.getPageCount();
 
    
-    await incrementUsage(user, isPreview, pageCount);
-
+    const usageAllowed = await incrementUsage(user, pageCount, isPreview);
+   if (!usageAllowed) {
+     return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
+   }
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="therapy_report_${safeId}.pdf"`,
