@@ -6,7 +6,9 @@ const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User"); 
-const pdfParse = require("pdf-parse");
+const { PDFDocument } = require("pdf-lib");
+const { incrementUsage } = require("../utils/usageUtils");
+
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -268,26 +270,23 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
 
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-
+   
     const now = new Date();
-    if (!user.usageLastReset || user.usageLastReset.getMonth() !== now.getMonth() || user.usageLastReset.getFullYear() !== now.getFullYear()) {
+    if (!user.usageLastReset || user.usageLastReset.getMonth() !== now.getMonth()) {
       user.usageCount = 0;
       user.usageLastReset = now;
     }
-    if (!user.previewLastReset || user.previewLastReset.getMonth() !== now.getMonth() || user.previewLastReset.getFullYear() !== now.getFullYear()) {
+    if (!user.previewLastReset || user.previewLastReset.getMonth() !== now.getMonth()) {
       user.previewCount = 0;
       user.previewLastReset = now;
     }
 
     const isPremiumUser = user.isPremium;
+
     const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
     const safeId = `therapyReport_${Date.now()}`;
     const pdfPath = path.join(pdfDir, `${safeId}.pdf`);
@@ -328,35 +327,13 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
 
+    
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
 
-    if (isPreview) {
-      if (!user.isPremium) {
-        if (user.previewCount < 3) {
-          user.previewCount += 1;
-        } else {
-          if (user.usageCount + pageCount > user.maxUsage) {
-            fs.unlinkSync(pdfPath);
-            return res.status(403).json({
-              error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-            });
-          }
-          user.usageCount += pageCount;
-        }
-      }
-    } else {
-      if (!user.isPremium && user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-        });
-      }
-      user.usageCount += pageCount;
-    }
-
-    await user.save();
+   
+    await incrementUsage(user, isPreview, pageCount);
 
     res.set({
       "Content-Type": "application/pdf",
@@ -370,5 +347,6 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     return res.status(500).json({ error: "Failed to generate therapy report" });
   }
 });
+
 
 module.exports = router;
