@@ -5,8 +5,10 @@ const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
-const pdfParse = require("pdf-parse");
 const dualAuth = require('../middleware/dualAuth');
+const { PDFDocument } = require("pdf-lib");
+const { incrementUsage } = require("../utils/usageUtils");
+
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
@@ -200,7 +202,7 @@ function generateRecipeHTML(data) {
 
 
 router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
-  const { data, isPreview } = req.body;
+  const { data, isPreview = false } = req.body;
   log("Received data for recipe generation:", data);
 
   if (!data || !data.recipeName) {
@@ -214,11 +216,9 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
 
     const isPremium = user.isPremium;
 
-  
     const cleanedData = { ...data };
     if (!isPremium) delete cleanedData.ingredientBreakdown;
 
-    
     const payload = {
       ...cleanedData,
       customLogoUrl: isPremium ? null : defaultLogoUrl,
@@ -232,35 +232,27 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
     const html = generateRecipeHTML(payload);
 
     const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) {
-      fs.mkdirSync(pdfDir, { recursive: true });
-    }
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+
     const pdfPath = path.join(pdfDir, `recipe_${Date.now()}.pdf`);
 
     const browser = await puppeteer.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
+
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4" });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
-    const parsed = await pdfParse(pdfBuffer);
-    const pageCount = parsed.numpages;
+
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
     log(`Generated PDF has ${pageCount} pages.`);
 
-    if (!isPreview) {
-      if (user.usageCount + pageCount > user.maxUsage) {
-        fs.unlinkSync(pdfPath);
-        return res.status(403).json({ error: "Monthly usage limit reached. Upgrade to premium for more pages." });
-      }
-
-      user.usageCount += pageCount;
-      await user.save();
-      log("User usage count updated:", user.usageCount);
-    }
+    await incrementUsage(user, isPreview, pageCount);
 
     res.download(pdfPath, (err) => {
       if (err) console.error("Error sending file:", err);

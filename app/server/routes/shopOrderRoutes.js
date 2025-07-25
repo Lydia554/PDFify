@@ -5,7 +5,6 @@ const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const User = require("../models/User");
-const pdfParse = require("pdf-parse");
 const dualAuth = require('../middleware/dualAuth');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
