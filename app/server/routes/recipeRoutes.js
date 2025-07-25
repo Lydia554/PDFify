@@ -145,7 +145,7 @@ function generateRecipeHTML(data) {
   }
 
 
-  
+
           .terms { margin-top: 15px; font-size: 11px; color: #aaa; }
           .logo { display: block; margin: 0 auto 30px; max-width: 100px; }
           .watermark { color: #c44; font-weight: bold; }
@@ -158,7 +158,7 @@ function generateRecipeHTML(data) {
             .label { font-size: 1em; }
             .ingredients li, .instructions li { font-size: 1em; }
             .chart-container h2 { font-size: 16px; }
-            .footer { font-size: 13px; }
+            .footer { font-size: 9px; }
             .terms { font-size: 11px; }
             .logo { max-width: 80px; margin-bottom: 20px; }
           }
