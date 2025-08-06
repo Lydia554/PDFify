@@ -130,7 +130,7 @@ Video demo coming soon.
 
 ## 📸 Screenshots
 
-### 🧾 Invoice Rendering (Development View)
+### 🧾 Invoice Rendering (Development Mode)
 ![Invoice Dev Premium 1](./assets/Invoice-Dev-Premium-1.jpg)
 ![Invoice Dev Premium 2](./assets/Invoice-Dev-Premium-2.jpg)
 
