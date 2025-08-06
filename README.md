@@ -123,7 +123,7 @@ If you're interested in a demo, technical deep-dive, or collaboration, feel free
 
 ## 🔗 Demo / Preview
 
-Video demo coming soon.
+# Video demo coming soon.
 ---
 
 ## 📸 Screenshots
