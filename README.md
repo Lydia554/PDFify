@@ -116,7 +116,6 @@ Standards-compliant output for long-term archiving and tax authority compatibili
 ## 🚧 Source Code
 
 This repository is for **public showcase purposes only**.  
-The core source code is kept private to protect proprietary logic and premium features.
 
 If you're interested in a demo, technical deep-dive, or collaboration, feel free to reach out.
 
@@ -124,14 +123,14 @@ If you're interested in a demo, technical deep-dive, or collaboration, feel free
 
 ## 🔗 Demo / Preview
 
-Video demo coming soon.  
-Visit [https://pdfify.pro](https://pdfify.pro) or [lidija-jokic.com](https://lidija-jokic.com) for more.
+Video demo coming soon.
+
 
 ---
 
 ## 📸 Screenshots
 
-### 🧾 Invoice Rendering (Development View)
+### 🧾 Invoice Rendering (Development Mode)
 ![Invoice Dev Premium 1](./assets/Invoice-Dev-Premium-1.jpg)
 ![Invoice Dev Premium 2](./assets/Invoice-Dev-Premium-2.jpg)
 

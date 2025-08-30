@@ -14,9 +14,20 @@ async function embedXmp(pdfDoc, xmpFilePath) {
   try {
     const rawXmp = fs.readFileSync(xmpFilePath, "utf-8");
     
-    const sanitizedXmp = rawXmp.replace(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g, "").trim();
+    // Ensure proper UTF-8 BOM and XML structure
+    let cleanXmp = rawXmp;
+    if (!cleanXmp.startsWith('\uFEFF')) {
+      cleanXmp = '\uFEFF' + cleanXmp;
+    }
+    
+    // Validate basic XML structure
+    if (!cleanXmp.includes('<?xml') && !cleanXmp.includes('<?xpacket')) {
+      throw new Error('Invalid XMP structure: missing XML declaration or xpacket');
+    }
 
-    const metadataStream = pdfDoc.context.flateStream(Buffer.from(sanitizedXmp, "utf-8"), {
+    // Create metadata stream with proper UTF-8 encoding
+    const xmpBuffer = Buffer.from(cleanXmp, "utf-8");
+    const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
       Type: PDFName.of("Metadata"),
       Subtype: PDFName.of("XML"),
       Filter: PDFName.of("FlateDecode"),
@@ -25,7 +36,7 @@ async function embedXmp(pdfDoc, xmpFilePath) {
     const metadataRef = pdfDoc.context.register(metadataStream);
     catalog.set(PDFName.of("Metadata"), metadataRef);
 
-    console.log("✅ XMP metadata embedded successfully");
+    console.log("✅ XMP metadata embedded successfully with UTF-8 BOM");
   } catch (err) {
     console.error("❌ Error embedding XMP metadata:", err);
     throw err;
