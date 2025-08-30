@@ -192,12 +192,25 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       }
 
       const page = await browser.newPage();
+      
+      // Set media features for PDF/A compatibility
+      await page.emulateMediaType('print');
+      await page.evaluateOnNewDocument(() => {
+        // Ensure transparency compatibility
+        document.documentElement.style.setProperty('--pdf-a-mode', 'true');
+      });
+      
       await page.setContent(html, { waitUntil: "networkidle0" });
 
       const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        preferCSSPageSize: false,
+        displayHeaderFooter: false,
+        // Enhanced settings for PDF/A compliance
+        tagged: true,
+        outline: false,
       });
       await page.close();
 
@@ -285,6 +298,7 @@ if (!usageAllowed) {
 await embedXmp(pdfDoc, xmpPath);
 
 
+        // Enhanced ICC profile and color space handling for PDF/A-3B compliance
         const iccData = fs.readFileSync(iccPath);
         const iccStream = pdfDoc.context.flateStream(iccData, {
           N: 3,
@@ -292,14 +306,49 @@ await embedXmp(pdfDoc, xmpPath);
           Filter: PDFName.of("FlateDecode"),
         });
         const iccRef = pdfDoc.context.register(iccStream);
+        
+        // Create proper OutputIntent for PDF/A-3B
         const outputIntentDict = pdfDoc.context.obj({
           Type: PDFName.of("OutputIntent"),
           S: PDFName.of("GTS_PDFA3"),
           OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
           Info: PDFHexString.of("sRGB IEC61966-2.1"),
+          OutputCondition: PDFHexString.of("sRGB IEC61966-2.1"),
+          RegistryName: PDFHexString.of("http://www.color.org"),
           DestOutputProfile: iccRef,
         });
         catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
+
+        // Set default color spaces to avoid DeviceRGB/DeviceGray issues
+        const resourcesDict = pdfDoc.context.obj({
+          ColorSpace: pdfDoc.context.obj({
+            DefaultRGB: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
+            DefaultGray: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
+          })
+        });
+        
+        // Apply default color spaces to all pages and handle transparency groups
+        const pages = pdfDoc.getPages();
+        pages.forEach(page => {
+          const pageDict = pdfDoc.context.lookup(page.ref);
+          
+          // Set default color spaces
+          let existingResources = pageDict.lookup(PDFName.of("Resources"));
+          if (!existingResources) {
+            pageDict.set(PDFName.of("Resources"), resourcesDict);
+          } else {
+            const resourcesRef = pdfDoc.context.register(resourcesDict);
+            existingResources.set(PDFName.of("ColorSpace"), resourcesDict.lookup(PDFName.of("ColorSpace")));
+          }
+          
+          // Add transparency group with proper color space for PDF/A-3B compliance
+          const groupDict = pdfDoc.context.obj({
+            Type: PDFName.of("Group"),
+            S: PDFName.of("Transparency"),
+            CS: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
+          });
+          pageDict.set(PDFName.of("Group"), groupDict);
+        });
 
         finalPdfBytes = await pdfDoc.save();
       }
@@ -320,11 +369,19 @@ const gsArgs = [
   "-dSubsetFonts=true",
   "-dPreserveDocInfo=false",          
   "-dPDFACompatibilityPolicy=1",
-  "-dFlattenTransparency=true",       
+  "-dAutoRotatePages=/None",
+  "-dColorImageResolution=300",
+  "-dGrayImageResolution=300",
+  "-dMonoImageResolution=1200",
+  "-dDownsampleColorImages=false",
+  "-dDownsampleGrayImages=false",
+  "-dDownsampleMonoImages=false",
+  "-dColorConversionStrategy=/RGB",
+  "-dConvertCMYKImagesToRGB=true",
+  "-dUseCIEColor=true",
   "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
   `-sOutputFile=${tempOutput}`,
   tempInput,
-            
 ];
 
 
