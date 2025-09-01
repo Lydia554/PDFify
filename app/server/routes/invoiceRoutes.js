@@ -294,10 +294,6 @@ if (!usageAllowed) {
 
         catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
 
-     const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-await embedXmp(pdfDoc, xmpPath);
-
-
         // Enhanced ICC profile and color space handling for PDF/A-3B compliance
         const iccData = fs.readFileSync(iccPath);
         const iccStream = pdfDoc.context.flateStream(iccData, {
@@ -357,6 +353,8 @@ await embedXmp(pdfDoc, xmpPath);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, finalPdfBytes);
 
+// Create Ghostscript args with PDFA definition file
+const pdfaDefPath = path.resolve(__dirname, "../PDFA_def.ps");
 const gsArgs = [
   "-dPDFA=3",                        
   "-dBATCH",
@@ -371,7 +369,7 @@ const gsArgs = [
   "-dPDFACompatibilityPolicy=1",
   "-dAutoRotatePages=/None",
   "-dColorImageResolution=300",
-  "-dGrayImageResolution=300",
+  "-dGrayImageResolution=300", 
   "-dMonoImageResolution=1200",
   "-dDownsampleColorImages=false",
   "-dDownsampleGrayImages=false",
@@ -379,7 +377,9 @@ const gsArgs = [
   "-dColorConversionStrategy=/RGB",
   "-dConvertCMYKImagesToRGB=true",
   "-dUseCIEColor=true",
+  "-dPDFSETTINGS=/prepress",
   "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
+  pdfaDefPath,  // Include PDFA definition
   `-sOutputFile=${tempOutput}`,
   tempInput,
 ];
@@ -399,7 +399,24 @@ const gsArgs = [
       });
 
       console.log(`📁 Reading final PDF output from: ${tempOutput}`);
-      const finalPdf = fs.readFileSync(tempOutput);
+      let finalPdf = fs.readFileSync(tempOutput);
+
+      // Post-process the PDF to fix XMP and add proper metadata after Ghostscript
+      if (user.plan === "pro") {
+        try {
+          const postProcessDoc = await PDFDocument.load(finalPdf);
+          
+          // Embed XMP metadata after Ghostscript processing
+          const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+          await embedXmp(postProcessDoc, xmpPath);
+          
+          finalPdf = Buffer.from(await postProcessDoc.save());
+          console.log("✅ Post-processed PDF with XMP metadata");
+        } catch (postErr) {
+          console.error("⚠️ Post-processing failed:", postErr.message);
+          // Continue with Ghostscript output if post-processing fails
+        }
+      }
 
       results.push({ index, pdf: finalPdf });
     }
