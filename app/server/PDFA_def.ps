@@ -1,0 +1,17 @@
+%!
+% PDFA_def.ps for PDF/A-3B compliance
+% This file defines color spaces and metadata handling for PDF/A-3B
+
+% Set up device-independent color spaces
+/DefaultGray [/ICCBased /srgb-icc] def
+/DefaultRGB [/ICCBased /srgb-icc] def
+
+% Define sRGB ICC profile
+/srgb-icc <<
+  /N 3
+  /DataSource (/app/sRGB_IEC61966-2-1_no_black_scaling.icc) (r) file
+  /Alternate /DeviceRGB
+>> def
+
+% Ensure proper transparency handling
+/TransparencyColorSpace /DeviceRGB def
