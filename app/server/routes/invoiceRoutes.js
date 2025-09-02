@@ -353,8 +353,6 @@ if (!usageAllowed) {
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, finalPdfBytes);
 
-// Create Ghostscript args with PDFA definition file
-const pdfaDefPath = path.resolve(__dirname, "../PDFA_def.ps");
 const gsArgs = [
   "-dPDFA=3",                        
   "-dBATCH",
@@ -379,7 +377,6 @@ const gsArgs = [
   "-dUseCIEColor=true",
   "-dPDFSETTINGS=/prepress",
   "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
-  pdfaDefPath,  // Include PDFA definition
   `-sOutputFile=${tempOutput}`,
   tempInput,
 ];
