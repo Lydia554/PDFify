@@ -371,22 +371,20 @@ const gsArgs = [
   "-dUseCIEColor=true",
   "-dEmbedAllFonts=true",
   "-dSubsetFonts=true",
-  "-dPreserveDocInfo=true",          // preserve metadata
+  "-dPreserveDocInfo=true",
   "-dPreserveAnnots=true",
-  "-dPDFACompatibilityPolicy=1",    // strict mode
+  "-dPDFACompatibilityPolicy=1",
   "-dAutoRotatePages=/None",
-  "-dColorConversionStrategy=RGB",
-  "-dProcessColorModel=/DeviceRGB",
   "-sColorConversionStrategy=RGB",
+  "-dProcessColorModel=/DeviceRGB",
   "-dConvertCMYKImagesToRGB=true",
   "-dDownsampleColorImages=false",
   "-dDownsampleGrayImages=false",
   "-dDownsampleMonoImages=false",
   "-dPDFSETTINGS=/prepress",
- `-sOutputICCProfile=${gsIccPath}`,
-`-sOutputFile=${tempOutputPath}`,
-tempInputPath,
-
+  `-sOutputICCProfile=${gsIccPath}`,
+  `-sOutputFile=${tempOutputPath}`,
+  tempInputPath,
 ];
 
 
