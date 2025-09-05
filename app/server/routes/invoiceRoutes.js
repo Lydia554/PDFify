@@ -354,29 +354,27 @@ if (!usageAllowed) {
       fs.writeFileSync(tempInput, finalPdfBytes);
 
 const gsArgs = [
-  "-dPDFA=3",                        
+  "-dPDFA=3",
   "-dBATCH",
   "-dNOPAUSE",
-  "-sDEVICE=pdfwrite",
   "-dNOOUTERSAVE",
-  "-sProcessColorModel=DeviceRGB",
-  "-sColorConversionStrategy=RGB",
+  "-sDEVICE=pdfwrite",
+  "-dUseCIEColor=true",
   "-dEmbedAllFonts=true",
   "-dSubsetFonts=true",
-  "-dPreserveDocInfo=false",          
-  "-dPDFACompatibilityPolicy=1",
+  "-dPreserveDocInfo=true",          // preserve metadata
+  "-dPreserveAnnots=true",
+  "-dPDFACompatibilityPolicy=1",     // strict mode
   "-dAutoRotatePages=/None",
-  "-dColorImageResolution=300",
-  "-dGrayImageResolution=300", 
-  "-dMonoImageResolution=1200",
+  "-dColorConversionStrategy=RGB",
+  "-dProcessColorModel=/DeviceRGB",
+  "-sColorConversionStrategy=RGB",
+  "-dConvertCMYKImagesToRGB=true",
   "-dDownsampleColorImages=false",
   "-dDownsampleGrayImages=false",
   "-dDownsampleMonoImages=false",
-  "-dColorConversionStrategy=/RGB",
-  "-dConvertCMYKImagesToRGB=true",
-  "-dUseCIEColor=true",
   "-dPDFSETTINGS=/prepress",
-  "-sOutputICCProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
+  `-sOutputICCProfile=${iccPath}`,   // use your existing ICC profile
   `-sOutputFile=${tempOutput}`,
   tempInput,
 ];
