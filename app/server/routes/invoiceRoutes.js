@@ -39,7 +39,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
 
-  const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "../app/sRGB_IEC61966-2-1_no_black_scaling.icc");
+ const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "sRGB_IEC61966-2-1_no_black_scaling.icc");
+const gsIccPath = iccPath.replace(/\\/g, "/");
   console.log("🔍 Using ICC profile path:", iccPath);
 
   try {
@@ -374,7 +375,7 @@ const gsArgs = [
   "-dDownsampleGrayImages=false",
   "-dDownsampleMonoImages=false",
   "-dPDFSETTINGS=/prepress",
-  `-sOutputICCProfile=${iccPath}`,   // use your existing ICC profile
+  `-sOutputICCProfile="${gsIccPath}"`,
   `-sOutputFile=${tempOutput}`,
   tempInput,
 ];
