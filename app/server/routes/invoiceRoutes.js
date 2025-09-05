@@ -416,14 +416,45 @@ await new Promise((resolve, reject) => {
 if (user.plan === "pro") {
   try {
     const postDoc = await PDFDocument.load(finalPdf);
+
+    // Re-embed ZUGFeRD XML because GS stripped it
+    const zugferdXml = generateZugferdXML(invoiceData);
+    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
+    await embedZugferd(postDoc, xmlBuffer); // custom helper with your logic
+
+    // Re-embed XMP metadata
     const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
     await embedXmp(postDoc, xmpPath);
+
+    // Ensure OutputIntent stays present
+    const iccData = fs.readFileSync(iccPath);
+    const iccStream = postDoc.context.flateStream(iccData, {
+      N: 3,
+      Alternate: PDFName.of("DeviceRGB"),
+      Filter: PDFName.of("FlateDecode"),
+    });
+    const iccRef = postDoc.context.register(iccStream);
+    const outputIntentDict = postDoc.context.obj({
+      Type: PDFName.of("OutputIntent"),
+      S: PDFName.of("GTS_PDFA3"),
+      OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
+      Info: PDFHexString.of("sRGB IEC61966-2.1"),
+      OutputCondition: PDFHexString.of("sRGB IEC61966-2.1"),
+      RegistryName: PDFHexString.of("http://www.color.org"),
+      DestOutputProfile: iccRef,
+    });
+    postDoc.catalog.set(
+      PDFName.of("OutputIntents"),
+      postDoc.context.obj([postDoc.context.register(outputIntentDict)])
+    );
+
     finalPdf = Buffer.from(await postDoc.save());
-    console.log("✅ Re-embedded XMP metadata after GS");
+    console.log("✅ Re-embedded ZUGFeRD, XMP, and OutputIntents after GS");
   } catch (postErr) {
-    console.error("⚠️ Re-embedding XMP after GS failed:", postErr.message);
+    console.error("⚠️ Post-GS embedding failed:", postErr.message);
   }
 }
+
 
       results.push({ index, pdf: finalPdf });
     }
