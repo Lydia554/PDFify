@@ -84,16 +84,10 @@ function checkOutputIntents(pdf) {
 
   const ctx = pdf.context;
   const catalog = pdf.catalog && pdf.catalog.dict;
-  if (!catalog) {
-    errors.push('Catalog missing.');
-    return { errors, warnings, report };
-  }
+  if (!catalog) { errors.push('Catalog missing.'); return { errors, warnings, report }; }
 
   const oiObj = catalog.get(PDFName.of('OutputIntents'));
-  if (!oiObj) {
-    errors.push('Catalog missing /OutputIntents array.');
-    return { errors, warnings, report };
-  }
+  if (!oiObj) { errors.push('Catalog missing /OutputIntents array.'); return { errors, warnings, report }; }
 
   const oiArr = deref(oiObj, ctx);
   if (!oiArr || typeof oiArr.size !== 'function' || typeof oiArr.get !== 'function') {
@@ -136,10 +130,7 @@ function checkOutputIntents(pdf) {
 // Validate ICC profile bytes
 function validateICCProfile(bytes) {
   const errors = [];
-  if (!bytes || bytes.length < 36) {
-    errors.push('ICC profile too small.');
-    return errors;
-  }
+  if (!bytes || bytes.length < 36) { errors.push('ICC profile too small.'); return errors; }
   if (Buffer.from(bytes.slice(36, 40)).toString('ascii') !== 'acsp')
     errors.push('ICC profile missing "acsp" signature.');
   const colorSpace = Buffer.from(bytes.slice(16, 20)).toString('ascii');
@@ -155,16 +146,10 @@ async function checkXMP(pdf) {
 
   const ctx = pdf.context;
   const catalog = pdf.catalog && pdf.catalog.dict;
-  if (!catalog) {
-    errors.push('Catalog missing.');
-    return { errors, warnings, report };
-  }
+  if (!catalog) { errors.push('Catalog missing.'); return { errors, warnings, report }; }
 
   const md = catalog.get(PDFName.of('Metadata'));
-  if (!md) {
-    errors.push('Catalog missing /Metadata (XMP).');
-    return { errors, warnings, report };
-  }
+  if (!md) { errors.push('Catalog missing /Metadata (XMP).'); return { errors, warnings, report }; }
 
   const mdStream = deref(md, ctx);
   if (!mdStream || typeof mdStream.getContents !== 'function') {
@@ -192,6 +177,29 @@ async function checkXMP(pdf) {
 
   return { errors, warnings, report };
 }
+
+function checkFonts(pdf) {
+  const errors = [];
+  const warnings = [];
+  const report = { totalFonts: 0, notEmbedded: [], subsetFonts: [] };
+  const ctx = pdf.context;
+
+  for (const [, obj] of ctx.enumerateIndirectObjects()) {
+    if (!(obj instanceof PDFDict)) continue;
+    const type = obj.get(PDFName.of('Type'));
+    if (!type || resolveName(type, ctx) !== 'Font') continue;
+
+    report.totalFonts++;
+    const fd = deref(obj.get(PDFName.of('FontDescriptor')), ctx);
+    const fontName = resolveObjectToString(obj.get(PDFName.of('BaseFont')), ctx) || '(unnamed)';
+    const hasFF = fd && (fd.get(PDFName.of('FontFile')) || fd.get(PDFName.of('FontFile2')) || fd.get(PDFName.of('FontFile3')));
+    if (!hasFF) { errors.push(`Font "${fontName}" is not embedded.`); report.notEmbedded.push(fontName); }
+    else if (/^[A-Z]{6}\+/.test(fontName)) report.subsetFonts.push(fontName);
+  }
+
+  return { errors, warnings, report };
+}
+
 
 function checkFonts(pdf) {
   const errors = [];

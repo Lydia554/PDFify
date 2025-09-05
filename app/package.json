@@ -10,10 +10,8 @@
     "validate:pdf": "node validate-pdfa.js",
     "test:xmp": "node test/embed-xmp-test.js",
     "embed-zugferd": "java -cp \"java-tools:java-tools/lib/*:java-tools\" ZUGFeRDEmbedder",
-     "validate-pdfa3b": "node tools/pdfa3b-validator.js"
+    "validate-pdfa3b": "node tools/pdfa3b-validator.js"
   },
-
-  
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -30,6 +28,7 @@
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "fast-xml-parser": "^5.2.5",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.13.0",
     "node-cron": "^3.0.3",
@@ -45,9 +44,4 @@
   "devDependencies": {
     "nodemon": "^3.1.9"
   }
-
-
-
-
-  
 }
