@@ -1,10 +1,14 @@
-// Helpers: postProcessPdf.js
+
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
-const path = require("path");
 const fs = require("fs");
+const path = require("path");
 
 /**
  * Post-process PDF/A-3b
+ * Ensures:
+ *  - Embedded ZUGFeRD XML (AF + Filespec)
+ *  - XMP metadata as real stream
+ *  - OutputIntents with ICC profile
  * @param {Uint8Array|Buffer} pdfBytes
  * @param {string} iccPath
  * @param {string} xmpFilePath
@@ -12,12 +16,11 @@ const fs = require("fs");
  * @returns {Promise<Buffer>}
  */
 async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null) {
-  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const pdfDoc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
 
   const catalog = pdfDoc.catalog;
 
   /** ---------------- ZUGFeRD XML ---------------- */
-  let filespecRef = null;
   if (zugferdXml) {
     const xmlBuffer = Buffer.from(zugferdXml, "utf8");
     const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
@@ -36,9 +39,9 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
       Desc: PDFHexString.of("ZUGFeRD invoice XML"),
       AFRelationship: PDFName.of("Data"),
     });
-    filespecRef = pdfDoc.context.register(filespecDict);
+    const filespecRef = pdfDoc.context.register(filespecDict);
 
-    // Names -> EmbeddedFiles -> Names array
+    // Add to Names / EmbeddedFiles
     let names = catalog.lookup(PDFName.of("Names")) || pdfDoc.context.obj({});
     catalog.set(PDFName.of("Names"), names);
 
@@ -51,14 +54,14 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
     namesArray.push(PDFHexString.of(fileName));
     namesArray.push(filespecRef);
 
-    // Add AF array to catalog
+    // AF array in catalog
     catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
   }
 
   /** ---------------- ICC / OutputIntents ---------------- */
   if (!fs.existsSync(iccPath)) throw new Error("ICC profile missing: " + iccPath);
-
   const iccData = fs.readFileSync(iccPath);
+
   const iccStream = pdfDoc.context.flateStream(iccData, {
     N: 3,
     Alternate: PDFName.of("DeviceRGB"),
@@ -76,8 +79,8 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
     DestOutputProfile: iccRef,
   });
 
-  // Register the array itself
-  const outputIntentsArray = pdfDoc.context.register(pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
+  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+  const outputIntentsArray = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
   catalog.set(PDFName.of("OutputIntents"), outputIntentsArray);
 
   /** ---------------- XMP Metadata ---------------- */
@@ -126,13 +129,18 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
   });
 
   /** ---------------- Debug logs ---------------- */
+  console.log("✅ PostProcess Debug:");
   console.log("Catalog keys:", catalog.keys().map(k => k.value()));
-  console.log("OutputIntents raw:", catalog.lookup(PDFName.of("OutputIntents")));
-  console.log("Metadata raw:", catalog.lookup(PDFName.of("Metadata")));
+  const oi = catalog.lookup(PDFName.of("OutputIntents"));
+  console.log("OutputIntents type:", oi?.constructor?.name);
+  if (oi?.lookup) console.log("OutputIntents deref:", oi.lookup(pdfDoc.context));
+  const md = catalog.lookup(PDFName.of("Metadata"));
+  console.log("Metadata type:", md?.constructor?.name);
+  if (md?.getContents) console.log("Metadata size:", md.getContents()?.length);
   console.log("Pages:", pages.length);
 
   /** ---------------- Save final PDF ---------------- */
-  return Buffer.from(await pdfDoc.save());
+  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
 
 module.exports = { postProcessPdf };
