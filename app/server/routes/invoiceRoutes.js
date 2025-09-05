@@ -12,6 +12,8 @@ const embedXmp = require("../xmp/embedXmp");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
 const { incrementUsage } = require("../utils/usageUtils");
+const { postProcessPdf } = require("../utils/postProcessPdf");
+
 const os = require("os");
 
 
@@ -412,48 +414,22 @@ await new Promise((resolve, reject) => {
       let finalPdf = fs.readFileSync(tempOutput);
 
 
+
+
 // Re-embed XMP metadata after Ghostscript
 if (user.plan === "pro") {
   try {
-    const postDoc = await PDFDocument.load(finalPdf);
-
-    // Re-embed ZUGFeRD XML because GS stripped it
     const zugferdXml = generateZugferdXML(invoiceData);
-    const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-    await embedZugferd(postDoc, xmlBuffer); // custom helper with your logic
-
-    // Re-embed XMP metadata
     const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-    await embedXmp(postDoc, xmpPath);
 
-    // Ensure OutputIntent stays present
-    const iccData = fs.readFileSync(iccPath);
-    const iccStream = postDoc.context.flateStream(iccData, {
-      N: 3,
-      Alternate: PDFName.of("DeviceRGB"),
-      Filter: PDFName.of("FlateDecode"),
-    });
-    const iccRef = postDoc.context.register(iccStream);
-    const outputIntentDict = postDoc.context.obj({
-      Type: PDFName.of("OutputIntent"),
-      S: PDFName.of("GTS_PDFA3"),
-      OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
-      Info: PDFHexString.of("sRGB IEC61966-2.1"),
-      OutputCondition: PDFHexString.of("sRGB IEC61966-2.1"),
-      RegistryName: PDFHexString.of("http://www.color.org"),
-      DestOutputProfile: iccRef,
-    });
-    postDoc.catalog.set(
-      PDFName.of("OutputIntents"),
-      postDoc.context.obj([postDoc.context.register(outputIntentDict)])
-    );
+    finalPdf = await postProcessPdf(finalPdf, iccPath, xmpPath, zugferdXml);
 
-    finalPdf = Buffer.from(await postDoc.save());
-    console.log("✅ Re-embedded ZUGFeRD, XMP, and OutputIntents after GS");
+    console.log("✅ Post-processed (ICC, OutputIntent, XMP, ZUGFeRD) final PDF after GS");
   } catch (postErr) {
-    console.error("⚠️ Post-GS embedding failed:", postErr.message);
+    console.error("⚠️ postProcessPdf failed:", postErr.message);
   }
 }
+
 
 
       results.push({ index, pdf: finalPdf });
