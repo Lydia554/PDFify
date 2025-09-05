@@ -1,6 +1,5 @@
-// Helpers: postProcessPdf.js (or paste into your route file above the route)
-const { PDFName, PDFHexString } = require("pdf-lib");
-const path = require("path");
+// helpers/postProcessPdf.js
+const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const fs = require("fs");
 
 /**
@@ -18,7 +17,7 @@ const fs = require("fs");
 async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // 1) embed ZUGFeRD XML (if provided)
+  // 1) Embed ZUGFeRD XML (if provided)
   let filespecRef = null;
   if (zugferdXml) {
     const xmlBuffer = Buffer.from(zugferdXml, "utf8");
@@ -40,7 +39,7 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
     });
     filespecRef = pdfDoc.context.register(filespecDict);
 
-    // Names -> EmbeddedFiles -> Names array [name, filespecRef, ...]
+    // Names -> EmbeddedFiles -> Names array
     let names = pdfDoc.catalog.lookup(PDFName.of("Names"));
     if (!names) {
       names = pdfDoc.context.obj({});
@@ -56,103 +55,86 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
       namesArray = pdfDoc.context.obj([]);
       embeddedFiles.set(PDFName.of("Names"), namesArray);
     }
-    // Append name (as PDFHexString) and filespecRef
     namesArray.push(PDFHexString.of(fileName));
     namesArray.push(filespecRef);
 
-    // Add AF (array of filespecs) to catalog
-    pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
+    // Add /AF array in catalog properly
+    const afArrayRef = pdfDoc.context.register(pdfDoc.context.obj([filespecRef]));
+    pdfDoc.catalog.set(PDFName.of("AF"), afArrayRef);
   }
 
-  // 2) embed ICC profile as a stream and add OutputIntents
-  if (fs.existsSync(iccPath)) {
-    const iccData = fs.readFileSync(iccPath);
-    const iccStream = pdfDoc.context.flateStream(iccData, {
-      N: 3,
-      Alternate: PDFName.of("DeviceRGB"),
-      Filter: PDFName.of("FlateDecode"),
-    });
-    const iccRef = pdfDoc.context.register(iccStream);
-
-    const outputIntentDict = pdfDoc.context.obj({
-      Type: PDFName.of("OutputIntent"),
-      S: PDFName.of("GTS_PDFA3"),
-      OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
-      Info: PDFHexString.of("sRGB IEC61966-2.1"),
-      OutputCondition: PDFHexString.of("sRGB IEC61966-2.1"),
-      RegistryName: PDFHexString.of("http://www.color.org"),
-      DestOutputProfile: iccRef,
-    });
-    pdfDoc.catalog.set(
-      PDFName.of("OutputIntents"),
-      pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)])
-    );
-
-    // Set default ColorSpace entries in Resources for each page (helps some validators)
-    const pages = pdfDoc.getPages();
-    pages.forEach(page => {
-      try {
-        const pageDict = pdfDoc.context.lookup(page.ref);
-        let resources = pageDict.lookup(PDFName.of("Resources"));
-        if (!resources) {
-          resources = pdfDoc.context.obj({});
-          pageDict.set(PDFName.of("Resources"), resources);
-        }
-        // Set ColorSpace dictionary
-        resources.set(
-          PDFName.of("ColorSpace"),
-          pdfDoc.context.obj({
-            DefaultRGB: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
-            DefaultGray: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
-          })
-        );
-        // Add Transparency Group CS (optional)
-        pageDict.set(
-          PDFName.of("Group"),
-          pdfDoc.context.obj({
-            Type: PDFName.of("Group"),
-            S: PDFName.of("Transparency"),
-            CS: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
-          })
-        );
-      } catch (e) {
-        // ignore page-level issues
-      }
-    });
-  } else {
+  // 2) Embed ICC profile and OutputIntents
+  if (!fs.existsSync(iccPath)) {
     throw new Error("ICC profile missing at postProcessPdf: " + iccPath);
   }
+  const iccData = fs.readFileSync(iccPath);
+  const iccStream = pdfDoc.context.flateStream(iccData, {
+    N: 3,
+    Alternate: PDFName.of("DeviceRGB"),
+    Filter: PDFName.of("FlateDecode"),
+  });
+  const iccRef = pdfDoc.context.register(iccStream);
 
-  // 3) Embed XMP metadata as a real metadata stream (xpacket wrapper)
+  const outputIntentDict = pdfDoc.context.obj({
+    Type: PDFName.of("OutputIntent"),
+    S: PDFName.of("GTS_PDFA3"),
+    OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
+    Info: PDFHexString.of("sRGB IEC61966-2.1"),
+    OutputCondition: PDFHexString.of("sRGB IEC61966-2.1"),
+    RegistryName: PDFHexString.of("http://www.color.org"),
+    DestOutputProfile: iccRef,
+  });
+  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+  const outputIntentArrayRef = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), outputIntentArrayRef);
+
+  // Set default ColorSpace and transparency for each page
+  pdfDoc.getPages().forEach(page => {
+    const pageDict = pdfDoc.context.lookup(page.ref);
+    let resources = pageDict.lookup(PDFName.of("Resources"));
+    if (!resources) {
+      resources = pdfDoc.context.obj({});
+      pageDict.set(PDFName.of("Resources"), resources);
+    }
+    resources.set(
+      PDFName.of("ColorSpace"),
+      pdfDoc.context.obj({
+        DefaultRGB: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
+        DefaultGray: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
+      })
+    );
+    pageDict.set(
+      PDFName.of("Group"),
+      pdfDoc.context.obj({
+        Type: PDFName.of("Group"),
+        S: PDFName.of("Transparency"),
+        CS: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
+      })
+    );
+  });
+
+  // 3) Embed XMP metadata properly
+  let xmpBuffer;
   if (xmpFilePath && fs.existsSync(xmpFilePath)) {
     let rawXmp = fs.readFileSync(xmpFilePath, "utf8").trim();
-    // Ensure xpacket wrapper (validator often expects xpacket)
     if (!rawXmp.includes("<?xpacket")) {
       rawXmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>\n${rawXmp}\n<?xpacket end="w"?>`;
     }
-    const xmpBuffer = Buffer.from(rawXmp, "utf8");
-    const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
-      Type: PDFName.of("Metadata"),
-      Subtype: PDFName.of("XML"),
-      Filter: PDFName.of("FlateDecode"),
-    });
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
+    xmpBuffer = Buffer.from(rawXmp, "utf8");
   } else {
-    // If there is no xmp file, still create a minimal XMP packet from document info
-    const minimalXmp = '<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF><?xpacket end="w"?>';
-    const metadataStream = pdfDoc.context.flateStream(Buffer.from(minimalXmp, "utf8"), {
-      Type: PDFName.of("Metadata"),
-      Subtype: PDFName.of("XML"),
-      Filter: PDFName.of("FlateDecode"),
-    });
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
+    // Minimal fallback XMP
+    xmpBuffer = Buffer.from('<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF><?xpacket end="w"?>', 'utf8');
   }
+  const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
+  });
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
 
-  // Save final PDF
-  const out = await pdfDoc.save();
-  return Buffer.from(out);
+  const finalPdf = await pdfDoc.save();
+  return Buffer.from(finalPdf);
 }
 
 module.exports = { postProcessPdf };
