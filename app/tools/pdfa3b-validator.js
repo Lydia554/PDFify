@@ -338,20 +338,27 @@ function sniffHeaderVersion(bytes) {
 }
 
 /* ------------------ CLI ------------------ */
-(async () => {
-  const args = process.argv.slice(2);
-  if (args.length < 1) {
-    console.error('Usage: node pdfa3b-validator.js <file.pdf>');
-    process.exit(1);
-  }
+if (require.main === module) {
+  // only run CLI code if file is executed directly
+  (async () => {
+    const args = process.argv.slice(2);
+    if (args.length < 1) {
+      console.error('Usage: node pdfa3b-validator.js <file.pdf>');
+      process.exit(1);
+    }
 
-  const filePath = args[0];
-  if (!fs.existsSync(filePath)) {
-    console.error('File not found:', filePath);
-    process.exit(1);
-  }
+    const filePath = args[0];
+    if (!fs.existsSync(filePath)) {
+      console.error('File not found:', filePath);
+      process.exit(1);
+    }
 
-  const buffer = fs.readFileSync(filePath);
-  const result = await validatePDFA3bStrict(buffer);
-  console.log(JSON.stringify(result, null, 2));
-})();
+    const buffer = fs.readFileSync(filePath);
+    const result = await validatePDFA3bStrict(buffer);
+    console.log(JSON.stringify(result, null, 2));
+  })();
+}
+
+
+
+module.exports = { validatePDFA3bStrict };

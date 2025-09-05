@@ -1,26 +1,22 @@
-
-const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
+// postProcessPdfStrict.js
+const { PDFDocument, PDFName, PDFHexString, PDFStream } = require("pdf-lib");
 const fs = require("fs");
 const path = require("path");
 
 /**
- * Post-process PDF/A-3b
- * Ensures:
- *  - Embedded ZUGFeRD XML (AF + Filespec)
- *  - XMP metadata as real stream
- *  - OutputIntents with ICC profile
+ * Post-process PDF to PDF/A-3b compliant
  * @param {Uint8Array|Buffer} pdfBytes
  * @param {string} iccPath
- * @param {string} xmpFilePath
+ * @param {string|null} xmpFilePath
  * @param {string|null} zugferdXml
  * @returns {Promise<Buffer>}
  */
 async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null) {
-  const pdfDoc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
-
+  const pdfDoc = await PDFDocument.load(pdfBytes);
   const catalog = pdfDoc.catalog;
 
   /** ---------------- ZUGFeRD XML ---------------- */
+  let filespecRef = null;
   if (zugferdXml) {
     const xmlBuffer = Buffer.from(zugferdXml, "utf8");
     const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
@@ -39,9 +35,9 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
       Desc: PDFHexString.of("ZUGFeRD invoice XML"),
       AFRelationship: PDFName.of("Data"),
     });
-    const filespecRef = pdfDoc.context.register(filespecDict);
+    filespecRef = pdfDoc.context.register(filespecDict);
 
-    // Add to Names / EmbeddedFiles
+    // Names -> EmbeddedFiles -> Names array
     let names = catalog.lookup(PDFName.of("Names")) || pdfDoc.context.obj({});
     catalog.set(PDFName.of("Names"), names);
 
@@ -54,14 +50,13 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
     namesArray.push(PDFHexString.of(fileName));
     namesArray.push(filespecRef);
 
-    // AF array in catalog
+    // Add AF array to catalog
     catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
   }
 
   /** ---------------- ICC / OutputIntents ---------------- */
   if (!fs.existsSync(iccPath)) throw new Error("ICC profile missing: " + iccPath);
   const iccData = fs.readFileSync(iccPath);
-
   const iccStream = pdfDoc.context.flateStream(iccData, {
     N: 3,
     Alternate: PDFName.of("DeviceRGB"),
@@ -79,29 +74,34 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
     DestOutputProfile: iccRef,
   });
 
-  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
-  const outputIntentsArray = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
+  // ✅ Proper array of dicts (no double register)
+  const outputIntentsArray = pdfDoc.context.obj([outputIntentDict]);
   catalog.set(PDFName.of("OutputIntents"), outputIntentsArray);
 
-  /** ---------------- XMP Metadata ---------------- */
-  let xmpContent;
-  if (xmpFilePath && fs.existsSync(xmpFilePath)) {
-    xmpContent = fs.readFileSync(xmpFilePath, "utf8").trim();
-    if (!xmpContent.includes("<?xpacket")) {
-      xmpContent = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>\n${xmpContent}\n<?xpacket end="w"?>`;
-    }
-  } else {
-    xmpContent = '<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF><?xpacket end="w"?>';
+/** ---------------- XMP Metadata ---------------- */
+let xmpContent;
+if (xmpFilePath && fs.existsSync(xmpFilePath)) {
+  xmpContent = fs.readFileSync(xmpFilePath, "utf8").trim();
+  if (!xmpContent.includes("<?xpacket")) {
+    xmpContent = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>\n${xmpContent}\n<?xpacket end="w"?>`;
   }
+} else {
+  xmpContent = '<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF><?xpacket end="w"?>';
+}
 
-  const xmpBuffer = Buffer.from(xmpContent, "utf8");
-  const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-    Filter: PDFName.of("FlateDecode"),
-  });
-  const metadataRef = pdfDoc.context.register(metadataStream);
-  catalog.set(PDFName.of("Metadata"), metadataRef);
+const xmpBuffer = Buffer.from(xmpContent, "utf8");
+
+// Use flateStream like OutputIntent
+const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
+  Type: PDFName.of("Metadata"),
+  Subtype: PDFName.of("XML"),
+  Filter: PDFName.of("FlateDecode"),
+});
+const metadataRef = pdfDoc.context.register(metadataStream);
+catalog.set(PDFName.of("Metadata"), metadataRef);
+
+
+
 
   /** ---------------- Page Resources / Transparency ---------------- */
   const pages = pdfDoc.getPages();
@@ -131,16 +131,13 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
   /** ---------------- Debug logs ---------------- */
   console.log("✅ PostProcess Debug:");
   console.log("Catalog keys:", catalog.keys().map(k => k.value()));
-  const oi = catalog.lookup(PDFName.of("OutputIntents"));
-  console.log("OutputIntents type:", oi?.constructor?.name);
-  if (oi?.lookup) console.log("OutputIntents deref:", oi.lookup(pdfDoc.context));
-  const md = catalog.lookup(PDFName.of("Metadata"));
-  console.log("Metadata type:", md?.constructor?.name);
-  if (md?.getContents) console.log("Metadata size:", md.getContents()?.length);
+  console.log("OutputIntents type:", catalog.lookup(PDFName.of("OutputIntents")).constructor.name);
+  console.log("Metadata type:", catalog.lookup(PDFName.of("Metadata")).constructor.name);
+  console.log("Metadata size:", xmpBuffer.length);
   console.log("Pages:", pages.length);
 
   /** ---------------- Save final PDF ---------------- */
-  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+  return Buffer.from(await pdfDoc.save());
 }
 
 module.exports = { postProcessPdf };
