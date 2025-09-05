@@ -12,6 +12,7 @@ const embedXmp = require("../xmp/embedXmp");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
 const { incrementUsage } = require("../utils/usageUtils");
+const os = require("os");
 
 
 
