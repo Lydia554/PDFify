@@ -39,9 +39,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
 
- const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "sRGB_IEC61966-2-1_no_black_scaling.icc");
-const gsIccPath = iccPath.replace(/\\/g, "/");
-  console.log("🔍 Using ICC profile path:", iccPath);
+const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "sRGB_IEC61966-2-1_no_black_scaling.icc");
+const gsIccPath = iccPath.replace(/\\/g, "/"); // convert backslashes to forward slashes
+console.log("🔍 Using ICC profile path:", iccPath);
 
   try {
     const gsVersion = execSync("gs --version").toString().trim();
@@ -350,9 +350,14 @@ if (!usageAllowed) {
         finalPdfBytes = await pdfDoc.save();
       }
 
-      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
-      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
-      fs.writeFileSync(tempInput, finalPdfBytes);
+ // Temporary input/output PDFs
+const tempInput = path.join(tmpDir, `input-${index}.pdf`);
+const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
+fs.writeFileSync(tempInput, finalPdfBytes);
+
+// Convert temp paths to forward-slash style for Ghostscript
+const tempInputPath = tempInput.replace(/\\/g, "/");
+const tempOutputPath = tempOutput.replace(/\\/g, "/");
 
 const gsArgs = [
   "-dPDFA=3",
@@ -365,7 +370,7 @@ const gsArgs = [
   "-dSubsetFonts=true",
   "-dPreserveDocInfo=true",          // preserve metadata
   "-dPreserveAnnots=true",
-  "-dPDFACompatibilityPolicy=1",     // strict mode
+  "-dPDFACompatibilityPolicy=1",    // strict mode
   "-dAutoRotatePages=/None",
   "-dColorConversionStrategy=RGB",
   "-dProcessColorModel=/DeviceRGB",
@@ -376,8 +381,8 @@ const gsArgs = [
   "-dDownsampleMonoImages=false",
   "-dPDFSETTINGS=/prepress",
   `-sOutputICCProfile="${gsIccPath}"`,
-  `-sOutputFile=${tempOutput}`,
-  tempInput,
+  `-sOutputFile="${tempOutputPath}"`,
+  `"${tempInputPath}"`,
 ];
 
 
