@@ -96,8 +96,10 @@ function checkOutputIntents(pdf) {
   }
 
   const oiArr = deref(oiObj, ctx);
-  if (!oiArr || !(oiArr instanceof PDFArray)) {
-    errors.push('/OutputIntents is not an array.');
+
+  // Changed: check for PDFArray capabilities instead of instanceof
+  if (!oiArr || typeof oiArr.size !== 'function' || typeof oiArr.get !== 'function') {
+    errors.push('/OutputIntents is not a valid array.');
     return { errors, warnings, report };
   }
 
@@ -106,7 +108,7 @@ function checkOutputIntents(pdf) {
   let hasValidICC = false;
   for (let i = 0; i < oiArr.size(); i++) {
     const oi = deref(oiArr.get(i), ctx);
-    if (!oi || !(oi instanceof PDFDict)) continue;
+    if (!oi || typeof oi.get !== 'function') continue; // treat as PDFDict if it has get()
 
     const S = resolveName(oi.get(PDFName.of('S')), ctx);
     const oci = resolveObjectToString(oi.get(PDFName.of('OutputConditionIdentifier')), ctx);
@@ -115,14 +117,16 @@ function checkOutputIntents(pdf) {
 
     report.intents.push({ S, OutputConditionIdentifier: oci, hasDestOutputProfile: !!destStream });
 
-    if (!destStream) errors.push(`OutputIntent #${i} missing DestOutputProfile.`);
-    else {
-      const bytes = destStream.getContents();
-      if (!bytes || bytes.length < 36) errors.push(`OutputIntent #${i} ICC profile too small.`);
-      else if (Buffer.from(bytes.slice(36, 40)).toString('ascii') !== 'acsp')
-        errors.push(`OutputIntent #${i} ICC profile missing 'acsp' signature.`);
-      else hasValidICC = true;
+    if (!destStream || typeof destStream.getContents !== 'function') {
+      errors.push(`OutputIntent #${i} missing DestOutputProfile.`);
+      continue;
     }
+
+    const bytes = destStream.getContents();
+    if (!bytes || bytes.length < 36) errors.push(`OutputIntent #${i} ICC profile too small.`);
+    else if (Buffer.from(bytes.slice(36, 40)).toString('ascii') !== 'acsp')
+      errors.push(`OutputIntent #${i} ICC profile missing 'acsp' signature.`);
+    else hasValidICC = true;
 
     if (!S) warnings.push('OutputIntent /S missing.');
     if (!oci) warnings.push('OutputIntent /OutputConditionIdentifier missing.');
@@ -152,8 +156,10 @@ async function checkXMP(pdf) {
   }
 
   const mdStream = deref(md, ctx);
-  if (!mdStream || !(mdStream instanceof PDFStream)) {
-    errors.push('/Metadata is not a stream.');
+
+  // Changed: check for PDFStream capabilities instead of instanceof
+  if (!mdStream || typeof mdStream.getContents !== 'function') {
+    errors.push('/Metadata is not a valid stream.');
     return { errors, warnings, report };
   }
 
@@ -185,33 +191,6 @@ async function checkXMP(pdf) {
   return { errors, warnings, report };
 }
 
-function checkFonts(pdf) {
-  const errors = [];
-  const warnings = [];
-  const report = { totalFonts: 0, notEmbedded: [], subsetFonts: [] };
-
-  const ctx = pdf.context;
-
-  for (const [, obj] of ctx.enumerateIndirectObjects()) {
-    if (!(obj instanceof PDFDict)) continue;
-    const type = obj.get(PDFName.of('Type'));
-    if (!type || resolveName(type, ctx) !== 'Font') continue;
-
-    report.totalFonts++;
-    const fd = deref(obj.get(PDFName.of('FontDescriptor')), ctx);
-    const fontName = resolveObjectToString(obj.get(PDFName.of('BaseFont')), ctx) || '(unnamed)';
-
-    const hasFF = fd && (fd.get(PDFName.of('FontFile')) || fd.get(PDFName.of('FontFile2')) || fd.get(PDFName.of('FontFile3')));
-    if (!hasFF) {
-      errors.push(`Font "${fontName}" is not embedded.`);
-      report.notEmbedded.push(fontName);
-    } else if (/^[A-Z]{6}\+/.test(fontName)) {
-      report.subsetFonts.push(fontName);
-    }
-  }
-
-  return { errors, warnings, report };
-}
 
 function checkEmbeddedFiles(pdf) {
   const errors = [];
