@@ -1,15 +1,16 @@
 #!/usr/bin/env node
 /**
- * Strict PDF/A-3b Validator (Windows-ready, closer to VeraPDF)
+ * Enhanced PDF/A-3b Validator (VeraPDF-like)
  *
  * Usage:
- *   node pdfa3b-validator.js <file.pdf>
+ *   node pdfa3b-validator-strict.js <file.pdf>
  *
  * Output: JSON report with errors/warnings.
  */
 
 const fs = require('fs');
-const { PDFDocument, PDFName, PDFRef, PDFDict, PDFArray, PDFStream } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFDict } = require('pdf-lib');
+const { XMLParser } = require('fast-xml-parser');
 
 /* ------------------ Public API ------------------ */
 async function validatePDFA3bStrict(pdfBuffer) {
@@ -19,11 +20,12 @@ async function validatePDFA3bStrict(pdfBuffer) {
 
   const u8 = toUint8Array(pdfBuffer);
 
-  // Header version check
+  // Header version
   const headerVersion = sniffHeaderVersion(u8);
   info.headerVersion = headerVersion || null;
   if (!headerVersion) errors.push('Could not read PDF header version.');
-  else if (parseFloat(headerVersion) < 1.4) errors.push(`PDF header version ${headerVersion} too old for PDF/A-3b.`);
+  else if (parseFloat(headerVersion) < 1.4)
+    errors.push(`PDF header version ${headerVersion} too old for PDF/A-3b.`);
 
   // Load PDF
   let pdf;
@@ -33,43 +35,41 @@ async function validatePDFA3bStrict(pdfBuffer) {
     return { ok: false, errors: ['Failed to parse PDF (encrypted or corrupted).'], warnings: [], report: {} };
   }
 
-  const ctx = pdf.context;
-  const catalogDict = pdf.catalog && pdf.catalog.dict;
-  info.hasCatalog = !!catalogDict;
+  info.hasCatalog = !!(pdf.catalog && pdf.catalog.dict);
 
   // OutputIntents
   const oiResult = checkOutputIntents(pdf);
-  if (oiResult.errors.length) errors.push(...oiResult.errors);
-  if (oiResult.warnings.length) warnings.push(...oiResult.warnings);
+  errors.push(...oiResult.errors);
+  warnings.push(...oiResult.warnings);
   info.outputIntents = oiResult.report;
 
   // XMP metadata
   const xmpResult = await checkXMP(pdf);
-  if (xmpResult.errors.length) errors.push(...xmpResult.errors);
-  if (xmpResult.warnings.length) warnings.push(...xmpResult.warnings);
+  errors.push(...xmpResult.errors);
+  warnings.push(...xmpResult.warnings);
   info.xmp = xmpResult.report;
 
   // Fonts
   const fontResult = checkFonts(pdf);
-  if (fontResult.errors.length) errors.push(...fontResult.errors);
-  if (fontResult.warnings.length) warnings.push(...fontResult.warnings);
+  errors.push(...fontResult.errors);
+  warnings.push(...fontResult.warnings);
   info.fonts = fontResult.report;
 
   // Embedded files
   const embResult = checkEmbeddedFiles(pdf);
-  if (embResult.errors.length) errors.push(...embResult.errors);
-  if (embResult.warnings.length) warnings.push(...embResult.warnings);
+  errors.push(...embResult.errors);
+  warnings.push(...embResult.warnings);
   info.embeddedFiles = embResult.report;
 
   // Forbidden features
   const bannedResult = checkForbiddenFeatures(pdf);
-  if (bannedResult.errors.length) errors.push(...bannedResult.errors);
-  if (bannedResult.warnings.length) warnings.push(...bannedResult.warnings);
+  errors.push(...bannedResult.errors);
+  warnings.push(...bannedResult.warnings);
   info.forbidden = bannedResult.report;
 
   // Color spaces
   const colorResult = checkColorSpaces(pdf);
-  if (colorResult.warnings.length) warnings.push(...colorResult.warnings);
+  warnings.push(...colorResult.warnings);
   info.color = colorResult.report;
 
   const ok = errors.length === 0;
@@ -96,19 +96,17 @@ function checkOutputIntents(pdf) {
   }
 
   const oiArr = deref(oiObj, ctx);
-
-  // Changed: check for PDFArray capabilities instead of instanceof
   if (!oiArr || typeof oiArr.size !== 'function' || typeof oiArr.get !== 'function') {
     errors.push('/OutputIntents is not a valid array.');
     return { errors, warnings, report };
   }
 
   report.found = oiArr.size() > 0;
-
   let hasValidICC = false;
+
   for (let i = 0; i < oiArr.size(); i++) {
     const oi = deref(oiArr.get(i), ctx);
-    if (!oi || typeof oi.get !== 'function') continue; // treat as PDFDict if it has get()
+    if (!oi || typeof oi.get !== 'function') continue;
 
     const S = resolveName(oi.get(PDFName.of('S')), ctx);
     const oci = resolveObjectToString(oi.get(PDFName.of('OutputConditionIdentifier')), ctx);
@@ -123,18 +121,31 @@ function checkOutputIntents(pdf) {
     }
 
     const bytes = destStream.getContents();
-    if (!bytes || bytes.length < 36) errors.push(`OutputIntent #${i} ICC profile too small.`);
-    else if (Buffer.from(bytes.slice(36, 40)).toString('ascii') !== 'acsp')
-      errors.push(`OutputIntent #${i} ICC profile missing 'acsp' signature.`);
-    else hasValidICC = true;
+    errors.push(...validateICCProfile(bytes));
+    if (bytes && Buffer.from(bytes.slice(36, 40)).toString('ascii') === 'acsp') hasValidICC = true;
 
     if (!S) warnings.push('OutputIntent /S missing.');
+    else if (S !== 'GTS_PDFA1') errors.push(`OutputIntent /S must be GTS_PDFA1 for PDF/A-3b.`);
     if (!oci) warnings.push('OutputIntent /OutputConditionIdentifier missing.');
   }
 
   if (!hasValidICC) errors.push('No valid ICC profile found in OutputIntents.');
-
   return { errors, warnings, report };
+}
+
+// Validate ICC profile bytes
+function validateICCProfile(bytes) {
+  const errors = [];
+  if (!bytes || bytes.length < 36) {
+    errors.push('ICC profile too small.');
+    return errors;
+  }
+  if (Buffer.from(bytes.slice(36, 40)).toString('ascii') !== 'acsp')
+    errors.push('ICC profile missing "acsp" signature.');
+  const colorSpace = Buffer.from(bytes.slice(16, 20)).toString('ascii');
+  if (!['RGB ', 'CMYK', 'GRAY'].includes(colorSpace))
+    errors.push(`ICC profile color space is ${colorSpace}, expected RGB/CMYK/GRAY.`);
+  return errors;
 }
 
 async function checkXMP(pdf) {
@@ -156,8 +167,6 @@ async function checkXMP(pdf) {
   }
 
   const mdStream = deref(md, ctx);
-
-  // Changed: check for PDFStream capabilities instead of instanceof
   if (!mdStream || typeof mdStream.getContents !== 'function') {
     errors.push('/Metadata is not a valid stream.');
     return { errors, warnings, report };
@@ -168,35 +177,48 @@ async function checkXMP(pdf) {
   report.bytes = bytes ? bytes.length : 0;
 
   let xml;
-  try {
-    xml = Buffer.from(bytes).toString('utf8');
-  } catch {
-    errors.push('Could not decode XMP as UTF-8.');
-    return { errors, warnings, report };
-  }
+  try { xml = Buffer.from(bytes).toString('utf8'); } 
+  catch { errors.push('Could not decode XMP as UTF-8.'); return { errors, warnings, report }; }
 
   if (/rdf:RDF/i.test(xml)) report.rdfPresent = true;
   if (/^\s*<\?xpacket/i.test(xml)) report.xpacket = true;
 
-  const partMatch = xml.match(/<[^:>]+:part>\s*([0-9]+)\s*<\/[^:>]+:part>/i);
-  const confMatch = xml.match(/<[^:>]+:conformance>\s*([A-Za-z0-9]+)\s*<\/[^:>]+:conformance>/i);
-
-  if (partMatch) report.part = Number(partMatch[1]);
-  else errors.push('XMP missing pdfaid:part=3.');
-  if (confMatch) report.conformance = confMatch[1];
-  else errors.push('XMP missing pdfaid:conformance=B.');
-
-  if (!report.xpacket) errors.push('XMP missing xpacket wrapper.');
+  try {
+    const parser = new XMLParser({ ignoreAttributes: false });
+    parser.parse(xml);
+    if (!/pdfaid:part=3/i.test(xml)) errors.push('XMP missing pdfaid:part=3.');
+    if (!/pdfaid:conformance=B/i.test(xml)) errors.push('XMP missing pdfaid:conformance=B.');
+  } catch { errors.push('XMP XML parsing error.'); }
 
   return { errors, warnings, report };
 }
 
+function checkFonts(pdf) {
+  const errors = [];
+  const warnings = [];
+  const report = { totalFonts: 0, notEmbedded: [], subsetFonts: [] };
+  const ctx = pdf.context;
+
+  for (const [, obj] of ctx.enumerateIndirectObjects()) {
+    if (!(obj instanceof PDFDict)) continue;
+    const type = obj.get(PDFName.of('Type'));
+    if (!type || resolveName(type, ctx) !== 'Font') continue;
+
+    report.totalFonts++;
+    const fd = deref(obj.get(PDFName.of('FontDescriptor')), ctx);
+    const fontName = resolveObjectToString(obj.get(PDFName.of('BaseFont')), ctx) || '(unnamed)';
+    const hasFF = fd && (fd.get(PDFName.of('FontFile')) || fd.get(PDFName.of('FontFile2')) || fd.get(PDFName.of('FontFile3')));
+    if (!hasFF) { errors.push(`Font "${fontName}" is not embedded.`); report.notEmbedded.push(fontName); }
+    else if (/^[A-Z]{6}\+/.test(fontName)) report.subsetFonts.push(fontName);
+  }
+
+  return { errors, warnings, report };
+}
 
 function checkEmbeddedFiles(pdf) {
   const errors = [];
   const warnings = [];
   const report = { hasAF: false, embeddedFiles: [] };
-
   const ctx = pdf.context;
   const catalog = pdf.catalog && pdf.catalog.dict;
   if (!catalog) return { errors: ['Catalog missing.'], warnings, report };
@@ -205,7 +227,7 @@ function checkEmbeddedFiles(pdf) {
   if (af) {
     report.hasAF = true;
     const afArr = deref(af, ctx);
-    if (afArr instanceof PDFArray) {
+    if (afArr && typeof afArr.size === 'function' && typeof afArr.get === 'function') {
       for (let i = 0; i < afArr.size(); i++) {
         const fspec = deref(afArr.get(i), ctx);
         const AFRelationship = resolveName(fspec?.get(PDFName.of('AFRelationship')), ctx) || null;
@@ -222,22 +244,22 @@ function checkForbiddenFeatures(pdf) {
   const errors = [];
   const warnings = [];
   const report = { jsActions: [], launchActions: [], richMedia: [], openActions: [] };
-
   const ctx = pdf.context;
 
   for (const [, obj] of ctx.enumerateIndirectObjects()) {
     if (!(obj instanceof PDFDict)) continue;
-
     const candidates = [];
     if (obj.get(PDFName.of('AA'))) candidates.push(obj.get(PDFName.of('AA')));
     if (obj.get(PDFName.of('A'))) candidates.push(obj.get(PDFName.of('A')));
     if (obj.get(PDFName.of('OpenAction'))) candidates.push(obj.get(PDFName.of('OpenAction')));
 
     for (const cand of candidates) {
-      const dict = deref(cand, ctx);
-      if (!dict || !(dict instanceof PDFDict)) continue;
+      const dict = deref
+            (cand, ctx);
+      if (!dict || typeof dict.get !== 'function') continue;
       const S = resolveName(dict.get(PDFName.of('S')), ctx);
       if (!S) continue;
+
       if (/JavaScript/i.test(S)) { errors.push('JavaScript action found.'); report.jsActions.push(S); }
       if (/Launch/i.test(S)) { errors.push('Launch action found.'); report.launchActions.push(S); }
       if (/RichMedia|Movie|Sound/i.test(S)) { errors.push(`${S} action found.`); report.richMedia.push(S); }
@@ -260,41 +282,24 @@ function checkColorSpaces(pdf) {
     const colorSpaces = deref(resources.get(PDFName.of('ColorSpace')), ctx);
     if (!colorSpaces) continue;
 
-    // Handle dictionary
-    if (colorSpaces instanceof PDFDict) {
-      for (const key of colorSpaces.keys()) {
-        const val = deref(colorSpaces.get(key), ctx);
-        const csName = val instanceof PDFName ? val.value() : null;
-        if (csName === 'DeviceRGB' || csName === 'DeviceCMYK' || csName === 'DeviceGray') {
-          warnings.push(`Page uses device color space: ${csName}`);
-          report.deviceColorSpaces.push(csName);
-        }
-      }
-    }
-    // Handle single name
-    else if (colorSpaces instanceof PDFName) {
-      const csName = colorSpaces.value();
-      if (csName === 'DeviceRGB' || csName === 'DeviceCMYK' || csName === 'DeviceGray') {
+    const handleCS = (val) => {
+      const csName = val && val.value ? val.value : null;
+      if (csName && ['DeviceRGB', 'DeviceCMYK', 'DeviceGray'].includes(csName)) {
         warnings.push(`Page uses device color space: ${csName}`);
         report.deviceColorSpaces.push(csName);
       }
-    }
-    // Handle array (rare)
-    else if (colorSpaces instanceof PDFArray) {
-      for (let i = 0; i < colorSpaces.size(); i++) {
-        const val = deref(colorSpaces.get(i), ctx);
-        const csName = val instanceof PDFName ? val.value() : null;
-        if (csName === 'DeviceRGB' || csName === 'DeviceCMYK' || csName === 'DeviceGray') {
-          warnings.push(`Page uses device color space: ${csName}`);
-          report.deviceColorSpaces.push(csName);
-        }
-      }
+    };
+
+    if (typeof colorSpaces.get === 'function') { // dictionary
+      for (const key of colorSpaces.keys()) handleCS(deref(colorSpaces.get(key), ctx));
+    } else if (colorSpaces.value) handleCS(colorSpaces); // single name
+    else if (typeof colorSpaces.size === 'function') { // array
+      for (let i = 0; i < colorSpaces.size(); i++) handleCS(deref(colorSpaces.get(i), ctx));
     }
   }
 
   return { warnings, report };
 }
-
 
 /* ------------------ Helpers ------------------ */
 function toUint8Array(buffer) {
@@ -308,7 +313,6 @@ function deref(obj, ctx) {
 }
 function resolveName(obj, ctx) { try { return obj && obj.value ? obj.value : null; } catch { return null; } }
 function resolveObjectToString(obj, ctx) { try { return obj && obj.value ? obj.value.toString() : null; } catch { return null; } }
-
 function sniffHeaderVersion(bytes) {
   if (!bytes || bytes.length < 8) return null;
   const str = Buffer.from(bytes.slice(0, 8)).toString('ascii');
@@ -318,11 +322,10 @@ function sniffHeaderVersion(bytes) {
 
 /* ------------------ CLI ------------------ */
 if (require.main === module) {
-  // only run CLI code if file is executed directly
   (async () => {
     const args = process.argv.slice(2);
     if (args.length < 1) {
-      console.error('Usage: node pdfa3b-validator.js <file.pdf>');
+      console.error('Usage: node pdfa3b-validator-strict.js <file.pdf>');
       process.exit(1);
     }
 
@@ -338,6 +341,5 @@ if (require.main === module) {
   })();
 }
 
-
-
 module.exports = { validatePDFA3bStrict };
+
