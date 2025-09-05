@@ -373,6 +373,7 @@ const gsArgs = [
   "-dSubsetFonts=true",
   "-dPreserveDocInfo=true",
   "-dPreserveAnnots=true",
+  "-dShowAnnots=true",
   "-dPDFACompatibilityPolicy=1",
   "-dAutoRotatePages=/None",
   "-sColorConversionStrategy=RGB",
@@ -386,6 +387,7 @@ const gsArgs = [
   `-sOutputFile=${tempOutputPath}`,
   tempInputPath,
 ];
+
 
 
 console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
@@ -409,22 +411,19 @@ await new Promise((resolve, reject) => {
       console.log(`📁 Reading final PDF output from: ${tempOutput}`);
       let finalPdf = fs.readFileSync(tempOutput);
 
-      // Post-process the PDF to fix XMP and add proper metadata after Ghostscript
-      if (user.plan === "pro") {
-        try {
-          const postProcessDoc = await PDFDocument.load(finalPdf);
-          
-          // Embed XMP metadata after Ghostscript processing
-          const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-          await embedXmp(postProcessDoc, xmpPath);
-          
-          finalPdf = Buffer.from(await postProcessDoc.save());
-          console.log("✅ Post-processed PDF with XMP metadata");
-        } catch (postErr) {
-          console.error("⚠️ Post-processing failed:", postErr.message);
-          // Continue with Ghostscript output if post-processing fails
-        }
-      }
+
+// Re-embed XMP metadata after Ghostscript
+if (user.plan === "pro") {
+  try {
+    const postDoc = await PDFDocument.load(finalPdf);
+    const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+    await embedXmp(postDoc, xmpPath);
+    finalPdf = Buffer.from(await postDoc.save());
+    console.log("✅ Re-embedded XMP metadata after GS");
+  } catch (postErr) {
+    console.error("⚠️ Re-embedding XMP after GS failed:", postErr.message);
+  }
+}
 
       results.push({ index, pdf: finalPdf });
     }
