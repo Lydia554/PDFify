@@ -40,7 +40,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
 
 const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "sRGB_IEC61966-2-1_no_black_scaling.icc");
-const gsIccPath = iccPath.replace(/\\/g, "/"); // convert backslashes to forward slashes
+const gsIccPath = iccPath.replace(/\\/g, "/");
+
 console.log("🔍 Using ICC profile path:", iccPath);
 
   try {
@@ -63,8 +64,9 @@ console.log("🔍 Using ICC profile path:", iccPath);
 
 
   let browser;
-  const tmpDir = "/tmp/pdfify-batch-" + Date.now();
-  fs.mkdirSync(tmpDir);
+const tmpDir = path.join(os.tmpdir(), `pdfify-batch-${Date.now()}`);
+fs.mkdirSync(tmpDir, { recursive: true });
+
 
   try {
     let requests = req.body.requests;
@@ -203,16 +205,16 @@ console.log("🔍 Using ICC profile path:", iccPath);
       
       await page.setContent(html, { waitUntil: "networkidle0" });
 
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-        preferCSSPageSize: false,
-        displayHeaderFooter: false,
-        // Enhanced settings for PDF/A compliance
-        tagged: true,
-        outline: false,
-      });
+ const pdfBuffer = await page.pdf({
+  format: "A4",
+  printBackground: true,
+  margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+  preferCSSPageSize: false,
+  displayHeaderFooter: false,
+  tagged: true,
+  outline: false,
+});
+
       await page.close();
 
       let finalPdfBytes = pdfBuffer;
@@ -380,9 +382,10 @@ const gsArgs = [
   "-dDownsampleGrayImages=false",
   "-dDownsampleMonoImages=false",
   "-dPDFSETTINGS=/prepress",
-  `-sOutputICCProfile="${gsIccPath}"`,
-  `-sOutputFile="${tempOutputPath}"`,
-  `"${tempInputPath}"`,
+ `-sOutputICCProfile=${gsIccPath}`,
+`-sOutputFile=${tempOutputPath}`,
+tempInputPath,
+
 ];
 
 
