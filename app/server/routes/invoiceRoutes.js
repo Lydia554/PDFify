@@ -12,7 +12,8 @@ const embedXmp = require("../xmp/embedXmp");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const { execSync, execFile } = require("child_process");
 const { incrementUsage } = require("../utils/usageUtils");
-const { postProcessPdf } = require("../utils/postProcessPdf");
+const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
+
 
 const os = require("os");
 
@@ -422,7 +423,8 @@ if (user.plan === "pro") {
     const zugferdXml = generateZugferdXML(invoiceData);
     const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
 
-    finalPdf = await postProcessPdf(finalPdf, iccPath, xmpPath, zugferdXml);
+    finalPdf = await postProcessPdfStrict(finalPdf, iccPath, xmpPath, zugferdXml);
+
 
     console.log("✅ Post-processed (ICC, OutputIntent, XMP, ZUGFeRD) final PDF after GS");
   } catch (postErr) {
