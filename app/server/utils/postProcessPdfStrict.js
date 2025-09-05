@@ -1,13 +1,12 @@
 // postProcessPdfStrict.js
-const { PDFDocument, PDFName, PDFHexString, PDFStream } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const fs = require("fs");
-const path = require("path");
 
 /**
- * Post-process PDF to PDF/A-3b compliant
+ * Post-process PDF/A-3b
  * @param {Uint8Array|Buffer} pdfBytes
  * @param {string} iccPath
- * @param {string|null} xmpFilePath
+ * @param {string} xmpFilePath
  * @param {string|null} zugferdXml
  * @returns {Promise<Buffer>}
  */
@@ -56,6 +55,7 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
 
   /** ---------------- ICC / OutputIntents ---------------- */
   if (!fs.existsSync(iccPath)) throw new Error("ICC profile missing: " + iccPath);
+
   const iccData = fs.readFileSync(iccPath);
   const iccStream = pdfDoc.context.flateStream(iccData, {
     N: 3,
@@ -74,38 +74,34 @@ async function postProcessPdf(pdfBytes, iccPath, xmpFilePath, zugferdXml = null)
     DestOutputProfile: iccRef,
   });
 
-  // ✅ Proper array of dicts (no double register)
-  const outputIntentsArray = pdfDoc.context.obj([outputIntentDict]);
+  // ✅ Register OutputIntent and create proper array
+  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+  const outputIntentsArray = pdfDoc.context.obj([outputIntentRef]);
   catalog.set(PDFName.of("OutputIntents"), outputIntentsArray);
 
-/** ---------------- XMP Metadata ---------------- */
-let xmpContent;
-if (xmpFilePath && fs.existsSync(xmpFilePath)) {
-  xmpContent = fs.readFileSync(xmpFilePath, "utf8").trim();
-  if (!xmpContent.includes("<?xpacket")) {
-    xmpContent = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>\n${xmpContent}\n<?xpacket end="w"?>`;
+  /** ---------------- XMP Metadata ---------------- */
+  let xmpContent;
+  if (xmpFilePath && fs.existsSync(xmpFilePath)) {
+    xmpContent = fs.readFileSync(xmpFilePath, "utf8").trim();
+    if (!xmpContent.includes("<?xpacket")) {
+      xmpContent = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>\n${xmpContent}\n<?xpacket end="w"?>`;
+    }
+  } else {
+    xmpContent = '<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF><?xpacket end="w"?>';
   }
-} else {
-  xmpContent = '<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"></rdf:RDF><?xpacket end="w"?>';
-}
 
-const xmpBuffer = Buffer.from(xmpContent, "utf8");
-
-// Use flateStream like OutputIntent
-const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
-  Type: PDFName.of("Metadata"),
-  Subtype: PDFName.of("XML"),
-  Filter: PDFName.of("FlateDecode"),
-});
-const metadataRef = pdfDoc.context.register(metadataStream);
-catalog.set(PDFName.of("Metadata"), metadataRef);
-
-
-
+  const xmpBuffer = Buffer.from(xmpContent, "utf8");
+  const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
+  });
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  catalog.set(PDFName.of("Metadata"), metadataRef);
 
   /** ---------------- Page Resources / Transparency ---------------- */
   const pages = pdfDoc.getPages();
-  pages.forEach(page => {
+  pages.forEach((page) => {
     const pageDict = pdfDoc.context.lookup(page.ref);
     let resources = pageDict.lookup(PDFName.of("Resources")) || pdfDoc.context.obj({});
     pageDict.set(PDFName.of("Resources"), resources);
@@ -130,10 +126,9 @@ catalog.set(PDFName.of("Metadata"), metadataRef);
 
   /** ---------------- Debug logs ---------------- */
   console.log("✅ PostProcess Debug:");
-  console.log("Catalog keys:", catalog.keys().map(k => k.value()));
+  console.log("Catalog keys:", catalog.keys().map((k) => k.value()));
   console.log("OutputIntents type:", catalog.lookup(PDFName.of("OutputIntents")).constructor.name);
   console.log("Metadata type:", catalog.lookup(PDFName.of("Metadata")).constructor.name);
-  console.log("Metadata size:", xmpBuffer.length);
   console.log("Pages:", pages.length);
 
   /** ---------------- Save final PDF ---------------- */
