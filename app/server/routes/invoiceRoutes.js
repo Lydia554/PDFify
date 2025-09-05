@@ -390,18 +390,23 @@ tempInputPath,
 ];
 
 
-      console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
-      await new Promise((resolve, reject) => {
-        execFile("gs", gsArgs, (err) => {
-          if (err) {
-            console.error("❌ Ghostscript failed:", err);
-            reject(err);
-          } else {
-            console.log("✅ Ghostscript finished successfully");
-            resolve();
-          }
-        });
-      });
+console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
+await new Promise((resolve, reject) => {
+  execFile("gs", gsArgs, { encoding: "utf-8" }, (err, stdout, stderr) => {
+    console.log("📄 Ghostscript stdout:\n", stdout);
+    console.log("📄 Ghostscript stderr:\n", stderr);
+
+    if (err) {
+      console.error("❌ Ghostscript failed with code:", err.code);
+      console.error("💬 Ghostscript error message:", err.message);
+      reject(err);
+    } else {
+      console.log("✅ Ghostscript finished successfully");
+      resolve();
+    }
+  });
+});
+
 
       console.log(`📁 Reading final PDF output from: ${tempOutput}`);
       let finalPdf = fs.readFileSync(tempOutput);
