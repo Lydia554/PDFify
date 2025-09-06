@@ -59,14 +59,29 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
   return await pdfDoc.save({ useObjectStreams: false });
 }
 
-// --- Ghostscript detection for Windows ---
+-
+// --- Ghostscript detection ---
 function detectGhostscript() {
+  const { execSync } = require("child_process");
+
+  // 1️⃣ First, try if 'gs' or 'gswin64c' is in PATH
+  try {
+    const version = execSync("gswin64c -v", { stdio: "pipe" }).toString();
+    if (version.includes("Ghostscript")) return "gswin64c";
+  } catch {}
+
+  try {
+    const version = execSync("gs -v", { stdio: "pipe" }).toString();
+    if (version.includes("Ghostscript")) return "gs";
+  } catch {}
+
+  // 2️⃣ Fallback: check common installation paths
   const possibleGsPaths = [
     'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
     'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
   ];
   const gsExe = possibleGsPaths.find(p => fs.existsSync(p));
-  if (!gsExe) throw new Error('Ghostscript not found. Install Ghostscript.');
+  if (!gsExe) throw new Error('Ghostscript not found. Please install it or add it to PATH.');
   return gsExe;
 }
 
