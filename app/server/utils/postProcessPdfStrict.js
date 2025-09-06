@@ -1,19 +1,16 @@
-
-const { PDFDocument, PDFName } = require('pdf-lib');
-
+const { PDFDocument, PDFName, PDFString } = require('pdf-lib');
 const fs = require('fs');
 
 async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
   // 1️⃣ Embed ICC profile as OutputIntent
-
   const iccBytes = fs.readFileSync(iccPath);
   const iccOutputIntent = pdfDoc.context.obj({
     Type: PDFName.of('OutputIntent'),
     S: PDFName.of('GTS_PDFA1'),                     // Correct /S for PDF/A-3b
-    OutputConditionIdentifier: pdfDoc.context.str('sRGB IEC61966-2.1'),
-    Info: pdfDoc.context.str('sRGB IEC61966-2.1'),
+    OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
+    Info: PDFString.of('sRGB IEC61966-2.1'),
     DestOutputProfile: pdfDoc.context.stream(iccBytes),
   });
 
@@ -34,7 +31,6 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
   if (fs.existsSync(xmpPath)) {
     let xmpData = fs.readFileSync(xmpPath, 'utf8');
 
-    // Wrap in xpacket if missing
     if (!xmpData.includes('<x:xmpmeta')) {
       xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
@@ -45,7 +41,7 @@ ${xmpData}
 
     const xmpStream = pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'));
     const metadataRef = pdfDoc.context.register(xmpStream);
-    pdfDoc.catalog.set('Metadata', metadataRef);
+    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 
     console.log('📄 XMP metadata registered, length:', xmpData.length);
   }
@@ -54,20 +50,19 @@ ${xmpData}
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'));
     const zugferdFileSpec = pdfDoc.context.obj({
-      Type: pdfDoc.context.name('Filespec'),
-      F: pdfDoc.context.str('zugferd.xml'),
+      Type: PDFName.of('Filespec'),
+      F: PDFString.of('zugferd.xml'),
       EF: { F: zugferdStream },
     });
 
     const afArray = pdfDoc.context.obj([zugferdFileSpec]);
-    pdfDoc.catalog.set('AF', afArray);
+    pdfDoc.catalog.set(PDFName.of('AF'), afArray);
 
     console.log('📎 ZUGFeRD XML attached, length:', zugferdXml.length);
   }
 
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
 
-  // Log catalog OutputIntents after save
   const catalog = pdfDoc.catalog.lookupMaybe('OutputIntents');
   console.log('🔹 Catalog /OutputIntents after embedding:', catalog ? catalog.toString() : 'None');
 
