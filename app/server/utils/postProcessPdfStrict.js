@@ -6,9 +6,10 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
 
   // 1️⃣ Embed ICC profile as OutputIntent
   const iccBytes = fs.readFileSync(iccPath);
+
   const iccOutputIntent = pdfDoc.context.obj({
     Type: PDFName.of('OutputIntent'),
-    S: PDFName.of('GTS_PDFA1'),                     // Correct /S for PDF/A-3b
+    S: PDFName.of('GTS_PDFA1'),                       // Required for PDF/A-3b
     OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
     Info: PDFString.of('sRGB IEC61966-2.1'),
     DestOutputProfile: pdfDoc.context.stream(iccBytes),
@@ -19,18 +20,13 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
     pdfDoc.context.obj([iccOutputIntent])
   );
 
-  console.log('📌 ICC OutputIntent dictionary registered:');
-  console.log({
-    Type: 'OutputIntent',
-    S: 'GTS_PDFA1',
-    OutputConditionIdentifier: 'sRGB IEC61966-2.1',
-    DestOutputProfileLength: iccBytes.length,
-  });
+  console.log('📌 ICC OutputIntent embedded, length:', iccBytes.length);
 
   // 2️⃣ Embed XMP metadata
   if (fs.existsSync(xmpPath)) {
     let xmpData = fs.readFileSync(xmpPath, 'utf8');
 
+    // Wrap in xpacket if missing
     if (!xmpData.includes('<x:xmpmeta')) {
       xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
@@ -43,10 +39,10 @@ ${xmpData}
     const metadataRef = pdfDoc.context.register(xmpStream);
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 
-    console.log('📄 XMP metadata registered, length:', xmpData.length);
+    console.log('📄 XMP metadata embedded, length:', xmpData.length);
   }
 
-  // 3️⃣ Optionally embed ZUGFeRD XML as a file attachment
+  // 3️⃣ Optionally attach ZUGFeRD XML as embedded file
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'));
     const zugferdFileSpec = pdfDoc.context.obj({
@@ -63,8 +59,9 @@ ${xmpData}
 
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
 
-  const catalog = pdfDoc.catalog.lookupMaybe('OutputIntents');
-  console.log('🔹 Catalog /OutputIntents after embedding:', catalog ? catalog.toString() : 'None');
+  // ✅ Log catalog OutputIntents after save
+  const catalogIntents = pdfDoc.catalog.lookup(PDFName.of('OutputIntents'));
+  console.log('🔹 Catalog /OutputIntents:', catalogIntents ? catalogIntents.toString() : 'None');
 
   return finalBytes;
 }
