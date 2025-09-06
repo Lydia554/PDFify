@@ -26,13 +26,10 @@ const FORCE_PLAN = process.env.FORCE_PLAN;
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
-process.env.ICC_PROFILE_PATH = path.resolve(__dirname, "sRGB_v4_ICC_preference.icc");
+  const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
+  const gsIccPath = iccPath.replace(/\\/g, "/");
 
-const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
-const gsIccPath = iccPath.replace(/\\/g, "/");
-
-console.log("🔍 Using ICC profile path:", iccPath);
-
+  console.log("🔍 Using ICC profile path:", iccPath);
 
   try {
     const gsVersion = execSync("gs --version").toString().trim();
@@ -112,7 +109,11 @@ console.log("🔍 Using ICC profile path:", iccPath);
       }
       if (!Array.isArray(invoiceData.items)) invoiceData.items = [];
 
-      if (!user.isPremium) { invoiceData.isBasicUser = true; invoiceData.customLogoUrl = null; invoiceData.showChart = false; }
+      if (!user.isPremium) {
+        invoiceData.isBasicUser = true;
+        invoiceData.customLogoUrl = null;
+        invoiceData.showChart = false;
+      }
 
       // --- Generate HTML + PDF via Puppeteer ---
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
@@ -138,7 +139,7 @@ console.log("🔍 Using ICC profile path:", iccPath);
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
 
-      // --- Inject XMP/ZUGFeRD metadata BEFORE Ghostscript ---
+      // --- Pre-Ghostscript injection (ZUGFeRD / XMP) ONLY for PRO users ---
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
         const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
@@ -165,8 +166,9 @@ console.log("🔍 Using ICC profile path:", iccPath);
       });
 
       let finalPdf = fs.readFileSync(tempOutput);
+      fs.unlinkSync(tempInput);
 
-      // --- Optional minimal tweaks AFTER Ghostscript ---
+      // --- Post-Ghostscript tweaks ONLY for PRO users ---
       if (user.plan === "pro") {
         finalPdf = await postProcessPdfStrict(finalPdf, iccPath, null, null);
       }
@@ -174,8 +176,13 @@ console.log("🔍 Using ICC profile path:", iccPath);
       results.push({ index, pdf: finalPdf });
     }
 
+    // --- Send results ---
     if (results.length === 1) {
-      res.set({ "Content-Type": "application/pdf", "Content-Disposition": `inline; filename=invoice.pdf`, "Content-Length": results[0].pdf.length });
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename=invoice.pdf`,
+        "Content-Length": results[0].pdf.length
+      });
       res.send(results[0].pdf);
     } else {
       const archive = archiver("zip", { zlib: { level: 9 } });
