@@ -19,15 +19,16 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
   const iccRef = ctx.register(iccStream);
   console.log(`📌 ICC stream registered, length: ${iccBytes.length}`);
 
-  // Create OutputIntent dictionary
-  const outputIntentDict = ctx.obj({
-    Type: PDFName.of('OutputIntent'),
-    S: PDFName.of('GTS_PDFA1'), // PDF/A-3b requires GTS_PDFA1
-    OutputConditionIdentifier: PDFHexString.fromText('sRGB IEC61966-2.1'),
-    Info: PDFHexString.fromText('sRGB IEC61966-2.1'),
-    DestOutputProfile: iccRef,
-    RegistryName: PDFHexString.fromText('http://www.color.org')
-  });
+// Create OutputIntent dictionary for sRGB v4
+const outputIntentDict = ctx.obj({
+  Type: PDFName.of('OutputIntent'),
+  S: PDFName.of('GTS_PDFA1'), // PDF/A-3b requires GTS_PDFA1
+  OutputConditionIdentifier: PDFHexString.fromText('sRGB v4 ICC Preference'),
+  Info: PDFHexString.fromText('sRGB v4 ICC Preference'),
+  DestOutputProfile: iccRef,
+  RegistryName: PDFHexString.fromText('http://www.color.org')
+});
+
   const outputIntentRef = ctx.register(outputIntentDict);
   console.log('📌 OutputIntent dictionary registered');
 
