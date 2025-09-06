@@ -5,21 +5,22 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
   // 1️⃣ Embed ICC profile as OutputIntent
-  const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.stream(iccBytes);
+const iccBytes = fs.readFileSync(iccPath); // path to sRGB_v4_ICC_preference.icc
+const iccStream = pdfDoc.context.stream(iccBytes);
 
-  const outputIntent = pdfDoc.context.obj({
-    Type: PDFName.of('OutputIntent'),
-    S: PDFName.of('GTS_PDFA1'),                        // ✅ PDF/A-3b requires this
-    OutputConditionIdentifier: PDFHexString.fromText('sRGB IEC61966-2.1'),
-    Info: PDFHexString.fromText('sRGB IEC61966-2.1'),
-    DestOutputProfile: iccStream,
-  });
+const outputIntent = pdfDoc.context.obj({
+  Type: PDFName.of('OutputIntent'),
+  S: PDFName.of('GTS_PDFA1'),                  // PDF/A-3b requires this
+  OutputConditionIdentifier: pdfDoc.context.obj('sRGB IEC61966-2.1'), // ASCII string
+  Info: pdfDoc.context.obj('sRGB IEC61966-2.1'),
+  DestOutputProfile: iccStream,
+});
 
-  pdfDoc.catalog.set(
-    PDFName.of('OutputIntents'),
-    pdfDoc.context.obj([outputIntent])
-  );
+pdfDoc.catalog.set(
+  PDFName.of('OutputIntents'),
+  pdfDoc.context.obj([outputIntent])
+);
+
 
   console.log('📌 ICC OutputIntent embedded');
 
