@@ -1,7 +1,7 @@
-const { PDFDocument, PDFName, PDFHexString } = require('pdf-lib');
+const { PDFDocument, PDFName } = require('pdf-lib');
 const fs = require('fs');
 
-async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
+async function postProcessPdfStrict(pdfBytes, xmpPath, zugferdXml = null) {
   console.log('🛠️ Starting postProcessPdfStrict...');
 
   // Load PDF
@@ -9,30 +9,6 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
   const ctx = pdf.context;
   const catalog = pdf.catalog.dict;
   console.log(`📄 PDF loaded for post-processing, pages: ${pdf.getPageCount()}`);
-
-  // --- ICC / OutputIntent ---
-  console.log('🎨 Embedding ICC profile...');
-  const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = ctx.flateStream(iccBytes, {
-    N: 3,
-    Alternate: PDFName.of('DeviceRGB'),
-    Filter: PDFName.of('FlateDecode'),
-  });
-  const iccRef = ctx.register(iccStream);
-
-  const outputIntentDict = ctx.obj({
-    Type: PDFName.of('OutputIntent'),
-    S: PDFName.of('GTS_PDFA3'), // PDF/A-3b
-    OutputConditionIdentifier: PDFHexString.of('sRGB IEC61966-2.1'),
-    Info: PDFHexString.of('sRGB IEC61966-2.1'),
-    DestOutputProfile: iccRef,
-    RegistryName: PDFHexString.of('http://www.color.org'),
-  });
-
-  const outputIntentRef = ctx.register(outputIntentDict);
-  const oiArray = ctx.obj([outputIntentRef]);
-  catalog.set(PDFName.of('OutputIntents'), oiArray);
-  console.log('✅ ICC OutputIntent registered into PDF');
 
   // --- Metadata (XMP) ---
   console.log('📄 Loading XMP template...');
