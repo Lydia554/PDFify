@@ -36,17 +36,24 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
       })
     );
 
-    // Merge with existing /AF array if present
+    // Merge with existing /AF array
+    let afArray;
     const existingAF = pdfDoc.catalog.get(PDFName.of('AF'));
     if (existingAF) {
-      const afArray = pdfDoc.context.lookup(existingAF, PDFArray);
-      afArray.push(zugferdFileSpec);
-      pdfDoc.catalog.set(PDFName.of('AF'), afArray);
+      afArray = pdfDoc.context.lookup(existingAF, PDFArray);
+      // Check for existing ZUGFeRD file
+      const hasZugferd = afArray.some(ref => {
+        const fsObj = pdfDoc.context.lookup(ref);
+        const fileName = fsObj.get(PDFName.of('F'));
+        return fileName && fileName.value === 'zugferd-invoice.xml';
+      });
+      if (!hasZugferd) afArray.push(zugferdFileSpec);
     } else {
-      pdfDoc.catalog.set(PDFName.of('AF'), pdfDoc.context.obj([zugferdFileSpec]));
+      afArray = pdfDoc.context.obj([zugferdFileSpec]);
     }
 
-    console.log('📦 ZUGFeRD XML attached with /AFRelationship (merged if existing)');
+    pdfDoc.catalog.set(PDFName.of('AF'), afArray);
+    console.log('📦 ZUGFeRD XML attached with /AFRelationship (no duplicates)');
   }
 
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
