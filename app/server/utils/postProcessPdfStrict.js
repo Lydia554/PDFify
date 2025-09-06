@@ -48,7 +48,9 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null,
     console.log('🎨 /OutputIntents replaced with GTS_PDFA1');
   }
 
-  // --- Attach ZUGFeRD XML ---
+
+
+  // --- Attach ZUGFeRD XML if provided ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
     const zugferdFileSpec = pdfDoc.context.register(
@@ -60,13 +62,26 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null,
       })
     );
 
-    const afArray = pdfDoc.context.obj([zugferdFileSpec]);
+    let afArray = pdfDoc.catalog.get(PDFName.of('AF'));
+    if (!afArray) {
+      afArray = pdfDoc.context.obj([zugferdFileSpec]);
+    } else {
+      afArray = pdfDoc.context.lookup(afArray, PDFArray);
+      const hasZugferd = afArray.some(ref => {
+        const fsObj = pdfDoc.context.lookup(ref);
+        const fileName = fsObj.get(PDFName.of('F'));
+        return fileName && fileName.value === 'zugferd-invoice.xml';
+      });
+      if (!hasZugferd) afArray.push(zugferdFileSpec);
+    }
+
     pdfDoc.catalog.set(PDFName.of('AF'), afArray);
-    console.log('📦 ZUGFeRD XML attached (duplicates removed)');
+    console.log('📦 ZUGFeRD XML attached');
   }
 
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
   return finalBytes;
 }
+
 
 module.exports = { postProcessPdfStrict };

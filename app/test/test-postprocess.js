@@ -41,17 +41,29 @@ const { execFileSync, execSync } = require('child_process');
     if (!fs.existsSync(iccPath)) throw new Error('ICC profile not found');
 
     // 5️⃣ Run Ghostscript
-    execFileSync(gsExe, [
-      '-dPDFA=3', '-dBATCH', '-dNOPAUSE', '-sDEVICE=pdfwrite',
-      '-dEmbedAllFonts=true', '-dSubsetFonts=true',
-      '-dPreserveDocInfo=true', '-dPreserveAnnots=true', '-dPDFACompatibilityPolicy=1',
-      '-dAutoRotatePages=/None', '-sColorConversionStrategy=RGB', '-dProcessColorModel=/DeviceRGB',
-      '-dConvertCMYKImagesToRGB=true', '-dDownsampleColorImages=false', '-dDownsampleGrayImages=false',
-      '-dDownsampleMonoImages=false', '-dPDFSETTINGS=/prepress',
-      `-sOutputICCProfile=${iccPath}`,
-      `-sOutputFile=${gsOutputPath}`,
-      inputPdfPath
-    ], { stdio: 'inherit' });
+ execFileSync(gsExe, [
+  '-dPDFA=3',
+  '-dBATCH',
+  '-dNOPAUSE',
+  '-sDEVICE=pdfwrite',
+  '-dEmbedAllFonts=true',
+  '-dSubsetFonts=true',
+  '-dPreserveDocInfo=true',
+  '-dPreserveAnnots=true',
+  '-dPDFACompatibilityPolicy=1',
+  '-dAutoRotatePages=/None',
+  '-sColorConversionStrategy=RGB',
+  '-dProcessColorModel=/DeviceRGB',
+  '-dConvertCMYKImagesToRGB=true',
+  '-dDownsampleColorImages=false',
+  '-dDownsampleGrayImages=false',
+  '-dDownsampleMonoImages=false',
+  '-dPDFSETTINGS=/prepress',
+  `-sOutputICCProfile=${iccPath}`,
+  `-sOutputFile=${gsOutputPath}`,
+  inputPdfPath
+], { stdio: 'inherit' });
+
 
     console.log('✅ Ghostscript PDF/A-3b generated:', gsOutputPath);
 
