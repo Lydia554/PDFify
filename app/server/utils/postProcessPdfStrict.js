@@ -1,49 +1,73 @@
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { PDFDocument } = require('pdf-lib');
 const fs = require('fs');
 
 async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // 1️⃣ Embed ICC profile
+  // 1️⃣ Embed ICC profile as OutputIntent
   const iccBytes = fs.readFileSync(iccPath);
-  const iccColorSpace = pdfDoc.context.obj({
-    Type: 'OutputIntent',
-    S: 'GTS_PDFA1',                        // ✅ Correct S entry for PDF/A-3b
-    OutputConditionIdentifier: 'sRGB IEC61966-2.1',
-    Info: 'sRGB IEC61966-2.1',
+  const iccOutputIntent = pdfDoc.context.obj({
+    Type: pdfDoc.context.name('OutputIntent'),
+    S: pdfDoc.context.name('GTS_PDFA1'),                 // Required for PDF/A-3b
+    OutputConditionIdentifier: pdfDoc.context.str('sRGB IEC61966-2.1'),
+    Info: pdfDoc.context.str('sRGB IEC61966-2.1'),
     DestOutputProfile: pdfDoc.context.stream(iccBytes),
   });
 
-  // Attach OutputIntent to catalog
-  const catalog = pdfDoc.catalog;
-  catalog.set('OutputIntents', pdfDoc.context.obj([iccColorSpace]));
+  pdfDoc.catalog.set(
+    'OutputIntents',
+    pdfDoc.context.obj([iccOutputIntent])
+  );
+
+  console.log('📌 ICC OutputIntent dictionary registered:');
+  console.log({
+    Type: 'OutputIntent',
+    S: 'GTS_PDFA1',
+    OutputConditionIdentifier: 'sRGB IEC61966-2.1',
+    DestOutputProfileLength: iccBytes.length,
+  });
 
   // 2️⃣ Embed XMP metadata
   if (fs.existsSync(xmpPath)) {
     let xmpData = fs.readFileSync(xmpPath, 'utf8');
 
-    // Wrap XMP if needed
+    // Wrap in xpacket if missing
     if (!xmpData.includes('<x:xmpmeta')) {
-      xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>\n<x:xmpmeta xmlns:x='adobe:ns:meta/'>\n${xmpData}\n</x:xmpmeta>\n<?xpacket end='w'?>`;
+      xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/'>
+${xmpData}
+</x:xmpmeta>
+<?xpacket end='w'?>`;
     }
 
-    pdfDoc.setXmpMetadata(xmpData);
+    const xmpStream = pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'));
+    const metadataRef = pdfDoc.context.register(xmpStream);
+    pdfDoc.catalog.set('Metadata', metadataRef);
+
+    console.log('📄 XMP metadata registered, length:', xmpData.length);
   }
 
-  // 3️⃣ Optionally attach ZUGFeRD XML as embedded file
+  // 3️⃣ Optionally embed ZUGFeRD XML as a file attachment
   if (zugferdXml) {
-    const fileStream = pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'));
-    const fileSpec = pdfDoc.context.obj({
-      Type: 'Filespec',
-      F: 'zugferd.xml',
-      EF: { F: fileStream },
+    const zugferdStream = pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'));
+    const zugferdFileSpec = pdfDoc.context.obj({
+      Type: pdfDoc.context.name('Filespec'),
+      F: pdfDoc.context.str('zugferd.xml'),
+      EF: { F: zugferdStream },
     });
 
-    const afArray = pdfDoc.context.obj([fileSpec]);
+    const afArray = pdfDoc.context.obj([zugferdFileSpec]);
     pdfDoc.catalog.set('AF', afArray);
+
+    console.log('📎 ZUGFeRD XML attached, length:', zugferdXml.length);
   }
 
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
+
+  // Log catalog OutputIntents after save
+  const catalog = pdfDoc.catalog.lookupMaybe('OutputIntents');
+  console.log('🔹 Catalog /OutputIntents after embedding:', catalog ? catalog.toString() : 'None');
+
   return finalBytes;
 }
 
