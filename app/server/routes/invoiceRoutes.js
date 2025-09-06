@@ -69,6 +69,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
 
+      // Germany VAT split
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.items = invoiceData.items.map(item => {
           const totalNum = parseFloat(item.total || 0);
@@ -119,11 +120,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // Post-process for Pro users
+      // Only attach ZUGFeRD for Pro users
       if (user.plan === "pro") {
-        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
         const zugferdXml = generateZugferdXML(invoiceData);
-        finalPdf = await postProcessPdfStrict(finalPdf, xmpPath, zugferdXml);
+        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml);
       }
 
       // Increment usage
