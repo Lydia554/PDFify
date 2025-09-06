@@ -9,7 +9,7 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
-const { execFile } = require("child_process");
+const { execFile, execSync } = require("child_process");
 const { incrementUsage } = require("../utils/usageUtils");
 const os = require("os");
 
@@ -59,23 +59,19 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
   return await pdfDoc.save({ useObjectStreams: false });
 }
 
--
 // --- Ghostscript detection ---
 function detectGhostscript() {
-  const { execSync } = require("child_process");
-
-  // 1️⃣ First, try if 'gs' or 'gswin64c' is in PATH
+  // Try PATH first
   try {
     const version = execSync("gswin64c -v", { stdio: "pipe" }).toString();
     if (version.includes("Ghostscript")) return "gswin64c";
   } catch {}
-
   try {
     const version = execSync("gs -v", { stdio: "pipe" }).toString();
     if (version.includes("Ghostscript")) return "gs";
   } catch {}
 
-  // 2️⃣ Fallback: check common installation paths
+  // Check common Windows paths
   const possibleGsPaths = [
     'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
     'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
