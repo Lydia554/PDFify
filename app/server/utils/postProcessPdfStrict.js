@@ -1,10 +1,10 @@
-const { PDFDocument, PDFName, PDFString } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFString, PDFArray } = require('pdf-lib');
 const fs = require('fs');
 
 async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // --- Attach ZUGFeRD XML ---
+  // --- Attach ZUGFeRD XML if provided ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(
       pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'))
@@ -23,7 +23,6 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     if (!afArray) {
       afArray = pdfDoc.context.obj([zugferdFileSpec]);
     } else {
-      const PDFArray = require('pdf-lib').PDFArray;
       afArray = pdfDoc.context.lookup(afArray, PDFArray);
       const hasZugferd = afArray.some(ref => {
         const fsObj = pdfDoc.context.lookup(ref);
@@ -37,8 +36,8 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     console.log('📦 ZUGFeRD XML attached');
   }
 
-  // --- Inject multilingual XMP metadata ---
-const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
+  // --- Inject minimal XMP metadata for validator awareness ---
+  const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
 
   const xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
   <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
@@ -58,7 +57,7 @@ const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
 
   const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
   pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
-  console.log('📄 Multilingual XMP metadata injected (PDF/A-3b compliant)');
+  console.log('📄 XMP metadata injected for PDF/A-3b awareness');
 
   return await pdfDoc.save({ useObjectStreams: false });
 }
