@@ -9,8 +9,8 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
   const iccStream = pdfDoc.context.register(pdfDoc.context.stream(iccBytes));
 
   const outputIntentDict = pdfDoc.context.obj({
-    Type: PDFName.of('OutputIntent'),
-    S: PDFName.of('GTS_PDFA1'),
+    Type: 'OutputIntent', // ✅ direct name
+    S: 'GTS_PDFA1',       // ✅ direct name for strict PDF/A validator
     OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
     Info: PDFString.of('sRGB IEC61966-2.1'),
     DestOutputProfile: iccStream
@@ -28,17 +28,16 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
 
   // --- XMP metadata
   let xmpData = fs.existsSync(xmpPath) ? fs.readFileSync(xmpPath, 'utf8') : '';
+
+  // ✅ Inject into first <rdf:Description> instead of after </rdf:RDF>
   if (!xmpData.includes('<pdfaid:part>3</pdfaid:part>')) {
     xmpData = xmpData.replace(
-      '</rdf:RDF>',
-      `<rdf:Description rdf:about=""
-        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-        <pdfaid:part>3</pdfaid:part>
-        <pdfaid:conformance>B</pdfaid:conformance>
-      </rdf:Description>
-    </rdf:RDF>`
+      /<rdf:Description[^>]*>/,
+      `$&\n<pdfaid:part>3</pdfaid:part>\n<pdfaid:conformance>B</pdfaid:conformance>`
     );
   }
+
+  // Add XPacket wrapper if missing
   if (!xmpData.includes('<?xpacket')) {
     xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>${xmpData}<?xpacket end='w'?>`;
   }
