@@ -26,7 +26,6 @@ const FORCE_PLAN = process.env.FORCE_PLAN;
 async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // --- XMP metadata ---
   if (xmpPath) {
     let xmpData = fs.readFileSync(xmpPath, 'utf8');
     if (!xmpData.includes('<pdfaid:part>3</pdfaid:part>')) {
@@ -43,7 +42,6 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
     console.log('📄 XMP metadata attached');
   }
 
-  // --- Attach ZUGFeRD XML ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
     const zugferdFileSpec = pdfDoc.context.register(
@@ -51,26 +49,23 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
         Type: PDFName.of('Filespec'),
         F: PDFString.of('zugferd-invoice.xml'),
         EF: pdfDoc.context.obj({ F: zugferdStream }),
-        AFRelationship: PDFName.of('Alternative') // ensures /AFRelationship
+        AFRelationship: PDFName.of('Alternative')
       })
     );
     pdfDoc.catalog.set(PDFName.of('AF'), pdfDoc.context.obj([zugferdFileSpec]));
     console.log('📦 ZUGFeRD XML attached with /AFRelationship');
   }
 
-  const finalBytes = await pdfDoc.save({ useObjectStreams: false });
-  return finalBytes;
+  return await pdfDoc.save({ useObjectStreams: false });
 }
 
-// --- Helper to detect Ghostscript executable ---
+// --- Ghostscript detection for Windows ---
 function detectGhostscript() {
   const possibleGsPaths = [
-    'gs', // Linux / MacOS
-    'gswin64c', 'gswin32c', // Windows if in PATH
     'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
     'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
   ];
-  const gsExe = possibleGsPaths.find(p => fs.existsSync(p) || p === 'gs' || p === 'gswin64c' || p === 'gswin32c');
+  const gsExe = possibleGsPaths.find(p => fs.existsSync(p));
   if (!gsExe) throw new Error('Ghostscript not found. Install Ghostscript.');
   return gsExe;
 }
@@ -98,10 +93,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
 
-    // --- Detect Ghostscript once
+    // Detect Ghostscript once
     const gsExe = detectGhostscript();
-console.log("🎯 Ghostscript detected:", gsExe);
-
+    console.log("🎯 Ghostscript detected:", gsExe);
 
     for (const [index, { data, isPreview }] of requests.entries()) {
       if (!data) { results.push({ error: "Invalid data" }); continue; }
@@ -125,7 +119,7 @@ console.log("🎯 Ghostscript detected:", gsExe);
 
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // --- Puppeteer PDF ---
+      // Puppeteer PDF
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -139,7 +133,7 @@ console.log("🎯 Ghostscript detected:", gsExe);
       });
       await page.close();
 
-      // --- Ghostscript PDF/A-3b conversion ---
+      // Ghostscript PDF/A-3b conversion
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
@@ -154,19 +148,21 @@ console.log("🎯 Ghostscript detected:", gsExe);
         `-sOutputICCProfile=${gsIccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
       ];
 
-     await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
+      await new Promise((resolve, reject) =>
+        execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
+      );
 
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // --- Post-process ONLY Pro users ---
+      // Post-process Pro users
       if (user.plan === "pro") {
         const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
         const zugferdXml = generateZugferdXML(invoiceData);
         finalPdf = await postProcessPdfStrict(finalPdf, xmpPath, zugferdXml);
       }
 
-      // --- Count pages & usage ---
+      // Count pages & usage
       const pdfDoc = await PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
@@ -175,7 +171,7 @@ console.log("🎯 Ghostscript detected:", gsExe);
       results.push({ index, pdf: finalPdf });
     }
 
-    // --- Send results ---
+    // Send results
     if (results.length === 1) {
       res.set({
         "Content-Type": "application/pdf",
