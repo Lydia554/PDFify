@@ -38,7 +38,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
   }
 
   // --- Inject multilingual XMP metadata ---
-  const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
+const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
 
   const xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
   <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
