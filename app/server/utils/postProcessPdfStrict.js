@@ -5,17 +5,18 @@ async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = nul
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
   // 1️⃣ Embed ICC profile as OutputIntent
+
   const iccBytes = fs.readFileSync(iccPath);
   const iccOutputIntent = pdfDoc.context.obj({
-    Type: pdfDoc.context.name('OutputIntent'),
-    S: pdfDoc.context.name('GTS_PDFA1'),                 // Required for PDF/A-3b
+    Type: PDFName.of('OutputIntent'),
+    S: PDFName.of('GTS_PDFA1'),                     // Correct /S for PDF/A-3b
     OutputConditionIdentifier: pdfDoc.context.str('sRGB IEC61966-2.1'),
     Info: pdfDoc.context.str('sRGB IEC61966-2.1'),
     DestOutputProfile: pdfDoc.context.stream(iccBytes),
   });
 
   pdfDoc.catalog.set(
-    'OutputIntents',
+    PDFName.of('OutputIntents'),
     pdfDoc.context.obj([iccOutputIntent])
   );
 
