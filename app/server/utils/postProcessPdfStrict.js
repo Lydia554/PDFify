@@ -1,11 +1,12 @@
 const { PDFDocument, PDFName, PDFString, PDFArray } = require('pdf-lib');
 const fs = require('fs');
+const path = require('path');
 
-async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null) {
+async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null, iccPath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // --- XMP metadata injection with proper RDF namespaces ---
-  if (xmpPath) {
+  // --- XMP metadata injection ---
+  if (xmpPath && fs.existsSync(xmpPath)) {
     let xmpData = fs.readFileSync(xmpPath, 'utf8');
 
     // Inject PDF/A-3b identifiers if missing
@@ -29,6 +30,25 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
     console.log('📄 XMP metadata attached with RDF namespaces');
   }
 
+  // --- /OutputIntents for PDF/A-3b ---
+  if (iccPath && fs.existsSync(iccPath)) {
+    const iccBytes = fs.readFileSync(iccPath);
+    const iccStream = pdfDoc.context.register(pdfDoc.context.stream(iccBytes));
+
+    const outputIntent = pdfDoc.context.obj({
+      Type: PDFName.of('OutputIntent'),
+      S: PDFName.of('GTS_PDFA1'),
+      OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
+      Info: PDFString.of('sRGB IEC61966-2.1'),
+      DestOutputProfile: iccStream
+    });
+
+    pdfDoc.catalog.set(PDFName.of('OutputIntents'), pdfDoc.context.obj([outputIntent]));
+    console.log('🎨 /OutputIntents added for PDF/A-3b');
+  } else {
+    console.warn('⚠️ ICC profile missing, skipping /OutputIntents');
+  }
+
   // --- Attach ZUGFeRD XML ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
@@ -41,12 +61,10 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
       })
     );
 
-    // Merge with existing /AF array if present
     let afArray;
     const existingAF = pdfDoc.catalog.get(PDFName.of('AF'));
     if (existingAF) {
       afArray = pdfDoc.context.lookup(existingAF, PDFArray);
-      // Only attach if not already present
       const hasZugferd = afArray.some(ref => {
         const fsObj = pdfDoc.context.lookup(ref);
         const fileName = fsObj.get(PDFName.of('F'));

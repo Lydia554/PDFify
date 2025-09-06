@@ -23,7 +23,7 @@ const locales = {
 const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
-// --- Detect Ghostscript for Windows ---
+// --- Detect Ghostscript executable ---
 function detectGhostscript() {
   const possiblePaths = [
     'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
@@ -32,7 +32,6 @@ function detectGhostscript() {
 
   for (const p of possiblePaths) if (fs.existsSync(p)) return p;
 
-  // fallback to PATH names
   try { if (require('child_process').execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gswin64c"; } catch {}
   try { if (require('child_process').execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gs"; } catch {}
 
@@ -44,7 +43,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
   const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
-  const gsIccPath = iccPath.replace(/\\/g, "/");
   if (!fs.existsSync(iccPath)) return res.status(500).json({ error: "ICC profile missing." });
 
   const tmpDir = path.join(os.tmpdir(), `pdfify-batch-${Date.now()}`);
@@ -61,8 +59,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
-
-    // Detect Ghostscript once
     const gsExe = detectGhostscript();
     console.log("🎯 Ghostscript detected:", gsExe);
 
@@ -85,7 +81,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.taxRate = typeof invoiceData.taxRate === "number"
         ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
         : invoiceData.taxRate || '21%';
-
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
       // Puppeteer PDF
@@ -109,12 +104,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       const gsArgs = [
         "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-sDEVICE=pdfwrite",
-        "-dUseCIEColor=true", "-dEmbedAllFonts=true", "-dSubsetFonts=true",
+        "-dEmbedAllFonts=true", "-dSubsetFonts=true",
         "-dPreserveDocInfo=true", "-dPreserveAnnots=true", "-dPDFACompatibilityPolicy=1",
         "-dAutoRotatePages=/None", "-sColorConversionStrategy=RGB", "-dProcessColorModel=/DeviceRGB",
         "-dConvertCMYKImagesToRGB=true", "-dDownsampleColorImages=false", "-dDownsampleGrayImages=false",
         "-dDownsampleMonoImages=false", "-dPDFSETTINGS=/prepress",
-        `-sOutputICCProfile=${gsIccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
+        `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
       ];
 
       await new Promise((resolve, reject) =>
@@ -124,14 +119,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // Post-process PDF for Pro users
+      // Post-process for Pro users
       if (user.plan === "pro") {
         const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
         const zugferdXml = generateZugferdXML(invoiceData);
         finalPdf = await postProcessPdfStrict(finalPdf, xmpPath, zugferdXml);
       }
 
-      // Count pages & enforce usage limits
+      // Increment usage
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);

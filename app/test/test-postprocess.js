@@ -11,19 +11,31 @@ const { execFileSync } = require('child_process');
     if (!fs.existsSync(inputPdfPath)) throw new Error('Input PDF not found');
     console.log('📄 Loaded input PDF:', inputPdfPath);
 
-    // 2️⃣ Detect Ghostscript executable
-    const possibleGsPaths = [
-      'gs', // Unix / PATH
-      'gswin64c', // Windows if in PATH
-      'gswin32c', // 32-bit fallback
-      'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe', // common Windows path
-      'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
-    ];
+  
 
-    let gsExe = possibleGsPaths.find(p => fs.existsSync(p) || p === 'gs' || p === 'gswin64c' || p === 'gswin32c');
-    if (!gsExe) throw new Error('Ghostscript executable not found. Install Ghostscript.');
+ // 2️⃣ Detect Ghostscript executable (Windows safe)
+const possibleGsPaths = [
+  'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
+  'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe',
+  'gswin64c', // fallback if in PATH
+  'gswin32c', // fallback if in PATH
+  'gs'        // Unix / other OS
+];
 
-    console.log('🎯 Using Ghostscript executable:', gsExe);
+let gsExe = possibleGsPaths.find(p => {
+  if (fs.existsSync(p)) return true;
+  try {
+    require('child_process').execSync(`${p} -v`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+});
+
+if (!gsExe) throw new Error('Ghostscript executable not found. Install Ghostscript or adjust path.');
+
+console.log('🎯 Using Ghostscript executable:', gsExe);
+
 
     // 3️⃣ Output path for Ghostscript PDF/A-3b
     const gsOutputPath = path.resolve(__dirname, 'Gen_gs.pdf');
