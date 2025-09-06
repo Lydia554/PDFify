@@ -90,14 +90,16 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       fs.writeFileSync(tempInput, pdfBuffer);
 
       // --- Ghostscript PDF/A-3b conversion ---
-      const gsArgs = [
-        "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-sDEVICE=pdfwrite",
-        "-dUseCIEColor=true", "-dEmbedAllFonts=true", "-dSubsetFonts=true",
-        "-dPreserveDocInfo=true", "-dPDFACompatibilityPolicy=1",
-        `-sOutputICCProfile=${gsIccPath}`,
-        `-sOutputFile=${tempOutput}`,
-        tempInput.replace(/\\/g, "/")
-      ];
+const gsArgs = [
+  "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-sDEVICE=pdfwrite",
+  "-dEmbedAllFonts=true", "-dSubsetFonts=true", "-dPreserveDocInfo=true",
+  "-dPreserveAnnots=true", "-dShowAnnots=true", "-dPDFACompatibilityPolicy=1", "-dAutoRotatePages=/None",
+  "-sColorConversionStrategy=RGB", "-dProcessColorModel=/DeviceRGB", "-dConvertCMYKImagesToRGB=true",
+  "-dDownsampleColorImages=false", "-dDownsampleGrayImages=false", "-dDownsampleMonoImages=false",
+  "-dPDFSETTINGS=/prepress",
+  `-sOutputICCProfile=${gsIccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
+];
+
 
       await new Promise((resolve, reject) => {
         execFile("gs", gsArgs, { encoding: "utf-8" }, (err, stdout, stderr) => err ? reject(err) : resolve());
