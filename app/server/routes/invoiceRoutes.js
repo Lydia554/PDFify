@@ -59,9 +59,20 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
   return await pdfDoc.save({ useObjectStreams: false });
 }
 
-// --- Ghostscript detection ---
 function detectGhostscript() {
-  // Try PATH first
+  const { execSync } = require("child_process");
+
+  // Common Windows paths
+  const possibleGsPaths = [
+    'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
+    'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
+  ];
+
+  for (const p of possibleGsPaths) {
+    if (fs.existsSync(p)) return p; // Return full path
+  }
+
+  // Fallback: check PATH
   try {
     const version = execSync("gswin64c -v", { stdio: "pipe" }).toString();
     if (version.includes("Ghostscript")) return "gswin64c";
@@ -71,15 +82,9 @@ function detectGhostscript() {
     if (version.includes("Ghostscript")) return "gs";
   } catch {}
 
-  // Check common Windows paths
-  const possibleGsPaths = [
-    'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
-    'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
-  ];
-  const gsExe = possibleGsPaths.find(p => fs.existsSync(p));
-  if (!gsExe) throw new Error('Ghostscript not found. Please install it or add it to PATH.');
-  return gsExe;
+  throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
+
 
 // --- Invoice route ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
