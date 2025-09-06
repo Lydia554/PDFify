@@ -26,9 +26,9 @@ const FORCE_PLAN = process.env.FORCE_PLAN;
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
-process.env.ICC_PROFILE_PATH = path.resolve(__dirname, "sRGB_IEC61966-2-1.icc");
+process.env.ICC_PROFILE_PATH = path.resolve(__dirname, "sRGB_v4_ICC_preference");
 
-const iccPath = path.resolve(__dirname, "../routes/sRGB_IEC61966-2-1.icc");
+const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference");
 const gsIccPath = iccPath.replace(/\\/g, "/");
 
 console.log("🔍 Using ICC profile path:", iccPath);
