@@ -27,7 +27,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
 
-const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
+const iccPath = path.resolve(__dirname, "../routes/sRGB_IEC61966-2-1");
 const gsIccPath = iccPath.replace(/\\/g, "/");
 
 console.log("🔍 Using ICC profile path:", iccPath);

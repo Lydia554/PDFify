@@ -8,8 +8,8 @@ const { validatePDFA3bStrict } = require('../tools/pdfa3b-validator');
   try {
     const inputPdfPath = path.resolve(__dirname, 'Gen.pdf');
     const pdfBytes = fs.readFileSync(inputPdfPath);
+const iccPath = path.resolve(__dirname, "../server/routes/sRGB_IEC61966-2-1");
 
-    const iccPath = path.resolve(__dirname, '../sRGB_v4_ICC_preference.icc');
     const xmpPath = path.resolve(__dirname, '../server/xmp/zugferd.xmp');
 
     const zugferdXml = fs.existsSync(path.resolve(__dirname, 'zugferd.xml'))
