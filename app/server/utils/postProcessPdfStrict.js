@@ -1,4 +1,6 @@
-const { PDFDocument } = require('pdf-lib');
+
+const { PDFDocument, PDFName } = require('pdf-lib');
+
 const fs = require('fs');
 
 async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
