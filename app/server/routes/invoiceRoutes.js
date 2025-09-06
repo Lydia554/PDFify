@@ -29,18 +29,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "sRGB_IEC61966-2-1_no_black_scaling.icc");
   const gsIccPath = iccPath.replace(/\\/g, "/");
 
-  console.log("🔍 Using ICC profile path:", iccPath);
-
-  try {
-    const gsVersion = execSync("gs --version").toString().trim();
-    console.log("📦 Ghostscript version:", gsVersion);
-  } catch (err) {
-    console.error("❌ Ghostscript not found:", err.message);
-    return res.status(500).json({ error: "Ghostscript not installed." });
-  }
-
   if (!fs.existsSync(iccPath)) {
-    console.error("❌ ICC profile not found at path:", iccPath);
+    console.error("❌ ICC profile missing at path:", iccPath);
     return res.status(500).json({ error: "ICC profile missing." });
   }
 
@@ -49,29 +39,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   fs.mkdirSync(tmpDir, { recursive: true });
 
   try {
-    let requests = req.body.requests;
-    if (!Array.isArray(requests)) {
-      if (req.body.data) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
-      else return res.status(400).json({ error: "You must send 1-100 requests." });
-    }
-
-    if (requests.length === 0 || requests.length > 100) {
-      return res.status(400).json({ error: "You must send 1-100 requests." });
-    }
+    let requests = Array.isArray(req.body.requests) ? req.body.requests : req.body.data ? [{ data: req.body.data, isPreview: req.body.isPreview }] : [];
+    if (!requests.length || requests.length > 100) return res.status(400).json({ error: "You must send 1-100 requests." });
 
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const now = new Date();
-    if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
-      user.previewCount = 0; user.previewLastReset = now;
-    }
-    if (!user.usageLastReset || now.getMonth() !== user.usageLastReset.getMonth() || now.getFullYear() !== user.usageLastReset.getFullYear()) {
-      user.usageCount = 0; user.usageLastReset = now;
-    }
-
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-
     const results = [];
 
     for (const [index, { data, isPreview }] of requests.entries()) {
@@ -80,41 +54,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         continue;
       }
 
+      // --- Prepare invoice data ---
       let invoiceData = { ...data };
       const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
+      invoiceData.locale = locales[{ slovenia: "sl", germany: "de" }[country] || "en"] || locales["en"];
+      if (!Array.isArray(invoiceData.items)) invoiceData.items = typeof invoiceData.items === "string" ? JSON.parse(invoiceData.items || "[]") : [];
 
-      function parseSafeNumber(value) {
-        if (typeof value === "string") return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
-        return parseFloat(value) || 0;
-      }
-
-      if (country === "germany" && Array.isArray(invoiceData.items)) {
-        invoiceData.items = invoiceData.items.map(item => {
-          const totalNum = parseSafeNumber(item.total);
-          const taxRate = 0.19;
-          const net = totalNum / (1 + taxRate);
-          const taxAmount = totalNum - net;
-          return { ...item, tax: taxAmount.toFixed(2), net: net.toFixed(2) };
-        });
-      }
-
-      invoiceData.taxRate = typeof invoiceData.taxRate === "number"
-        ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
-        : invoiceData.taxRate || '21%';
-
-      const supportedLocales = { slovenia: "sl", germany: "de" };
-      invoiceData.locale = locales[supportedLocales[country] || "en"] || locales["en"];
-
-      if (typeof invoiceData.items === "string") {
-        try { invoiceData.items = JSON.parse(invoiceData.items); } catch { invoiceData.items = []; }
-      }
-      if (!Array.isArray(invoiceData.items)) invoiceData.items = [];
-
-      const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
-      if (!user.isPremium) { invoiceData.isBasicUser = true; invoiceData.customLogoUrl = null; invoiceData.showChart = false; }
-
-      // Generate HTML and PDF via Puppeteer
+      // --- Puppeteer PDF ---
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -125,52 +72,42 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         format: "A4",
         printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-        preferCSSPageSize: false,
         displayHeaderFooter: false,
         tagged: true,
-        outline: false,
       });
       await page.close();
 
-      const pdfDoc = await PDFDocument.load(pdfBuffer);
-      const pageCount = pdfDoc.getPageCount();
-      const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
-      if (!usageAllowed) return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
+      // --- Pre-Ghostscript: Inject XMP/ZUGFeRD ---
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+        pdfBuffer = await postProcessPdfStrict(pdfBuffer, iccPath, xmpPath, zugferdXml);
+      }
 
-      // Temporary input/output for Ghostscript
+      // --- Temporary files for Ghostscript ---
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
+      // --- Ghostscript PDF/A-3b conversion ---
       const gsArgs = [
         "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-sDEVICE=pdfwrite",
-        "-dUseCIEColor=true", "-dEmbedAllFonts=true", "-dSubsetFonts=true", "-dPreserveDocInfo=true",
-        "-dPreserveAnnots=true", "-dShowAnnots=true", "-dPDFACompatibilityPolicy=1", "-dAutoRotatePages=/None",
-        "-sColorConversionStrategy=RGB", "-dProcessColorModel=/DeviceRGB", "-dConvertCMYKImagesToRGB=true",
-        "-dDownsampleColorImages=false", "-dDownsampleGrayImages=false", "-dDownsampleMonoImages=false",
-        "-dPDFSETTINGS=/prepress",
-        `-sOutputICCProfile=${gsIccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
+        "-dUseCIEColor=true", "-dEmbedAllFonts=true", "-dSubsetFonts=true",
+        "-dPreserveDocInfo=true", "-dPDFACompatibilityPolicy=1",
+        `-sOutputICCProfile=${gsIccPath}`,
+        `-sOutputFile=${tempOutput}`,
+        tempInput.replace(/\\/g, "/")
       ];
 
       await new Promise((resolve, reject) => {
-        execFile("gs", gsArgs, { encoding: "utf-8" }, (err, stdout, stderr) => {
-          if (err) return reject(err);
-          resolve();
-        });
+        execFile("gs", gsArgs, { encoding: "utf-8" }, (err, stdout, stderr) => err ? reject(err) : resolve());
       });
 
-      let finalPdf = fs.readFileSync(tempOutput);
-
-      // Post-process XMP/ZUGFeRD after GS
-      if (user.plan === "pro") {
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-        finalPdf = await postProcessPdfStrict(finalPdf, iccPath, xmpPath, zugferdXml);
-      }
-
+      const finalPdf = fs.readFileSync(tempOutput);
       results.push({ index, pdf: finalPdf });
     }
 
+    // --- Return result ---
     if (results.length === 1) {
       res.set({ "Content-Type": "application/pdf", "Content-Disposition": `inline; filename=invoice.pdf`, "Content-Length": results[0].pdf.length });
       res.send(results[0].pdf);
