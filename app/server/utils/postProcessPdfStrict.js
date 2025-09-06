@@ -47,4 +47,5 @@ async function postProcessPdfAfterGS(pdfBytes, xmpPath = null, zugferdXml = null
   return finalBytes;
 }
 
-module.exports = { postProcessPdfAfterGS };
+module.exports = { postProcessPdfStrict };
+
