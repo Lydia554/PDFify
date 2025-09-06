@@ -12,7 +12,7 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
-const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict'); 
+const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -69,7 +69,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
 
-      // Germany VAT split
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.items = invoiceData.items.map(item => {
           const totalNum = parseFloat(item.total || 0);
@@ -84,7 +83,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // Puppeteer PDF
+      // --- Puppeteer PDF generation ---
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -98,7 +97,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       await page.close();
 
-      // Ghostscript PDF/A-3b conversion
+      // --- Ghostscript PDF/A-3b conversion ---
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
@@ -120,13 +119,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // Only attach ZUGFeRD for Pro users
+      // --- Post-process for Pro users ---
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
-        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml);
+        const localeMeta = {
+          title: invoiceData.locale.invoiceTitle || 'Invoice',
+          creator: 'PDFify',
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+        };
+        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
       }
 
-      // Increment usage
+      // --- Increment usage ---
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
@@ -135,7 +139,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       results.push({ index, pdf: finalPdf });
     }
 
-    // Send results
+    // --- Send results ---
     if (results.length === 1) {
       res.set({
         "Content-Type": "application/pdf",
