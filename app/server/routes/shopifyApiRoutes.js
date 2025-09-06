@@ -535,11 +535,11 @@ if (!isPreview && user.usageCount + pageCount > user.maxUsage) {
 
 
 
-if (isPreview) {
-  await incrementUsage(user, true, pageCount);
-  await user.save();
-  console.log("✅ Preview count incremented and saved:", user.previewCount);
-}
+await incrementUsage(user, isPreview, pageCount);
+
+
+const freshUser = await User.findById(user._id).lean();
+console.log("✅ Usage incremented, new usageCount:", freshUser.usageCount);
 
 
 
@@ -573,7 +573,7 @@ if (isPreview) {
         : `attachment; filename=Invoice_${safeOrderId}.pdf`,
     });
 
-    res.setHeader("X-PDF-Page-Count", pageCount);
+    
     res.send(pdfBuffer);
 
     fs.unlinkSync(pdfPath);
