@@ -9,7 +9,7 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
-const { execFile, execSync } = require("child_process");
+const { execFile } = require("child_process");
 const { incrementUsage } = require("../utils/usageUtils");
 const os = require("os");
 
@@ -22,6 +22,7 @@ const locales = {
 const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
+// --- Post-processing function ---
 async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
@@ -50,7 +51,7 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
         Type: PDFName.of('Filespec'),
         F: PDFString.of('zugferd-invoice.xml'),
         EF: pdfDoc.context.obj({ F: zugferdStream }),
-        AFRelationship: PDFName.of('Alternative') // ✅ ensure /AFRelationship
+        AFRelationship: PDFName.of('Alternative') // ensures /AFRelationship
       })
     );
     pdfDoc.catalog.set(PDFName.of('AF'), pdfDoc.context.obj([zugferdFileSpec]));
@@ -61,18 +62,31 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
   return finalBytes;
 }
 
+// --- Helper to detect Ghostscript executable ---
+function detectGhostscript() {
+  const possibleGsPaths = [
+    'gs', // Linux / MacOS
+    'gswin64c', 'gswin32c', // Windows if in PATH
+    'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
+    'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
+  ];
+  const gsExe = possibleGsPaths.find(p => fs.existsSync(p) || p === 'gs' || p === 'gswin64c' || p === 'gswin32c');
+  if (!gsExe) throw new Error('Ghostscript not found. Install Ghostscript.');
+  return gsExe;
+}
+
+// --- Invoice route ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
   const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
   const gsIccPath = iccPath.replace(/\\/g, "/");
-
   if (!fs.existsSync(iccPath)) return res.status(500).json({ error: "ICC profile missing." });
 
-  let browser;
   const tmpDir = path.join(os.tmpdir(), `pdfify-batch-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
+  let browser;
   try {
     let requests = req.body.requests;
     if (!Array.isArray(requests)) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
@@ -83,6 +97,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
+
+    // --- Detect Ghostscript once
+    const gsExe = detectGhostscript();
+    console.log("🎯 Ghostscript detected:", gsExe);
 
     for (const [index, { data, isPreview }] of requests.entries()) {
       if (!data) { results.push({ error: "Invalid data" }); continue; }
@@ -106,6 +124,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
+      // --- Puppeteer PDF ---
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -119,7 +138,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       await page.close();
 
-      // --- Ghostscript PDF/A-3b ---
+      // --- Ghostscript PDF/A-3b conversion ---
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
@@ -134,7 +153,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         `-sOutputICCProfile=${gsIccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
       ];
 
-      await new Promise((resolve, reject) => execFile("gs", gsArgs, err => err ? reject(err) : resolve()));
+      await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
+
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
@@ -156,7 +176,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     // --- Send results ---
     if (results.length === 1) {
-      res.set({ "Content-Type": "application/pdf", "Content-Disposition": `inline; filename=invoice.pdf`, "Content-Length": results[0].pdf.length });
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename=invoice.pdf`,
+        "Content-Length": results[0].pdf.length
+      });
       res.send(results[0].pdf);
     } else {
       const archive = archiver("zip", { zlib: { level: 9 } });
