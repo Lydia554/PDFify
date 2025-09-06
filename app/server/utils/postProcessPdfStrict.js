@@ -6,9 +6,9 @@ async function postProcessPdf(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
   const ctx = pdf.context;
   const catalog = pdf.catalog.dict;
 
-  // --- OutputIntent with ICC ---
+  // --- OutputIntents with ICC ---
   const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = ctx.flateStream(iccBytes, { Type: PDFName.of('Stream'), N: 3 });
+  const iccStream = ctx.flateStream(iccBytes, { N: 3 });
   const outputIntentDict = ctx.obj({
     Type: PDFName.of('OutputIntent'),
     S: PDFName.of('GTS_PDFA1'),
@@ -16,23 +16,41 @@ async function postProcessPdf(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
     DestOutputProfile: iccStream,
     Info: 'sRGB IEC61966-2.1'
   });
-  const oiArray = ctx.obj([outputIntentDict]);
+
+  // Ensure it's a proper indirect object array
+  const oiDictRef = ctx.register(outputIntentDict);
+  const oiArray = ctx.obj([oiDictRef]);
   catalog.set(PDFName.of('OutputIntents'), oiArray);
 
   // --- Metadata (XMP) ---
   let xmpData = fs.readFileSync(xmpPath, 'utf8');
-  if (zugferdXml) xmpData = xmpData.replace('<!-- ZUGFeRD_PLACEHOLDER -->', zugferdXml);
+  if (zugferdXml) {
+    xmpData = xmpData.replace('<!-- ZUGFeRD_PLACEHOLDER -->', zugferdXml);
+  }
 
-  // Inject PDF/A-3b tags if missing
-  if (!/pdfaid:part=3/i.test(xmpData)) xmpData = xmpData.replace('</rdf:RDF>', '<pdfaid:part>3</pdfaid:part></rdf:RDF>');
-  if (!/pdfaid:conformance=B/i.test(xmpData)) xmpData = xmpData.replace('</rdf:RDF>', '<pdfaid:conformance>B</pdfaid:conformance></rdf:RDF>');
+  // Inject PDF/A-3b tags properly inside rdf:Description
+  if (!/pdfaid:part>3</i.test(xmpData)) {
+    xmpData = xmpData.replace(
+      '</rdf:RDF>',
+      '<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id" rdf:about=""><pdfaid:part>3</pdfaid:part></rdf:Description></rdf:RDF>'
+    );
+  }
+  if (!/pdfaid:conformance>B</i.test(xmpData)) {
+    xmpData = xmpData.replace(
+      '</rdf:RDF>',
+      '<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id" rdf:about=""><pdfaid:conformance>B</pdfaid:conformance></rdf:Description></rdf:RDF>'
+    );
+  }
 
+  // Add as proper Metadata stream
   const xmpStream = ctx.flateStream(Buffer.from(xmpData, 'utf8'), {
     Type: PDFName.of('Metadata'),
     Subtype: PDFName.of('XML')
   });
-  catalog.set(PDFName.of('Metadata'), xmpStream);
+  const xmpRef = ctx.register(xmpStream);
+  catalog.set(PDFName.of('Metadata'), xmpRef);
 
+  // Save with object streams disabled (important for PDF/A)
   return await pdf.save({ useObjectStreams: false });
 }
 
