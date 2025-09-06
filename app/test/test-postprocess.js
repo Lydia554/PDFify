@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const { postProcessPdf } = require('../server/utils/postProcessPdfStrict');
+const { postProcessPdfStrict } = require('../server/utils/postProcessPdfStrict');
+
 const { validatePDFA3bStrict } = require('../tools/pdfa3b-validator');
 
 (async () => {
@@ -15,7 +16,7 @@ const { validatePDFA3bStrict } = require('../tools/pdfa3b-validator');
       ? fs.readFileSync(path.resolve(__dirname, 'zugferd.xml'), 'utf8')
       : null;
 
-    const finalPdf = await postProcessPdf(pdfBytes, iccPath, xmpPath, zugferdXml);
+    const finalPdf = await postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml);
 
     const outputPath = path.resolve(__dirname, 'Gen_postprocessed.pdf');
     fs.writeFileSync(outputPath, finalPdf);

@@ -1,54 +1,74 @@
-const { PDFDocument, PDFName } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFHexString } = require('pdf-lib');
 const fs = require('fs');
 
 async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
-  console.log("🛠️ Starting postProcessPdfStrict...");
+  console.log('🛠️ Starting postProcessPdfStrict...');
 
+  // Load PDF
   const pdf = await PDFDocument.load(pdfBytes);
-  const catalog = pdf.catalog;
   const ctx = pdf.context;
+  const catalog = pdf.catalog.dict;
+  console.log(`📄 PDF loaded for post-processing, pages: ${pdf.getPageCount()}`);
 
-  console.log("📄 PDF loaded for post-processing, pages:", pdf.getPageCount());
+  // --- ICC / OutputIntent ---
+  console.log('🎨 Embedding ICC profile...');
+  const iccBytes = fs.readFileSync(iccPath);
+  const iccStream = ctx.flateStream(iccBytes, {
+    N: 3,
+    Alternate: PDFName.of('DeviceRGB'),
+    Filter: PDFName.of('FlateDecode'),
+  });
+  const iccRef = ctx.register(iccStream);
+
+  const outputIntentDict = ctx.obj({
+    Type: PDFName.of('OutputIntent'),
+    S: PDFName.of('GTS_PDFA3'), // PDF/A-3b
+    OutputConditionIdentifier: PDFHexString.of('sRGB IEC61966-2.1'),
+    Info: PDFHexString.of('sRGB IEC61966-2.1'),
+    DestOutputProfile: iccRef,
+    RegistryName: PDFHexString.of('http://www.color.org'),
+  });
+
+  const outputIntentRef = ctx.register(outputIntentDict);
+  const oiArray = ctx.obj([outputIntentRef]);
+  catalog.set(PDFName.of('OutputIntents'), oiArray);
+  console.log('✅ ICC OutputIntent registered into PDF');
 
   // --- Metadata (XMP) ---
+  console.log('📄 Loading XMP template...');
   let xmpData = fs.readFileSync(xmpPath, 'utf8');
-  console.log("📄 XMP template loaded");
 
   if (zugferdXml) {
     xmpData = xmpData.replace('<!-- ZUGFeRD_PLACEHOLDER -->', zugferdXml);
-    console.log("🔗 ZUGFeRD XML embedded into XMP");
   }
 
-  // Ensure PDF/A-3b part B compliance in XMP
+  // Ensure PDF/A-3b part/conformance is present
   if (!/pdfaid:part>3/i.test(xmpData)) {
     xmpData = xmpData.replace(
       '</rdf:RDF>',
       '<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id" rdf:about=""><pdfaid:part>3</pdfaid:part></rdf:Description></rdf:RDF>'
     );
-    console.log("✅ pdfaid:part=3 added to XMP");
   }
-
   if (!/pdfaid:conformance>B/i.test(xmpData)) {
     xmpData = xmpData.replace(
       '</rdf:RDF>',
       '<rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id" rdf:about=""><pdfaid:conformance>B</pdfaid:conformance></rdf:Description></rdf:RDF>'
     );
-    console.log("✅ pdfaid:conformance=B added to XMP");
   }
+
+  // Wrap in XMP packet
+  xmpData = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>\n${xmpData}\n<?xpacket end="w"?>`;
 
   const xmpStream = ctx.flateStream(Buffer.from(xmpData, 'utf8'), {
     Type: PDFName.of('Metadata'),
-    Subtype: PDFName.of('XML')
+    Subtype: PDFName.of('XML'),
   });
   const xmpRef = ctx.register(xmpStream);
   catalog.set(PDFName.of('Metadata'), xmpRef);
+  console.log('✅ XMP metadata registered into PDF');
 
-  console.log("✅ XMP metadata registered into PDF");
-
-  const outputBytes = await pdf.save({ useObjectStreams: false });
-  console.log("💾 PDF post-processing complete");
-
-  return outputBytes;
+  console.log('💾 PDF post-processing complete');
+  return await pdf.save({ useObjectStreams: false });
 }
 
 module.exports = { postProcessPdfStrict };
