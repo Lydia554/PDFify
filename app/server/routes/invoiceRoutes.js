@@ -12,7 +12,7 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
-const { postProcessPdfStrict } = require('../utils/post-process-pdf');
+const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict'); 
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -32,7 +32,7 @@ function detectGhostscript() {
 
   for (const p of possiblePaths) if (fs.existsSync(p)) return p;
 
-  // fallback to PATH names (just in case)
+  // fallback to PATH names
   try { if (require('child_process').execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gswin64c"; } catch {}
   try { if (require('child_process').execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gs"; } catch {}
 
@@ -124,12 +124,18 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // Post-process PDF (Pro users get ZUGFeRD)
+      // Post-process PDF for Pro users
       if (user.plan === "pro") {
         const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
         const zugferdXml = generateZugferdXML(invoiceData);
         finalPdf = await postProcessPdfStrict(finalPdf, xmpPath, zugferdXml);
       }
+
+      // Count pages & enforce usage limits
+      const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
+      const pageCount = pdfDoc.getPageCount();
+      const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
+      if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
       results.push({ index, pdf: finalPdf });
     }
