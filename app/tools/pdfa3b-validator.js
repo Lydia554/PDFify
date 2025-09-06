@@ -9,7 +9,7 @@
  */
 
 const fs = require('fs');
-const { PDFDocument, PDFName, PDFDict } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFDict, PDFArray, PDFStream, PDFRef } = require('pdf-lib');
 const { XMLParser } = require('fast-xml-parser');
 
 /* ------------------ Public API ------------------ */
@@ -87,10 +87,15 @@ function checkOutputIntents(pdf) {
   if (!catalog) { errors.push('Catalog missing.'); return { errors, warnings, report }; }
 
   const oiObj = catalog.get(PDFName.of('OutputIntents'));
+  console.log("DEBUG: Raw /OutputIntents =", oiObj ? oiObj.constructor.name : "null");
+
   if (!oiObj) { errors.push('Catalog missing /OutputIntents array.'); return { errors, warnings, report }; }
 
   const oiArr = deref(oiObj, ctx);
-  if (!oiArr || typeof oiArr.size !== 'function' || typeof oiArr.get !== 'function') {
+  console.log("DEBUG: After deref /OutputIntents =", oiArr ? oiArr.constructor.name : "null");
+
+  if (!(oiArr instanceof PDFArray)) {
+    console.log("DEBUG: /OutputIntents not PDFArray:", oiArr);
     errors.push('/OutputIntents is not a valid array.');
     return { errors, warnings, report };
   }
@@ -100,6 +105,7 @@ function checkOutputIntents(pdf) {
 
   for (let i = 0; i < oiArr.size(); i++) {
     const oi = deref(oiArr.get(i), ctx);
+    console.log(`DEBUG: OutputIntent[${i}] =`, oi ? oi.constructor.name : "null");
     if (!oi || typeof oi.get !== 'function') continue;
 
     const S = resolveName(oi.get(PDFName.of('S')), ctx);
@@ -107,9 +113,11 @@ function checkOutputIntents(pdf) {
     const dest = oi.get(PDFName.of('DestOutputProfile'));
     const destStream = deref(dest, ctx);
 
+    console.log(`DEBUG: OutputIntent[${i}] S=${S}, OCI=${oci}, DestStream=${destStream ? destStream.constructor.name : "null"}`);
+
     report.intents.push({ S, OutputConditionIdentifier: oci, hasDestOutputProfile: !!destStream });
 
-    if (!destStream || typeof destStream.getContents !== 'function') {
+    if (!(destStream instanceof PDFStream)) {
       errors.push(`OutputIntent #${i} missing DestOutputProfile.`);
       continue;
     }
@@ -127,18 +135,6 @@ function checkOutputIntents(pdf) {
   return { errors, warnings, report };
 }
 
-// Validate ICC profile bytes
-function validateICCProfile(bytes) {
-  const errors = [];
-  if (!bytes || bytes.length < 36) { errors.push('ICC profile too small.'); return errors; }
-  if (Buffer.from(bytes.slice(36, 40)).toString('ascii') !== 'acsp')
-    errors.push('ICC profile missing "acsp" signature.');
-  const colorSpace = Buffer.from(bytes.slice(16, 20)).toString('ascii');
-  if (!['RGB ', 'CMYK', 'GRAY'].includes(colorSpace))
-    errors.push(`ICC profile color space is ${colorSpace}, expected RGB/CMYK/GRAY.`);
-  return errors;
-}
-
 async function checkXMP(pdf) {
   const errors = [];
   const warnings = [];
@@ -149,15 +145,21 @@ async function checkXMP(pdf) {
   if (!catalog) { errors.push('Catalog missing.'); return { errors, warnings, report }; }
 
   const md = catalog.get(PDFName.of('Metadata'));
+  console.log("DEBUG: Raw /Metadata =", md ? md.constructor.name : "null");
+
   if (!md) { errors.push('Catalog missing /Metadata (XMP).'); return { errors, warnings, report }; }
 
   const mdStream = deref(md, ctx);
-  if (!mdStream || typeof mdStream.getContents !== 'function') {
+  console.log("DEBUG: After deref /Metadata =", mdStream ? mdStream.constructor.name : "null");
+
+  if (!(mdStream instanceof PDFStream)) {
     errors.push('/Metadata is not a valid stream.');
     return { errors, warnings, report };
   }
 
   const bytes = mdStream.getContents();
+  console.log("DEBUG: Metadata length =", bytes ? bytes.length : 0);
+
   report.hasMetadata = true;
   report.bytes = bytes ? bytes.length : 0;
 
@@ -178,28 +180,16 @@ async function checkXMP(pdf) {
   return { errors, warnings, report };
 }
 
-function checkFonts(pdf) {
+function validateICCProfile(bytes) {
   const errors = [];
-  const warnings = [];
-  const report = { totalFonts: 0, notEmbedded: [], subsetFonts: [] };
-  const ctx = pdf.context;
-
-  for (const [, obj] of ctx.enumerateIndirectObjects()) {
-    if (!(obj instanceof PDFDict)) continue;
-    const type = obj.get(PDFName.of('Type'));
-    if (!type || resolveName(type, ctx) !== 'Font') continue;
-
-    report.totalFonts++;
-    const fd = deref(obj.get(PDFName.of('FontDescriptor')), ctx);
-    const fontName = resolveObjectToString(obj.get(PDFName.of('BaseFont')), ctx) || '(unnamed)';
-    const hasFF = fd && (fd.get(PDFName.of('FontFile')) || fd.get(PDFName.of('FontFile2')) || fd.get(PDFName.of('FontFile3')));
-    if (!hasFF) { errors.push(`Font "${fontName}" is not embedded.`); report.notEmbedded.push(fontName); }
-    else if (/^[A-Z]{6}\+/.test(fontName)) report.subsetFonts.push(fontName);
-  }
-
-  return { errors, warnings, report };
+  if (!bytes || bytes.length < 36) { errors.push('ICC profile too small.'); return errors; }
+  if (Buffer.from(bytes.slice(36, 40)).toString('ascii') !== 'acsp')
+    errors.push('ICC profile missing "acsp" signature.');
+  const colorSpace = Buffer.from(bytes.slice(16, 20)).toString('ascii');
+  if (!['RGB ', 'CMYK', 'GRAY'].includes(colorSpace))
+    errors.push(`ICC profile color space is ${colorSpace}, expected RGB/CMYK/GRAY.`);
+  return errors;
 }
-
 
 function checkFonts(pdf) {
   const errors = [];
@@ -235,7 +225,7 @@ function checkEmbeddedFiles(pdf) {
   if (af) {
     report.hasAF = true;
     const afArr = deref(af, ctx);
-    if (afArr && typeof afArr.size === 'function' && typeof afArr.get === 'function') {
+    if (afArr instanceof PDFArray) {
       for (let i = 0; i < afArr.size(); i++) {
         const fspec = deref(afArr.get(i), ctx);
         const AFRelationship = resolveName(fspec?.get(PDFName.of('AFRelationship')), ctx) || null;
@@ -262,8 +252,7 @@ function checkForbiddenFeatures(pdf) {
     if (obj.get(PDFName.of('OpenAction'))) candidates.push(obj.get(PDFName.of('OpenAction')));
 
     for (const cand of candidates) {
-      const dict = deref
-            (cand, ctx);
+      const dict = deref(cand, ctx);
       if (!dict || typeof dict.get !== 'function') continue;
       const S = resolveName(dict.get(PDFName.of('S')), ctx);
       if (!S) continue;
@@ -298,10 +287,10 @@ function checkColorSpaces(pdf) {
       }
     };
 
-    if (typeof colorSpaces.get === 'function') { // dictionary
+    if (colorSpaces instanceof PDFDict) { // dictionary
       for (const key of colorSpaces.keys()) handleCS(deref(colorSpaces.get(key), ctx));
     } else if (colorSpaces.value) handleCS(colorSpaces); // single name
-    else if (typeof colorSpaces.size === 'function') { // array
+    else if (colorSpaces instanceof PDFArray) { // array
       for (let i = 0; i < colorSpaces.size(); i++) handleCS(deref(colorSpaces.get(i), ctx));
     }
   }
@@ -317,8 +306,13 @@ function toUint8Array(buffer) {
 }
 
 function deref(obj, ctx) {
-  try { return obj && obj.lookup ? obj.lookup(ctx) : obj; } catch { return null; }
+  if (!obj) return null;
+  try {
+    if (obj instanceof PDFRef) return ctx.lookup(obj);
+    return obj;
+  } catch { return obj; }
 }
+
 function resolveName(obj, ctx) { try { return obj && obj.value ? obj.value : null; } catch { return null; } }
 function resolveObjectToString(obj, ctx) { try { return obj && obj.value ? obj.value.toString() : null; } catch { return null; } }
 function sniffHeaderVersion(bytes) {
@@ -350,4 +344,3 @@ if (require.main === module) {
 }
 
 module.exports = { validatePDFA3bStrict };
-

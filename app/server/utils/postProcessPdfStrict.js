@@ -6,21 +6,23 @@ async function postProcessPdf(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
   const ctx = pdf.context;
   const catalog = pdf.catalog.dict;
 
-  // --- OutputIntents with ICC ---
+  // --- OutputIntent with ICC ---
   const iccBytes = fs.readFileSync(iccPath);
   const iccStream = ctx.flateStream(iccBytes, { N: 3 });
+  const iccRef = ctx.register(iccStream);
+
   const outputIntentDict = ctx.obj({
     Type: PDFName.of('OutputIntent'),
     S: PDFName.of('GTS_PDFA1'),
     OutputConditionIdentifier: 'sRGB IEC61966-2.1',
-    DestOutputProfile: iccStream,
+    DestOutputProfile: iccRef,
     Info: 'sRGB IEC61966-2.1'
   });
+  const outputIntentRef = ctx.register(outputIntentDict);
 
-  // Ensure it's a proper indirect object array
-  const oiDictRef = ctx.register(outputIntentDict);
-  const oiArray = ctx.obj([oiDictRef]);
-  catalog.set(PDFName.of('OutputIntents'), oiArray);
+  const oiArray = ctx.obj([outputIntentRef]);
+  const oiArrayRef = ctx.register(oiArray);
+  catalog.set(PDFName.of('OutputIntents'), oiArrayRef);
 
   // --- Metadata (XMP) ---
   let xmpData = fs.readFileSync(xmpPath, 'utf8');
@@ -28,7 +30,6 @@ async function postProcessPdf(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
     xmpData = xmpData.replace('<!-- ZUGFeRD_PLACEHOLDER -->', zugferdXml);
   }
 
-  // Inject PDF/A-3b tags properly inside rdf:Description
   if (!/pdfaid:part>3</i.test(xmpData)) {
     xmpData = xmpData.replace(
       '</rdf:RDF>',
@@ -42,7 +43,6 @@ async function postProcessPdf(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
     );
   }
 
-  // Add as proper Metadata stream
   const xmpStream = ctx.flateStream(Buffer.from(xmpData, 'utf8'), {
     Type: PDFName.of('Metadata'),
     Subtype: PDFName.of('XML')
@@ -50,7 +50,6 @@ async function postProcessPdf(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
   const xmpRef = ctx.register(xmpStream);
   catalog.set(PDFName.of('Metadata'), xmpRef);
 
-  // Save with object streams disabled (important for PDF/A)
   return await pdf.save({ useObjectStreams: false });
 }
 
