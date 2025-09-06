@@ -4,14 +4,19 @@ const fs = require('fs');
 async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // --- XMP metadata injection ---
+  // --- XMP metadata injection with proper RDF namespaces ---
   if (xmpPath) {
     let xmpData = fs.readFileSync(xmpPath, 'utf8');
 
-    if (!xmpData.includes('<pdfaid:part>3</pdfaid:part>')) {
+    // Inject PDF/A-3b identifiers if missing
+    if (!xmpData.includes('pdfaid:part')) {
       xmpData = xmpData.replace(
-        /(<rdf:Description[^>]*>)/,
-        `$1\n<pdfaid:part>3</pdfaid:part>\n<pdfaid:conformance>B</pdfaid:conformance>`
+        /(<rdf:RDF[^>]*>)/,
+        `$1
+<rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+  <pdfaid:part>3</pdfaid:part>
+  <pdfaid:conformance>B</pdfaid:conformance>
+</rdf:Description>`
       );
     }
 
@@ -21,7 +26,7 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
 
     const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
     pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
-    console.log('📄 XMP metadata attached');
+    console.log('📄 XMP metadata attached with RDF namespaces');
   }
 
   // --- Attach ZUGFeRD XML ---
@@ -36,12 +41,12 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null)
       })
     );
 
-    // Merge with existing /AF array
+    // Merge with existing /AF array if present
     let afArray;
     const existingAF = pdfDoc.catalog.get(PDFName.of('AF'));
     if (existingAF) {
       afArray = pdfDoc.context.lookup(existingAF, PDFArray);
-      // Check for existing ZUGFeRD file
+      // Only attach if not already present
       const hasZugferd = afArray.some(ref => {
         const fsObj = pdfDoc.context.lookup(ref);
         const fileName = fsObj.get(PDFName.of('F'));
