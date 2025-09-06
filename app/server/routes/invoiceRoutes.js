@@ -4,14 +4,15 @@ const path = require("path");
 const router = express.Router();
 const fs = require("fs");
 const archiver = require("archiver");
+const os = require("os");
+const { execFile } = require("child_process");
+
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
-const { execFile, execSync } = require("child_process");
 const { incrementUsage } = require("../utils/usageUtils");
-const os = require("os");
+const { postProcessPdfStrict } = require('../utils/post-process-pdf');
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -22,71 +23,23 @@ const locales = {
 const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
-// --- Post-processing function ---
-async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null) {
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-
-  if (xmpPath) {
-    let xmpData = fs.readFileSync(xmpPath, 'utf8');
-    if (!xmpData.includes('<pdfaid:part>3</pdfaid:part>')) {
-      xmpData = xmpData.replace(
-        /(<rdf:Description[^>]*>)/,
-        `$1\n<pdfaid:part>3</pdfaid:part>\n<pdfaid:conformance>B</pdfaid:conformance>`
-      );
-    }
-    if (!xmpData.includes('<?xpacket')) {
-      xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>${xmpData}<?xpacket end='w'?>`;
-    }
-    const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
-    pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
-    console.log('📄 XMP metadata attached');
-  }
-
-  if (zugferdXml) {
-    const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
-    const zugferdFileSpec = pdfDoc.context.register(
-      pdfDoc.context.obj({
-        Type: PDFName.of('Filespec'),
-        F: PDFString.of('zugferd-invoice.xml'),
-        EF: pdfDoc.context.obj({ F: zugferdStream }),
-        AFRelationship: PDFName.of('Alternative')
-      })
-    );
-    pdfDoc.catalog.set(PDFName.of('AF'), pdfDoc.context.obj([zugferdFileSpec]));
-    console.log('📦 ZUGFeRD XML attached with /AFRelationship');
-  }
-
-  return await pdfDoc.save({ useObjectStreams: false });
-}
-
+// --- Detect Ghostscript for Windows ---
 function detectGhostscript() {
-  const { execSync } = require("child_process");
-
-  // Common Windows paths
-  const possibleGsPaths = [
+  const possiblePaths = [
     'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
     'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
   ];
 
-  for (const p of possibleGsPaths) {
-    if (fs.existsSync(p)) return p; // Return full path
-  }
+  for (const p of possiblePaths) if (fs.existsSync(p)) return p;
 
-  // Fallback: check PATH
-  try {
-    const version = execSync("gswin64c -v", { stdio: "pipe" }).toString();
-    if (version.includes("Ghostscript")) return "gswin64c";
-  } catch {}
-  try {
-    const version = execSync("gs -v", { stdio: "pipe" }).toString();
-    if (version.includes("Ghostscript")) return "gs";
-  } catch {}
+  // fallback to PATH names (just in case)
+  try { if (require('child_process').execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gswin64c"; } catch {}
+  try { if (require('child_process').execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gs"; } catch {}
 
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
-
-// --- Invoice route ---
+// --- /generate-invoice route ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
@@ -171,18 +124,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // Post-process Pro users
+      // Post-process PDF (Pro users get ZUGFeRD)
       if (user.plan === "pro") {
         const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
         const zugferdXml = generateZugferdXML(invoiceData);
         finalPdf = await postProcessPdfStrict(finalPdf, xmpPath, zugferdXml);
       }
-
-      // Count pages & usage
-      const pdfDoc = await PDFDocument.load(finalPdf);
-      const pageCount = pdfDoc.getPageCount();
-      const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
-      if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
       results.push({ index, pdf: finalPdf });
     }
