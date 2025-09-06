@@ -1,75 +1,72 @@
-const { PDFDocument, PDFName, PDFHexString } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFString } = require('pdf-lib');
 const fs = require('fs');
 
 async function postProcessPdfStrict(pdfBytes, iccPath, xmpPath, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // 1️⃣ Embed ICC profile as OutputIntent
-const iccBytes = fs.readFileSync(iccPath); // path to sRGB_v4_ICC_preference.icc
-const iccStream = pdfDoc.context.stream(iccBytes);
+  // --- ICC profile
+  const iccBytes = fs.readFileSync(iccPath);
+  const iccStream = pdfDoc.context.register(pdfDoc.context.stream(iccBytes));
 
-const outputIntent = pdfDoc.context.obj({
-  Type: PDFName.of('OutputIntent'),
-  S: PDFName.of('GTS_PDFA1'),                  // PDF/A-3b requires this
-  OutputConditionIdentifier: pdfDoc.context.obj('sRGB IEC61966-2.1'), // ASCII string
-  Info: pdfDoc.context.obj('sRGB IEC61966-2.1'),
-  DestOutputProfile: iccStream,
-});
+  const outputIntentDict = pdfDoc.context.obj({
+    Type: PDFName.of('OutputIntent'),
+    S: PDFName.of('GTS_PDFA1'),
+    OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
+    Info: PDFString.of('sRGB IEC61966-2.1'),
+    DestOutputProfile: iccStream
+  });
 
-pdfDoc.catalog.set(
-  PDFName.of('OutputIntents'),
-  pdfDoc.context.obj([outputIntent])
-);
-
+  const outputIntentsArray = pdfDoc.context.register(pdfDoc.context.obj([outputIntentDict]));
+  pdfDoc.catalog.set(PDFName.of('OutputIntents'), outputIntentsArray);
 
   console.log('📌 ICC OutputIntent embedded');
 
-  // 2️⃣ Embed XMP metadata (PDF/A-3b required tags)
-  let xmpData = '';
-  if (fs.existsSync(xmpPath)) {
-    xmpData = fs.readFileSync(xmpPath, 'utf8');
+  // --- Debug OutputIntents before save
+  const oiRef = pdfDoc.catalog.get(PDFName.of('OutputIntents'));
+  const oiObj = pdfDoc.context.lookup(oiRef);
+  console.log('🔍 OutputIntents raw:', oiObj.toString());
+
+  // --- XMP metadata
+  let xmpData = fs.existsSync(xmpPath) ? fs.readFileSync(xmpPath, 'utf8') : '';
+  if (!xmpData.includes('<pdfaid:part>3</pdfaid:part>')) {
+    xmpData = xmpData.replace(
+      '</rdf:RDF>',
+      `<rdf:Description rdf:about=""
+        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+        <pdfaid:part>3</pdfaid:part>
+        <pdfaid:conformance>B</pdfaid:conformance>
+      </rdf:Description>
+    </rdf:RDF>`
+    );
+  }
+  if (!xmpData.includes('<?xpacket')) {
+    xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>${xmpData}<?xpacket end='w'?>`;
   }
 
-  // Wrap in xpacket and ensure pdfaid:part=3, conformance=B
-  if (!xmpData.includes('<x:xmpmeta')) {
-    xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about=''
-      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end='w'?>`;
-  }
+  const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
+  pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
 
-  const xmpStream = pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'));
-  const metadataRef = pdfDoc.context.register(xmpStream);
-  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+  console.log('📄 XMP metadata embedded');
 
-  console.log('📄 XMP metadata embedded, length:', xmpData.length);
+  // --- Debug Metadata before save
+  const mdRef = pdfDoc.catalog.get(PDFName.of('Metadata'));
+  const mdObj = pdfDoc.context.lookup(mdRef);
+  console.log('🔍 Metadata raw:', mdObj.toString());
 
-  // 3️⃣ Optional ZUGFeRD XML attachment
+  // --- ZUGFeRD optional
   if (zugferdXml) {
-    const zugferdStream = pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'));
-    const zugferdFileSpec = pdfDoc.context.obj({
-      Type: PDFName.of('Filespec'),
-      F: PDFHexString.fromText('zugferd.xml'),
-      EF: { F: zugferdStream },
-    });
-
-    const afArray = pdfDoc.context.obj([zugferdFileSpec]);
-    pdfDoc.catalog.set(PDFName.of('AF'), afArray);
-
-    console.log('📎 ZUGFeRD XML attached, length:', zugferdXml.length);
+    const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
+    const zugferdFileSpec = pdfDoc.context.register(
+      pdfDoc.context.obj({
+        Type: PDFName.of('Filespec'),
+        F: PDFString.of('zugferd.xml'),
+        EF: pdfDoc.context.obj({ F: zugferdStream })
+      })
+    );
+    pdfDoc.catalog.set(PDFName.of('AF'), pdfDoc.context.obj([zugferdFileSpec]));
   }
 
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
-
-  console.log('✅ PDF post-processed and saved');
-
   return finalBytes;
 }
 
