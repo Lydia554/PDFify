@@ -1,34 +1,34 @@
-const { PDFDocument, PDFName, PDFString, PDFArray } = require('pdf-lib');
+const { PDFDocument, PDFName, PDFString, PDFArray, PDFDict } = require('pdf-lib');
 const fs = require('fs');
-const path = require('path');
 
 async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null, iccPath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
+
+  // --- Remove old /OutputIntents and /Metadata ---
+  pdfDoc.catalog.delete(PDFName.of('OutputIntents'));
+  pdfDoc.catalog.delete(PDFName.of('Metadata'));
+  pdfDoc.catalog.delete(PDFName.of('AF')); // To prevent duplicates for ZUGFeRD
 
   // --- XMP metadata injection ---
   if (xmpPath && fs.existsSync(xmpPath)) {
     let xmpData = fs.readFileSync(xmpPath, 'utf8');
 
-    // Add PDF/A-3b identifiers if missing
-    if (!xmpData.includes('<pdfaid:part>3</pdfaid:part>')) {
-      xmpData = xmpData.replace(
-        /(<rdf:RDF[^>]*>)/,
-        `$1
+    // Always ensure part=3 & conformance=B
+    xmpData = xmpData.replace(/<\/rdf:RDF>/, `
 <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
   <pdfaid:part>3</pdfaid:part>
   <pdfaid:conformance>B</pdfaid:conformance>
-</rdf:Description>`
-      );
-    }
+</rdf:Description>
+</rdf:RDF>`);
 
-    // Ensure xpacket wrapper
+    // Add xpacket wrapper if missing
     if (!xmpData.includes('<?xpacket')) {
       xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>${xmpData}<?xpacket end='w'?>`;
     }
 
     const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
     pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
-    console.log('📄 XMP metadata injected with pdfaid:part=3 and pdfaid:conformance=B');
+    console.log('📄 XMP metadata fixed with pdfaid:part=3 & pdfaid:conformance=B');
   }
 
   // --- /OutputIntents for PDF/A-3b ---
@@ -38,19 +38,17 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null,
 
     const outputIntent = pdfDoc.context.obj({
       Type: PDFName.of('OutputIntent'),
-      S: PDFName.of('GTS_PDFA1'), // Required for PDF/A
+      S: PDFName.of('GTS_PDFA1'), // Required value for PDF/A-3b
       OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
       Info: PDFString.of('sRGB IEC61966-2.1'),
       DestOutputProfile: iccStream
     });
 
     pdfDoc.catalog.set(PDFName.of('OutputIntents'), pdfDoc.context.obj([outputIntent]));
-    console.log('🎨 /OutputIntents set with S=GTS_PDFA1');
-  } else {
-    console.warn('⚠️ ICC profile missing: skipping /OutputIntents');
+    console.log('🎨 /OutputIntents replaced with GTS_PDFA1');
   }
 
-  // --- Attach ZUGFeRD XML (no duplicates) ---
+  // --- Attach ZUGFeRD XML ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
     const zugferdFileSpec = pdfDoc.context.register(
@@ -62,22 +60,9 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null,
       })
     );
 
-    let afArray;
-    const existingAF = pdfDoc.catalog.get(PDFName.of('AF'));
-    if (existingAF) {
-      afArray = pdfDoc.context.lookup(existingAF, PDFArray);
-      const hasZugferd = afArray.some(ref => {
-        const fsObj = pdfDoc.context.lookup(ref);
-        const fileName = fsObj.get(PDFName.of('F'));
-        return fileName && fileName.value === 'zugferd-invoice.xml';
-      });
-      if (!hasZugferd) afArray.push(zugferdFileSpec);
-    } else {
-      afArray = pdfDoc.context.obj([zugferdFileSpec]);
-    }
-
+    const afArray = pdfDoc.context.obj([zugferdFileSpec]);
     pdfDoc.catalog.set(PDFName.of('AF'), afArray);
-    console.log('📦 ZUGFeRD XML embedded with AFRelationship=Alternative');
+    console.log('📦 ZUGFeRD XML attached (duplicates removed)');
   }
 
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
