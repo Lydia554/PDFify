@@ -4,53 +4,34 @@ const path = require("path");
 const router = express.Router();
 const fs = require("fs");
 const archiver = require("archiver");
+const os = require("os");
+const { execFile, execSync } = require("child_process");
+
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
-const embedXmp = require("../xmp/embedXmp");
-const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
-const { execSync, execFile } = require("child_process");
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
-
-
-const os = require("os");
-
-
+const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 
 const locales = {
   sl: require('../../locales/sl.json'),
   en: require('../../locales/en.json'),
   de: require('../../locales/de.json'),
-  
 };
 
-
-const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
-
-
-const log = (message, data = null) => {
-  if (process.env.NODE_ENV !== "production") {
-    console.log(message, data);
-  }
-};
-
-
-  const FORCE_PLAN = process.env.FORCE_PLAN;
+const FORCE_PLAN = process.env.FORCE_PLAN;
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
-
-const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "sRGB_IEC61966-2-1_no_black_scaling.icc");
-const gsIccPath = iccPath.replace(/\\/g, "/");
-
-console.log("🔍 Using ICC profile path:", iccPath);
+  const iccPath = process.env.ICC_PROFILE_PATH || path.resolve(__dirname, "sRGB_IEC61966-2-1_no_black_scaling.icc");
+  const gsIccPath = iccPath.replace(/\\/g, "/");
+  console.log("🔍 Using ICC profile path:", iccPath);
 
   try {
-    const gsVersion = execSync("gs --version").toString().trim();
-    console.log("📦 Ghostscript version:", gsVersion);
+    execSync("gs --version");
   } catch (err) {
     console.error("❌ Ghostscript not found:", err.message);
     return res.status(500).json({ error: "Ghostscript not installed." });
@@ -59,46 +40,27 @@ console.log("🔍 Using ICC profile path:", iccPath);
   if (!fs.existsSync(iccPath)) {
     console.error("❌ ICC profile not found at path:", iccPath);
     return res.status(500).json({ error: "ICC profile missing." });
-  } else {
-    console.log("🖨️ ICC profile found:", iccPath);
   }
 
-
-
-
+  const tmpDir = path.join(os.tmpdir(), `pdfify-batch-${Date.now()}`);
+  fs.mkdirSync(tmpDir, { recursive: true });
 
   let browser;
-const tmpDir = path.join(os.tmpdir(), `pdfify-batch-${Date.now()}`);
-fs.mkdirSync(tmpDir, { recursive: true });
-
-
   try {
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+
     let requests = req.body.requests;
-    
     if (!Array.isArray(requests)) {
-      if (req.body.data) {
-        requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
-        console.log("📩 Converted single request to array");
-      } else {
-        console.error("⚠️ No valid requests or data sent in request body");
-        return res.status(400).json({ error: "You must send 1-100 requests." });
-      }
+      if (req.body.data) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
+      else return res.status(400).json({ error: "You must send 1-100 requests." });
     }
 
-    if (requests.length === 0 || requests.length > 100) {
-      console.error("⚠️ Invalid requests count:", requests.length);
-      return res.status(400).json({ error: "You must send 1-100 requests." });
-    }
-    
+    if (requests.length === 0 || requests.length > 100) return res.status(400).json({ error: "You must send 1-100 requests." });
 
     const user = await User.findById(req.user.userId);
-    if (!user) {
-      console.error("❌ User not found:", req.user.userId);
-      return res.status(404).json({ error: "User not found" });
-    }
-    
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-  
+    // Reset monthly counts
     const now = new Date();
     if (!user.previewLastReset || now.getMonth() !== user.previewLastReset.getMonth() || now.getFullYear() !== user.previewLastReset.getFullYear()) {
       user.previewCount = 0;
@@ -109,336 +71,114 @@ fs.mkdirSync(tmpDir, { recursive: true });
       user.usageLastReset = now;
     }
 
-    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-
     const results = [];
 
     for (const [index, { data, isPreview }] of requests.entries()) {
       console.log(`📝 Processing request #${index + 1}`);
-
       if (!data || typeof data !== "object") {
-        console.warn(`⚠️ Skipping invalid or missing data at request #${index + 1}`);
         results.push({ error: "Invalid or missing data" });
         continue;
       }
 
-  let invoiceData = { ...data };
-
-     
-      const countryRaw = invoiceData.country || "slovenia";
-      const country = countryRaw.toLowerCase();
+      const invoiceData = { ...data };
+      const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
 
-      
-      function parseSafeNumber(value) {
-        if (typeof value === "string") {
-          return parseFloat(value.replace(/[^\d.]/g, "")) || 0;
-        }
-        return parseFloat(value) || 0;
-      }
-
+      const parseSafeNumber = (v) => typeof v === "string" ? parseFloat(v.replace(/[^\d.]/g, "")) || 0 : parseFloat(v) || 0;
       if (country === "germany" && Array.isArray(invoiceData.items)) {
-        invoiceData.items = invoiceData.items.map((item, i) => {
+        invoiceData.items = invoiceData.items.map((item) => {
           const totalNum = parseSafeNumber(item.total);
-          const taxRate = 0.19;
-          const net = totalNum / (1 + taxRate);
-          const taxAmount = totalNum - net;
-          return {
-            ...item,
-            tax: taxAmount.toFixed(2),
-            net: net.toFixed(2),
-          };
+          const net = totalNum / 1.19;
+          const tax = totalNum - net;
+          return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
         });
       }
 
+      invoiceData.taxRate = typeof invoiceData.taxRate === 'string' ? invoiceData.taxRate.includes('%') ? invoiceData.taxRate : `${invoiceData.taxRate}%` : '21%';
+      invoiceData.locale = locales[{ slovenia: "sl", germany: "de" }[country] || "en"] || locales["en"];
 
-      function formatTaxRate(rate) {
-        if (typeof rate === 'string') {
-          return rate.includes('%') ? rate : `${rate}%`;
-        }
-        if (typeof rate === 'number') {
-          return `${(rate * 100).toFixed(0)}%`;
-        }
-        return '21%';
-      }
-      invoiceData.taxRate = formatTaxRate(invoiceData.taxRate || '21%');
-
-      
-      const supportedLocales = {
-        slovenia: "sl",
-        germany: "de",
-        
-      };
-      const langCode = supportedLocales[country] || "en";
-      const locale = locales[langCode] || locales["en"];
-      invoiceData.locale = locale;
-
-     
       if (typeof invoiceData.items === "string") {
-        try {
-          invoiceData.items = JSON.parse(invoiceData.items);
-        } catch {
-          invoiceData.items = [];
-        }
+        try { invoiceData.items = JSON.parse(invoiceData.items); } catch { invoiceData.items = []; }
       }
-      if (!Array.isArray(invoiceData.items)) {
-        invoiceData.items = [];
-      }
+      if (!Array.isArray(invoiceData.items)) invoiceData.items = [];
 
       const safeOrderId = invoiceData.orderId || `invoice-${Date.now()}-${index}`;
       invoiceData.isBasicUser = !user.isPremium;
-      if (!user.isPremium) {
-        invoiceData.customLogoUrl = null;
-        invoiceData.showChart = false;
-      }
+      if (!user.isPremium) invoiceData.customLogoUrl = null;
 
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
-      if (!html || typeof html !== "string") {
-        results.push({ error: "Failed to generate HTML" });
-        continue;
-      }
-
       const page = await browser.newPage();
-      
-      // Set media features for PDF/A compatibility
       await page.emulateMediaType('print');
-      await page.evaluateOnNewDocument(() => {
-        // Ensure transparency compatibility
-        document.documentElement.style.setProperty('--pdf-a-mode', 'true');
-      });
-      
+      await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
       await page.setContent(html, { waitUntil: "networkidle0" });
 
- const pdfBuffer = await page.pdf({
-  format: "A4",
-  printBackground: true,
-  margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-  preferCSSPageSize: false,
-  displayHeaderFooter: false,
-  tagged: true,
-  outline: false,
-});
-
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        preferCSSPageSize: false,
+        displayHeaderFooter: false,
+        tagged: true,
+        outline: false,
+      });
       await page.close();
 
-      let finalPdfBytes = pdfBuffer;
-
-   
-const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-
-
-
-const pageCount = pdfDoc.getPageCount();
-
-
-
-const usageAllowed = await incrementUsage(user, pageCount, isPreview,  FORCE_PLAN);
-if (!usageAllowed) {
-  return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
-}
-
-
-
-
-
-      if (user.plan === "pro") {
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const xmlBuffer = Buffer.from(zugferdXml, "utf-8");
-
-        const pdfDoc = await PDFDocument.load(pdfBuffer, { updateMetadata: false });
-
-        const sanitizeMetadata = (str) =>
-          String(str || "").replace(/[\r\n\t]+/g, " ").replace(/[^\x20-\x7E]/g, "?").trim();
-
-        pdfDoc.setTitle(sanitizeMetadata(`Invoice ${safeOrderId}`));
-        pdfDoc.setAuthor("PDFify User");
-        pdfDoc.setSubject("ZUGFeRD Invoice");
-        pdfDoc.setProducer("PDFify API");
-        pdfDoc.setCreator("PDFify");
-        pdfDoc.setKeywords(["invoice", "zugferd", "pdfa3"]);
-        pdfDoc.setCreationDate(now);
-        pdfDoc.setModificationDate(now);
-
-        const embeddedFileStream = pdfDoc.context.flateStream(xmlBuffer, {
-          Type: PDFName.of("EmbeddedFile"),
-          Subtype: PDFName.of("application/xml"),
-        });
-        const embeddedFileRef = pdfDoc.context.register(embeddedFileStream);
-        const fileName = "zugferd-invoice.xml";
-        const efDict = pdfDoc.context.obj({ F: embeddedFileRef, UF: embeddedFileRef });
-        const filespecDict = pdfDoc.context.obj({
-          Type: PDFName.of("Filespec"),
-          F: PDFHexString.of(fileName),
-          UF: PDFHexString.of(fileName),
-          EF: efDict,
-          Desc: PDFHexString.of("ZUGFeRD invoice XML"),
-          AFRelationship: PDFName.of("Data"),
-        });
-        const filespecRef = pdfDoc.context.register(filespecDict);
-
-        const catalog = pdfDoc.catalog;
-        let namesDict = catalog.lookup(PDFName.of("Names"));
-        if (!namesDict) {
-          namesDict = pdfDoc.context.obj({});
-          catalog.set(PDFName.of("Names"), namesDict);
-        }
-
-        let embeddedFilesDict = namesDict.lookup(PDFName.of("EmbeddedFiles"));
-        if (!embeddedFilesDict) {
-          embeddedFilesDict = pdfDoc.context.obj({ Names: [] });
-          namesDict.set(PDFName.of("EmbeddedFiles"), embeddedFilesDict);
-        }
-
-        let embeddedFilesArray = embeddedFilesDict.lookup(PDFName.of("Names"));
-        if (!embeddedFilesArray) {
-          embeddedFilesArray = pdfDoc.context.obj([]);
-          embeddedFilesDict.set(PDFName.of("Names"), embeddedFilesArray);
-        }
-
-        embeddedFilesArray.push(PDFHexString.of(fileName));
-        embeddedFilesArray.push(filespecRef);
-
-        catalog.set(PDFName.of("AF"), pdfDoc.context.obj([filespecRef]));
-
-        // Enhanced ICC profile and color space handling for PDF/A-3B compliance
-        const iccData = fs.readFileSync(iccPath);
-        const iccStream = pdfDoc.context.flateStream(iccData, {
-          N: 3,
-          Alternate: PDFName.of("DeviceRGB"),
-          Filter: PDFName.of("FlateDecode"),
-        });
-        const iccRef = pdfDoc.context.register(iccStream);
-        
-        // Create proper OutputIntent for PDF/A-3B
-        const outputIntentDict = pdfDoc.context.obj({
-          Type: PDFName.of("OutputIntent"),
-          S: PDFName.of("GTS_PDFA3"),
-          OutputConditionIdentifier: PDFHexString.of("sRGB IEC61966-2.1"),
-          Info: PDFHexString.of("sRGB IEC61966-2.1"),
-          OutputCondition: PDFHexString.of("sRGB IEC61966-2.1"),
-          RegistryName: PDFHexString.of("http://www.color.org"),
-          DestOutputProfile: iccRef,
-        });
-        catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntentDict)]));
-
-        // Set default color spaces to avoid DeviceRGB/DeviceGray issues
-        const resourcesDict = pdfDoc.context.obj({
-          ColorSpace: pdfDoc.context.obj({
-            DefaultRGB: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
-            DefaultGray: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
-          })
-        });
-        
-        // Apply default color spaces to all pages and handle transparency groups
-        const pages = pdfDoc.getPages();
-        pages.forEach(page => {
-          const pageDict = pdfDoc.context.lookup(page.ref);
-          
-          // Set default color spaces
-          let existingResources = pageDict.lookup(PDFName.of("Resources"));
-          if (!existingResources) {
-            pageDict.set(PDFName.of("Resources"), resourcesDict);
-          } else {
-            const resourcesRef = pdfDoc.context.register(resourcesDict);
-            existingResources.set(PDFName.of("ColorSpace"), resourcesDict.lookup(PDFName.of("ColorSpace")));
-          }
-          
-          // Add transparency group with proper color space for PDF/A-3B compliance
-          const groupDict = pdfDoc.context.obj({
-            Type: PDFName.of("Group"),
-            S: PDFName.of("Transparency"),
-            CS: pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]),
-          });
-          pageDict.set(PDFName.of("Group"), groupDict);
-        });
-
-        finalPdfBytes = await pdfDoc.save();
+      // Increment usage
+      const pageCount = (await PDFDocument.load(pdfBuffer)).getPageCount();
+      if (!await incrementUsage(user, pageCount, isPreview, FORCE_PLAN)) {
+        return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
       }
 
- // Temporary input/output PDFs
-const tempInput = path.join(tmpDir, `input-${index}.pdf`);
-const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
-fs.writeFileSync(tempInput, finalPdfBytes);
+      // Save temp PDF for Ghostscript
+      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
+      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
+      fs.writeFileSync(tempInput, pdfBuffer);
 
-// Convert temp paths to forward-slash style for Ghostscript
-const tempInputPath = tempInput.replace(/\\/g, "/");
-const tempOutputPath = tempOutput.replace(/\\/g, "/");
+      // Ghostscript PDF/A-3 conversion
+      const gsArgs = [
+        "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE",
+        "-sDEVICE=pdfwrite",
+        "-dUseCIEColor=true",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dPreserveDocInfo=true",
+        "-dPreserveAnnots=true",
+        "-dShowAnnots=true",
+        "-dPDFACompatibilityPolicy=1",
+        "-dAutoRotatePages=/None",
+        "-sColorConversionStrategy=RGB",
+        "-dProcessColorModel=/DeviceRGB",
+        "-dConvertCMYKImagesToRGB=true",
+        "-dDownsampleColorImages=false",
+        "-dDownsampleGrayImages=false",
+        "-dDownsampleMonoImages=false",
+        "-dPDFSETTINGS=/prepress",
+        `-sOutputICCProfile=${gsIccPath}`,
+        `-sOutputFile=${tempOutput}`,
+        tempInput.replace(/\\/g, "/"),
+      ];
 
-const gsArgs = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-dNOOUTERSAVE",
-  "-sDEVICE=pdfwrite",
-  "-dUseCIEColor=true",
-  "-dEmbedAllFonts=true",
-  "-dSubsetFonts=true",
-  "-dPreserveDocInfo=true",
-  "-dPreserveAnnots=true",
-  "-dShowAnnots=true",
-  "-dPDFACompatibilityPolicy=1",
-  "-dAutoRotatePages=/None",
-  "-sColorConversionStrategy=RGB",
-  "-dProcessColorModel=/DeviceRGB",
-  "-dConvertCMYKImagesToRGB=true",
-  "-dDownsampleColorImages=false",
-  "-dDownsampleGrayImages=false",
-  "-dDownsampleMonoImages=false",
-  "-dPDFSETTINGS=/prepress",
-  `-sOutputICCProfile=${gsIccPath}`,
-  `-sOutputFile=${tempOutputPath}`,
-  tempInputPath,
-];
+      console.log("🚨 Running Ghostscript...");
+      await new Promise((resolve, reject) => {
+        execFile("gs", gsArgs, { encoding: "utf-8" }, (err, stdout, stderr) => {
+          console.log(stdout, stderr);
+          if (err) reject(err); else resolve();
+        });
+      });
 
-
-
-console.log("🚨 Running Ghostscript for PDF/A-3 conversion...");
-await new Promise((resolve, reject) => {
-  execFile("gs", gsArgs, { encoding: "utf-8" }, (err, stdout, stderr) => {
-    console.log("📄 Ghostscript stdout:\n", stdout);
-    console.log("📄 Ghostscript stderr:\n", stderr);
-
-    if (err) {
-      console.error("❌ Ghostscript failed with code:", err.code);
-      console.error("💬 Ghostscript error message:", err.message);
-      reject(err);
-    } else {
-      console.log("✅ Ghostscript finished successfully");
-      resolve();
-    }
-  });
-});
-
-
-      console.log(`📁 Reading final PDF output from: ${tempOutput}`);
       let finalPdf = fs.readFileSync(tempOutput);
 
-
-
-
-// Re-embed XMP metadata after Ghostscript
-if (user.plan === "pro") {
-  try {
-    const zugferdXml = generateZugferdXML(invoiceData);
-    const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
-
-    finalPdf = await postProcessPdfStrict(finalPdf, iccPath, xmpPath, zugferdXml);
-
-
-    console.log("✅ Post-processed (ICC, OutputIntent, XMP, ZUGFeRD) final PDF after GS");
-  } catch (postErr) {
-    console.error("⚠️ postProcessPdf failed:", postErr.message);
-  }
-}
-
-
+      // Post-process only for XMP/ZUGFeRD
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+        finalPdf = await postProcessPdfStrict(finalPdf, iccPath, xmpPath, zugferdXml);
+      }
 
       results.push({ index, pdf: finalPdf });
     }
 
     if (results.length === 1) {
-      console.log("📤 Sending single PDF response");
       res.set({
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename=invoice.pdf`,
@@ -446,35 +186,21 @@ if (user.plan === "pro") {
       });
       res.send(results[0].pdf);
     } else {
-      console.log("🗜️ Zipping multiple PDFs for response");
       const archive = archiver("zip", { zlib: { level: 9 } });
-      res.set({
-        "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename=invoices.zip`,
-      });
+      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename=invoices.zip` });
       archive.pipe(res);
-      results.forEach(({ index, pdf }) => {
-        archive.append(pdf, { name: `invoice-${index + 1}.pdf` });
-      });
+      results.forEach(({ index, pdf }) => archive.append(pdf, { name: `invoice-${index + 1}.pdf` }));
       await archive.finalize();
     }
 
-      
-
     await user.save();
-  } catch (e) {
-    console.error("❌ Exception in /generate-invoice:", e);
-    res.status(500).json({ error: "Internal Server Error", details: e.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   } finally {
-    if (browser) {
-      console.log("🧹 Closing Puppeteer browser...");
-      await browser.close();
-    }
-    console.log("🧹 Cleaning up temporary directory...");
+    if (browser) await browser.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
-
-
 
 module.exports = router;
