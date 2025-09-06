@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { postProcessPdfStrict } = require('../server/utils/postProcessPdfStrict');
+
 const { validatePDFA3bStrict } = require('../tools/pdfa3b-validator');
 
 (async () => {

@@ -1,7 +1,7 @@
 const { PDFDocument, PDFName, PDFString } = require('pdf-lib');
 const fs = require('fs');
 
-async function postProcessPdfAfterGS(pdfBytes, xmpPath = null, zugferdXml = null) {
+async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
   // --- XMP metadata (optional)
@@ -46,6 +46,7 @@ async function postProcessPdfAfterGS(pdfBytes, xmpPath = null, zugferdXml = null
   const finalBytes = await pdfDoc.save({ useObjectStreams: false });
   return finalBytes;
 }
+
 
 module.exports = { postProcessPdfStrict };
 
