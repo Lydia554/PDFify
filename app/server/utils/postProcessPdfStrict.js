@@ -4,6 +4,13 @@ const fs = require('fs');
 async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
+  // --- Preserve existing /OutputIntents ---
+  const existingOutputIntentsRef = pdfDoc.catalog.get(PDFName.of('OutputIntents'));
+  let outputIntents = null;
+  if (existingOutputIntentsRef) {
+    outputIntents = pdfDoc.context.lookup(existingOutputIntentsRef, PDFArray);
+  }
+
   // --- Attach ZUGFeRD XML if provided ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(
@@ -36,28 +43,34 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     console.log('📦 ZUGFeRD XML attached');
   }
 
-  // --- Inject minimal XMP metadata for validator awareness ---
+  // --- Inject PDF/A-3b XMP metadata ---
   const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
 
   const xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-  <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
-    <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-      <rdf:Description rdf:about=''
-        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
-        xmlns:dc='http://purl.org/dc/elements/1.1/'>
-        <pdfaid:part>3</pdfaid:part>
-        <pdfaid:conformance>B</pdfaid:conformance>
-        <dc:title>${title}</dc:title>
-        <dc:creator>${creator}</dc:creator>
-        <dc:language>${language}</dc:language>
-      </rdf:Description>
-    </rdf:RDF>
-  </x:xmpmeta>
-  <?xpacket end='w'?>`;
+<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <rdf:Description rdf:about=''
+      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+      xmlns:dc='http://purl.org/dc/elements/1.1/'>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+      <dc:title>${title}</dc:title>
+      <dc:creator>${creator}</dc:creator>
+      <dc:language>${language}</dc:language>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end='w'?>`;
 
   const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
   pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
-  console.log('📄 XMP metadata injected for PDF/A-3b awareness');
+  console.log('📄 PDF/A-3b XMP metadata injected');
+
+  // --- Restore /OutputIntents if it existed ---
+  if (outputIntents) {
+    pdfDoc.catalog.set(PDFName.of('OutputIntents'), outputIntents);
+    console.log('🎨 /OutputIntents preserved');
+  }
 
   return await pdfDoc.save({ useObjectStreams: false });
 }
