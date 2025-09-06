@@ -100,7 +100,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     // --- Detect Ghostscript once
     const gsExe = detectGhostscript();
-    console.log("🎯 Ghostscript detected:", gsExe);
+console.log("🎯 Ghostscript detected:", gsExe);
+await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
 
     for (const [index, { data, isPreview }] of requests.entries()) {
       if (!data) { results.push({ error: "Invalid data" }); continue; }
