@@ -14,6 +14,7 @@ const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
 const { ensureOutputIntents } = require('../utils/pdfOutputIntentUtils');
+const { PDFDocument } = require("pdf-lib");
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -113,32 +114,50 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
       ];
 
-      await new Promise((resolve, reject) =>
-        execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
-      );
+      try {
+        await new Promise((resolve, reject) =>
+          execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
+        );
+      } catch (gsErr) {
+        console.error("❌ Ghostscript failed:", gsErr.message);
+        results.push({ index, error: "Ghostscript conversion failed" });
+        continue; // Skip to next invoice
+      }
 
-   
-
-      
-// After Ghostscript output
+// --- Check OutputIntents before post-processing ---
 let finalPdf = fs.readFileSync(tempOutput);
+try {
+  const pdfDoc = await PDFDocument.load(finalPdf);
+  const catalog = pdfDoc.catalog;
+  const rawOutputIntents = catalog.get(PDFName.of('OutputIntents'));
+  console.log("🛈 Raw /OutputIntents before ensure:", rawOutputIntents ? "FOUND" : "MISSING");
 
-// Ensure OutputIntents before post-processing
-finalPdf = await ensureOutputIntents(finalPdf, iccPath);
+  finalPdf = await ensureOutputIntents(finalPdf, iccPath);
 
-// Post-process for Pro users (XMP + ZUGFeRD)
-if (user.plan === "pro") {
-  const zugferdXml = generateZugferdXML(invoiceData);
-  const localeMeta = {
-    title: invoiceData.locale.invoiceTitle || 'Invoice',
-    creator: 'PDFify',
-    language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
-  };
-  finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
+  const pdfDocAfter = await PDFDocument.load(finalPdf);
+  const catalogAfter = pdfDocAfter.catalog;
+  const oiAfter = catalogAfter.get(PDFName.of('OutputIntents'));
+  console.log("🛈 /OutputIntents after ensure:", oiAfter ? "FOUND" : "MISSING");
+} catch (oiErr) {
+  console.error("❌ Missing OutputIntents:", oiErr.message);
+  results.push({ index, error: "OutputIntents missing after Ghostscript" });
+  continue;
 }
 
-      // --- Increment usage ---
-      const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
+
+      // --- Pro: Inject ZUGFeRD + Metadata ---
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const localeMeta = {
+          title: invoiceData.locale.invoiceTitle || 'Invoice',
+          creator: 'PDFify',
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+        };
+        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
+      }
+
+      // --- Usage count ---
+      const pdfDoc = await PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
