@@ -14,7 +14,9 @@ const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
 const { ensureOutputIntents } = require('../utils/pdfOutputIntentUtils');
-const { PDFDocument } = require("pdf-lib");
+const { PDFDocument, PDFName } = require("pdf-lib");
+
+
 
 const locales = {
   sl: require('../../locales/sl.json'),

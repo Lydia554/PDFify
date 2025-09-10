@@ -2,10 +2,11 @@
 const { PDFDocument, PDFName, PDFString, PDFArray } = require('pdf-lib');
 const fs = require('fs');
 
+/**
+ * Ensures XMP data contains PDF/A-3B metadata (pdfaid:part and pdfaid:conformance)
+ */
 function ensureXmpHasPdfa(xmpData) {
-  // If there is an RDF block, inject pdfaid description before </rdf:RDF>
   if (/<rdf:RDF[\s\S]*<\/rdf:RDF>/.test(xmpData)) {
-    // Only add if pdfaid not present
     if (!/pdfaid:part|<pdfaid:part>/.test(xmpData)) {
       xmpData = xmpData.replace(
         /<\/rdf:RDF>/,
@@ -15,7 +16,7 @@ function ensureXmpHasPdfa(xmpData) {
     return xmpData;
   }
 
-  // No RDF present — build a minimal XMP packet including rdf and pdfaid
+  // Minimal XMP if RDF not present
   return `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -28,18 +29,18 @@ function ensureXmpHasPdfa(xmpData) {
 <?xpacket end='w'?>`;
 }
 
+/**
+ * Add /OutputIntents to PDF if missing
+ */
 async function addOutputIntentsIfMissing(pdfDoc, iccPath) {
   const catalog = pdfDoc.catalog;
   const context = pdfDoc.context;
 
   const existing = catalog.get(PDFName.of('OutputIntents'));
-  if (existing) {
-    // Already present — nothing to do
-    return;
-  }
+  if (existing) return; // Already exists
 
   if (!iccPath || !fs.existsSync(iccPath)) {
-    console.warn('⚠️ ICC path not provided or not found — skipping /OutputIntents injection.');
+    console.warn('⚠️ ICC path missing, skipping /OutputIntents injection.');
     return;
   }
 
@@ -48,7 +49,7 @@ async function addOutputIntentsIfMissing(pdfDoc, iccPath) {
 
   const outputIntent = context.obj({
     Type: PDFName.of('OutputIntent'),
-    S: PDFName.of('GTS_PDFA1'), // required for PDF/A
+    S: PDFName.of('GTS_PDFA1'),
     OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
     Info: PDFString.of('sRGB IEC61966-2.1'),
     DestOutputProfile: iccStream
@@ -56,9 +57,12 @@ async function addOutputIntentsIfMissing(pdfDoc, iccPath) {
 
   const arr = context.obj([outputIntent]);
   catalog.set(PDFName.of('OutputIntents'), arr);
-  console.log('🎨 /OutputIntents added (S=GTS_PDFA1)');
+  console.log('🎨 /OutputIntents added');
 }
 
+/**
+ * Attach ZUGFeRD XML to PDF (AF array)
+ */
 async function attachZugferdIfNeeded(pdfDoc, zugferdXml) {
   if (!zugferdXml) return;
 
@@ -75,27 +79,30 @@ async function attachZugferdIfNeeded(pdfDoc, zugferdXml) {
 
   const afKey = PDFName.of('AF');
   let af = pdfDoc.catalog.get(afKey);
+  let arr;
 
   if (!af) {
-    af = context.obj([fileSpec]);
+    arr = context.obj([fileSpec]);
   } else {
-    // Resolve existing AF array
-    const PDFArrayClass = require('pdf-lib').PDFArray;
-    const arr = context.lookup(af, PDFArrayClass);
-    // avoid duplicate
-    const hasZugferd = arr.some(ref => {
-      const fsObj = context.lookup(ref);
-      const fname = fsObj.get(PDFName.of('F'));
-      return fname && fname.value === 'zugferd-invoice.xml';
-    });
-    if (!hasZugferd) arr.push(fileSpec);
-    af = arr;
+    arr = context.lookup(af, PDFArray);
+    if (!arr) arr = context.obj([fileSpec]);
+    else {
+      const hasZugferd = arr.some(ref => {
+        const fsObj = context.lookup(ref);
+        const fname = fsObj.get(PDFName.of('F'));
+        return fname && fname.value === 'zugferd-invoice.xml';
+      });
+      if (!hasZugferd) arr.push(fileSpec);
+    }
   }
 
-  pdfDoc.catalog.set(afKey, af);
-  console.log('📦 ZUGFeRD XML attached (AFRelationship=Alternative)');
+  pdfDoc.catalog.set(afKey, arr);
+  console.log('📦 ZUGFeRD XML attached');
 }
 
+/**
+ * Set XMP metadata stream
+ */
 async function setMetadataStream(pdfDoc, xmpData) {
   const context = pdfDoc.context;
   const xmpStream = context.register(context.stream(Buffer.from(xmpData, 'utf8')));
@@ -104,24 +111,20 @@ async function setMetadataStream(pdfDoc, xmpData) {
 }
 
 /**
- * Main exported function.
- * @param {Uint8Array|Buffer} pdfBytes - original PDF bytes
- * @param {string|null} xmpPath - path to an XMP template file (optional)
- * @param {string|null} zugferdXml - ZUGFeRD xml string to attach (optional)
- * @param {string|null} iccPath - path to ICC profile to insert to OutputIntents (optional)
- * @returns {Promise<Uint8Array>} processed PDF bytes
+ * Main PDF post-processing function
  */
-async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null, iccPath = null) {
-  // Load PDF into pdf-lib
+async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}, iccPath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // --- XMP handling ---
-  let xmpData = null;
-  if (xmpPath && fs.existsSync(xmpPath)) {
-    xmpData = fs.readFileSync(xmpPath, 'utf8');
-    xmpData = ensureXmpHasPdfa(xmpData);
+  // --- XMP ---
+  let xmpData = '';
+  if (localeMeta && localeMeta.title) {
+    xmpData = ensureXmpHasPdfa(`<rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/">
+      <dc:title>${localeMeta.title}</dc:title>
+      <dc:creator>${localeMeta.creator || 'PDFify'}</dc:creator>
+      <dc:language>${localeMeta.language || 'en'}</dc:language>
+    </rdf:Description>`);
   } else {
-    // Minimal XMP with pdfaid if no template provided
     xmpData = ensureXmpHasPdfa('');
   }
 
@@ -130,19 +133,19 @@ async function postProcessPdfStrict(pdfBytes, xmpPath = null, zugferdXml = null,
     xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>${xmpData}<?xpacket end='w'?>`;
   }
 
-  // Replace current Metadata (if exists) to avoid stale refs
-  try { pdfDoc.catalog.delete(PDFName.of('Metadata')); } catch (e) { /* ignore */ }
+  // Remove stale Metadata first
+  try { pdfDoc.catalog.delete(PDFName.of('Metadata')); } catch {}
+
   await setMetadataStream(pdfDoc, xmpData);
 
-  // --- OutputIntents: only add if missing (use iccPath) ---
+  // --- OutputIntents ---
   await addOutputIntentsIfMissing(pdfDoc, iccPath);
 
-  // --- Attach ZUGFeRD xml if provided ---
+  // --- Attach ZUGFeRD ---
   await attachZugferdIfNeeded(pdfDoc, zugferdXml);
 
-  // Save final PDF
-  const finalBytes = await pdfDoc.save({ useObjectStreams: false });
-  return finalBytes;
+  // --- Save ---
+  return await pdfDoc.save({ useObjectStreams: false });
 }
 
 module.exports = { postProcessPdfStrict };
