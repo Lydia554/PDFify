@@ -13,10 +13,6 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
-const { ensureOutputIntents } = require('../utils/pdfOutputIntentUtils');
-const { PDFDocument, PDFName } = require("pdf-lib");
-
-
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -116,38 +112,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
       ];
 
-      try {
-        await new Promise((resolve, reject) =>
-          execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
-        );
-      } catch (gsErr) {
-        console.error("❌ Ghostscript failed:", gsErr.message);
-        results.push({ index, error: "Ghostscript conversion failed" });
-        continue; // Skip to next invoice
-      }
+      await new Promise((resolve, reject) =>
+        execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
+      );
 
-// --- Check OutputIntents before post-processing ---
-let finalPdf = fs.readFileSync(tempOutput);
-try {
-  const pdfDoc = await PDFDocument.load(finalPdf);
-  const catalog = pdfDoc.catalog;
-  const rawOutputIntents = catalog.get(PDFName.of('OutputIntents'));
-  console.log("🛈 Raw /OutputIntents before ensure:", rawOutputIntents ? "FOUND" : "MISSING");
+      let finalPdf = fs.readFileSync(tempOutput);
+      fs.unlinkSync(tempInput);
 
-  finalPdf = await ensureOutputIntents(finalPdf, iccPath);
-
-  const pdfDocAfter = await PDFDocument.load(finalPdf);
-  const catalogAfter = pdfDocAfter.catalog;
-  const oiAfter = catalogAfter.get(PDFName.of('OutputIntents'));
-  console.log("🛈 /OutputIntents after ensure:", oiAfter ? "FOUND" : "MISSING");
-} catch (oiErr) {
-  console.error("❌ Missing OutputIntents:", oiErr.message);
-  results.push({ index, error: "OutputIntents missing after Ghostscript" });
-  continue;
-}
-
-
-      // --- Pro: Inject ZUGFeRD + Metadata ---
+      // --- Post-process for Pro users ---
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
         const localeMeta = {
@@ -158,8 +130,8 @@ try {
         finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
       }
 
-      // --- Usage count ---
-      const pdfDoc = await PDFDocument.load(finalPdf);
+      // --- Increment usage ---
+      const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
