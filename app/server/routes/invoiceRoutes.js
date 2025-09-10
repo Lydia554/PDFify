@@ -13,6 +13,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
+const { ensureOutputIntents } = require('../utils/pdfOutputIntentUtils');
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -116,19 +117,25 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
       );
 
-      let finalPdf = fs.readFileSync(tempOutput);
-      fs.unlinkSync(tempInput);
+   
 
-      // --- Post-process for Pro users ---
-      if (user.plan === "pro") {
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const localeMeta = {
-          title: invoiceData.locale.invoiceTitle || 'Invoice',
-          creator: 'PDFify',
-          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
-        };
-        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
-      }
+      
+// After Ghostscript output
+let finalPdf = fs.readFileSync(tempOutput);
+
+// Ensure OutputIntents before post-processing
+finalPdf = await ensureOutputIntents(finalPdf, iccPath);
+
+// Post-process for Pro users (XMP + ZUGFeRD)
+if (user.plan === "pro") {
+  const zugferdXml = generateZugferdXML(invoiceData);
+  const localeMeta = {
+    title: invoiceData.locale.invoiceTitle || 'Invoice',
+    creator: 'PDFify',
+    language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+  };
+  finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
+}
 
       // --- Increment usage ---
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
