@@ -3,8 +3,8 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const router = express.Router();
 const fs = require("fs");
-const os = require("os");
 const archiver = require("archiver");
+const os = require("os");
 const { execFile } = require("child_process");
 
 const User = require("../models/User");
@@ -20,28 +20,38 @@ const locales = {
   de: require('../../locales/de.json'),
 };
 
-const { generateInvoiceHTML } = require("../../templates/english.js");
+const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 const FORCE_PLAN = process.env.FORCE_PLAN;
-const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
 
+// --- Detect Ghostscript executable ---
 function detectGhostscript() {
   const possiblePaths = [
     'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
     'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
   ];
+
   for (const p of possiblePaths) if (fs.existsSync(p)) return p;
+
   try { if (require('child_process').execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gswin64c"; } catch {}
   try { if (require('child_process').execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gs"; } catch {}
+
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
+// --- /generate-invoice route ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
-  const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
+  console.log("🌐 /generate-invoice router hit");
+
+  const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
+  if (!fs.existsSync(iccPath)) return res.status(500).json({ error: "ICC profile missing." });
+
+  const tmpDir = path.join(os.tmpdir(), `pdfify-batch-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
   let browser;
   try {
-    let requests = Array.isArray(req.body.requests) ? req.body.requests : [{ data: req.body.data, isPreview: req.body.isPreview }];
+    let requests = req.body.requests;
+    if (!Array.isArray(requests)) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
     if (!requests.length || requests.length > 100) return res.status(400).json({ error: "1-100 requests only." });
 
     const user = await User.findById(req.user.userId);
@@ -50,75 +60,77 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
     const gsExe = detectGhostscript();
+    console.log("🎯 Ghostscript detected:", gsExe);
 
     for (const [index, { data, isPreview }] of requests.entries()) {
       if (!data) { results.push({ error: "Invalid data" }); continue; }
 
-      const invoiceData = { ...data, country: (data.country || 'slovenia').toLowerCase() };
-      invoiceData.locale = locales[invoiceData.country === 'germany' ? 'de' : 'sl'] || locales.en;
+      const invoiceData = { ...data };
+      const country = (invoiceData.country || "slovenia").toLowerCase();
+      invoiceData.country = country;
 
-      // Puppeteer PDF
-      const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+      if (country === "germany" && Array.isArray(invoiceData.items)) {
+        invoiceData.items = invoiceData.items.map(item => {
+          const totalNum = parseFloat(item.total || 0);
+          const net = totalNum / 1.19;
+          const tax = totalNum - net;
+          return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
+        });
+      }
+
+      invoiceData.taxRate = typeof invoiceData.taxRate === "number"
+        ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
+        : invoiceData.taxRate || '21%';
+      invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
+
+      // --- Puppeteer PDF generation ---
+      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
       await page.setContent(html, { waitUntil: "networkidle0" });
 
-      const pdfBuffer = await page.pdf({
+      let pdfBuffer = await page.pdf({
         format: "A4", printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
         preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
       });
       await page.close();
 
-      // --- Save temp input PDF ---
+      // --- Ghostscript PDF/A-3b conversion ---
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
-      // --- Ghostscript PDF/A-3b conversion ---
-      await new Promise((resolve, reject) => {
-        const gsArgs = [
-          "-dPDFA=3",
-          "-dBATCH",
-          "-dNOPAUSE",
-          "-dNOOUTERSAVE",
-          "-sDEVICE=pdfwrite",
-          "-dEmbedAllFonts=true",
-          "-dSubsetFonts=true",
-          "-dPreserveDocInfo=true",
-          "-dPDFACompatibilityPolicy=1",
-          "-dAutoRotatePages=/None",
-          "-sColorConversionStrategy=RGB",
-          "-dProcessColorModel=/DeviceRGB",
-          `-sOutputICCProfile=${iccPath}`,
-          `-sOutputFile=${tempOutput}`,
-          tempInput
-        ];
+      const gsArgs = [
+        "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-sDEVICE=pdfwrite",
+        "-dEmbedAllFonts=true", "-dSubsetFonts=true",
+        "-dPreserveDocInfo=true", "-dPreserveAnnots=true", "-dPDFACompatibilityPolicy=1",
+        "-dAutoRotatePages=/None", "-sColorConversionStrategy=RGB", "-dProcessColorModel=/DeviceRGB",
+        "-dConvertCMYKImagesToRGB=true", "-dDownsampleColorImages=false", "-dDownsampleGrayImages=false",
+        "-dDownsampleMonoImages=false", "-dPDFSETTINGS=/prepress",
+        `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
+      ];
 
-        execFile(gsExe, gsArgs, (err, stdout, stderr) => {
-          if (err) {
-            console.error("❌ Ghostscript error:", stderr || err);
-            return reject(err);
-          }
-          resolve();
-        });
-      });
+      await new Promise((resolve, reject) =>
+        execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
+      );
 
       let finalPdf = fs.readFileSync(tempOutput);
+      fs.unlinkSync(tempInput);
 
-      // --- Post-process for XMP / ZUGFeRD ---
+      // --- Post-process for Pro users ---
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
         const localeMeta = {
           title: invoiceData.locale.invoiceTitle || 'Invoice',
           creator: 'PDFify',
-          language: invoiceData.country === 'germany' ? 'de' : 'en'
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
         };
         finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
       }
 
-      // --- Usage counting ---
+      // --- Increment usage ---
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);

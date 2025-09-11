@@ -4,6 +4,13 @@ const fs = require('fs');
 async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
+  // --- Preserve existing /OutputIntents ---
+  const existingOutputIntentsRef = pdfDoc.catalog.get(PDFName.of('OutputIntents'));
+  let outputIntents = null;
+  if (existingOutputIntentsRef) {
+    outputIntents = pdfDoc.context.lookup(existingOutputIntentsRef, PDFArray);
+  }
+
   // --- Attach ZUGFeRD XML if provided ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(
@@ -21,16 +28,24 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
 
     let afArray = pdfDoc.catalog.get(PDFName.of('AF'));
     if (!afArray) {
-      pdfDoc.catalog.set(PDFName.of('AF'), pdfDoc.context.obj([zugferdFileSpec]));
+      afArray = pdfDoc.context.obj([zugferdFileSpec]);
     } else {
       afArray = pdfDoc.context.lookup(afArray, PDFArray);
-      afArray.push(zugferdFileSpec);
-      pdfDoc.catalog.set(PDFName.of('AF'), afArray);
+      const hasZugferd = afArray.some(ref => {
+        const fsObj = pdfDoc.context.lookup(ref);
+        const fileName = fsObj.get(PDFName.of('F'));
+        return fileName && fileName.value === 'zugferd-invoice.xml';
+      });
+      if (!hasZugferd) afArray.push(zugferdFileSpec);
     }
+
+    pdfDoc.catalog.set(PDFName.of('AF'), afArray);
+    console.log('📦 ZUGFeRD XML attached');
   }
 
-  // --- Inject XMP metadata ---
+  // --- Inject PDF/A-3b XMP metadata ---
   const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
+
   const xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -47,10 +62,15 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
 </x:xmpmeta>
 <?xpacket end='w'?>`;
 
-  const xmpStream = pdfDoc.context.register(
-    pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'), { Subtype: PDFName.of('XML') })
-  );
+  const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
   pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
+  console.log('📄 PDF/A-3b XMP metadata injected');
+
+  // --- Restore /OutputIntents if it existed ---
+  if (outputIntents) {
+    pdfDoc.catalog.set(PDFName.of('OutputIntents'), outputIntents);
+    console.log('🎨 /OutputIntents preserved');
+  }
 
   return await pdfDoc.save({ useObjectStreams: false });
 }
