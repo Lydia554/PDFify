@@ -1,32 +1,42 @@
 const { PDFDocument, PDFName, PDFString, PDFArray } = require('pdf-lib');
 const fs = require('fs');
 
-async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}, iccPath) {
-  if (!iccPath) throw new Error('ICC profile path required for PDF/A-3b OutputIntent');
+async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}, iccPath = null) {
+  const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  // --- Setup /OutputIntents ---
+  let outputIntents = pdfDoc.catalog.get(PDFName.of('OutputIntents'));
+  if (!outputIntents) {
+    if (!iccPath) throw new Error('ICC profile path required for PDF/A-3b OutputIntent');
 
-  // --- ICC OutputIntent ---
-  const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.register(pdfDoc.context.stream(iccBytes));
-  const outputIntent = pdfDoc.context.obj({
-    Type: PDFName.of('OutputIntent'),
-    S: PDFName.of('GTS_PDFA1'),
-    OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
-    DestOutputProfile: iccStream,
-  });
+    const iccBytes = fs.readFileSync(iccPath);
+    const iccStream = pdfDoc.context.register(pdfDoc.context.stream(iccBytes));
 
-  pdfDoc.catalog.set(PDFName.of('OutputIntents'), pdfDoc.context.obj([outputIntent]));
+    const intentDict = pdfDoc.context.obj({
+      Type: PDFName.of('OutputIntent'),
+      S: PDFName.of('GTS_PDFA1'),           // PDF/A-3b standard
+      OutputConditionIdentifier: PDFString.of('sRGB IEC61966-2.1'),
+      DestOutputProfile: iccStream,
+    });
 
-  // --- ZUGFeRD ---
+    // IMPORTANT: register OutputIntent as indirect object
+    pdfDoc.catalog.set(
+      PDFName.of('OutputIntents'),
+      pdfDoc.context.obj([pdfDoc.context.register(intentDict)])
+    );
+  }
+
+  // --- Attach ZUGFeRD XML if provided ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
-    const zugferdFileSpec = pdfDoc.context.register(pdfDoc.context.obj({
-      Type: PDFName.of('Filespec'),
-      F: PDFString.of('zugferd-invoice.xml'),
-      EF: pdfDoc.context.obj({ F: zugferdStream }),
-      AFRelationship: PDFName.of('Alternative'),
-    }));
+    const zugferdFileSpec = pdfDoc.context.register(
+      pdfDoc.context.obj({
+        Type: PDFName.of('Filespec'),
+        F: PDFString.of('zugferd-invoice.xml'),
+        EF: pdfDoc.context.obj({ F: zugferdStream }),
+        AFRelationship: PDFName.of('Alternative')
+      })
+    );
 
     let afArray = pdfDoc.catalog.get(PDFName.of('AF'));
     if (!afArray) {
@@ -38,7 +48,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     }
   }
 
-  // --- XMP Metadata ---
+  // --- Inject PDF/A-3b XMP metadata ---
   const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
   const xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
@@ -56,10 +66,13 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
 </x:xmpmeta>
 <?xpacket end='w'?>`;
 
-  const metadataStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'), {
-    Type: PDFName.of('Metadata'),
-    Subtype: PDFName.of('XML'),
-  }));
+  // Metadata stream as indirect object with /Subtype /XML
+  const metadataStream = pdfDoc.context.register(
+    pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'), {
+      Type: PDFName.of('Metadata'),
+      Subtype: PDFName.of('XML')
+    })
+  );
   pdfDoc.catalog.set(PDFName.of('Metadata'), metadataStream);
 
   return await pdfDoc.save({ useObjectStreams: false });
