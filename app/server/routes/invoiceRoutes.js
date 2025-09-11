@@ -1,3 +1,4 @@
+// server/routes/invoiceRoutes.js
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
@@ -13,6 +14,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
+const { PDFDocument } = require("pdf-lib");
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -27,18 +29,25 @@ const FORCE_PLAN = process.env.FORCE_PLAN;
 function detectGhostscript() {
   const possiblePaths = [
     'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
-    'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
+    'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe',
+    'gswin64c',
+    'gswin32c',
+    'gs'
   ];
 
-  for (const p of possiblePaths) if (fs.existsSync(p)) return p;
-
-  try { if (require('child_process').execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gswin64c"; } catch {}
-  try { if (require('child_process').execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gs"; } catch {}
-
+  for (const p of possiblePaths) {
+    try {
+      if (fs.existsSync(p)) return p; // absolute path
+    } catch (e) { /* ignore */ }
+    try {
+      // test in PATH (silent)
+      require('child_process').execSync(`${p} -v`, { stdio: 'ignore' });
+      return p;
+    } catch (e) { /* not found in PATH */ }
+  }
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
-// --- /generate-invoice route ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
 
@@ -83,7 +92,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // --- Puppeteer PDF generation ---
+      // Puppeteer PDF
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -97,7 +106,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       await page.close();
 
-      // --- Ghostscript PDF/A-3b conversion ---
+      // Ghostscript conversion
       const tempInput = path.join(tmpDir, `input-${index}.pdf`);
       const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
@@ -112,46 +121,58 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
       ];
 
-      await new Promise((resolve, reject) =>
-        execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
-      );
-
-      let finalPdf = fs.readFileSync(tempOutput);
-      fs.unlinkSync(tempInput);
-
-      // --- Post-process for Pro users ---
-      if (user.plan === "pro") {
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const localeMeta = {
-          title: invoiceData.locale.invoiceTitle || 'Invoice',
-          creator: 'PDFify',
-          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
-        };
-        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
+      try {
+        await new Promise((resolve, reject) =>
+          execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
+        );
+      } catch (gsErr) {
+        console.error("❌ Ghostscript conversion failed:", gsErr);
+        results.push({ index, error: "Ghostscript conversion failed", details: gsErr.message });
+        fs.unlinkSync(tempInput);
+        continue;
       }
 
-      // --- Increment usage ---
-      const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
+      // Load the GS output
+      let finalPdf = fs.readFileSync(tempOutput);
+      fs.unlinkSync(tempInput); // remove input
+
+      // Post-process: attach OutputIntent/XMP/ZUGFeRD if needed
+      // We pass iccPath so postProcess can add OutputIntents if missing or incorrect
+      if (user.plan === "pro") {
+        const xmpPath = path.resolve(__dirname, "../xmp/zugferd.xmp");
+        const zugferdXml = generateZugferdXML(invoiceData);
+        finalPdf = await postProcessPdfStrict(finalPdf, xmpPath, zugferdXml, iccPath);
+      } else {
+        // even for non-pro, ensure OutputIntents exist by running postProcess with minimal data
+        finalPdf = await postProcessPdfStrict(finalPdf, null, null, iccPath);
+      }
+
+      // Count pages and usage
+      const pdfDoc = await PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
       results.push({ index, pdf: finalPdf });
+      // remove gs output file
+      try { fs.unlinkSync(tempOutput); } catch (e) { /* ignore */ }
     }
 
-    // --- Send results ---
-    if (results.length === 1) {
+    // Send results
+    if (results.length === 1 && results[0].pdf) {
       res.set({
         "Content-Type": "application/pdf",
         "Content-Disposition": `inline; filename=invoice.pdf`,
         "Content-Length": results[0].pdf.length
       });
-      res.send(results[0].pdf);
+      return res.send(results[0].pdf);
     } else {
       const archive = archiver("zip", { zlib: { level: 9 } });
       res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename=invoices.zip` });
       archive.pipe(res);
-      results.forEach(({ index, pdf }) => archive.append(pdf, { name: `invoice-${index + 1}.pdf` }));
+      results.forEach(({ index, pdf }) => {
+        if (pdf) archive.append(pdf, { name: `invoice-${index + 1}.pdf` });
+      });
       await archive.finalize();
     }
 
