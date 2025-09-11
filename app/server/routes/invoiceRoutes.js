@@ -127,7 +127,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           creator: 'PDFify',
           language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
         };
-        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
+        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, iccPath);
+
       }
 
       // --- Increment usage ---
