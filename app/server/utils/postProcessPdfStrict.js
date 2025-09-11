@@ -1,12 +1,15 @@
 const { PDFDocument, PDFName, PDFString, PDFArray } = require('pdf-lib');
 const fs = require('fs');
 
-async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}, iccPath = null) {
+async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
   // --- Attach ZUGFeRD XML if provided ---
   if (zugferdXml) {
-    const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
+    const zugferdStream = pdfDoc.context.register(
+      pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'))
+    );
+
     const zugferdFileSpec = pdfDoc.context.register(
       pdfDoc.context.obj({
         Type: PDFName.of('Filespec'),
