@@ -19,14 +19,13 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
       DestOutputProfile: iccStream,
     });
 
-    // IMPORTANT: register OutputIntent as indirect object
     pdfDoc.catalog.set(
       PDFName.of('OutputIntents'),
       pdfDoc.context.obj([pdfDoc.context.register(intentDict)])
     );
   }
 
-  // --- Attach ZUGFeRD XML if provided ---
+  // --- Attach ZUGFeRD XML ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8')));
     const zugferdFileSpec = pdfDoc.context.register(
@@ -66,14 +65,10 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
 </x:xmpmeta>
 <?xpacket end='w'?>`;
 
-  // Metadata stream as indirect object with /Subtype /XML
-  const metadataStream = pdfDoc.context.register(
-    pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'), {
-      Type: PDFName.of('Metadata'),
-      Subtype: PDFName.of('XML')
-    })
+  const xmpStream = pdfDoc.context.register(
+    pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'), { Subtype: PDFName.of('XML') })
   );
-  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataStream);
+  pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
 
   return await pdfDoc.save({ useObjectStreams: false });
 }
