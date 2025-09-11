@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync, execSync } = require('child_process');
-const { postProcessPdfStrict } = require('../server/utils/postProcessPdfStrict');
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 const { validatePDFA3bStrict } = require('../tools/pdfa3b-validator');
 
 (async () => {
@@ -15,7 +15,7 @@ const { validatePDFA3bStrict } = require('../tools/pdfa3b-validator');
     const possibleGsPaths = [
       'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
       'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe',
-      'gswin64c', // fallback if in PATH
+      'gswin64c',
       'gswin32c',
       'gs'
     ];
@@ -48,22 +48,59 @@ const { validatePDFA3bStrict } = require('../tools/pdfa3b-validator');
 
     console.log('✅ Ghostscript PDF/A-3b generated:', gsOutputPath);
 
-    // 6️⃣ Load PDF bytes
-    const pdfBytes = fs.readFileSync(gsOutputPath);
+    // 6️⃣ Load PDF bytes from Ghostscript output
+    let pdfBytes = fs.readFileSync(gsOutputPath);
 
-    // 7️⃣ Load optional ZUGFeRD XML
-    const zugferdXmlPath = path.resolve(__dirname, 'zugferd.xml');
-    const zugferdXml = fs.existsSync(zugferdXmlPath) ? fs.readFileSync(zugferdXmlPath, 'utf8') : null;
+    // 7️⃣ Minimal fix for OutputIntents + XMP
+    async function fixPdfForPDFA(pdfBytes, iccPath) {
+      const pdfDoc = await PDFDocument.load(pdfBytes, { updateMetadata: false });
+      const ctx = pdfDoc.context;
+      const catalog = pdfDoc.catalog;
 
-    // 8️⃣ Prepare locale metadata for XMP
-    const localeMeta = {
-      title: 'Invoice',
-      creator: 'PDFify',
-      language: 'en'
-    };
+      // Debug before changes
+      console.log("🔍 Before: /OutputIntents =", catalog.get(PDFName.of("OutputIntents")) ? "FOUND" : "MISSING");
+      console.log("🔍 Before: /Metadata =", catalog.get(PDFName.of("Metadata")) ? "FOUND" : "MISSING");
 
-    // 9️⃣ Post-process PDF (attach ZUGFeRD + XMP + OutputIntent)
-    const finalPdf = await postProcessPdfStrict(pdfBytes, zugferdXml, localeMeta);
+      // ✅ Inject OutputIntents if missing
+      if (!catalog.get(PDFName.of("OutputIntents"))) {
+        const iccData = fs.readFileSync(iccPath);
+        const iccStream = ctx.flateStream(iccData, { N: 3, Alternate: PDFName.of("DeviceRGB") });
+        const oi = ctx.obj({
+          Type: PDFName.of("OutputIntent"),
+          S: PDFName.of("GTS_PDFA1"),
+          OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+          Info: PDFString.of("sRGB IEC61966-2.1"),
+          DestOutputProfile: iccStream
+        });
+        catalog.set(PDFName.of("OutputIntents"), ctx.obj([oi]));
+        console.log("✅ Added OutputIntents");
+      }
+
+      // ✅ Add minimal XMP metadata
+      const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+      <x:xmpmeta xmlns:x='adobe:ns:meta/'>
+        <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+          <rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+            <pdfaid:part>3</pdfaid:part>
+            <pdfaid:conformance>B</pdfaid:conformance>
+          </rdf:Description>
+        </rdf:RDF>
+      </x:xmpmeta>
+      <?xpacket end='w'?>`;
+
+      const metaStream = ctx.flateStream(xmp);
+      catalog.set(PDFName.of("Metadata"), metaStream);
+      console.log("✅ Injected minimal XMP");
+
+      // Debug after changes
+      console.log("🔍 After: /OutputIntents =", catalog.get(PDFName.of("OutputIntents")) ? "FOUND" : "MISSING");
+      console.log("🔍 After: /Metadata =", catalog.get(PDFName.of("Metadata")) ? "FOUND" : "MISSING");
+
+      return await pdfDoc.save({ useObjectStreams: false });
+    }
+
+    // Apply fixes
+    const finalPdf = await fixPdfForPDFA(pdfBytes, iccPath);
 
     // 🔟 Save final PDF
     const outputPath = path.resolve(__dirname, 'Gen_postprocessed.pdf');
