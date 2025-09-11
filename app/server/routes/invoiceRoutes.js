@@ -5,6 +5,7 @@ const router = express.Router();
 const fs = require("fs");
 const os = require("os");
 const archiver = require("archiver");
+const { execFile } = require("child_process");
 
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
@@ -23,6 +24,20 @@ const { generateInvoiceHTML } = require("../../templates/english.js");
 const FORCE_PLAN = process.env.FORCE_PLAN;
 const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
 
+function detectGhostscript() {
+  const possiblePaths = [
+    'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
+    'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
+  ];
+
+  for (const p of possiblePaths) if (fs.existsSync(p)) return p;
+
+  try { if (require('child_process').execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gswin64c"; } catch {}
+  try { if (require('child_process').execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gs"; } catch {}
+
+  throw new Error('Ghostscript not found.');
+}
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -38,7 +53,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    const gsExe = detectGhostscript();
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+
     const results = [];
 
     for (const [index, { data, isPreview }] of requests.entries()) {
@@ -54,7 +71,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
       await page.setContent(html, { waitUntil: "networkidle0" });
 
-      let pdfBuffer = await page.pdf({
+      const tmpPdfPath = path.join(tmpDir, `input-${index}.pdf`);
+      const tmpPdfAPath = path.join(tmpDir, `pdfa-${index}.pdf`);
+
+      const pdfBuffer = await page.pdf({
         format: "A4",
         printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
@@ -63,11 +83,31 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         tagged: true
       });
       await page.close();
+      fs.writeFileSync(tmpPdfPath, pdfBuffer);
 
-      // Post-process with PDF/A-3b + ICC + XMP + ZUGFeRD
-      const zugferdXml = user.plan === "pro" ? generateZugferdXML(invoiceData) : null;
-      const localeMeta = { title: invoiceData.locale.invoiceTitle || 'Invoice', creator: 'PDFify', language: invoiceData.country === 'germany' ? 'de' : 'en' };
-      const finalPdf = await postProcessPdfStrict(pdfBuffer, zugferdXml, localeMeta, iccPath);
+      // Ghostscript PDF/A-3b conversion
+      const gsArgs = [
+        "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-sDEVICE=pdfwrite",
+        "-dEmbedAllFonts=true", "-dSubsetFonts=true", "-dPreserveDocInfo=true",
+        "-dPDFACompatibilityPolicy=1",
+        "-dAutoRotatePages=/None", "-sColorConversionStrategy=RGB", "-dProcessColorModel=/DeviceRGB",
+        `-sOutputICCProfile=${iccPath}`,
+        `-sOutputFile=${tmpPdfAPath}`,
+        tmpPdfPath
+      ];
+
+      await new Promise((resolve, reject) =>
+        execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
+      );
+
+      let finalPdf = fs.readFileSync(tmpPdfAPath);
+
+      // Post-process PDF for Pro users (ZUGFeRD + XMP)
+      if (user.plan === 'pro') {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const localeMeta = { title: invoiceData.locale.invoiceTitle || 'Invoice', creator: 'PDFify', language: invoiceData.country === 'germany' ? 'de' : 'en' };
+        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta);
+      }
 
       // Usage
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
@@ -94,6 +134,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     await user.save();
+
   } catch (err) {
     console.error("❌ Exception in /generate-invoice:", err);
     res.status(500).json({ error: "Internal Server Error", details: err.message });
