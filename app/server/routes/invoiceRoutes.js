@@ -127,13 +127,8 @@ if (user.plan === "pro") {
     creator: 'PDFify',
     language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
   };
-
-  finalPdf = await postProcessPdfStrict(
-    finalPdf,
-    zugferdXml,
-    localeMeta,
-    path.resolve(__dirname, "../routes/zugferd.xmp") 
-  );
+  const xmpTemplatePath = path.resolve(__dirname, '../server/xmp/zugferd.xmp');
+  finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, xmpTemplatePath);
 }
 
 
