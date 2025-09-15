@@ -121,12 +121,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       // --- Post-process for Pro users ---
 if (user.plan === "pro") {
-  const xmpTemplatePath = path.resolve(__dirname, '../server/xmp/zugferd.xmp');
-  console.log('📌 Calling postProcessPdfStrict...');
-  finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, xmpTemplatePath);
-  console.log('📌 postProcessPdfStrict finished');
-}
+  const zugferdXml = generateZugferdXML(invoiceData);
+  const localeMeta = {
+    title: invoiceData.locale.invoiceTitle || 'Invoice',
+    creator: 'PDFify',
+    language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+  };
 
+  finalPdf = await postProcessPdfStrict(
+    finalPdf,
+    zugferdXml,
+    localeMeta,
+    path.resolve(__dirname, "../server/xmp/zugferd.xmp") 
+  );
+}
 
 
       // --- Increment usage ---
