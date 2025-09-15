@@ -4,10 +4,10 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-// Replace this with your Graylog logger if you have one
+// Replace with your Graylog logger if needed
 const log = {
   info: (...args) => process.stdout.write(args.join(' ') + '\n'),
-  error: (...args) => process.stderr.write(args.join(' ') + '\n')
+  error: (...args) => process.stderr.write(args.join(' ') + '\n'),
 };
 
 /**
@@ -27,7 +27,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     throw err;
   }
 
-  // --- Preserve existing OutputIntents ---
+  // Preserve existing OutputIntents
   let outputIntents = null;
   try {
     const existingOutputIntentsRef = pdfDoc.catalog.get(PDFName.of('OutputIntents'));
@@ -39,7 +39,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     log.error('❌ Error reading OutputIntents:', err);
   }
 
-  // --- Attach ZUGFeRD XML ---
+  // Attach ZUGFeRD XML
   if (zugferdXml) {
     try {
       const zugferdStream = pdfDoc.context.register(
@@ -50,7 +50,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
           Type: PDFName.of('Filespec'),
           F: PDFString.of('zugferd-invoice.xml'),
           EF: pdfDoc.context.obj({ F: zugferdStream }),
-          AFRelationship: PDFName.of('Alternative')
+          AFRelationship: PDFName.of('Alternative'),
         })
       );
 
@@ -75,17 +75,16 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     }
   }
 
-  // --- Embed PDF/A-3b XMP metadata ---
+  // Embed PDF/A-3b XMP metadata
   try {
     let xmpContent = '';
-
     if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
-      xmpContent = fs.readFileSync(xmpTemplatePath, 'utf-8');
+      xmpContent = fs.readFileSync(xmpTemplatePath, 'utf8');
       log.info('📄 XMP template loaded from', xmpTemplatePath);
     } else {
-      // Base XMP
+      // Fallback base XMP
       const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
-      xmpContent = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
+      xmpContent = `<?xpacket begin='﻿' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=''
@@ -103,12 +102,12 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
       log.info('📄 Base XMP metadata generated');
     }
 
-    // Ensure UTF-8 BOM
-    if (!xmpContent.startsWith('\uFEFF')) xmpContent = '\uFEFF' + xmpContent;
+    // Safe BOM injection
+    const xmpBuffer = Buffer.concat([Buffer.from([0xEF, 0xBB, 0xBF]), Buffer.from(xmpContent, 'utf8')]);
 
-    const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, 'utf8'), {
+    const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
       Type: PDFName.of('Metadata'),
-      Subtype: PDFName.of('XML')
+      Subtype: PDFName.of('XML'),
     });
 
     pdfDoc.catalog.set(PDFName.of('Metadata'), pdfDoc.context.register(metadataStream));
@@ -118,19 +117,19 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     throw err;
   }
 
-  // --- Add Trailer ID ---
+  // Add Trailer ID
   try {
     const id = crypto.randomBytes(16).toString('hex');
     pdfDoc.catalog.set(PDFName.of('ID'), pdfDoc.context.obj([
       PDFHexString.fromText(id),
-      PDFHexString.fromText(id)
+      PDFHexString.fromText(id),
     ]));
     log.info('🆔 Trailer ID added');
   } catch (err) {
     log.error('❌ Failed to add Trailer ID:', err);
   }
 
-  // --- Restore OutputIntents ---
+  // Restore OutputIntents
   try {
     if (outputIntents) {
       pdfDoc.catalog.set(PDFName.of('OutputIntents'), outputIntents);
