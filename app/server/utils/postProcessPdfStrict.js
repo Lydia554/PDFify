@@ -1,83 +1,70 @@
-const { PDFDocument, PDFName, PDFString, PDFArray, PDFHexString } = require('pdf-lib');
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
+const { PDFDocument, PDFName } = require("pdf-lib");
+const fs = require("fs");
+const crypto = require("crypto");
 
 /**
- * Post-process PDF to strict PDF/A-3b standard for Pro users
- * - Preserves /OutputIntents
- * - Adds Trailer ID
- * - Embeds ZUGFeRD XML
- * - Embeds verified XMP metadata from template with dynamic fields
+ * Post-process PDF/A-3b PDF:
+ * - Embed ZUGFeRD XML
+ * - Embed strict XMP metadata (from template if provided)
+ * - Preserve OutputIntents
+ * - Add Trailer ID for VeraPDF compliance
  *
- * @param {Buffer} pdfBytes - PDF buffer from Puppeteer/Ghostscript
- * @param {string|null} zugferdXml - Optional ZUGFeRD XML string
- * @param {Object} localeMeta - { title, creator, language }
- * @param {string|null} xmpTemplatePath - Optional path to your .xmp template
- * @returns {Buffer} final PDF
+ * @param {Uint8Array|Buffer} pdfBytes
+ * @param {string|null} zugferdXml
+ * @param {object} localeMeta - { title, creator, language }
+ * @param {string|null} xmpTemplatePath - optional path to strict XMP template
  */
 async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}, xmpTemplatePath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
-  // --- Preserve existing /OutputIntents ---
-  const existingOutputIntentsRef = pdfDoc.catalog.get(PDFName.of('OutputIntents'));
+  // --- Preserve /OutputIntents ---
+  const existingOutputIntentsRef = pdfDoc.catalog.get(PDFName.of("OutputIntents"));
   let outputIntents = null;
   if (existingOutputIntentsRef) {
-    outputIntents = pdfDoc.context.lookup(existingOutputIntentsRef, PDFArray);
+    outputIntents = pdfDoc.context.lookup(existingOutputIntentsRef);
   }
 
-  // --- Attach ZUGFeRD XML if provided ---
+  // --- Embed ZUGFeRD XML if provided ---
   if (zugferdXml) {
     const zugferdStream = pdfDoc.context.register(
-      pdfDoc.context.stream(Buffer.from(zugferdXml, 'utf8'))
+      pdfDoc.context.stream(Buffer.from(zugferdXml, "utf8"))
     );
 
     const zugferdFileSpec = pdfDoc.context.register(
       pdfDoc.context.obj({
-        Type: PDFName.of('Filespec'),
-        F: PDFString.of('zugferd-invoice.xml'),
+        Type: PDFName.of("Filespec"),
+        F: PDFName.of("zugferd-invoice.xml"),
         EF: pdfDoc.context.obj({ F: zugferdStream }),
-        AFRelationship: PDFName.of('Alternative')
+        AFRelationship: PDFName.of("Alternative"),
       })
     );
 
-    let afArray = pdfDoc.catalog.get(PDFName.of('AF'));
+    let afArray = pdfDoc.catalog.get(PDFName.of("AF"));
     if (!afArray) {
       afArray = pdfDoc.context.obj([zugferdFileSpec]);
     } else {
-      afArray = pdfDoc.context.lookup(afArray, PDFArray);
+      afArray = pdfDoc.context.lookup(afArray);
       const hasZugferd = afArray.some(ref => {
         const fsObj = pdfDoc.context.lookup(ref);
-        const fileName = fsObj.get(PDFName.of('F'));
-        return fileName && fileName.value === 'zugferd-invoice.xml';
+        const fileName = fsObj.get(PDFName.of("F"));
+        return fileName && fileName.value === "zugferd-invoice.xml";
       });
       if (!hasZugferd) afArray.push(zugferdFileSpec);
     }
-
-    pdfDoc.catalog.set(PDFName.of('AF'), afArray);
-    console.log('📦 ZUGFeRD XML attached');
+    pdfDoc.catalog.set(PDFName.of("AF"), afArray);
+    console.log("📦 ZUGFeRD XML attached");
   }
 
-  // --- Add Trailer ID (Fix VeraPDF missing ID flag) ---
-  const id = crypto.randomBytes(16).toString('hex');
-  pdfDoc.catalog.set(PDFName.of('ID'), pdfDoc.context.obj([
-    PDFHexString.fromText(id),
-    PDFHexString.fromText(id)
-  ]));
-  console.log('🆔 Trailer ID added');
-
-  // --- Embed verified XMP metadata ---
-  const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
-  let xmpContent = '';
-
+  // --- Embed strict XMP ---
+  let xmpContent = "";
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
-    xmpContent = fs.readFileSync(xmpTemplatePath, 'utf-8');
+    xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
-    // fallback minimal XMP
+    // fallback minimal PDF/A-3b packet
     xmpContent = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
+<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+    <rdf:Description rdf:about='' xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
       <pdfaid:part>3</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
     </rdf:Description>
@@ -86,26 +73,37 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
 <?xpacket end='w'?>`;
   }
 
-  // Inject dynamic fields into XMP (title, creator, language)
-  xmpContent = xmpContent.replace(/<dc:title>.*?<\/dc:title>/, `<dc:title>${title}</dc:title>`)
-                         .replace(/<dc:creator>.*?<\/dc:creator>/, `<dc:creator>${creator}</dc:creator>`)
-                         .replace(/<dc:language>.*?<\/dc:language>/, `<dc:language>${language}</dc:language>`);
+  // Insert dynamic metadata if requested
+  const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
+  xmpContent = xmpContent
+    .replace(/<dc:title>.*<\/dc:title>/, `<dc:title>${title}</dc:title>`)
+    .replace(/<dc:creator>.*<\/dc:creator>/, `<dc:creator>${creator}</dc:creator>`)
+    .replace(/<dc:language>.*<\/dc:language>/, `<dc:language>${language}</dc:language>`);
 
-  if (!xmpContent.startsWith('\uFEFF')) xmpContent = '\uFEFF' + xmpContent;
+  // Ensure UTF-8 BOM
+  if (!xmpContent.startsWith("\uFEFF")) xmpContent = "\uFEFF" + xmpContent;
 
-  const xmpStream = pdfDoc.context.register(
-    pdfDoc.context.stream(Buffer.from(xmpContent, 'utf-8'), {
-      Type: PDFName.of('Metadata'),
-      Subtype: PDFName.of('XML')
-    })
-  );
-  pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
-  console.log('📄 Strict PDF/A-3b XMP metadata injected');
+  // Embed XMP as FlateDecode stream
+  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+  });
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
+  console.log("📄 Strict XMP metadata embedded");
 
-  // --- Restore /OutputIntents if existed ---
+  // --- Add Trailer ID ---
+  const id = crypto.randomBytes(16).toString("hex");
+  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([
+    PDFName.of(id),
+    PDFName.of(id)
+  ]));
+  console.log("🆔 Trailer ID added");
+
+  // --- Restore /OutputIntents ---
   if (outputIntents) {
-    pdfDoc.catalog.set(PDFName.of('OutputIntents'), outputIntents);
-    console.log('🎨 /OutputIntents preserved');
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), outputIntents);
+    console.log("🎨 /OutputIntents preserved");
   }
 
   return await pdfDoc.save({ useObjectStreams: false });
