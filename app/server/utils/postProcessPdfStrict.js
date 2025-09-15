@@ -4,10 +4,10 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-// Use console.log for Graylog
+// Replace this with your Graylog logger if you have one
 const log = {
-  info: (...args) => console.log('[PDF-STRICT]', ...args),
-  error: (...args) => console.error('[PDF-STRICT]', ...args)
+  info: (...args) => process.stdout.write(args.join(' ') + '\n'),
+  error: (...args) => process.stderr.write(args.join(' ') + '\n')
 };
 
 /**
@@ -15,7 +15,7 @@ const log = {
  * @param {Buffer} pdfBytes - Original PDF bytes
  * @param {string|null} zugferdXml - Optional ZUGFeRD XML content
  * @param {Object} localeMeta - { title, creator, language }
- * @param {string|null} xmpTemplatePath - Optional path to XMP template
+ * @param {string|null} xmpTemplatePath - Optional path to an XMP template
  */
 async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}, xmpTemplatePath = null) {
   let pdfDoc;
@@ -27,7 +27,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     throw err;
   }
 
-  // Preserve existing OutputIntents
+  // --- Preserve existing OutputIntents ---
   let outputIntents = null;
   try {
     const existingOutputIntentsRef = pdfDoc.catalog.get(PDFName.of('OutputIntents'));
@@ -39,7 +39,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     log.error('❌ Error reading OutputIntents:', err);
   }
 
-  // Attach ZUGFeRD XML
+  // --- Attach ZUGFeRD XML ---
   if (zugferdXml) {
     try {
       const zugferdStream = pdfDoc.context.register(
@@ -75,7 +75,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     }
   }
 
-  // Embed PDF/A-3b XMP metadata
+  // --- Embed PDF/A-3b XMP metadata ---
   try {
     let xmpContent = '';
 
@@ -83,6 +83,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
       xmpContent = fs.readFileSync(xmpTemplatePath, 'utf-8');
       log.info('📄 XMP template loaded from', xmpTemplatePath);
     } else {
+      // Base XMP
       const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
       xmpContent = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
@@ -117,7 +118,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     throw err;
   }
 
-  // Add Trailer ID
+  // --- Add Trailer ID ---
   try {
     const id = crypto.randomBytes(16).toString('hex');
     pdfDoc.catalog.set(PDFName.of('ID'), pdfDoc.context.obj([
@@ -129,7 +130,7 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     log.error('❌ Failed to add Trailer ID:', err);
   }
 
-  // Restore OutputIntents
+  // --- Restore OutputIntents ---
   try {
     if (outputIntents) {
       pdfDoc.catalog.set(PDFName.of('OutputIntents'), outputIntents);
@@ -139,7 +140,6 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     log.error('❌ Failed to restore OutputIntents:', err);
   }
 
-  // Save PDF
   try {
     const finalPdf = await pdfDoc.save({ useObjectStreams: false });
     log.info('💾 PDF saved successfully');
