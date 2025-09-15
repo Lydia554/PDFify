@@ -1,15 +1,15 @@
-<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.164384, 2020/07/10-21:49:21        ">
+<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="PDFify">
   <rdf:RDF 
-    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-    xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-    xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-    xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-    xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-    xmlns:pdfaAF="http://www.aiim.org/pdfa/ns/af/"
-    xmlns:dc="http://purl.org/dc/elements/1.1/"
-    xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-    xmlns:zf="urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic">
+      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+      xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+      xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+      xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+      xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+      xmlns:pdfaAF="http://www.aiim.org/pdfa/ns/af/"
+      xmlns:dc="http://purl.org/dc/elements/1.1/"
+      xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+      xmlns:zf="urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic">
 
     <!-- PDF/A Identification -->
     <rdf:Description rdf:about="">
@@ -39,34 +39,6 @@
             <pdfaSchema:schema>ZUGFeRD PDFA Extension Schema</pdfaSchema:schema>
             <pdfaSchema:namespaceURI>urn:zugferd:pdfa:CrossIndustryDocument:invoice:2p1:basic</pdfaSchema:namespaceURI>
             <pdfaSchema:prefix>zf</pdfaSchema:prefix>
-            <pdfaSchema:property>
-              <rdf:Seq>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Name of the embedded XML invoice file</pdfaProperty:description>
-                </rdf:li>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>DocumentType</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Type of the embedded document (e.g., INVOICE)</pdfaProperty:description>
-                </rdf:li>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>Version</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>ZUGFeRD version</pdfaProperty:description>
-                </rdf:li>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>ZUGFeRD conformance level</pdfaProperty:description>
-                </rdf:li>
-              </rdf:Seq>
-            </pdfaSchema:property>
           </rdf:li>
         </rdf:Bag>
       </pdfaExtension:schemas>
@@ -88,4 +60,4 @@
 
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end='w'?>
+<?xpacket end="w"?>
