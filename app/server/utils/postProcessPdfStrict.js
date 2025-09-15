@@ -1,5 +1,5 @@
-const { PDFDocument, PDFName, PDFString, PDFArray } = require('pdf-lib');
-const fs = require('fs');
+const { PDFDocument, PDFName, PDFString, PDFArray, PDFHexString } = require('pdf-lib');
+const crypto = require('crypto');
 
 async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -45,7 +45,6 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
 
   // --- Inject PDF/A-3b XMP metadata ---
   const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
-
   const xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -65,6 +64,14 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
   const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
   pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
   console.log('📄 PDF/A-3b XMP metadata injected');
+
+  // --- Add Trailer ID (Fix VeraPDF missing ID flag) ---
+  const id = crypto.randomBytes(16).toString('hex');
+  pdfDoc.catalog.set(PDFName.of('ID'), pdfDoc.context.obj([
+    PDFHexString.fromText(id),
+    PDFHexString.fromText(id)
+  ]));
+  console.log('🆔 Trailer ID added');
 
   // --- Restore /OutputIntents if it existed ---
   if (outputIntents) {
