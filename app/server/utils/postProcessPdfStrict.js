@@ -43,14 +43,16 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
     console.log('📦 ZUGFeRD XML attached');
   }
 
-  // --- Inject PDF/A-3b XMP metadata ---
+  // --- Inject proper PDF/A-3b XMP metadata ---
   const { title = 'Invoice', creator = 'PDFify', language = 'en' } = localeMeta;
   const xmpData = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDF-Lib'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about=''
-      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
-      xmlns:dc='http://purl.org/dc/elements/1.1/'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'
+           xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+           xmlns:pdfaExtension='http://www.aiim.org/pdfa/ns/extension/'
+           xmlns:dc='http://purl.org/dc/elements/1.1/'>
+    <rdf:Description rdf:about=''>
       <pdfaid:part>3</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
       <dc:title>${title}</dc:title>
@@ -61,7 +63,12 @@ async function postProcessPdfStrict(pdfBytes, zugferdXml = null, localeMeta = {}
 </x:xmpmeta>
 <?xpacket end='w'?>`;
 
-  const xmpStream = pdfDoc.context.register(pdfDoc.context.stream(Buffer.from(xmpData, 'utf8')));
+  const xmpStream = pdfDoc.context.register(
+    pdfDoc.context.stream(Buffer.from(xmpData, 'utf8'), {
+      Type: PDFName.of('Metadata'),
+      Subtype: PDFName.of('XML')
+    })
+  );
   pdfDoc.catalog.set(PDFName.of('Metadata'), xmpStream);
   console.log('📄 PDF/A-3b XMP metadata injected');
 
