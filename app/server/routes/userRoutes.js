@@ -6,6 +6,8 @@ const dualAuth = require("../middleware/dualAuth");
 const sendEmail = require("../sendEmail");
 const router = express.Router();
 
+const FORCE_PLAN = process.env.FORCE_PLAN;
+
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
