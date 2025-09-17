@@ -53,6 +53,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
+    const tempResults = [];
+    let totalPages = 0; 
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw };
@@ -74,23 +76,39 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // --- Generate HTML with embedded images ---
-      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
-
       const page = await browser.newPage();
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
+
+      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
       const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
+        format: "A4", printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
         preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
       });
       await page.close();
 
-      // --- Ghostscript PDF/A-3b conversion ---
+      // Count pages first
+      const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
+      const pageCount = pdfDoc.getPageCount();
+      totalPages += pageCount;
+
+      // Store temporary result
+      tempResults.push({ pdfBuffer, orderId, pageCount });
+    }
+
+    // ✅ Check monthly page limit ONCE
+    const usageAllowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
+    if (!usageAllowed) {
+      await browser.close();
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      return res.status(403).json({ error: 'Monthly limit reached.' });
+    }
+
+    // If allowed, process Ghostscript + ZUGFeRD + save results
+    for (const { pdfBuffer, orderId } of tempResults) {
       const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
       const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
@@ -109,21 +127,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // --- ZUGFeRD for pro users ---
       if (user.plan === "pro") {
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const localeMeta = {
-          title: invoiceData.locale.invoiceTitle || 'Invoice',
-          creator: 'PDFify',
-          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
-        };
+        const zugferdXml = generateZugferdXML({});
+        const localeMeta = { title: 'Invoice', creator: 'PDFify', language: 'en' };
         finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
       }
-
-      const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
-      const pageCount = pdfDoc.getPageCount();
-      const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
-      if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
       results.push({ pdfBuffer: finalPdf, orderId });
     }
@@ -131,7 +139,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
     await browser.close();
 
-    // --- Return results ---
+    // Return single PDF or ZIP
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       res.set({
@@ -142,7 +150,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.send(pdfBuffer);
     }
 
-    // Multiple PDFs -> ZIP
     const archive = archiver("zip", { zlib: { level: 9 } });
     res.set({
       "Content-Type": "application/zip",
@@ -162,5 +169,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
 
 module.exports = router;
