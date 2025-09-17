@@ -1,11 +1,12 @@
+
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const router = express.Router();
 const fs = require("fs");
-const archiver = require("archiver");
 const os = require("os");
-const { execFile } = require("child_process");
+const { execFile, execSync } = require("child_process");
+const archiver = require("archiver");
 const { Parser } = require("json2csv");
 
 const User = require("../models/User");
@@ -24,25 +25,26 @@ const locales = {
 const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
-// --- Detect Ghostscript executable ---
+// --- Detect Ghostscript dynamically ---
 function detectGhostscript() {
   const possiblePaths = [
-    'C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe',
-    'C:\\Program Files (x86)\\gs\\gs10.05.1\\bin\\gswin32c.exe'
+    'C:\\Program Files\\gs\\bin\\gswin64c.exe',
+    'C:\\Program Files (x86)\\gs\\bin\\gswin32c.exe',
+    '/usr/bin/gs',
+    '/usr/local/bin/gs'
   ];
-
   for (const p of possiblePaths) if (fs.existsSync(p)) return p;
 
-  try { if (require('child_process').execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gswin64c"; } catch {}
-  try { if (require('child_process').execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return "gs"; } catch {}
+  try { if (execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return 'gswin64c'; } catch {}
+  try { if (execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return 'gs'; } catch {}
 
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
-// --- CSV generator helper ---
+// --- Generate CSV for invoice items ---
 function generateCSV(invoiceData) {
   if (!invoiceData.items || !Array.isArray(invoiceData.items)) return "";
-  const parser = new Parser({ fields: ["description", "quantity", "price", "total", "net", "tax", "taxNumber", "position"] });
+  const parser = new Parser({ fields: ["name", "quantity", "price", "total", "net", "tax", "position"] });
   return parser.parse(invoiceData.items);
 }
 
@@ -53,7 +55,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
   if (!fs.existsSync(iccPath)) return res.status(500).json({ error: "ICC profile missing." });
 
-  const tmpDir = path.join(os.tmpdir(), `pdfify-batch-${Date.now()}`);
+  const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
   let browser;
@@ -68,13 +70,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
     const gsExe = detectGhostscript();
-    console.log("🎯 Ghostscript detected:", gsExe);
 
     for (const [index, { data, isPreview }] of requests.entries()) {
       if (!data) { results.push({ error: "Invalid data" }); continue; }
 
       const invoiceData = { ...data };
-      const orderId = invoiceData.orderId || `order-${index + 1}`;
+      const orderId = invoiceData.orderId || `order-${Date.now()}-${index}`;
       const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
 
@@ -92,23 +93,23 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // --- Puppeteer PDF generation ---
-      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
+      // --- Generate PDF ---
       const page = await browser.newPage();
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
-      await page.setContent(html, { waitUntil: "networkidle0" });
+      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
+      await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
-      let pdfBuffer = await page.pdf({
+      const pdfBuffer = await page.pdf({
         format: "A4", printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
         preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
       });
       await page.close();
 
-      // --- Ghostscript PDF/A-3b conversion ---
-      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
-      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
+      // --- Ghostscript conversion ---
+      const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
+      const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
       const gsArgs = [
@@ -121,10 +122,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
       ];
 
-      await new Promise((resolve, reject) =>
-        execFile(gsExe, gsArgs, err => err ? reject(err) : resolve())
-      );
-
+      await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
@@ -136,13 +134,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           creator: 'PDFify',
           language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
         };
-
-        finalPdf = await postProcessPdfStrict(
-          finalPdf,
-          zugferdXml,
-          localeMeta,
-          path.resolve(__dirname, "../server/xmp/zugferd.xmp")
-        );
+        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
       }
 
       // --- Increment usage ---
@@ -151,23 +143,33 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
-      results.push({ index, pdf: finalPdf, orderId });
+      // --- Generate CSV ---
+      const csvData = generateCSV(invoiceData);
+      const csvPath = path.join(tmpDir, `${orderId}.csv`);
+      fs.writeFileSync(csvPath, csvData);
+
+      results.push({ pdf: finalPdf, csvPath, orderId });
     }
 
     // --- Send results ---
     if (results.length === 1) {
-      const { pdf, orderId } = results[0];
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
-        "Content-Length": pdf.length
-      });
-      return res.send(pdf);
-    } else {
+      const { pdf, csvPath, orderId } = results[0];
+      res.setHeader("Content-Disposition", `attachment; filename="${orderId}.zip"`);
+      res.setHeader("Content-Type", "application/zip");
       const archive = archiver("zip", { zlib: { level: 9 } });
-      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="invoices.zip"` });
       archive.pipe(res);
-      results.forEach(({ pdf, orderId }) => archive.append(pdf, { name: `${orderId}.pdf` }));
+      archive.append(pdf, { name: `${orderId}.pdf` });
+      archive.file(csvPath, { name: `${orderId}.csv` });
+      await archive.finalize();
+    } else {
+      res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
+      res.setHeader("Content-Type", "application/zip");
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      archive.pipe(res);
+      results.forEach(({ pdf, csvPath, orderId }) => {
+        archive.append(pdf, { name: `${orderId}.pdf` });
+        archive.file(csvPath, { name: `${orderId}.csv` });
+      });
       await archive.finalize();
     }
 
@@ -180,6 +182,5 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
-
 
 module.exports = router;

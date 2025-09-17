@@ -48,14 +48,11 @@ function rowsToInvoiceJson(rows) {
   };
 }
 
-ddocument.getElementById('csvGenerateBtn').addEventListener('click', async () => {
-  const file = document.getElementById('csvUpload').files[0];
-  if (!file) {
-    alert('Please upload a CSV file first.');
-    return;
-  }
 
-  document.getElementById('csvResult').textContent = '';
+document.getElementById('csvGenerateBtn').addEventListener('click', async () => {
+  const file = document.getElementById('csvUpload').files[0];
+  if (!file) return alert('Please upload a CSV file first.');
+
   const progressBar = document.getElementById('progressBar');
   const progressCount = document.getElementById('progressCount');
   progressBar.style.width = '0%';
@@ -63,19 +60,11 @@ ddocument.getElementById('csvGenerateBtn').addEventListener('click', async () =>
   document.getElementById('csvProgress').classList.remove('hidden');
 
   const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) {
-    alert('Please enter your API key.');
-    return;
-  }
+  if (!apiKey) return alert('Please enter your API key.');
 
   const text = await file.text();
   let data;
-  try {
-    data = parseCSV(text);
-  } catch (e) {
-    alert('Invalid CSV format.');
-    return;
-  }
+  try { data = parseCSV(text); } catch { return alert('Invalid CSV format.'); }
 
   const groupedInvoices = groupRowsByOrderId(data);
   const requests = groupedInvoices.map(rows => ({
@@ -99,10 +88,7 @@ ddocument.getElementById('csvGenerateBtn').addEventListener('click', async () =>
     for (const req of requests) {
       const res = await fetch('/api/generate-invoice', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify({ requests: [req] }) 
       });
 
@@ -118,21 +104,17 @@ ddocument.getElementById('csvGenerateBtn').addEventListener('click', async () =>
       const blob = await res.blob();
       const arrayBuffer = await blob.arrayBuffer();
       zip.file(filename, arrayBuffer);
-
       updateProgress();
     }
 
-    // Create one ZIP after all invoices
+    // Download ZIP after all invoices
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
     const a = document.createElement('a');
     a.href = url;
     a.download = "invoices.zip";
-    document.body.appendChild(a);
     a.click();
-    a.remove();
     URL.revokeObjectURL(url);
-
     document.getElementById('csvResult').innerHTML = `<span class="text-green-600">✅ ${total} invoices downloaded.</span>`;
 
   } catch (err) {
