@@ -1,7 +1,6 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
-const router = express.Router();
 const fs = require("fs");
 const os = require("os");
 const { execFile } = require("child_process");
@@ -13,8 +12,6 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
-
-
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -33,20 +30,14 @@ function detectGhostscript() {
     'C:\\Program Files (x86)\\gs\\bin\\gswin32c.exe'
   ];
   for (const p of possiblePaths) if (fs.existsSync(p)) return p;
-
   const { execSync } = require('child_process');
   try { if (execSync('gs -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gs'; } catch {}
   try { if (execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gswin64c'; } catch {}
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
-// --- /generate-invoice route ---
+// --- /generate-invoice ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
-  console.log("🌐 /generate-invoice router hit");
-
-  const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
-  if (!fs.existsSync(iccPath)) return res.status(500).json({ error: "ICC profile missing." });
-
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
@@ -60,7 +51,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found" });
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
-
     const results = [];
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
@@ -98,6 +88,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.close();
 
       // Ghostscript conversion
+      const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
       const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
@@ -105,14 +96,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const gsExe = detectGhostscript();
       const gsArgs = [
         "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
-        "-dEmbedAllFonts=true","-dSubsetFonts=true",
-        "-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
+        "-dEmbedAllFonts=true","-dSubsetFonts=true","-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
         "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
         "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false",
         "-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
         `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
       ];
-
       await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
@@ -138,7 +127,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
     await browser.close();
 
-    // --- Return results ---
+    // --- Return PDFs ---
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       res.set({
