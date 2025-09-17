@@ -5,7 +5,6 @@ const fs = require("fs");
 const os = require("os");
 const { execFile } = require("child_process");
 const archiver = require("archiver");
-const router = express.Router();
 
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
@@ -13,7 +12,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
-const { generateInvoiceHTML } = require("../../templates/english.js"); // your Base64-ready HTML
+const { generateInvoiceHTML } = require("../../templates/english.js"); 
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -59,8 +58,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw };
       const orderId = invoiceData.orderId || `order-${Date.now()}`;
-      const country = (invoiceData.country || "slovenia").toLowerCase();
-      invoiceData.country = country;
+
+      // fallback: if no country/language specified, use default English
+      const country = (invoiceData.country || "").toLowerCase();
+      const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
+      invoiceData.country = country || "default";
+      invoiceData.locale = locales[lang] || locales["en"];
 
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.items = invoiceData.items.map(item => {
@@ -74,13 +77,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.taxRate = typeof invoiceData.taxRate === "number"
         ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
         : invoiceData.taxRate || '21%';
-      invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
       const page = await browser.newPage();
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
 
-      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
+      // --- Use default English template if no country/language specified ---
+      let html;
+      if (!invoiceDataRaw.country || !invoiceDataRaw.invoiceLanguage) {
+        html = generateInvoiceHTML({ ...invoiceData, isPreview });
+      } else {
+        // If you have other language templates, you can swap here
+        html = generateInvoiceHTML({ ...invoiceData, isPreview }); // fallback to English anyway
+      }
+
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
       const pdfBuffer = await page.pdf({
@@ -90,13 +100,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       await page.close();
 
-      // Count pages first
+      // Count pages
       const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
       const pageCount = pdfDoc.getPageCount();
       totalPages += pageCount;
 
-      // Store temporary result
-      tempResults.push({ pdfBuffer, orderId, pageCount });
+      tempResults.push({ pdfBuffer, orderId });
     }
 
     // ✅ Check monthly page limit ONCE
@@ -107,7 +116,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(403).json({ error: 'Monthly limit reached.' });
     }
 
-    // If allowed, process Ghostscript + ZUGFeRD + save results
+    // Ghostscript + ZUGFeRD processing
     for (const { pdfBuffer, orderId } of tempResults) {
       const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
       const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
@@ -119,8 +128,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
         "-dEmbedAllFonts=true","-dSubsetFonts=true","-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
         "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
-        "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false",
-        "-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
+        "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false","-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
         `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
       ];
       await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
@@ -139,7 +147,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
     await browser.close();
 
-    // Return single PDF or ZIP
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       res.set({
@@ -169,6 +176,5 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
-
 
 module.exports = router;

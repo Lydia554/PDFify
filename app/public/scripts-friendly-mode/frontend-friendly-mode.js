@@ -3,7 +3,9 @@ const formContainer = document.getElementById('formContainer');
 const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
-let FORCE_PLAN = 'pro';
+
+//forceds for now, later fetch from server
+const FORCE_PLAN = process.env.FORCE_PLAN;
 
 let allSelectedFiles = [];
 let userAccessType = 'free';
