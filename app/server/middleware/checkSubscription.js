@@ -7,7 +7,7 @@ const checkSubscription = (requiredPlan = 'premium') => {
 
     const userPlan = req.user.plan; 
 
-    const tiers = ['basic', 'premium', 'pro'];
+    const tiers = ['free', 'premium', 'pro'];
     const userTierIndex = tiers.indexOf(userPlan);
     const requiredTierIndex = tiers.indexOf(requiredPlan);
 
