@@ -4,26 +4,25 @@ const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
 let allSelectedFiles = [];
-let userAccessType = 'free'; // default
-let isAdvanced = false; // cached flag
+let userAccessType = 'free'; 
+let isAdvanced = false; 
 
 function isValidYouTubeUrl(url) {
   const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}(\S*)?$/;
   return regex.test(url.trim());
 }
 
-// Fetch user's access type
+
 async function fetchAccessType() {
   const apiKey =
     new URLSearchParams(window.location.search).get('apiKey') ||
     localStorage.getItem('apiKey');
   if (!apiKey) return;
 
-  // 1️⃣ Use forced plan if provided
   if (window.FORCE_PLAN && window.FORCE_PLAN.trim() !== '') {
     userAccessType = window.FORCE_PLAN.trim();
-    console.log(`Using forced plan from frontend: ${userAccessType}`);
     isAdvanced = ['premium', 'pro'].includes(userAccessType);
+    console.log(`Using forced plan from frontend: ${userAccessType}`);
     return;
   }
 
@@ -52,7 +51,6 @@ async function fetchAccessType() {
   }
 }
 
-// Render form based on template and access
 function renderForm(template) {
   let html = '';
 
@@ -65,7 +63,7 @@ function renderForm(template) {
       <textarea id="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
       <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" value="0" class="p-1 rounded border border-gray-400 text-black"/></label>
 
-      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+      <fieldset class="advanced-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Business Details</legend>
         <label class="block mb-1">Invoice Language:
           <select id="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
@@ -81,6 +79,7 @@ function renderForm(template) {
         <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" accept="image/*" class="w-full text-white"/></label>
         <label class="block mb-1">Extra Notes: <textarea id="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
       </fieldset>
+
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" checked /> Include Title</label>
     `;
   } else if (template === 'recipe') {
@@ -93,7 +92,7 @@ function renderForm(template) {
       <label class="block text-white mb-1 font-semibold">Instructions (semicolon separated):</label>
       <textarea id="instructions" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Preheat oven; Mix ingredients; Bake for 30 minutes"></textarea>
 
-      <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
+      <fieldset class="advanced-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Media & Nutrition</legend>
         <label class="block mb-1">Recipe Video URL (YouTube): <input id="videoUrl" placeholder="https://youtube.com/..." class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <fieldset class="border border-gray-600 p-2 rounded mb-3">
@@ -106,6 +105,7 @@ function renderForm(template) {
         <label class="block mb-1">Upload Images: <input type="file" id="imageUpload" accept="image/*" multiple class="w-full text-white"/></label>
         <div id="imagePreviewContainer" class="flex gap-2 flex-wrap mb-2"></div>
       </fieldset>
+
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" checked /> Include Title</label>
     `;
   }
@@ -114,9 +114,9 @@ function renderForm(template) {
   allSelectedFiles = [];
   updateImagePreview();
 
-  // Enable/disable premium fields
-  const premiumFields = formContainer.querySelectorAll('.premium-only input, .premium-only textarea, .premium-only select, .premium-only button');
-  premiumFields.forEach(el => {
+
+  const advancedFields = formContainer.querySelectorAll('.advanced-only input, .advanced-only textarea, .advanced-only select, .advanced-only button');
+  advancedFields.forEach(el => {
     el.disabled = !isAdvanced;
     el.style.opacity = isAdvanced ? '1' : '0.5';
     el.title = isAdvanced ? '' : 'Available in Premium or Pro only';
@@ -159,7 +159,7 @@ function onImagesSelected(event) {
   updateImagePreview();
 }
 
-// Generate PDF handler
+
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
