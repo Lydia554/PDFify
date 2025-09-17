@@ -11,7 +11,7 @@ async function getBase64Image(url) {
     return `data:image/png;base64,${Buffer.from(response.data, "binary").toString("base64")}`;
   } catch (err) {
     console.error("❌ Error fetching image for PDF:", url, err);
-    return ""; // fallback: empty string
+    return ""; 
   }
 }
 

@@ -75,8 +75,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       const invoiceData = { ...data };
       const orderId = invoiceData.orderId || `order-${index + 1}`;
-      invoiceData.orderId = orderId;
-
       const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
 
@@ -94,7 +92,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // --- Generate PDF ---
+      // --- Puppeteer PDF generation ---
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -109,8 +107,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.close();
 
       // --- Ghostscript PDF/A-3b conversion ---
-      const tempInput = path.join(tmpDir, `input-${orderId}.pdf`);
-      const tempOutput = path.join(tmpDir, `output-${orderId}.pdf`);
+      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
+      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
       const gsArgs = [
@@ -143,12 +141,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
           finalPdf,
           zugferdXml,
           localeMeta,
-          path.resolve(__dirname, "../server/xmp/zugferd.xmp") 
+          path.resolve(__dirname, "../server/xmp/zugferd.xmp")
         );
       }
-
-      // --- CSV ---
-      const csvData = generateCSV(invoiceData);
 
       // --- Increment usage ---
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
@@ -156,39 +151,23 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
-      results.push({ pdf: finalPdf, csv: csvData, orderId });
+      results.push({ index, pdf: finalPdf, orderId });
     }
 
     // --- Send results ---
     if (results.length === 1) {
-      const { pdf, csv, orderId } = results[0];
-
-      // Only PDF → download directly with correct filename
-      if (!csv) {
-        res.set({
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
-          "Content-Length": pdf.length
-        });
-        return res.send(pdf);
-      }
-
-      // PDF + CSV → ZIP them
-      const archive = archiver("zip", { zlib: { level: 9 } });
-      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="${orderId}.zip"` });
-      archive.pipe(res);
-      archive.append(pdf, { name: `${orderId}.pdf` });
-      archive.append(csv, { name: `${orderId}.csv` });
-      await archive.finalize();
+      const { pdf, orderId } = results[0];
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
+        "Content-Length": pdf.length
+      });
+      return res.send(pdf);
     } else {
-      // Multiple requests → ZIP all
       const archive = archiver("zip", { zlib: { level: 9 } });
       res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="invoices.zip"` });
       archive.pipe(res);
-      results.forEach(({ pdf, csv, orderId }) => {
-        archive.append(pdf, { name: `${orderId}.pdf` });
-        if (csv) archive.append(csv, { name: `${orderId}.csv` });
-      });
+      results.forEach(({ pdf, orderId }) => archive.append(pdf, { name: `${orderId}.pdf` }));
       await archive.finalize();
     }
 
@@ -201,5 +180,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
 
 module.exports = router;

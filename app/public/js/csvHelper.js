@@ -12,7 +12,6 @@ function parseCSV(text) {
 
 function groupRowsByOrderId(rows) {
   const grouped = {};
-
   rows.forEach(row => {
     const orderId = row.orderId;
     if (!grouped[orderId]) {
@@ -20,7 +19,6 @@ function groupRowsByOrderId(rows) {
     }
     grouped[orderId].push(row);
   });
-
   return Object.values(grouped);
 }
 
@@ -98,13 +96,20 @@ document.getElementById('csvGenerateBtn').addEventListener('click', async () => 
 
     if (!res.ok) throw new Error(await res.text());
 
+    const contentDisposition = res.headers.get('Content-Disposition');
+    let filename = 'invoices.zip';
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/);
+      if (match) filename = match[1];
+    }
+
     const contentType = res.headers.get('Content-Type') || '';
-    if (contentType.includes('zip')) {
+    if (contentType.includes('zip') || contentType.includes('pdf')) {
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'invoices.zip';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -112,7 +117,7 @@ document.getElementById('csvGenerateBtn').addEventListener('click', async () => 
 
       progressBar.style.width = '100%';
       progressCount.textContent = requests.length;
-      document.getElementById('csvResult').innerHTML = `<span class="text-green-600">✅ ZIP with ${requests.length} invoices downloaded.</span>`;
+      document.getElementById('csvResult').innerHTML = `<span class="text-green-600">✅ ${filename} downloaded.</span>`;
     } else {
       const text = await res.text();
       document.getElementById('csvResult').textContent = `Unexpected response: ${text}`;
