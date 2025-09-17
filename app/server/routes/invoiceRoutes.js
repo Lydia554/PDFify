@@ -66,6 +66,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       if (!data) { results.push({ error: "Invalid data" }); continue; }
 
       const invoiceData = { ...data };
+      const orderId = invoiceData.orderId || `order-${index + 1}`;
+      invoiceData.orderId = orderId; // ensure it’s in the invoiceData
+
       const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
 
@@ -98,8 +101,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.close();
 
       // --- Ghostscript PDF/A-3b conversion ---
-      const tempInput = path.join(tmpDir, `input-${index}.pdf`);
-      const tempOutput = path.join(tmpDir, `output-${index}.pdf`);
+      const tempInput = path.join(tmpDir, `input-${orderId}.pdf`);
+      const tempOutput = path.join(tmpDir, `output-${orderId}.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
       const gsArgs = [
@@ -120,22 +123,21 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       fs.unlinkSync(tempInput);
 
       // --- Post-process for Pro users ---
-if (user.plan === "pro") {
-  const zugferdXml = generateZugferdXML(invoiceData);
-  const localeMeta = {
-    title: invoiceData.locale.invoiceTitle || 'Invoice',
-    creator: 'PDFify',
-    language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
-  };
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const localeMeta = {
+          title: invoiceData.locale.invoiceTitle || 'Invoice',
+          creator: 'PDFify',
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+        };
 
-  finalPdf = await postProcessPdfStrict(
-    finalPdf,
-    zugferdXml,
-    localeMeta,
-    path.resolve(__dirname, "../server/xmp/zugferd.xmp") 
-  );
-}
-
+        finalPdf = await postProcessPdfStrict(
+          finalPdf,
+          zugferdXml,
+          localeMeta,
+          path.resolve(__dirname, "../server/xmp/zugferd.xmp") 
+        );
+      }
 
       // --- Increment usage ---
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
@@ -143,22 +145,23 @@ if (user.plan === "pro") {
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
-      results.push({ index, pdf: finalPdf });
+      results.push({ index, pdf: finalPdf, orderId });
     }
 
     // --- Send results ---
     if (results.length === 1) {
+      const { pdf, orderId } = results[0];
       res.set({
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=invoice.pdf`,
-        "Content-Length": results[0].pdf.length
+        "Content-Disposition": `inline; filename=${orderId}.pdf`,
+        "Content-Length": pdf.length
       });
-      res.send(results[0].pdf);
+      res.send(pdf);
     } else {
       const archive = archiver("zip", { zlib: { level: 9 } });
       res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename=invoices.zip` });
       archive.pipe(res);
-      results.forEach(({ index, pdf }) => archive.append(pdf, { name: `invoice-${index + 1}.pdf` }));
+      results.forEach(({ pdf, orderId }) => archive.append(pdf, { name: `${orderId}.pdf` }));
       await archive.finalize();
     }
 
