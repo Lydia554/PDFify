@@ -48,7 +48,7 @@ function rowsToInvoiceJson(rows) {
   };
 }
 
-document.getElementById('csvGenerateBtn').addEventListener('click', async () => {
+ddocument.getElementById('csvGenerateBtn').addEventListener('click', async () => {
   const file = document.getElementById('csvUpload').files[0];
   if (!file) {
     alert('Please upload a CSV file first.');
@@ -84,44 +84,57 @@ document.getElementById('csvGenerateBtn').addEventListener('click', async () => 
     customLogoUrl: rows[0].customLogoUrl,
   }));
 
+  const total = requests.length;
+  let completed = 0;
+  const zip = new JSZip();
+
+  const updateProgress = () => {
+    completed++;
+    const percent = Math.round((completed / total) * 100);
+    progressBar.style.width = `${percent}%`;
+    progressCount.textContent = `${completed}/${total}`;
+  };
+
   try {
-    const res = await fetch('/api/generate-invoice', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({ requests })
-    });
+    for (const req of requests) {
+      const res = await fetch('/api/generate-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ requests: [req] }) 
+      });
 
-    if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error(await res.text());
 
-    const contentDisposition = res.headers.get('Content-Disposition');
-    let filename = 'invoices.zip';
-    if (contentDisposition) {
-      const match = contentDisposition.match(/filename="(.+)"/);
-      if (match) filename = match[1];
-    }
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = 'invoice.pdf';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
 
-    const contentType = res.headers.get('Content-Type') || '';
-    if (contentType.includes('zip') || contentType.includes('pdf')) {
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      const arrayBuffer = await blob.arrayBuffer();
+      zip.file(filename, arrayBuffer);
 
-      progressBar.style.width = '100%';
-      progressCount.textContent = requests.length;
-      document.getElementById('csvResult').innerHTML = `<span class="text-green-600">✅ ${filename} downloaded.</span>`;
-    } else {
-      const text = await res.text();
-      document.getElementById('csvResult').textContent = `Unexpected response: ${text}`;
+      updateProgress();
     }
+
+    // Create one ZIP after all invoices
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(zipBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "invoices.zip";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    document.getElementById('csvResult').innerHTML = `<span class="text-green-600">✅ ${total} invoices downloaded.</span>`;
+
   } catch (err) {
     document.getElementById('csvResult').innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
   }
