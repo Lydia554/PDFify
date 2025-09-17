@@ -3,29 +3,27 @@ const formContainer = document.getElementById('formContainer');
 const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
-
-
-
 let allSelectedFiles = [];
+let userAccessType = 'free'; // default
+let isAdvanced = false; // cached flag
 
 function isValidYouTubeUrl(url) {
   const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}(\S*)?$/;
   return regex.test(url.trim());
 }
 
-
-let userAccessType = 'free'; // default
-
+// Fetch user's access type
 async function fetchAccessType() {
   const apiKey =
     new URLSearchParams(window.location.search).get('apiKey') ||
     localStorage.getItem('apiKey');
   if (!apiKey) return;
 
-  // 1️⃣ Check if forced plan is injected
+  // 1️⃣ Use forced plan if provided
   if (window.FORCE_PLAN && window.FORCE_PLAN.trim() !== '') {
     userAccessType = window.FORCE_PLAN.trim();
     console.log(`Using forced plan from frontend: ${userAccessType}`);
+    isAdvanced = ['premium', 'pro'].includes(userAccessType);
     return;
   }
 
@@ -43,75 +41,72 @@ async function fetchAccessType() {
 
     if (res.ok) {
       const data = await res.json();
-      // use actual plan from user
       userAccessType = data.accessType || data.planType?.toLowerCase() || 'free';
+      isAdvanced = ['premium', 'pro'].includes(userAccessType);
       console.log('Access type from backend:', userAccessType);
     }
   } catch (err) {
     console.warn('Access check failed, falling back to basic.');
     userAccessType = 'free';
+    isAdvanced = false;
   }
 }
 
-// check if user has advanced access
-function hasAdvancedAccess() {
-  return ['premium', 'pro'].includes(userAccessType);
-}
-
-
+// Render form based on template and access
 function renderForm(template) {
   let html = '';
+
   if (template === 'invoice') {
     html = `
-      <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" name="customerName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" name="date" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" name="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Items (format: description,quantity,unitPrice per line):</label>
-      <textarea id="items" name="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
-      <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" name="taxRate" value="0" class="p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Customer Name: <input id="customerName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Date: <input type="date" id="date" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Invoice Number: <input id="invoiceNumber" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Items (desc,qty,unitPrice per line):</label>
+      <textarea id="items" rows="5" class="w-full p-1 rounded border border-gray-400 text-black" placeholder="e.g. Apple,2,1.50"></textarea>
+      <label class="block text-white mb-1 font-semibold">Tax Rate (%): <input type="number" id="taxRate" value="0" class="p-1 rounded border border-gray-400 text-black"/></label>
 
       <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Business Details</legend>
         <label class="block mb-1">Invoice Language:
-          <select id="invoiceLanguage" name="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
+          <select id="invoiceLanguage" class="w-full p-1 rounded border border-gray-400 text-black">
             <option value="en">English</option>
             <option value="de">Deutsch</option>
             <option value="sl">Slovenščina</option>
           </select>
         </label>
-        <label class="block mb-1">Company Name: <input id="companyName" name="companyName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Company Email: <input id="companyEmail" name="companyEmail" type="email" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Sender Address: <input id="senderAddress" name="senderAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Recipient Address: <input id="recipientAddress" name="recipientAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-        <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" name="logoUpload" accept="image/*" class="w-full text-white"/></label>
-        <label class="block mb-1">Extra Notes: <textarea id="notes" name="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
+        <label class="block mb-1">Company Name: <input id="companyName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Company Email: <input id="companyEmail" type="email" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Sender Address: <input id="senderAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Recipient Address: <input id="recipientAddress" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Upload Logo: <input type="file" id="logoUpload" accept="image/*" class="w-full text-white"/></label>
+        <label class="block mb-1">Extra Notes: <textarea id="notes" rows="3" class="w-full p-1 rounded border border-gray-400 text-black"></textarea></label>
       </fieldset>
-      <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
+      <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" checked /> Include Title</label>
     `;
   } else if (template === 'recipe') {
     html = `
-      <label class="block text-white mb-1 font-semibold">Recipe Name: <input id="recipeName" name="recipeName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" name="prepTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
-      <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" name="cookTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Recipe Name: <input id="recipeName" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Prep Time: <input id="prepTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+      <label class="block text-white mb-1 font-semibold">Cook Time: <input id="cookTime" class="w-full p-1 rounded border border-gray-400 text-black"/></label>
       <label class="block text-white mb-1 font-semibold">Ingredients (comma separated):</label>
-      <textarea id="ingredients" name="ingredients" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Flour, Sugar, Eggs"></textarea>
+      <textarea id="ingredients" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Flour, Sugar, Eggs"></textarea>
       <label class="block text-white mb-1 font-semibold">Instructions (semicolon separated):</label>
-      <textarea id="instructions" name="instructions" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Preheat oven; Mix ingredients; Bake for 30 minutes"></textarea>
+      <textarea id="instructions" class="w-full p-1 rounded border border-gray-400 text-black resize-none min-h-[400px]" placeholder="e.g. Preheat oven; Mix ingredients; Bake for 30 minutes"></textarea>
 
       <fieldset class="premium-only border border-gray-500 p-3 rounded mt-4 text-white">
         <legend class="font-semibold mb-2">Media & Nutrition</legend>
-        <label class="block mb-1">Recipe Video URL (YouTube): <input id="videoUrl" name="videoUrl" placeholder="https://youtube.com/..." class="w-full p-1 rounded border border-gray-400 text-black"/></label>
+        <label class="block mb-1">Recipe Video URL (YouTube): <input id="videoUrl" placeholder="https://youtube.com/..." class="w-full p-1 rounded border border-gray-400 text-black"/></label>
         <fieldset class="border border-gray-600 p-2 rounded mb-3">
           <legend class="font-semibold mb-1">Nutrition Info (optional)</legend>
-          <label class="block mb-1">Calories: <input id="calories" name="calories" class="p-1 rounded border border-gray-400 text-black"/></label>
-          <label class="block mb-1">Protein: <input id="protein" name="protein" class="p-1 rounded border border-gray-400 text-black"/></label>
-          <label class="block mb-1">Fat: <input id="fat" name="fat" class="p-1 rounded border border-gray-400 text-black"/></label>
-          <label class="block mb-1">Carbs: <input id="carbs" name="carbs" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Calories: <input id="calories" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Protein: <input id="protein" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Fat: <input id="fat" class="p-1 rounded border border-gray-400 text-black"/></label>
+          <label class="block mb-1">Carbs: <input id="carbs" class="p-1 rounded border border-gray-400 text-black"/></label>
         </fieldset>
-        <label class="block mb-1">Upload Images: <input type="file" id="imageUpload" name="imageUpload" accept="image/*" multiple class="w-full text-white"/></label>
+        <label class="block mb-1">Upload Images: <input type="file" id="imageUpload" accept="image/*" multiple class="w-full text-white"/></label>
         <div id="imagePreviewContainer" class="flex gap-2 flex-wrap mb-2"></div>
       </fieldset>
-      <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" name="includeTitle" checked /> Include Title</label>
+      <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" checked /> Include Title</label>
     `;
   }
 
@@ -119,27 +114,22 @@ function renderForm(template) {
   allSelectedFiles = [];
   updateImagePreview();
 
-  if (template === 'recipe' && hasAdvancedAccess()) {
-    const imageInput = document.getElementById('imageUpload');
-    if (imageInput) {
-      imageInput.addEventListener('change', onImagesSelected);
-    }
-  }
-
-  // Enable/disable premium fields correctly
+  // Enable/disable premium fields
   const premiumFields = formContainer.querySelectorAll('.premium-only input, .premium-only textarea, .premium-only select, .premium-only button');
   premiumFields.forEach(el => {
-    if (hasAdvancedAccess()) {
-      el.disabled = false;
-      el.style.opacity = '1';
-      el.title = '';
-    } else {
-      el.disabled = true;
-      el.style.opacity = '0.5';
-      el.title = 'Available in Premium or Pro only';
-    }
+    el.disabled = !isAdvanced;
+    el.style.opacity = isAdvanced ? '1' : '0.5';
+    el.title = isAdvanced ? '' : 'Available in Premium or Pro only';
   });
+
+  if (template === 'recipe' && isAdvanced) {
+    const imageInput = document.getElementById('imageUpload');
+    if (imageInput) imageInput.addEventListener('change', onImagesSelected);
+  }
 }
+
+
+
 
 function updateImagePreview() {
   const previewContainer = document.getElementById('imagePreviewContainer');
@@ -169,6 +159,7 @@ function onImagesSelected(event) {
   updateImagePreview();
 }
 
+// Generate PDF handler
 generatePdfBtn.addEventListener('click', async () => {
   const template = templateSelect.value;
   let formData = {};
@@ -176,7 +167,7 @@ generatePdfBtn.addEventListener('click', async () => {
     if (template === 'invoice') {
       const logoInput = document.getElementById('logoUpload');
       let base64Logo = '';
-      if (hasAdvancedAccess() && logoInput?.files.length > 0) {
+      if (isAdvanced && logoInput?.files.length > 0) {
         const file = logoInput.files[0];
         base64Logo = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -200,30 +191,25 @@ generatePdfBtn.addEventListener('click', async () => {
             unitPrice: parseFloat(unitPrice),
           };
         }).filter(item => item.description && !isNaN(item.quantity) && !isNaN(item.unitPrice)),
-        logoBase64: base64Logo || undefined,
-        invoiceLanguage: hasAdvancedAccess() ? document.getElementById('invoiceLanguage')?.value : 'en',
-        senderAddress: hasAdvancedAccess() ? document.getElementById('senderAddress')?.value : undefined,
-        companyName: hasAdvancedAccess() ? document.getElementById('companyName')?.value : undefined,
-        companyEmail: hasAdvancedAccess() ? document.getElementById('companyEmail')?.value : undefined,
-        recipientAddress: hasAdvancedAccess() ? document.getElementById('recipientAddress')?.value : undefined,
-        notes: hasAdvancedAccess() ? document.getElementById('notes')?.value : undefined,
+        logo: base64Logo || undefined,
+        invoiceLanguage: isAdvanced ? document.getElementById('invoiceLanguage')?.value : 'en',
+        senderAddress: isAdvanced ? document.getElementById('senderAddress')?.value : undefined,
+        companyName: isAdvanced ? document.getElementById('companyName')?.value : undefined,
+        companyEmail: isAdvanced ? document.getElementById('companyEmail')?.value : undefined,
+        recipientAddress: isAdvanced ? document.getElementById('recipientAddress')?.value : undefined,
+        notes: isAdvanced ? document.getElementById('notes')?.value : undefined,
       };
-
-      if (formData.logoBase64) {
-        formData.logo = formData.logoBase64;
-        delete formData.logoBase64;
-      }
     } else if (template === 'recipe') {
-      const videoUrl = hasAdvancedAccess() ? document.getElementById('videoUrl')?.value.trim() : '';
+      const videoUrl = isAdvanced ? document.getElementById('videoUrl')?.value.trim() : '';
       if (videoUrl && !isValidYouTubeUrl(videoUrl)) throw new Error('Please enter a valid YouTube video URL.');
 
-      const base64Images = hasAdvancedAccess()
+      const base64Images = isAdvanced
         ? await Promise.all(allSelectedFiles.map(file =>
             new Promise((resolve, reject) => {
               const reader = new FileReader();
               reader.readAsDataURL(file);
               reader.onload = () => resolve(reader.result);
-              reader.onerror = error => reject(error);
+              reader.onerror = err => reject(err);
             })
           ))
         : [];
@@ -237,7 +223,7 @@ generatePdfBtn.addEventListener('click', async () => {
         imageUrls: base64Images,
         includeTitle: document.getElementById('includeTitle')?.checked ?? false,
         videoUrl: videoUrl || undefined,
-        nutrition: hasAdvancedAccess() ? {
+        nutrition: isAdvanced ? {
           Calories: document.getElementById('calories')?.value || undefined,
           Protein: document.getElementById('protein')?.value || undefined,
           Fat: document.getElementById('fat')?.value || undefined,
@@ -259,12 +245,12 @@ generatePdfBtn.addEventListener('click', async () => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({ template, ...formData }),
-      credentials: "include",
+      credentials: 'include',
     });
 
     if (response.status === 401 || response.status === 403) {
-      localStorage.removeItem("apiKey");
-      window.location.href = "/login.html";
+      localStorage.removeItem('apiKey');
+      window.location.href = '/login.html';
       return;
     }
 
@@ -289,9 +275,9 @@ generatePdfBtn.addEventListener('click', async () => {
   }
 });
 
-templateSelect.addEventListener('change', () => {
-  renderForm(templateSelect.value);
-});
+
+// Template change handler
+templateSelect.addEventListener('change', () => renderForm(templateSelect.value));
 
 // Initialize
 (async () => {

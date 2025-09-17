@@ -6,8 +6,6 @@ const dualAuth = require("../middleware/dualAuth");
 const sendEmail = require("../sendEmail");
 const router = express.Router();
 
-const FORCE_PLAN = process.env.FORCE_PLAN;
-
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
@@ -136,17 +134,20 @@ router.get("/usage", authenticate, dualAuth, async (req, res) => {
 router.get("/me", authenticate, dualAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
 
-    const effectivePlan = FORCE_PLAN && FORCE_PLAN.trim() !== "" ? FORCE_PLAN : user.plan;
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    log("Fetched user details:", user);
 
     res.json({
       email: user.email,
       apiKey: user.apiKey,
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
-      planType: user.planType || "Free",
-      accessType: effectivePlan, 
+      isPremium: user.isPremium,
+      planType: user.planType || "Free",  
     });
   } catch (error) {
     console.error("Error fetching user details:", error);
