@@ -5,7 +5,6 @@ const router = express.Router();
 const fs = require("fs");
 const os = require("os");
 const { execFile } = require("child_process");
-const { Parser } = require("json2csv");
 const archiver = require("archiver");
 
 const User = require("../models/User");
@@ -14,6 +13,8 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
+
+
 
 const locales = {
   sl: require('../../locales/sl.json'),
