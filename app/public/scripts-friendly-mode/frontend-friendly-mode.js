@@ -3,6 +3,8 @@ const formContainer = document.getElementById('formContainer');
 const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
+let FORCE_PLAN = 'pro';
+
 let allSelectedFiles = [];
 let userAccessType = 'free';
 
@@ -16,6 +18,13 @@ async function fetchAccessType() {
     new URLSearchParams(window.location.search).get('apiKey') ||
     localStorage.getItem('apiKey');
   if (!apiKey) return;
+
+  if (FORCE_PLAN) {
+    userAccessType = FORCE_PLAN;
+    console.log(`Using forced plan: ${FORCE_PLAN}`);
+    return;
+  }
+
 
   try {
     const res = await fetch('/api/friendly/check-access', {
