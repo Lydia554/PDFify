@@ -6,7 +6,7 @@ const fs = require("fs");
 const archiver = require("archiver");
 const os = require("os");
 const { execFile } = require("child_process");
-const { Parser } = require("json2csv"); // For CSV generation
+const { Parser } = require("json2csv");
 
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
@@ -94,7 +94,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // --- Generate PDF with Puppeteer ---
+      // --- Generate PDF ---
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -147,7 +147,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         );
       }
 
-      // --- Generate CSV ---
+      // --- CSV ---
       const csvData = generateCSV(invoiceData);
 
       // --- Increment usage ---
@@ -163,18 +163,27 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (results.length === 1) {
       const { pdf, csv, orderId } = results[0];
 
-      // Return ZIP with both PDF + CSV
+      // Only PDF → download directly with correct filename
+      if (!csv) {
+        res.set({
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
+          "Content-Length": pdf.length
+        });
+        return res.send(pdf);
+      }
+
+      // PDF + CSV → ZIP them
       const archive = archiver("zip", { zlib: { level: 9 } });
-      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename=${orderId}.zip` });
+      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="${orderId}.zip"` });
       archive.pipe(res);
       archive.append(pdf, { name: `${orderId}.pdf` });
-      if (csv) archive.append(csv, { name: `${orderId}.csv` });
+      archive.append(csv, { name: `${orderId}.csv` });
       await archive.finalize();
-
     } else {
-      // Multiple requests: ZIP all files
+      // Multiple requests → ZIP all
       const archive = archiver("zip", { zlib: { level: 9 } });
-      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename=invoices.zip` });
+      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="invoices.zip"` });
       archive.pipe(res);
       results.forEach(({ pdf, csv, orderId }) => {
         archive.append(pdf, { name: `${orderId}.pdf` });
