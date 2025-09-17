@@ -84,63 +84,58 @@
 
 
 
-  <!-- Bulk CSV Section: Visible ONLY for Invoices -->
-  <div id="bulkCsvSection" class="space-y-4 mt-12 p-4 border border-indigo-500 rounded-md bg-gray-800 shadow-md hidden">
-    <h2 class="text-lg font-bold text-indigo-300">📁 Bulk Generate from CSV</h2>
-    <p class="text-sm text-gray-400">Generate multiple PDFs by uploading a properly formatted CSV file.</p>
+<!-- Bulk CSV Section: Visible ONLY for Invoices -->
+<div id="bulkCsvSection" class="space-y-4 mt-12 p-4 border border-indigo-500 rounded-md bg-gray-800 shadow-md hidden">
+  <h2 class="text-lg font-bold text-indigo-300">📁 Bulk Generate from CSV</h2>
+  <p class="text-sm text-gray-400">Generate multiple PDFs by uploading a properly formatted CSV file.</p>
 
-    <label for="csvUpload" class="block font-semibold text-gray-200">Upload CSV File:</label>
-    <input type="file" id="csvUpload" accept=".csv"
-      class="block w-full text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md p-2" />
+  <label for="csvUpload" class="block font-semibold text-gray-200">Upload CSV File:</label>
+  <input type="file" id="csvUpload" accept=".csv"
+         class="block w-full text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md p-2" />
 
-<div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3 max-w-full overflow-x-auto whitespace-pre font-mono">
-  Example CSV:<br />
-  <code>
+  <div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3 max-w-full overflow-x-auto whitespace-pre font-mono">
+    Example CSV:<br />
+    <code>
 customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium
 Anna Moore,anna@example.com,12345,Germany,2025-03-25,PDF Template,1,10.00€,10.00,19.00%,1,15.00€,3.15€,18.15€,https://example.com/custom-logo.png,False,False
 John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.00,22.00%,1,110.00€,22.00€,132.00€,https://example.com/logo2.png,True,True
-Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.00,19.00%,1,95.00€,18.05€,113.05€,https://example.com/logo3.png,False,True
-Michael Brown,michael@example.com,12348,Slovenia,2025-06-01,Training,4,25.00€,100.00,22.00%,1,120.00€,26.40€,146.40€,https://example.com/logo4.png,True,False
-Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00€,70.00,19.00%,1,80.00€,15.20€,95.20€,https://example.com/logo5.png,False,False
-  </code>
-</div>
+    </code>
+  </div>
 
+  <button id="csvGenerateBtn"
+          class="w-full py-3 bg-fuchsia-600 text-white rounded-md font-semibold hover:bg-fuchsia-700 transition-transform hover:scale-105 shadow-md">
+    🧾 Generate from CSV
+  </button>
 
-    <button id="csvGenerateBtn"
-      class="w-full py-3 bg-fuchsia-600 text-white rounded-md font-semibold hover:bg-fuchsia-700 transition-transform hover:scale-105 shadow-md">
-      🧾 Generate from CSV
-    </button>
-
-    <div id="csvProgress" class="text-sm text-indigo-200 mt-4 hidden">
-      <div class="mb-1">Progress: <span id="progressCount">0</span>/100</div>
-      <div class="w-full bg-gray-600 rounded-full h-2.5">
-        <div id="progressBar" class="bg-indigo-500 h-2.5 rounded-full transition-all" style="width: 0%"></div>
-      </div>
+  <div id="csvProgress" class="text-sm text-indigo-200 mt-4 hidden">
+    <div class="mb-1">Progress: <span id="progressCount">0</span>/<span id="progressTotal">0</span></div>
+    <div class="w-full bg-gray-600 rounded-full h-2.5">
+      <div id="progressBar" class="bg-indigo-500 h-2.5 rounded-full transition-all" style="width: 0%"></div>
     </div>
-
-    <p id="csvResult" class="text-sm text-gray-300 mt-4"></p>
   </div>
 
-  <div>
-    <label for="json" class="block mb-1 font-semibold text-gray-100">Data (JSON):</label>
-    <textarea id="json" rows="15" required
-      class="w-full border border-gray-600 bg-gray-700 rounded-md p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400 transition text-gray-100"></textarea>
-  </div>
-
-  <div class="flex gap-4">
-    <button onclick="sendRequest(true)"
-      class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
-      🔍 Preview
-    </button>
-    <button onclick="sendRequest(false)"
-      class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
-      ⬇️ Download PDF
-    </button>
-  </div>
+  <p id="csvResult" class="text-sm text-gray-300 mt-4"></p>
 </div>
 
+<!-- JSON input for single PDF -->
+<div>
+  <label for="json" class="block mb-1 font-semibold text-gray-100">Data (JSON):</label>
+  <textarea id="json" rows="15" required
+            class="w-full border border-gray-600 bg-gray-700 rounded-md p-2 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-indigo-400 transition text-gray-100"></textarea>
+</div>
 
-    <p id="result"></p>
+<div class="flex gap-4">
+  <button onclick="sendRequest(true)"
+          class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
+    🔍 Preview
+  </button>
+  <button onclick="sendRequest(false)"
+          class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
+    ⬇️ Download PDF
+  </button>
+</div>
+
+<p id="result"></p>
   </div>
 
   <!-- Friendly Mode Container -->
@@ -582,96 +577,69 @@ async function connectShopify(domain, token) {
   }
 }
 
-async function sendRequest(isPreview = false) {
-  const endpoint = document.getElementById("endpoint").value.trim();
-  const apiKey = document.getElementById("apiKey").value.trim();
-  const jsonInput = document.getElementById("json").value;
-  const result = document.getElementById("result");
+  async function sendRequest(isPreview = false) {
+    const endpoint = document.getElementById("endpoint").value.trim();
+    const apiKey = document.getElementById("apiKey").value.trim();
+    const jsonInput = document.getElementById("json").value;
+    const result = document.getElementById("result");
 
-  if (!endpoint) {
-    result.innerText = "Please select an endpoint.";
-    return;
-  }
-  if (!apiKey) {
-    result.innerText = "API key is required.";
-    return;
-  }
+    if (!endpoint) return result.innerText = "Please select an endpoint.";
+    if (!apiKey) return result.innerText = "API key is required.";
 
-  result.innerText = isPreview ? "Generating preview..." : "Generating PDF...";
+    result.innerText = isPreview ? "Generating preview..." : "Generating PDF...";
 
-  let parsedData;
-  try {
-    parsedData = JSON.parse(jsonInput);
-  } catch (parseError) {
-    result.innerText = "Invalid JSON input: " + parseError.message;
-    return;
-  }
-
-  let payload;
-  if (parsedData && typeof parsedData === 'object') {
-    if ('html' in parsedData) {
-      payload = { html: parsedData.html, isPreview };
-    } else if ('data' in parsedData) {
-      payload = { ...parsedData, isPreview };
-    } else {
-      payload = { data: parsedData, isPreview };
+    let parsedData;
+    try { parsedData = JSON.parse(jsonInput); } catch (e) {
+      result.innerText = "Invalid JSON input: " + e.message;
+      return;
     }
-  } else {
-    result.innerText = "Invalid input format.";
-    return;
-  }
 
-  try {
-    const response = await fetch(`/api/${endpoint}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload),
-      credentials: "include",
-    });
+    let payload = {};
+    if (parsedData && typeof parsedData === 'object') {
+      if ('html' in parsedData) payload = { html: parsedData.html, isPreview };
+      else if ('data' in parsedData) payload = { ...parsedData, isPreview };
+      else payload = { data: parsedData, isPreview };
+    } else { result.innerText = "Invalid input format."; return; }
 
-    if (!response.ok) {
-      let errorMessage = "PDF request failed.";
-      try {
-        const errorJson = await response.json();
-        errorMessage = errorJson.error || errorMessage;
-      } catch {
-        const errorText = await response.text();
-        errorMessage = errorText || errorMessage;
+    try {
+      const response = await fetch(`/api/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+        body: JSON.stringify(payload), credentials: "include"
+      });
+
+      if (!response.ok) {
+        let msg = "PDF request failed.";
+        try { const json = await response.json(); msg = json.error || msg; } catch { msg = await response.text() || msg; }
+        throw new Error(msg);
       }
-      throw new Error(errorMessage);
-    }
 
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
 
-    if (isPreview) {
-      window.open(blobUrl, "_blank");
-    } else {
-      
-      let filename = "Generated.pdf"; 
+      let filename = "Generated.pdf";
       const contentDisposition = response.headers.get("Content-Disposition");
       if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?(.+?)"?$/);
-        if (match) filename = match[1];
+        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
+        if (match) filename = decodeURIComponent(match[1]);
       }
 
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename; 
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
+      if (isPreview) window.open(blobUrl, "_blank");
+      else {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
 
-    result.innerText = "";
-  } catch (err) {
-    console.error("PDF request error:", err);
-    result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`;
+      result.innerText = "";
+    } catch (err) {
+      console.error("PDF request error:", err);
+      result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`;
+    }
   }
-}
 
 
     async function fetchUserData() {

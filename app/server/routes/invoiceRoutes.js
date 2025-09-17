@@ -6,6 +6,7 @@ const fs = require("fs");
 const os = require("os");
 const { execFile } = require("child_process");
 const { Parser } = require("json2csv");
+const archiver = require("archiver");
 
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
@@ -50,93 +51,117 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
   let browser;
   try {
-    const reqData = req.body.requests?.[0] || { data: req.body.data, isPreview: req.body.isPreview };
+    let requests = req.body.requests;
+    if (!Array.isArray(requests)) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
+    if (!requests.length) return res.status(400).json({ error: "No requests provided." });
+
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const invoiceData = { ...reqData.data };
-    const orderId = invoiceData.orderId || `order-${Date.now()}`;
-    const country = (invoiceData.country || "slovenia").toLowerCase();
-    invoiceData.country = country;
-
-    if (country === "germany" && Array.isArray(invoiceData.items)) {
-      invoiceData.items = invoiceData.items.map(item => {
-        const totalNum = parseFloat(item.total || 0);
-        const net = totalNum / 1.19;
-        const tax = totalNum - net;
-        return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
-      });
-    }
-
-    invoiceData.taxRate = typeof invoiceData.taxRate === "number"
-      ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
-      : invoiceData.taxRate || '21%';
-    invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
-
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
-    const page = await browser.newPage();
-    await page.emulateMediaType('print');
-    await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
 
-    const html = generateEnglishInvoice({ ...invoiceData, isPreview: reqData.isPreview });
-    await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
+    const results = [];
 
-    const pdfBuffer = await page.pdf({
-      format: "A4", printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
-    });
-    await page.close();
+    for (const { data: invoiceDataRaw, isPreview } of requests) {
+      const invoiceData = { ...invoiceDataRaw };
+      const orderId = invoiceData.orderId || `order-${Date.now()}`;
+      const country = (invoiceData.country || "slovenia").toLowerCase();
+      invoiceData.country = country;
 
-    // --- Ghostscript PDF/A-3b conversion ---
-    const tempInput = path.join(tmpDir, `input.pdf`);
-    const tempOutput = path.join(tmpDir, `output.pdf`);
-    fs.writeFileSync(tempInput, pdfBuffer);
+      if (country === "germany" && Array.isArray(invoiceData.items)) {
+        invoiceData.items = invoiceData.items.map(item => {
+          const totalNum = parseFloat(item.total || 0);
+          const net = totalNum / 1.19;
+          const tax = totalNum - net;
+          return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
+        });
+      }
 
-    const gsExe = detectGhostscript();
-    const gsArgs = [
-      "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
-      "-dEmbedAllFonts=true","-dSubsetFonts=true",
-      "-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
-      "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
-      "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false",
-      "-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
-      `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
-    ];
+      invoiceData.taxRate = typeof invoiceData.taxRate === "number"
+        ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
+        : invoiceData.taxRate || '21%';
+      invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-    await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
+      const page = await browser.newPage();
+      await page.emulateMediaType('print');
+      await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
 
-    let finalPdf = fs.readFileSync(tempOutput);
-    fs.unlinkSync(tempInput);
+      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
+      await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
-    // --- Post-process for Pro users ---
-    if (user.plan === "pro") {
-      const zugferdXml = generateZugferdXML(invoiceData);
-      const localeMeta = {
-        title: invoiceData.locale.invoiceTitle || 'Invoice',
-        creator: 'PDFify',
-        language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
-      };
-      finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
+      const pdfBuffer = await page.pdf({
+        format: "A4", printBackground: true,
+        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
+      });
+      await page.close();
+
+      // Ghostscript conversion
+      const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
+      const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
+      fs.writeFileSync(tempInput, pdfBuffer);
+
+      const gsExe = detectGhostscript();
+      const gsArgs = [
+        "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
+        "-dEmbedAllFonts=true","-dSubsetFonts=true",
+        "-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
+        "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
+        "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false",
+        "-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
+        `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
+      ];
+
+      await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
+      let finalPdf = fs.readFileSync(tempOutput);
+      fs.unlinkSync(tempInput);
+
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const localeMeta = {
+          title: invoiceData.locale.invoiceTitle || 'Invoice',
+          creator: 'PDFify',
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+        };
+        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
+      }
+
+      const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
+      const pageCount = pdfDoc.getPageCount();
+      const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
+      if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
+
+      results.push({ pdfBuffer: finalPdf, orderId });
     }
-
-    // --- Increment usage ---
-    const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
-    const pageCount = pdfDoc.getPageCount();
-    const usageAllowed = await incrementUsage(user, pageCount, reqData.isPreview, FORCE_PLAN);
-    if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
-
-    // --- Send single invoice PDF with orderId as filename ---
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
-      "Content-Length": finalPdf.length
-    });
-    res.send(finalPdf);
 
     await user.save();
+    await browser.close();
+
+    // --- Return results ---
+    if (results.length === 1) {
+      const { pdfBuffer, orderId } = results[0];
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
+        "Content-Length": pdfBuffer.length
+      });
+      return res.send(pdfBuffer);
+    }
+
+    // Multiple PDFs -> ZIP
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="invoices.zip"`
+    });
+    archive.pipe(res);
+    results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
+    await archive.finalize();
+
   } catch (err) {
     console.error("❌ Exception in /generate-invoice:", err);
+    if (browser) await browser.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
     res.status(500).json({ error: "Internal Server Error", details: err.message });
   } finally {
     if (browser) await browser.close();
