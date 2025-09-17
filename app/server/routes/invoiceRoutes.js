@@ -13,6 +13,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
+const { generateInvoiceHTML } = require("../../templates/english.js"); // your Base64-ready HTML
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -20,7 +21,6 @@ const locales = {
   de: require('../../locales/de.json'),
 };
 
-const { generateInvoiceHTML: generateEnglishInvoice } = require("../../templates/english.js");
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
 // --- Detect Ghostscript dynamically ---
@@ -74,21 +74,23 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
+      // --- Generate HTML with embedded images ---
+      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
+
       const page = await browser.newPage();
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
-
-      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
       const pdfBuffer = await page.pdf({
-        format: "A4", printBackground: true,
+        format: "A4",
+        printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
         preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
       });
       await page.close();
 
-      // Ghostscript conversion
+      // --- Ghostscript PDF/A-3b conversion ---
       const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
       const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
@@ -107,6 +109,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
+      // --- ZUGFeRD for pro users ---
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
         const localeMeta = {
@@ -128,7 +131,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
     await browser.close();
 
-    // --- Return PDFs ---
+    // --- Return results ---
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       res.set({

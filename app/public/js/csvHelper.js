@@ -46,6 +46,7 @@ function rowsToInvoiceJson(rows) {
   };
 }
 
+
 document.getElementById('csvGenerateBtn').addEventListener('click', async () => {
   const file = document.getElementById('csvUpload').files[0];
   if (!file) return alert('Please upload a CSV file first.');
