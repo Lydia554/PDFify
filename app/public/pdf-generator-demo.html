@@ -608,26 +608,13 @@ async function sendRequest(isPreview = false) {
   }
 
   let payload;
-
   if (parsedData && typeof parsedData === 'object') {
     if ('html' in parsedData) {
-    
-      payload = {
-        html: parsedData.html,
-        isPreview
-      };
+      payload = { html: parsedData.html, isPreview };
     } else if ('data' in parsedData) {
-     
-      payload = {
-        ...parsedData,
-        isPreview
-      };
+      payload = { ...parsedData, isPreview };
     } else {
-      
-      payload = {
-        data: parsedData,
-        isPreview
-      };
+      payload = { data: parsedData, isPreview };
     }
   } else {
     result.innerText = "Invalid input format.";
@@ -642,7 +629,7 @@ async function sendRequest(isPreview = false) {
         "Authorization": `Bearer ${apiKey}`
       },
       body: JSON.stringify(payload),
-        credentials: "include",
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -663,9 +650,17 @@ async function sendRequest(isPreview = false) {
     if (isPreview) {
       window.open(blobUrl, "_blank");
     } else {
+      
+      let filename = "Generated.pdf"; 
+      const contentDisposition = response.headers.get("Content-Disposition");
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?(.+?)"?$/);
+        if (match) filename = match[1];
+      }
+
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = "Generated.pdf";
+      a.download = filename; 
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

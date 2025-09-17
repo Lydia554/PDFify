@@ -1,12 +1,10 @@
-
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const router = express.Router();
 const fs = require("fs");
 const os = require("os");
-const { execFile, execSync } = require("child_process");
-const archiver = require("archiver");
+const { execFile } = require("child_process");
 const { Parser } = require("json2csv");
 
 const User = require("../models/User");
@@ -28,24 +26,16 @@ const FORCE_PLAN = process.env.FORCE_PLAN;
 // --- Detect Ghostscript dynamically ---
 function detectGhostscript() {
   const possiblePaths = [
+    '/usr/bin/gs', '/usr/local/bin/gs',
     'C:\\Program Files\\gs\\bin\\gswin64c.exe',
-    'C:\\Program Files (x86)\\gs\\bin\\gswin32c.exe',
-    '/usr/bin/gs',
-    '/usr/local/bin/gs'
+    'C:\\Program Files (x86)\\gs\\bin\\gswin32c.exe'
   ];
   for (const p of possiblePaths) if (fs.existsSync(p)) return p;
 
-  try { if (execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return 'gswin64c'; } catch {}
-  try { if (execSync('gs -v', { stdio: 'pipe' }).toString().includes("Ghostscript")) return 'gs'; } catch {}
-
+  const { execSync } = require('child_process');
+  try { if (execSync('gs -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gs'; } catch {}
+  try { if (execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gswin64c'; } catch {}
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
-}
-
-// --- Generate CSV for invoice items ---
-function generateCSV(invoiceData) {
-  if (!invoiceData.items || !Array.isArray(invoiceData.items)) return "";
-  const parser = new Parser({ fields: ["name", "quantity", "price", "total", "net", "tax", "position"] });
-  return parser.parse(invoiceData.items);
 }
 
 // --- /generate-invoice route ---
@@ -60,118 +50,89 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
   let browser;
   try {
-    let requests = req.body.requests;
-    if (!Array.isArray(requests)) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
-    if (!requests.length || requests.length > 100) return res.status(400).json({ error: "1-100 requests only." });
-
+    const reqData = req.body.requests?.[0] || { data: req.body.data, isPreview: req.body.isPreview };
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    const invoiceData = { ...reqData.data };
+    const orderId = invoiceData.orderId || `order-${Date.now()}`;
+    const country = (invoiceData.country || "slovenia").toLowerCase();
+    invoiceData.country = country;
+
+    if (country === "germany" && Array.isArray(invoiceData.items)) {
+      invoiceData.items = invoiceData.items.map(item => {
+        const totalNum = parseFloat(item.total || 0);
+        const net = totalNum / 1.19;
+        const tax = totalNum - net;
+        return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
+      });
+    }
+
+    invoiceData.taxRate = typeof invoiceData.taxRate === "number"
+      ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
+      : invoiceData.taxRate || '21%';
+    invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
+
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
-    const results = [];
+    const page = await browser.newPage();
+    await page.emulateMediaType('print');
+    await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
+
+    const html = generateEnglishInvoice({ ...invoiceData, isPreview: reqData.isPreview });
+    await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4", printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+      preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
+    });
+    await page.close();
+
+    // --- Ghostscript PDF/A-3b conversion ---
+    const tempInput = path.join(tmpDir, `input.pdf`);
+    const tempOutput = path.join(tmpDir, `output.pdf`);
+    fs.writeFileSync(tempInput, pdfBuffer);
+
     const gsExe = detectGhostscript();
+    const gsArgs = [
+      "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
+      "-dEmbedAllFonts=true","-dSubsetFonts=true",
+      "-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
+      "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
+      "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false",
+      "-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
+      `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
+    ];
 
-    for (const [index, { data, isPreview }] of requests.entries()) {
-      if (!data) { results.push({ error: "Invalid data" }); continue; }
+    await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
 
-      const invoiceData = { ...data };
-      const orderId = invoiceData.orderId || `order-${Date.now()}-${index}`;
-      const country = (invoiceData.country || "slovenia").toLowerCase();
-      invoiceData.country = country;
+    let finalPdf = fs.readFileSync(tempOutput);
+    fs.unlinkSync(tempInput);
 
-      if (country === "germany" && Array.isArray(invoiceData.items)) {
-        invoiceData.items = invoiceData.items.map(item => {
-          const totalNum = parseFloat(item.total || 0);
-          const net = totalNum / 1.19;
-          const tax = totalNum - net;
-          return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
-        });
-      }
-
-      invoiceData.taxRate = typeof invoiceData.taxRate === "number"
-        ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
-        : invoiceData.taxRate || '21%';
-      invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
-
-      // --- Generate PDF ---
-      const page = await browser.newPage();
-      await page.emulateMediaType('print');
-      await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
-      const html = generateEnglishInvoice({ ...invoiceData, isPreview });
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
-
-      const pdfBuffer = await page.pdf({
-        format: "A4", printBackground: true,
-        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-        preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
-      });
-      await page.close();
-
-      // --- Ghostscript conversion ---
-      const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
-      const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
-      fs.writeFileSync(tempInput, pdfBuffer);
-
-      const gsArgs = [
-        "-dPDFA=3", "-dBATCH", "-dNOPAUSE", "-dNOOUTERSAVE", "-sDEVICE=pdfwrite",
-        "-dEmbedAllFonts=true", "-dSubsetFonts=true",
-        "-dPreserveDocInfo=true", "-dPreserveAnnots=true", "-dPDFACompatibilityPolicy=1",
-        "-dAutoRotatePages=/None", "-sColorConversionStrategy=RGB", "-dProcessColorModel=/DeviceRGB",
-        "-dConvertCMYKImagesToRGB=true", "-dDownsampleColorImages=false", "-dDownsampleGrayImages=false",
-        "-dDownsampleMonoImages=false", "-dPDFSETTINGS=/prepress",
-        `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g, "/")
-      ];
-
-      await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
-      let finalPdf = fs.readFileSync(tempOutput);
-      fs.unlinkSync(tempInput);
-
-      // --- Post-process for Pro users ---
-      if (user.plan === "pro") {
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const localeMeta = {
-          title: invoiceData.locale.invoiceTitle || 'Invoice',
-          creator: 'PDFify',
-          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
-        };
-        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
-      }
-
-      // --- Increment usage ---
-      const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
-      const pageCount = pdfDoc.getPageCount();
-      const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
-      if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
-
-      // --- Generate CSV ---
-      const csvData = generateCSV(invoiceData);
-      const csvPath = path.join(tmpDir, `${orderId}.csv`);
-      fs.writeFileSync(csvPath, csvData);
-
-      results.push({ pdf: finalPdf, csvPath, orderId });
+    // --- Post-process for Pro users ---
+    if (user.plan === "pro") {
+      const zugferdXml = generateZugferdXML(invoiceData);
+      const localeMeta = {
+        title: invoiceData.locale.invoiceTitle || 'Invoice',
+        creator: 'PDFify',
+        language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+      };
+      finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
     }
 
-    // --- Send results ---
-    if (results.length === 1) {
-      const { pdf, csvPath, orderId } = results[0];
-      res.setHeader("Content-Disposition", `attachment; filename="${orderId}.zip"`);
-      res.setHeader("Content-Type", "application/zip");
-      const archive = archiver("zip", { zlib: { level: 9 } });
-      archive.pipe(res);
-      archive.append(pdf, { name: `${orderId}.pdf` });
-      archive.file(csvPath, { name: `${orderId}.csv` });
-      await archive.finalize();
-    } else {
-      res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
-      res.setHeader("Content-Type", "application/zip");
-      const archive = archiver("zip", { zlib: { level: 9 } });
-      archive.pipe(res);
-      results.forEach(({ pdf, csvPath, orderId }) => {
-        archive.append(pdf, { name: `${orderId}.pdf` });
-        archive.file(csvPath, { name: `${orderId}.csv` });
-      });
-      await archive.finalize();
-    }
+    // --- Increment usage ---
+    const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
+    const pageCount = pdfDoc.getPageCount();
+    const usageAllowed = await incrementUsage(user, pageCount, reqData.isPreview, FORCE_PLAN);
+    if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
+
+    // --- Send single invoice PDF with orderId as filename ---
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
+      "Content-Length": finalPdf.length
+    });
+    res.send(finalPdf);
 
     await user.save();
   } catch (err) {
