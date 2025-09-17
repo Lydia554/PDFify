@@ -23,6 +23,7 @@ const locales = {
 
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
+// --- Detect Ghostscript dynamically ---
 function detectGhostscript() {
   const possiblePaths = [
     '/usr/bin/gs', '/usr/local/bin/gs',
@@ -36,6 +37,7 @@ function detectGhostscript() {
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
+// --- /generate-invoice ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -49,34 +51,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Determine if user is pro (forced for testing)
-    const isPro = FORCE_PLAN ? FORCE_PLAN === 'pro' : user.plan === 'pro';
-
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
+    const tempResults = [];
     let totalPages = 0; 
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw };
       const orderId = invoiceData.orderId || `order-${Date.now()}`;
 
-      // fallback: default English
+      // fallback: if no country/language specified, use default English
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.country = country || "default";
       invoiceData.locale = locales[lang] || locales["en"];
-
-      // Remove Pro-only fields if user is not pro
-      if (!isPro) {
-        invoiceData.companyName = undefined;
-        invoiceData.companyEmail = undefined;
-        invoiceData.senderAddress = undefined;
-        invoiceData.recipientAddress = undefined;
-        invoiceData.logo = undefined;
-        invoiceData.notes = undefined;
-        invoiceData.invoiceLanguage = 'en';
-        invoiceData.locale = locales['en'];
-      }
 
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.items = invoiceData.items.map(item => {
@@ -95,7 +83,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
 
-      const html = generateInvoiceHTML({ ...invoiceData, isPreview });
+      
+      let html;
+      html = generateInvoiceHTML({ ...invoiceData, isPreview });
+
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
       const pdfBuffer = await page.pdf({
@@ -105,14 +96,15 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       await page.close();
 
+      // Count pages
       const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
       const pageCount = pdfDoc.getPageCount();
       totalPages += pageCount;
 
-      results.push({ pdfBuffer, orderId, pageCount });
+      tempResults.push({ pdfBuffer, orderId, invoiceData, country });
     }
 
-    // Check usage
+    // Check monthly page limit ONCE
     const usageAllowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
     if (!usageAllowed) {
       await browser.close();
@@ -121,7 +113,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     // Ghostscript + ZUGFeRD processing
-    for (const { pdfBuffer, orderId } of results) {
+    for (const { pdfBuffer, orderId, invoiceData, country } of tempResults) {
+      const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
       const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
@@ -132,20 +125,30 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         "-dEmbedAllFonts=true","-dSubsetFonts=true","-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
         "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
         "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false","-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
-        `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
+        `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
       ];
       await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // Post-process ZUGFeRD for Pro
-      if (isPro) {
-        const zugferdXml = generateZugferdXML({});
-        const localeMeta = { title: 'Invoice', creator: 'PDFify', language: 'en' };
-        finalPdf = await postProcessPdfStrict(finalPdf, zugferdXml, localeMeta, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
+      // --- Post-process only for real Pro users ---
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const localeMeta = {
+          title: invoiceData.locale.invoiceTitle || 'Invoice',
+          creator: 'PDFify',
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+        };
+
+        finalPdf = await postProcessPdfStrict(
+          finalPdf,
+          zugferdXml,
+          localeMeta,
+          path.resolve(__dirname, "../server/xmp/zugferd.xmp")
+        );
       }
 
-      fs.writeFileSync(tempOutput, finalPdf);
+      results.push({ pdfBuffer: finalPdf, orderId });
     }
 
     await user.save();
