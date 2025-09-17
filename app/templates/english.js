@@ -24,7 +24,7 @@ async function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdfify.pro/images/Logo.png";
 
-  const userClass = data.isBasicUser ? "basic" : "premium";
+  const userClass = "pdfa-clean"; // always PDF/A-compliant
 
   const watermarkHTML =
     data.isBasicUser && data.isPreview
@@ -48,7 +48,6 @@ async function generateInvoiceHTML(data) {
 
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
-  // Embed images as Base64
   const logoBase64 = await getBase64Image(logoUrl);
   const chartBase64 = data.showChart
     ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
@@ -58,25 +57,24 @@ async function generateInvoiceHTML(data) {
 <html>
   <head>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+
   body {
-    font-family: Arial, Helvetica, sans-serif;
-    color: #333;
+    font-family: 'Open Sans', sans-serif;
+    color: #2a3d66;
     background: #f4f7fb;
     margin: 0;
     padding: 0;
-    min-height: 100vh;
-    position: relative;
   }
 
   .container {
     max-width: 800px;
     margin: 20px auto;
-    padding: 30px 40px 160px;
-    background: #ffffff;
+    padding: 30px 40px 60px;
+    background: linear-gradient(to bottom right, #ffffff, #f0f4ff);
     border-radius: 16px;
-    border: 1px solid #e0e4ec;
-    position: relative;
-    z-index: 1;
+    border: 1px solid #c5d0f9;
+    box-shadow: 0 6px 15px rgba(42,61,102,0.15);
   }
 
   .table {
@@ -87,28 +85,35 @@ async function generateInvoiceHTML(data) {
 
   .table th, .table td {
     padding: 12px;
-    border: 1px solid #ccc;
     text-align: left;
+    border: 1px solid #c5d0f9;
   }
 
   .table th {
-    background-color: #e6e6e6;
-    color: #000;
-    font-weight: bold;
+    background-color: #dbe7ff;
+    color: #2a3d66;
+    font-weight: 600;
   }
 
   .table td {
-    background-color: #fff;
-    color: #000;
+    background-color: #fdfdff;
+    color: #2a3d66;
   }
 
   .table tr:nth-child(even) td {
-    background-color: #f2f2f2;
+    background-color: #f6f9fe;
+  }
+
+  .table tfoot td {
+    background-color: #dbe7ff;
+    font-weight: bold;
+    color: #2a3d66;
   }
 
   .total p {
     font-weight: bold;
-    color: #000;
+    color: #2a3d66;
+    font-size: 1.1em;
   }
 
   .watermark {
@@ -126,24 +131,18 @@ async function generateInvoiceHTML(data) {
   }
 
   .footer {
-    position: static;
-    max-width: 800px;
-    margin: 40px auto 10px auto;
-    padding: 10px 20px;
-    background-color: #eaeaea;
-    color: #000;
-    border-top: 1px solid #bbb;
     text-align: center;
-    line-height: 1.6;
     font-size: 11px;
-    border-radius: 0 0 16px 16px;
-    box-sizing: border-box;
+    margin-top: 20px;
+    color: #2a3d66;
+    background: #e8f0ff;
+    padding: 10px;
+    border-top: 1px solid #c5d0f9;
   }
 
   .footer a {
-    color: #000;
+    color: #1b2a90;
     text-decoration: none;
-    word-break: break-word;
   }
 
   .footer a:hover {
