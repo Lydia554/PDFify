@@ -4,7 +4,7 @@ const generatePdfBtn = document.getElementById('generateFriendlyBtn');
 const friendlyResult = document.getElementById('friendlyResult');
 
 let allSelectedFiles = [];
-let userAccessType = 'basic';
+let userAccessType = 'free';
 
 function isValidYouTubeUrl(url) {
   const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}(\S*)?$/;
@@ -16,28 +16,33 @@ async function fetchAccessType() {
     new URLSearchParams(window.location.search).get('apiKey') ||
     localStorage.getItem('apiKey');
   if (!apiKey) return;
+
   try {
     const res = await fetch('/api/friendly/check-access', {
       headers: { Authorization: `Bearer ${apiKey}` },
       credentials: "include",
     });
+
     if (res.status === 401 || res.status === 403) {
       localStorage.removeItem("apiKey");
       window.location.href = "/login.html";
       return;
     }
+
     if (res.ok) {
       const data = await res.json();
-      const type = data.accessType;
-      userAccessType = (type === 'premium' || type === 'pro') ? type : 'basic';
+      // Treat both "premium" and "pro" as advanced access
+      userAccessType = ['premium', 'pro'].includes(data.accessType) ? data.accessType : 'free';
     }
   } catch (err) {
     console.warn('Access check failed, falling back to basic.');
+    userAccessType = 'free';
   }
 }
 
+// Check if user has premium/pro access
 function hasAdvancedAccess() {
-  return userAccessType === 'premium' || userAccessType === 'pro';
+  return ['premium', 'pro'].includes(userAccessType);
 }
 
 function renderForm(template) {
@@ -107,14 +112,19 @@ function renderForm(template) {
     }
   }
 
-  if (!hasAdvancedAccess()) {
-    const premiumFields = formContainer.querySelectorAll('.premium-only input, .premium-only textarea, .premium-only select, .premium-only button');
-    premiumFields.forEach(el => {
+  // Enable/disable premium fields correctly
+  const premiumFields = formContainer.querySelectorAll('.premium-only input, .premium-only textarea, .premium-only select, .premium-only button');
+  premiumFields.forEach(el => {
+    if (hasAdvancedAccess()) {
+      el.disabled = false;
+      el.style.opacity = '1';
+      el.title = '';
+    } else {
       el.disabled = true;
       el.style.opacity = '0.5';
       el.title = 'Available in Premium or Pro only';
-    });
-  }
+    }
+  });
 }
 
 function updateImagePreview() {
@@ -177,22 +187,21 @@ generatePdfBtn.addEventListener('click', async () => {
           };
         }).filter(item => item.description && !isNaN(item.quantity) && !isNaN(item.unitPrice)),
         logoBase64: base64Logo || undefined,
-        invoiceLanguage: document.getElementById('invoiceLanguage')?.value || 'en',
+        invoiceLanguage: hasAdvancedAccess() ? document.getElementById('invoiceLanguage')?.value : 'en',
         senderAddress: hasAdvancedAccess() ? document.getElementById('senderAddress')?.value : undefined,
-        companyName: document.getElementById('companyName')?.value,
-        companyEmail: document.getElementById('companyEmail')?.value,
+        companyName: hasAdvancedAccess() ? document.getElementById('companyName')?.value : undefined,
+        companyEmail: hasAdvancedAccess() ? document.getElementById('companyEmail')?.value : undefined,
         recipientAddress: hasAdvancedAccess() ? document.getElementById('recipientAddress')?.value : undefined,
         notes: hasAdvancedAccess() ? document.getElementById('notes')?.value : undefined,
       };
+
       if (formData.logoBase64) {
         formData.logo = formData.logoBase64;
         delete formData.logoBase64;
       }
     } else if (template === 'recipe') {
       const videoUrl = hasAdvancedAccess() ? document.getElementById('videoUrl')?.value.trim() : '';
-      if (videoUrl && !isValidYouTubeUrl(videoUrl)) {
-        throw new Error('Please enter a valid YouTube video URL.');
-      }
+      if (videoUrl && !isValidYouTubeUrl(videoUrl)) throw new Error('Please enter a valid YouTube video URL.');
 
       const base64Images = hasAdvancedAccess()
         ? await Promise.all(allSelectedFiles.map(file =>
@@ -229,10 +238,6 @@ generatePdfBtn.addEventListener('click', async () => {
       localStorage.getItem('apiKey');
     if (!apiKey) throw new Error('API key missing. Please log in or use a valid access link.');
 
-
-
-
-
     const response = await fetch('/api/friendly/generate', {
       method: 'POST',
       headers: {
@@ -242,8 +247,6 @@ generatePdfBtn.addEventListener('click', async () => {
       body: JSON.stringify({ template, ...formData }),
       credentials: "include",
     });
-
-    
 
     if (response.status === 401 || response.status === 403) {
       localStorage.removeItem("apiKey");
@@ -276,6 +279,7 @@ templateSelect.addEventListener('change', () => {
   renderForm(templateSelect.value);
 });
 
+// Initialize
 (async () => {
   await fetchAccessType();
   renderForm(templateSelect.value);
