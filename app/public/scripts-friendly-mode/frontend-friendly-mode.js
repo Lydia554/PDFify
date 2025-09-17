@@ -12,29 +12,40 @@ function isValidYouTubeUrl(url) {
   const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}(\S*)?$/;
   return regex.test(url.trim());
 }
+
+
+let userAccessType = 'free'; // default
+
 async function fetchAccessType() {
   const apiKey =
     new URLSearchParams(window.location.search).get('apiKey') ||
     localStorage.getItem('apiKey');
   if (!apiKey) return;
 
+  // 1️⃣ Check if forced plan is injected
+  if (window.FORCE_PLAN && window.FORCE_PLAN.trim() !== '') {
+    userAccessType = window.FORCE_PLAN.trim();
+    console.log(`Using forced plan from frontend: ${userAccessType}`);
+    return;
+  }
+
   try {
     const res = await fetch('/api/user/me', {
       headers: { Authorization: `Bearer ${apiKey}` },
-      credentials: "include",
+      credentials: 'include',
     });
 
     if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem("apiKey");
-      window.location.href = "/login.html";
+      localStorage.removeItem('apiKey');
+      window.location.href = '/login.html';
       return;
     }
 
     if (res.ok) {
       const data = await res.json();
-      // Respect FORCE_PLAN or actual user access
-      userAccessType = data.accessType || 'free';
-      console.log("User access type:", userAccessType);
+      // use actual plan from user
+      userAccessType = data.accessType || data.planType?.toLowerCase() || 'free';
+      console.log('Access type from backend:', userAccessType);
     }
   } catch (err) {
     console.warn('Access check failed, falling back to basic.');
@@ -42,11 +53,11 @@ async function fetchAccessType() {
   }
 }
 
-
-// Check if user has premium/pro access
+// check if user has advanced access
 function hasAdvancedAccess() {
   return ['premium', 'pro'].includes(userAccessType);
 }
+
 
 function renderForm(template) {
   let html = '';
