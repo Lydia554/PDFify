@@ -7,25 +7,19 @@ const friendlyResult = document.getElementById('friendlyResult');
 
 
 let allSelectedFiles = [];
-let userAccessType = 'free';
 
 function isValidYouTubeUrl(url) {
   const regex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}(\S*)?$/;
   return regex.test(url.trim());
 }
 
+let userAccessType = 'free';
+
 async function fetchAccessType() {
   const apiKey =
     new URLSearchParams(window.location.search).get('apiKey') ||
     localStorage.getItem('apiKey');
   if (!apiKey) return;
-
-  if (FORCE_PLAN) {
-    userAccessType = FORCE_PLAN;
-    console.log(`Using forced plan: ${FORCE_PLAN}`);
-    return;
-  }
-
 
   try {
     const res = await fetch('/api/friendly/check-access', {
@@ -41,7 +35,6 @@ async function fetchAccessType() {
 
     if (res.ok) {
       const data = await res.json();
-      // Treat both "premium" and "pro" as advanced access
       userAccessType = ['premium', 'pro'].includes(data.accessType) ? data.accessType : 'free';
     }
   } catch (err) {
@@ -49,6 +42,7 @@ async function fetchAccessType() {
     userAccessType = 'free';
   }
 }
+
 
 // Check if user has premium/pro access
 function hasAdvancedAccess() {
