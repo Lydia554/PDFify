@@ -6,6 +6,7 @@ const fs = require("fs");
 const archiver = require("archiver");
 const os = require("os");
 const { execFile } = require("child_process");
+const { Parser } = require("json2csv"); // For CSV generation
 
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
@@ -38,6 +39,13 @@ function detectGhostscript() {
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
+// --- CSV generator helper ---
+function generateCSV(invoiceData) {
+  if (!invoiceData.items || !Array.isArray(invoiceData.items)) return "";
+  const parser = new Parser({ fields: ["description", "quantity", "price", "total", "net", "tax", "taxNumber", "position"] });
+  return parser.parse(invoiceData.items);
+}
+
 // --- /generate-invoice route ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   console.log("🌐 /generate-invoice router hit");
@@ -67,7 +75,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       const invoiceData = { ...data };
       const orderId = invoiceData.orderId || `order-${index + 1}`;
-      invoiceData.orderId = orderId; // ensure it’s in the invoiceData
+      invoiceData.orderId = orderId;
 
       const country = (invoiceData.country || "slovenia").toLowerCase();
       invoiceData.country = country;
@@ -86,7 +94,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         : invoiceData.taxRate || '21%';
       invoiceData.locale = locales[country === 'germany' ? 'de' : 'sl'] || locales["en"];
 
-      // --- Puppeteer PDF generation ---
+      // --- Generate PDF with Puppeteer ---
       const html = generateEnglishInvoice({ ...invoiceData, isPreview });
       const page = await browser.newPage();
       await page.emulateMediaType('print');
@@ -139,29 +147,39 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         );
       }
 
+      // --- Generate CSV ---
+      const csvData = generateCSV(invoiceData);
+
       // --- Increment usage ---
       const pdfDoc = await require("pdf-lib").PDFDocument.load(finalPdf);
       const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, isPreview, FORCE_PLAN);
       if (!usageAllowed) return res.status(403).json({ error: 'Monthly limit reached.' });
 
-      results.push({ index, pdf: finalPdf, orderId });
+      results.push({ pdf: finalPdf, csv: csvData, orderId });
     }
 
     // --- Send results ---
     if (results.length === 1) {
-      const { pdf, orderId } = results[0];
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=${orderId}.pdf`,
-        "Content-Length": pdf.length
-      });
-      res.send(pdf);
+      const { pdf, csv, orderId } = results[0];
+
+      // Return ZIP with both PDF + CSV
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename=${orderId}.zip` });
+      archive.pipe(res);
+      archive.append(pdf, { name: `${orderId}.pdf` });
+      if (csv) archive.append(csv, { name: `${orderId}.csv` });
+      await archive.finalize();
+
     } else {
+      // Multiple requests: ZIP all files
       const archive = archiver("zip", { zlib: { level: 9 } });
       res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename=invoices.zip` });
       archive.pipe(res);
-      results.forEach(({ pdf, orderId }) => archive.append(pdf, { name: `${orderId}.pdf` }));
+      results.forEach(({ pdf, csv, orderId }) => {
+        archive.append(pdf, { name: `${orderId}.pdf` });
+        if (csv) archive.append(csv, { name: `${orderId}.csv` });
+      });
       await archive.finalize();
     }
 
