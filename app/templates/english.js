@@ -25,18 +25,26 @@ async function getBase64Image(url) {
  * Normalize a value for PDF display
  * - Numbers => string with 2 decimals
  * - Strings => untouched
- * - Objects/undefined/null => empty string
+ * - Objects/arrays => JSON string (logged)
+ * - undefined/null => fallback
  */
 function normalizeValue(val, fallback = "") {
   if (val === null || val === undefined) return fallback;
   if (typeof val === "number") return val.toFixed(2);
   if (typeof val === "string") return val;
+  if (typeof val === "object") {
+    console.warn("⚠️ Found object/array in invoice field, using fallback:", val);
+    return fallback;
+  }
   return fallback;
 }
 
 async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
+
+  // Log full invoice data for debugging
+  console.log("📝 Invoice data before normalization:", JSON.stringify(data, null, 2));
 
   // Normalize all item fields
   const normalizedItems = items.map(item => ({
@@ -58,7 +66,7 @@ async function generateInvoiceHTML(data) {
       ? data.customLogoUrl.trim()
       : "https://pdfify.pro/images/Logo.png";
 
-  const userClass = "pdfa-clean"; 
+  const userClass = "pdfa-clean"; // PDF/A-3b safe
 
   const watermarkHTML =
     data.isBasicUser && data.isPreview
@@ -88,109 +96,29 @@ async function generateInvoiceHTML(data) {
     ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
     : "";
 
+  // Validate embedded images
+  if (logoBase64.length < 50) console.warn("⚠️ Logo Base64 seems too short, check image URL:", logoUrl);
+  if (data.showChart && chartBase64.length < 50) console.warn("⚠️ Chart Base64 seems too short, check QuickChart response");
+
   return `
 <html>
   <head>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
 
-      body {
-        font-family: 'Open Sans', sans-serif;
-        color: #333;
-        background: #f4f7fb;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-      }
-
-      .container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 30px 40px 160px;
-        background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-        border-radius: 16px;
-        border: 1px solid #e0e4ec;
-        position: relative;
-        z-index: 1;
-      }
-
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-
-      .table th, .table td {
-        padding: 14px;
-        border: 1px solid #dee2ef;
-        text-align: left;
-      }
-
-      .table th {
-        background-color: #dbe7ff;
-        color: #2a3d66;
-        font-weight: 600;
-      }
-
-      .table td {
-        background-color: #fdfdff;
-        color: #444;
-      }
-
-      .table tr:nth-child(even) td {
-        background-color: #f6f9fe;
-      }
-
-      .table tfoot td {
-        background-color: #dbe7ff;
-        font-weight: bold;
-        color: #2a3d66;
-      }
-
-      .total p {
-        font-weight: bold;
-        color: #000000ff;
-      }
-
-      .watermark {
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 60px;
-        color: #ffcccc;
-        font-weight: 900;
-        pointer-events: none;
-        user-select: none;
-        z-index: 9999;
-        white-space: nowrap;
-      }
-
-      .footer {
-        position: static;
-        max-width: 800px;
-        margin: 40px auto 10px auto;
-        padding: 10px 20px;
-        background-color: #f0f2f7;
-        color: #555;
-        border-top: 2px solid #cbd2e1;
-        text-align: center;
-        line-height: 1.6;
-        font-size: 11px;
-        border-radius: 0 0 16px 16px;
-        box-sizing: border-box;
-      }
-
-      .footer a {
-        color: #4a69bd;
-        text-decoration: none;
-      }
-
-      .footer a:hover {
-        text-decoration: underline;
-      }
-
-      /* PDF/A-3b overrides */
+      body { font-family: 'Open Sans', sans-serif; color: #333; background: #f4f7fb; margin: 0; padding: 0; min-height: 100vh; }
+      .container { max-width: 800px; margin: 20px auto; padding: 30px 40px 160px; background: linear-gradient(to bottom right, #ffffff, #f8fbff); border-radius: 16px; border: 1px solid #e0e4ec; position: relative; z-index: 1; }
+      .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+      .table th, .table td { padding: 14px; border: 1px solid #dee2ef; text-align: left; }
+      .table th { background-color: #dbe7ff; color: #2a3d66; font-weight: 600; }
+      .table td { background-color: #fdfdff; color: #444; }
+      .table tr:nth-child(even) td { background-color: #f6f9fe; }
+      .table tfoot td { background-color: #dbe7ff; font-weight: bold; color: #2a3d66; }
+      .total p { font-weight: bold; color: #000000ff; }
+      .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 60px; color: #ffcccc; font-weight: 900; pointer-events: none; user-select: none; z-index: 9999; white-space: nowrap; }
+      .footer { position: static; max-width: 800px; margin: 40px auto 10px auto; padding: 10px 20px; background-color: #f0f2f7; color: #555; border-top: 2px solid #cbd2e1; text-align: center; line-height: 1.6; font-size: 11px; border-radius: 0 0 16px 16px; box-sizing: border-box; }
+      .footer a { color: #4a69bd; text-decoration: none; }
+      .footer a:hover { text-decoration: underline; }
       .pdfa-clean .watermark { display: none !important; }
     </style>
   </head>
