@@ -1,283 +1,187 @@
-const axios = require("axios");
-const sharp = require("sharp");
+const express = require("express");
+const puppeteer = require("puppeteer");
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
+const { execFile } = require("child_process");
+const archiver = require("archiver");
+const router = express.Router();
 
-/**
- * Convert image URL (PNG, JPG, or SVG) to Base64 string for embedding in PDF
- * @param {string} url 
- * @returns {Promise<string>}
- */
-async function getBase64Image(url) {
+const User = require("../models/User");
+const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
+const { generateZugferdXML } = require('../utils/zugferdHelper');
+const { incrementUsage } = require("../utils/usageUtils");
+const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
+const { generateInvoiceHTML } = require("../../templates/english.js"); 
+
+const locales = {
+  sl: require('../../locales/sl.json'),
+  en: require('../../locales/en.json'),
+  de: require('../../locales/de.json'),
+};
+
+const FORCE_PLAN = process.env.FORCE_PLAN;
+
+// --- Detect Ghostscript dynamically ---
+function detectGhostscript() {
+  const possiblePaths = [
+    '/usr/bin/gs', '/usr/local/bin/gs',
+    'C:\\Program Files\\gs\\bin\\gswin64c.exe',
+    'C:\\Program Files (x86)\\gs\\bin\\gswin32c.exe'
+  ];
+  for (const p of possiblePaths) if (fs.existsSync(p)) return p;
+  const { execSync } = require('child_process');
+  try { if (execSync('gs -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gs'; } catch {}
+  try { if (execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gswin64c'; } catch {}
+  throw new Error('Ghostscript not found. Please install it or add it to PATH.');
+}
+
+// --- /generate-invoice ---
+router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
+  const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  let browser;
   try {
-    const response = await axios.get(url, { responseType: "arraybuffer" });
-    if (url.endsWith(".svg")) {
-      // Convert SVG to PNG in memory
-      const pngBuffer = await sharp(response.data).png().toBuffer();
-      return `data:image/png;base64,${pngBuffer.toString("base64")}`;
+    let requests = req.body.requests;
+    if (!Array.isArray(requests)) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
+    if (!requests.length) return res.status(400).json({ error: "No requests provided." });
+
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+    const results = [];
+    const tempResults = [];
+    let totalPages = 0; 
+
+    for (const { data: invoiceDataRaw, isPreview } of requests) {
+      const invoiceData = { ...invoiceDataRaw };
+      const orderId = invoiceData.orderId || `order-${Date.now()}`;
+
+      // fallback: if no country/language specified, use default English
+      const country = (invoiceData.country || "").toLowerCase();
+      const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
+      invoiceData.country = country || "default";
+      invoiceData.locale = locales[lang] || locales["en"];
+
+      if (country === "germany" && Array.isArray(invoiceData.items)) {
+        invoiceData.items = invoiceData.items.map(item => {
+          const totalNum = parseFloat(item.total || 0);
+          const net = totalNum / 1.19;
+          const tax = totalNum - net;
+          return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
+        });
+      }
+
+      invoiceData.taxRate = typeof invoiceData.taxRate === "number"
+        ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
+        : invoiceData.taxRate || '21%';
+
+      const page = await browser.newPage();
+      await page.emulateMediaType('print');
+      await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
+
+      
+      let html;
+      html = generateInvoiceHTML({ ...invoiceData, isPreview });
+
+      await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
+
+      const pdfBuffer = await page.pdf({
+        format: "A4", printBackground: true,
+        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
+      });
+      await page.close();
+
+      // Count pages
+      const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
+      const pageCount = pdfDoc.getPageCount();
+      totalPages += pageCount;
+
+      tempResults.push({ pdfBuffer, orderId, invoiceData, country });
     }
-    return `data:image/png;base64,${Buffer.from(response.data, "binary").toString("base64")}`;
+
+    // Check monthly page limit ONCE
+    const usageAllowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
+    if (!usageAllowed) {
+      await browser.close();
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      return res.status(403).json({ error: 'Monthly limit reached.' });
+    }
+
+    // Ghostscript + ZUGFeRD processing
+    for (const { pdfBuffer, orderId, invoiceData, country } of tempResults) {
+      const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
+      const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
+      const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
+      fs.writeFileSync(tempInput, pdfBuffer);
+
+      const gsExe = detectGhostscript();
+      const gsArgs = [
+        "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
+        "-dEmbedAllFonts=true","-dSubsetFonts=true","-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
+        "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
+        "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false","-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
+        `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
+      ];
+      await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
+      let finalPdf = fs.readFileSync(tempOutput);
+      fs.unlinkSync(tempInput);
+
+      // --- Post-process only for real Pro users ---
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const localeMeta = {
+          title: invoiceData.locale.invoiceTitle || 'Invoice',
+          creator: 'PDFify',
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+        };
+
+        finalPdf = await postProcessPdfStrict(
+          finalPdf,
+          zugferdXml,
+          localeMeta,
+          path.resolve(__dirname, "../server/xmp/zugferd.xmp")
+        );
+      }
+
+      results.push({ pdfBuffer: finalPdf, orderId });
+    }
+
+    await user.save();
+    await browser.close();
+
+    if (results.length === 1) {
+      const { pdfBuffer, orderId } = results[0];
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
+        "Content-Length": pdfBuffer.length
+      });
+      return res.send(pdfBuffer);
+    }
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename="invoices.zip"`
+    });
+    archive.pipe(res);
+    results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
+    await archive.finalize();
+
   } catch (err) {
-    console.error("❌ Error fetching image for PDF:", url, err);
-    return "";
+    console.error("❌ Exception in /generate-invoice:", err);
+    if (browser) await browser.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
+  } finally {
+    if (browser) await browser.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
-}
+});
 
-/**
- * Normalize a value for PDF display
- * - Numbers => string with 2 decimals
- * - Strings => untouched
- * - Objects/undefined/null => empty string
- */
-function normalizeValue(val, fallback = "") {
-  if (val === null || val === undefined) return fallback;
-  if (typeof val === "number") return val.toFixed(2);
-  if (typeof val === "string") return val;
-  return fallback;
-}
-
-async function generateInvoiceHTML(data) {
-  const locale = data.locale || {};
-  const items = Array.isArray(data.items) ? data.items : [];
-
-  // Normalize all item fields
-  const normalizedItems = items.map(item => ({
-    name: normalizeValue(item.name),
-    quantity: normalizeValue(item.quantity),
-    price: normalizeValue(item.price),
-    net: normalizeValue(item.net, "-"),
-    tax: normalizeValue(item.tax, "-"),
-    total: normalizeValue(item.total),
-  }));
-
-  // Normalize totals
-  const subtotal = normalizeValue(data.subtotal);
-  const tax = normalizeValue(data.tax);
-  const total = normalizeValue(data.total);
-
-  const logoUrl =
-    typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
-      ? data.customLogoUrl.trim()
-      : "https://pdfify.pro/images/Logo.png";
-
-  const userClass = "pdfa-clean"; 
-
-  const watermarkHTML =
-    data.isBasicUser && data.isPreview
-      ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
-      : "";
-
-  // Chart config
-  const chartConfig = {
-    type: "pie",
-    data: {
-      labels: ["Subtotal", "Tax"],
-      datasets: [
-        {
-          data: [
-            parseFloat(subtotal) || 0,
-            parseFloat(tax) || 0,
-          ],
-        },
-      ],
-    },
-  };
-  const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
-
-  // Embed images as Base64
-  const logoBase64 = await getBase64Image(logoUrl);
-  const chartBase64 = data.showChart
-    ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
-    : "";
-
-  return `
-<html>
-  <head>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-
-      body {
-        font-family: 'Open Sans', sans-serif;
-        color: #333;
-        background: #f4f7fb;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-      }
-
-      .container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 30px 40px 160px;
-        background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-        border-radius: 16px;
-        border: 1px solid #e0e4ec;
-        position: relative;
-        z-index: 1;
-      }
-
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-
-      .table th, .table td {
-        padding: 14px;
-        border: 1px solid #dee2ef;
-        text-align: left;
-      }
-
-      .table th {
-        background-color: #dbe7ff;
-        color: #2a3d66;
-        font-weight: 600;
-      }
-
-      .table td {
-        background-color: #fdfdff;
-        color: #444;
-      }
-
-      .table tr:nth-child(even) td {
-        background-color: #f6f9fe;
-      }
-
-      .table tfoot td {
-        background-color: #dbe7ff;
-        font-weight: bold;
-        color: #2a3d66;
-      }
-
-      .total p {
-        font-weight: bold;
-        color: #000000ff;
-      }
-
-      .watermark {
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 60px;
-        color: #ffcccc;
-        font-weight: 900;
-        pointer-events: none;
-        user-select: none;
-        z-index: 9999;
-        white-space: nowrap;
-      }
-
-      .footer {
-        position: static;
-        max-width: 800px;
-        margin: 40px auto 10px auto;
-        padding: 10px 20px;
-        background-color: #f0f2f7;
-        color: #555;
-        border-top: 2px solid #cbd2e1;
-        text-align: center;
-        line-height: 1.6;
-        font-size: 11px;
-        border-radius: 0 0 16px 16px;
-        box-sizing: border-box;
-      }
-
-      .footer a {
-        color: #4a69bd;
-        text-decoration: none;
-      }
-
-      .footer a:hover {
-        text-decoration: underline;
-      }
-
-      /* PDF/A-3b overrides */
-      .pdfa-clean .watermark { display: none !important; }
-    </style>
-  </head>
-  <body class="${userClass}">
-    <div class="container">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height:60px;" />` : ""}
-      <h1>${locale.invoiceTitle || "Invoice for"} ${normalizeValue(data.customerName)}</h1>
-
-      <div class="invoice-header">
-        <div class="left">
-          <p><strong>${locale.orderId || "Order ID"}:</strong> ${normalizeValue(data.orderId)}</p>
-          <p><strong>${locale.date || "Date"}:</strong> ${normalizeValue(data.date)}</p>
-        </div>
-        <div class="right">
-          <p><strong>${locale.customer || "Customer"}:</strong><br>${normalizeValue(data.customerName)}</p>
-          <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${normalizeValue(data.customerEmail)}">${normalizeValue(data.customerEmail)}</a></p>
-        </div>
-      </div>
-
-      <table class="table">
-        <thead>
-          <tr>
-            <th>${locale.item || "Item"}</th>
-            <th>${locale.quantity || "Quantity"}</th>
-            <th>${locale.price || "Price"}</th>
-            <th>${locale.net || "Net"}</th>
-            <th>${locale.tax || "Tax"}</th>
-            <th>${locale.total || "Total"}</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${
-            normalizedItems.length > 0
-              ? normalizedItems.map(item => `
-                <tr>
-                  <td>${item.name}</td>
-                  <td>${item.quantity}</td>
-                  <td>${item.price}</td>
-                  <td>${item.net}</td>
-                  <td>${item.tax}</td>
-                  <td>${item.total}</td>
-                </tr>
-              `).join("")
-              : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
-          }
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5">${locale.subtotal || "Subtotal"}</td>
-            <td>${subtotal}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.tax || "Tax"} (${normalizeValue(data.taxRate, '21%')})</td>
-            <td>${tax}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.total || "Total"}</td>
-            <td>${total}</td>
-          </tr>
-        </tfoot>
-      </table>
-
-      <div class="total">
-        <p>${locale.totalAmountDue || "Total Amount Due"}: ${total}</p>
-      </div>
-
-      ${
-        chartBase64
-          ? `<div class="chart-container">
-              <h2>${locale.breakdown || "Breakdown"}</h2>
-              <img src="${chartBase64}" alt="${locale.invoiceBreakdown || "Invoice Breakdown"}" style="max-width:500px;display:block;margin:auto;" />
-            </div>`
-          : ""
-      }
-    </div>
-
-    ${watermarkHTML}
-
-    <div class="footer">
-      <p>${locale.thanks || "Thanks for using our service!"}</p>
-      <p>${locale.contact || "If you have questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-      <p>&copy; 2025 🧾PDFify — ${locale.copyright || "All rights reserved."}</p>
-      <p>${locale.generated || "Generated using"} <strong>PDFify</strong>. ${locale.visitSite || '<a href="https://pdfify.pro/" target="_blank">Visit our site for more.</a>'}</p>
-    </div>
-  </body>
-</html>
-  `;
-}
-
-module.exports.generateInvoiceHTML = generateInvoiceHTML;
+module.exports = router;

@@ -21,22 +21,51 @@ async function getBase64Image(url) {
   }
 }
 
+/**
+ * Normalize a value for PDF display
+ * - Numbers => string with 2 decimals
+ * - Strings => untouched
+ * - Objects/undefined/null => empty string
+ */
+function normalizeValue(val, fallback = "") {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === "number") return val.toFixed(2);
+  if (typeof val === "string") return val;
+  return fallback;
+}
+
 async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
+
+  // Normalize all item fields
+  const normalizedItems = items.map(item => ({
+    name: normalizeValue(item.name),
+    quantity: normalizeValue(item.quantity),
+    price: normalizeValue(item.price),
+    net: normalizeValue(item.net, "-"),
+    tax: normalizeValue(item.tax, "-"),
+    total: normalizeValue(item.total),
+  }));
+
+  // Normalize totals
+  const subtotal = normalizeValue(data.subtotal);
+  const tax = normalizeValue(data.tax);
+  const total = normalizeValue(data.total);
 
   const logoUrl =
     typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
       ? data.customLogoUrl.trim()
       : "https://pdfify.pro/images/Logo.png";
 
-  const userClass = "pdfa-clean"; // PDF/A-3b safe
+  const userClass = "pdfa-clean"; 
 
   const watermarkHTML =
     data.isBasicUser && data.isPreview
       ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
       : "";
 
+  // Chart config
   const chartConfig = {
     type: "pie",
     data: {
@@ -44,14 +73,13 @@ async function generateInvoiceHTML(data) {
       datasets: [
         {
           data: [
-            Number(String(data.subtotal).replace(/[^\d.-]/g, "")) || 0,
-            Number(String(data.tax).replace(/[^\d.-]/g, "")) || 0,
+            parseFloat(subtotal) || 0,
+            parseFloat(tax) || 0,
           ],
         },
       ],
     },
   };
-
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
   // Embed images as Base64
@@ -169,16 +197,16 @@ async function generateInvoiceHTML(data) {
   <body class="${userClass}">
     <div class="container">
       ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height:60px;" />` : ""}
-      <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+      <h1>${locale.invoiceTitle || "Invoice for"} ${normalizeValue(data.customerName)}</h1>
 
       <div class="invoice-header">
         <div class="left">
-          <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
-          <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
+          <p><strong>${locale.orderId || "Order ID"}:</strong> ${normalizeValue(data.orderId)}</p>
+          <p><strong>${locale.date || "Date"}:</strong> ${normalizeValue(data.date)}</p>
         </div>
         <div class="right">
-          <p><strong>${locale.customer || "Customer"}:</strong><br>${data.customerName || ""}</p>
-          <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || ""}</a></p>
+          <p><strong>${locale.customer || "Customer"}:</strong><br>${normalizeValue(data.customerName)}</p>
+          <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${normalizeValue(data.customerEmail)}">${normalizeValue(data.customerEmail)}</a></p>
         </div>
       </div>
 
@@ -195,15 +223,15 @@ async function generateInvoiceHTML(data) {
         </thead>
         <tbody>
           ${
-            items.length > 0
-              ? items.map(item => `
+            normalizedItems.length > 0
+              ? normalizedItems.map(item => `
                 <tr>
-                  <td>${item.name || ""}</td>
-                  <td>${item.quantity || ""}</td>
-                  <td>${item.price || ""}</td>
-                  <td>${item.net || "-"}</td>
-                  <td>${item.tax || "-"}</td>
-                  <td>${item.total || ""}</td>
+                  <td>${item.name}</td>
+                  <td>${item.quantity}</td>
+                  <td>${item.price}</td>
+                  <td>${item.net}</td>
+                  <td>${item.tax}</td>
+                  <td>${item.total}</td>
                 </tr>
               `).join("")
               : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
@@ -212,21 +240,21 @@ async function generateInvoiceHTML(data) {
         <tfoot>
           <tr>
             <td colspan="5">${locale.subtotal || "Subtotal"}</td>
-            <td>${data.subtotal || ""}</td>
+            <td>${subtotal}</td>
           </tr>
           <tr>
-            <td colspan="5">${locale.tax || "Tax"} (${data.taxRate || "21%"})</td>
-            <td>${data.tax || ""}</td>
+            <td colspan="5">${locale.tax || "Tax"} (${normalizeValue(data.taxRate, '21%')})</td>
+            <td>${tax}</td>
           </tr>
           <tr>
             <td colspan="5">${locale.total || "Total"}</td>
-            <td>${data.total || ""}</td>
+            <td>${total}</td>
           </tr>
         </tfoot>
       </table>
 
       <div class="total">
-        <p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p>
+        <p>${locale.totalAmountDue || "Total Amount Due"}: ${total}</p>
       </div>
 
       ${
