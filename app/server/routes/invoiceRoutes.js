@@ -23,7 +23,7 @@ const locales = {
 
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
-// --- Detect Ghostscript dynamically ---
+// Detect Ghostscript dynamically
 function detectGhostscript() {
   const possiblePaths = [
     '/usr/bin/gs', '/usr/local/bin/gs',
@@ -37,7 +37,6 @@ function detectGhostscript() {
   throw new Error('Ghostscript not found. Please install it or add it to PATH.');
 }
 
-// --- /generate-invoice ---
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -58,9 +57,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw };
+      console.log("📝 Invoice request data:", JSON.stringify(invoiceData, null, 2));
+
       const orderId = invoiceData.orderId || `order-${Date.now()}`;
 
-      // fallback: if no country/language specified, use default English
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.country = country || "default";
@@ -83,16 +83,16 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
 
-      
-      let html;
-      html = generateInvoiceHTML({ ...invoiceData, isPreview });
-
+      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
       const pdfBuffer = await page.pdf({
-        format: "A4", printBackground: true,
+        format: "A4",
+        printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-        preferCSSPageSize: false, displayHeaderFooter: false, tagged: true
+        preferCSSPageSize: false,
+        displayHeaderFooter: false,
+        tagged: true
       });
       await page.close();
 
@@ -131,7 +131,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // --- Post-process only for real Pro users ---
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
         const localeMeta = {
