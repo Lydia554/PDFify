@@ -32,15 +32,20 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const plan = FORCE_PLAN && FORCE_PLAN.trim() !== "" ? FORCE_PLAN : user.plan;
-    const isPremium = (plan === 'premium' || plan === 'pro');
+    
+    const plan = FORCE_PLAN?.trim() || user.planType || 'free';
 
-    if (templateConfig.premiumOnly && !isPremium) {
+    
+    const isPremiumAccess = ['premium', 'pro'].includes(plan);
+    const isPremiumRender = isPremiumAccess || user.isPremium; 
+
+    if (templateConfig.premiumOnly && !isPremiumAccess) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
     }
-    if (!isPremium) formData.logoBase64 = null;
 
-    // Parse items/ingredients/instructions
+    if (!isPremiumAccess) formData.logoBase64 = null;
+
+   
     if (typeof formData.items === 'string') {
       formData.items = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean)
         .map(row => {
@@ -48,10 +53,15 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
           return { description: description || 'Item', quantity: Number(quantity) || 1, unitPrice: Number(unitPrice) || 0 };
         });
     }
-    if (typeof formData.ingredients === 'string') formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
-    if (typeof formData.instructions === 'string') formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
+    if (typeof formData.ingredients === 'string') {
+      formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+    }
+    if (typeof formData.instructions === 'string') {
+      formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
+    }
 
-    const generateHtml = templateConfig.fn(isPremium);
+    // Generate HTML using the proper template
+    const generateHtml = templateConfig.fn(isPremiumRender);
     const html = generateHtml(formData);
 
     // Generate PDF
@@ -69,6 +79,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pageCount = pdfDoc.getPageCount();
 
+    
     const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
     if (!usageAllowed) {
       fs.unlinkSync(pdfPath);
