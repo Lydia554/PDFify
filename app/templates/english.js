@@ -134,7 +134,7 @@ async function generateInvoiceHTML(data) {
 
       .total p {
         font-weight: bold;
-        color: #2a3d66;
+        color: #000000ff;
         font-size: 1.1em;
       }
 
