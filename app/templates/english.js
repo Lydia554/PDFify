@@ -3,7 +3,6 @@ const sharp = require("sharp");
 
 /**
  * Convert image URL (PNG, JPG, or SVG) to Base64 string for embedding in PDF
- * Safe: logs errors and falls back to empty string if conversion fails
  * @param {string} url 
  * @returns {Promise<string>}
  */
@@ -11,86 +10,43 @@ async function getBase64Image(url) {
   try {
     console.log("🔍 Fetching image:", url);
     const response = await axios.get(url, { responseType: "arraybuffer" });
-    let buffer = response.data;
-
-    if (!(buffer instanceof Buffer) && !(buffer instanceof Uint8Array)) {
-      console.warn("⚠️ Image response is not a buffer, returning empty image:", buffer);
-      return "";
-    }
-
     if (url.endsWith(".svg")) {
-      try {
-        const pngBuffer = await sharp(buffer).png().toBuffer();
-        console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
-        return `data:image/png;base64,${pngBuffer.toString("base64")}`;
-      } catch (svgErr) {
-        console.error("❌ Failed to convert SVG to PNG:", svgErr);
-        return "";
-      }
+      const pngBuffer = await sharp(response.data).png().toBuffer();
+      console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
+      return `data:image/png;base64,${pngBuffer.toString("base64")}`;
     }
-
+    const buffer = Buffer.from(response.data, "binary");
     console.log("✅ Image fetched, size:", buffer.length);
-    return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
-
+    return `data:image/png;base64,${buffer.toString("base64")}`;
   } catch (err) {
-    console.error("❌ Error fetching image for PDF:", url, err.response?.status || err.message);
+    console.error("❌ Error fetching image for PDF:", url, err);
     return "";
   }
 }
 
 /**
- * Normalize a value for PDF display
- * - Numbers => string with 2 decimals
- * - Strings => untouched
- * - Objects/arrays => fallback (logged)
- * - undefined/null => fallback
- */
-function normalizeValue(val, fallback = "") {
-  if (val === null || val === undefined) return fallback;
-  if (typeof val === "number") return val.toFixed(2);
-  if (typeof val === "string") return val;
-  if (typeof val === "object") {
-    console.warn("⚠️ Found object/array in invoice field, using fallback:", val);
-    return fallback;
-  }
-  return fallback;
-}
-
-/**
- * Generate PDF invoice HTML
- * @param {object} data Invoice data
- * @returns {Promise<string>} HTML string
+ * Generate HTML invoice for Puppeteer PDF rendering
+ * @param {Object} data 
+ * @returns {Promise<string>}
  */
 async function generateInvoiceHTML(data) {
+  // Safe fallbacks
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
+  
+  // Logo
+  const logoUrl =
+    typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length
+      ? data.customLogoUrl.trim()
+      : "https://pdfify.pro/images/Logo.png";
 
-  console.log("📝 Invoice data before normalization:", JSON.stringify(data, null, 2));
+  // PDF/A safe class
+  const userClass = "pdfa-clean";
 
-  // Normalize items
-  const normalizedItems = items.map(item => ({
-    name: normalizeValue(item.name),
-    quantity: normalizeValue(item.quantity),
-    price: normalizeValue(item.price),
-    net: normalizeValue(item.net, "-"),
-    tax: normalizeValue(item.tax, "-"),
-    total: normalizeValue(item.total),
-  }));
-
-  // Normalize totals
-  const subtotal = normalizeValue(data.subtotal);
-  const tax = normalizeValue(data.tax);
-  const total = normalizeValue(data.total);
-
-  const logoUrl = typeof data.customLogoUrl === "string" && data.customLogoUrl.trim()
-    ? data.customLogoUrl.trim()
-    : "https://pdfify.pro/images/Logo.png";
-
-  const userClass = "pdfa-clean"; // PDF/A-3b safe
-
-  const watermarkHTML = data.isBasicUser && data.isPreview
-    ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
-    : "";
+  const watermarkHTML =
+    data.isBasicUser && data.isPreview
+      ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
+      : "";
 
   // Chart config
   const chartConfig = {
@@ -98,56 +54,149 @@ async function generateInvoiceHTML(data) {
     data: {
       labels: ["Subtotal", "Tax"],
       datasets: [
-        { data: [parseFloat(subtotal) || 0, parseFloat(tax) || 0] }
-      ]
-    }
+        {
+          data: [
+            Number(String(data.subtotal).replace(/[^\d.-]/g, "")) || 0,
+            Number(String(data.tax).replace(/[^\d.-]/g, "")) || 0,
+          ],
+        },
+      ],
+    },
   };
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
-  // Embed images
+  // Embed images as Base64
   const logoBase64 = await getBase64Image(logoUrl);
   const chartBase64 = data.showChart
     ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
     : "";
-
-  if (logoBase64.length < 50) console.warn("⚠️ Logo Base64 seems too short, check image URL:", logoUrl);
-  if (data.showChart && chartBase64.length < 50) console.warn("⚠️ Chart Base64 seems too short, check QuickChart response");
 
   return `
 <html>
   <head>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-      body { font-family: 'Open Sans', sans-serif; color: #333; background: #f4f7fb; margin: 0; padding: 0; min-height: 100vh; }
-      .container { max-width: 800px; margin: 20px auto; padding: 30px 40px 160px; background: linear-gradient(to bottom right, #ffffff, #f8fbff); border-radius: 16px; border: 1px solid #e0e4ec; position: relative; z-index: 1; }
-      .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-      .table th, .table td { padding: 14px; border: 1px solid #dee2ef; text-align: left; }
-      .table th { background-color: #dbe7ff; color: #2a3d66; font-weight: 600; }
-      .table td { background-color: #fdfdff; color: #444; }
-      .table tr:nth-child(even) td { background-color: #f6f9fe; }
-      .table tfoot td { background-color: #dbe7ff; font-weight: bold; color: #2a3d66; }
-      .total p { font-weight: bold; color: #000000ff; }
-      .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 60px; color: #ffcccc; font-weight: 900; pointer-events: none; user-select: none; z-index: 9999; white-space: nowrap; }
-      .footer { position: static; max-width: 800px; margin: 40px auto 10px auto; padding: 10px 20px; background-color: #f0f2f7; color: #555; border-top: 2px solid #cbd2e1; text-align: center; line-height: 1.6; font-size: 11px; border-radius: 0 0 16px 16px; box-sizing: border-box; }
-      .footer a { color: #4a69bd; text-decoration: none; }
-      .footer a:hover { text-decoration: underline; }
+
+      body {
+        font-family: 'Open Sans', sans-serif;
+        color: #2a3d66;
+        background: #f4f7fb;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        position: relative;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 30px 40px 60px;
+        background: linear-gradient(to bottom right, #ffffff, #f0f4ff);
+        border-radius: 16px;
+        border: 1px solid #c5d0f9;
+        box-shadow: 0 6px 15px rgba(42,61,102,0.15);
+        position: relative;
+        z-index: 1;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+
+      .table th, .table td {
+        padding: 12px;
+        border: 1px solid #c5d0f9;
+        text-align: left;
+      }
+
+      .table th {
+        background-color: #dbe7ff;
+        color: #2a3d66;
+        font-weight: 600;
+      }
+
+      .table td {
+        background-color: #fdfdff;
+        color: #2a3d66;
+      }
+
+      .table tr:nth-child(even) td {
+        background-color: #f6f9fe;
+      }
+
+      .table tfoot td {
+        background-color: #dbe7ff;
+        font-weight: bold;
+        color: #2a3d66;
+      }
+
+      .total p {
+        font-weight: bold;
+        color: #2a3d66;
+        font-size: 1.1em;
+      }
+
+      .watermark {
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 60px;
+        color: #ffcccc;
+        font-weight: 900;
+        pointer-events: none;
+        user-select: none;
+        z-index: 9999;
+        white-space: nowrap;
+      }
+
+      .footer {
+        position: static;
+        max-width: 800px;
+        margin: 40px auto 10px auto;
+        padding: 10px;
+        line-height: 1.6;
+        font-size: 11px;
+        border-radius: 0 0 16px 16px;
+        box-sizing: border-box;
+        color: #2a3d66;
+        background: #e8f0ff;
+        border-top: 1px solid #c5d0f9;
+        text-align: center;
+      }
+
+      .footer a {
+        color: #1b2a90;
+        text-decoration: none;
+        word-break: break-word;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
+      /* PDF/A-3b overrides */
       .pdfa-clean .watermark { display: none !important; }
     </style>
   </head>
   <body class="${userClass}">
     <div class="container">
       ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height:60px;" />` : ""}
-      <h1>${locale.invoiceTitle || "Invoice for"} ${normalizeValue(data.customerName)}</h1>
+      <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+
       <div class="invoice-header">
         <div class="left">
-          <p><strong>${locale.orderId || "Order ID"}:</strong> ${normalizeValue(data.orderId)}</p>
-          <p><strong>${locale.date || "Date"}:</strong> ${normalizeValue(data.date)}</p>
+          <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
+          <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
         </div>
         <div class="right">
-          <p><strong>${locale.customer || "Customer"}:</strong><br>${normalizeValue(data.customerName)}</p>
-          <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${normalizeValue(data.customerEmail)}">${normalizeValue(data.customerEmail)}</a></p>
+          <p><strong>${locale.customer || "Customer"}:</strong><br>${data.customerName || ""}</p>
+          <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || ""}</a></p>
         </div>
       </div>
+
       <table class="table">
         <thead>
           <tr>
@@ -161,29 +210,39 @@ async function generateInvoiceHTML(data) {
         </thead>
         <tbody>
           ${
-            normalizedItems.length
-              ? normalizedItems.map(item => `
+            items.length
+              ? items.map(item => `
                 <tr>
-                  <td>${item.name}</td>
-                  <td>${item.quantity}</td>
-                  <td>${item.price}</td>
-                  <td>${item.net}</td>
-                  <td>${item.tax}</td>
-                  <td>${item.total}</td>
-                </tr>
-              `).join("")
+                  <td>${item.name || ""}</td>
+                  <td>${item.quantity || ""}</td>
+                  <td>${item.price || ""}</td>
+                  <td>${item.net || "-"}</td>
+                  <td>${item.tax || "-"}</td>
+                  <td>${item.total || ""}</td>
+                </tr>`).join("")
               : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
           }
         </tbody>
         <tfoot>
-          <tr><td colspan="5">${locale.subtotal || "Subtotal"}</td><td>${subtotal}</td></tr>
-          <tr><td colspan="5">${locale.tax || "Tax"} (${normalizeValue(data.taxRate, '21%')})</td><td>${tax}</td></tr>
-          <tr><td colspan="5">${locale.total || "Total"}</td><td>${total}</td></tr>
+          <tr>
+            <td colspan="5">${locale.subtotal || "Subtotal"}</td>
+            <td>${data.subtotal || ""}</td>
+          </tr>
+          <tr>
+            <td colspan="5">${locale.tax || "Tax"} (${data.taxRate || "21%"})</td>
+            <td>${data.tax || ""}</td>
+          </tr>
+          <tr>
+            <td colspan="5">${locale.total || "Total"}</td>
+            <td>${data.total || ""}</td>
+          </tr>
         </tfoot>
       </table>
+
       <div class="total">
-        <p>${locale.totalAmountDue || "Total Amount Due"}: ${total}</p>
+        <p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p>
       </div>
+
       ${
         chartBase64
           ? `<div class="chart-container">
@@ -193,7 +252,9 @@ async function generateInvoiceHTML(data) {
           : ""
       }
     </div>
+
     ${watermarkHTML}
+
     <div class="footer">
       <p>${locale.thanks || "Thanks for using our service!"}</p>
       <p>${locale.contact || "If you have questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
