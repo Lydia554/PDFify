@@ -79,7 +79,7 @@ async function generateInvoiceHTML(data) {
 
       body {
         font-family: 'Open Sans', sans-serif;
-        color: #2a3d66;
+        color: #000000ff;
         background: #f4f7fb;
         margin: 0;
         padding: 0;
@@ -168,7 +168,7 @@ async function generateInvoiceHTML(data) {
       }
 
       .footer a {
-        color: #1b2a90;
+        color: #000000ff;
         text-decoration: none;
         word-break: break-word;
       }
