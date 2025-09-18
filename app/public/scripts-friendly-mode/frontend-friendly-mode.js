@@ -12,19 +12,11 @@ function isValidYouTubeUrl(url) {
   return regex.test(url.trim());
 }
 
-
 async function fetchAccessType() {
   const apiKey =
     new URLSearchParams(window.location.search).get('apiKey') ||
     localStorage.getItem('apiKey');
   if (!apiKey) return;
-
-  if (window.FORCE_PLAN && window.FORCE_PLAN.trim() !== '') {
-    userAccessType = window.FORCE_PLAN.trim();
-    isAdvanced = ['premium', 'pro'].includes(userAccessType);
-    console.log(`Using forced plan from frontend: ${userAccessType}`);
-    return;
-  }
 
   try {
     const res = await fetch('/api/user/me', {
@@ -276,10 +268,8 @@ generatePdfBtn.addEventListener('click', async () => {
 });
 
 
-// Template change handler
 templateSelect.addEventListener('change', () => renderForm(templateSelect.value));
 
-// Initialize
 (async () => {
   await fetchAccessType();
   renderForm(templateSelect.value);
