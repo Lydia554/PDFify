@@ -3,20 +3,37 @@ const sharp = require("sharp");
 
 /**
  * Convert image URL (PNG, JPG, or SVG) to Base64 string for embedding in PDF
+ * Safe: logs errors and falls back to empty string if conversion fails
  * @param {string} url 
  * @returns {Promise<string>}
  */
 async function getBase64Image(url) {
   try {
+    console.log("🔍 Fetching image:", url);
     const response = await axios.get(url, { responseType: "arraybuffer" });
-    if (url.endsWith(".svg")) {
-      // Convert SVG to PNG in memory
-      const pngBuffer = await sharp(response.data).png().toBuffer();
-      return `data:image/png;base64,${pngBuffer.toString("base64")}`;
+    let buffer = response.data;
+
+    if (!(buffer instanceof Buffer) && !(buffer instanceof Uint8Array)) {
+      console.warn("⚠️ Image response is not a buffer, returning empty image:", buffer);
+      return "";
     }
-    return `data:image/png;base64,${Buffer.from(response.data, "binary").toString("base64")}`;
+
+    if (url.endsWith(".svg")) {
+      try {
+        const pngBuffer = await sharp(buffer).png().toBuffer();
+        console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
+        return `data:image/png;base64,${pngBuffer.toString("base64")}`;
+      } catch (svgErr) {
+        console.error("❌ Failed to convert SVG to PNG:", svgErr);
+        return "";
+      }
+    }
+
+    console.log("✅ Image fetched, size:", buffer.length);
+    return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
+
   } catch (err) {
-    console.error("❌ Error fetching image for PDF:", url, err);
+    console.error("❌ Error fetching image for PDF:", url, err.response?.status || err.message);
     return "";
   }
 }
@@ -25,7 +42,7 @@ async function getBase64Image(url) {
  * Normalize a value for PDF display
  * - Numbers => string with 2 decimals
  * - Strings => untouched
- * - Objects/arrays => JSON string (logged)
+ * - Objects/arrays => fallback (logged)
  * - undefined/null => fallback
  */
 function normalizeValue(val, fallback = "") {
@@ -39,14 +56,18 @@ function normalizeValue(val, fallback = "") {
   return fallback;
 }
 
+/**
+ * Generate PDF invoice HTML
+ * @param {object} data Invoice data
+ * @returns {Promise<string>} HTML string
+ */
 async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // Log full invoice data for debugging
   console.log("📝 Invoice data before normalization:", JSON.stringify(data, null, 2));
 
-  // Normalize all item fields
+  // Normalize items
   const normalizedItems = items.map(item => ({
     name: normalizeValue(item.name),
     quantity: normalizeValue(item.quantity),
@@ -61,17 +82,15 @@ async function generateInvoiceHTML(data) {
   const tax = normalizeValue(data.tax);
   const total = normalizeValue(data.total);
 
-  const logoUrl =
-    typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
-      ? data.customLogoUrl.trim()
-      : "https://pdfify.pro/images/Logo.png";
+  const logoUrl = typeof data.customLogoUrl === "string" && data.customLogoUrl.trim()
+    ? data.customLogoUrl.trim()
+    : "https://pdfify.pro/images/Logo.png";
 
   const userClass = "pdfa-clean"; // PDF/A-3b safe
 
-  const watermarkHTML =
-    data.isBasicUser && data.isPreview
-      ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
-      : "";
+  const watermarkHTML = data.isBasicUser && data.isPreview
+    ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
+    : "";
 
   // Chart config
   const chartConfig = {
@@ -79,24 +98,18 @@ async function generateInvoiceHTML(data) {
     data: {
       labels: ["Subtotal", "Tax"],
       datasets: [
-        {
-          data: [
-            parseFloat(subtotal) || 0,
-            parseFloat(tax) || 0,
-          ],
-        },
-      ],
-    },
+        { data: [parseFloat(subtotal) || 0, parseFloat(tax) || 0] }
+      ]
+    }
   };
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
-  // Embed images as Base64
+  // Embed images
   const logoBase64 = await getBase64Image(logoUrl);
   const chartBase64 = data.showChart
     ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
     : "";
 
-  // Validate embedded images
   if (logoBase64.length < 50) console.warn("⚠️ Logo Base64 seems too short, check image URL:", logoUrl);
   if (data.showChart && chartBase64.length < 50) console.warn("⚠️ Chart Base64 seems too short, check QuickChart response");
 
@@ -105,7 +118,6 @@ async function generateInvoiceHTML(data) {
   <head>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-
       body { font-family: 'Open Sans', sans-serif; color: #333; background: #f4f7fb; margin: 0; padding: 0; min-height: 100vh; }
       .container { max-width: 800px; margin: 20px auto; padding: 30px 40px 160px; background: linear-gradient(to bottom right, #ffffff, #f8fbff); border-radius: 16px; border: 1px solid #e0e4ec; position: relative; z-index: 1; }
       .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
@@ -126,7 +138,6 @@ async function generateInvoiceHTML(data) {
     <div class="container">
       ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height:60px;" />` : ""}
       <h1>${locale.invoiceTitle || "Invoice for"} ${normalizeValue(data.customerName)}</h1>
-
       <div class="invoice-header">
         <div class="left">
           <p><strong>${locale.orderId || "Order ID"}:</strong> ${normalizeValue(data.orderId)}</p>
@@ -137,7 +148,6 @@ async function generateInvoiceHTML(data) {
           <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${normalizeValue(data.customerEmail)}">${normalizeValue(data.customerEmail)}</a></p>
         </div>
       </div>
-
       <table class="table">
         <thead>
           <tr>
@@ -151,7 +161,7 @@ async function generateInvoiceHTML(data) {
         </thead>
         <tbody>
           ${
-            normalizedItems.length > 0
+            normalizedItems.length
               ? normalizedItems.map(item => `
                 <tr>
                   <td>${item.name}</td>
@@ -166,25 +176,14 @@ async function generateInvoiceHTML(data) {
           }
         </tbody>
         <tfoot>
-          <tr>
-            <td colspan="5">${locale.subtotal || "Subtotal"}</td>
-            <td>${subtotal}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.tax || "Tax"} (${normalizeValue(data.taxRate, '21%')})</td>
-            <td>${tax}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.total || "Total"}</td>
-            <td>${total}</td>
-          </tr>
+          <tr><td colspan="5">${locale.subtotal || "Subtotal"}</td><td>${subtotal}</td></tr>
+          <tr><td colspan="5">${locale.tax || "Tax"} (${normalizeValue(data.taxRate, '21%')})</td><td>${tax}</td></tr>
+          <tr><td colspan="5">${locale.total || "Total"}</td><td>${total}</td></tr>
         </tfoot>
       </table>
-
       <div class="total">
         <p>${locale.totalAmountDue || "Total Amount Due"}: ${total}</p>
       </div>
-
       ${
         chartBase64
           ? `<div class="chart-container">
@@ -194,9 +193,7 @@ async function generateInvoiceHTML(data) {
           : ""
       }
     </div>
-
     ${watermarkHTML}
-
     <div class="footer">
       <p>${locale.thanks || "Thanks for using our service!"}</p>
       <p>${locale.contact || "If you have questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
@@ -208,4 +205,4 @@ async function generateInvoiceHTML(data) {
   `;
 }
 
-module.exports.generateInvoiceHTML = generateInvoiceHTML;
+module.exports = { generateInvoiceHTML, getBase64Image };
