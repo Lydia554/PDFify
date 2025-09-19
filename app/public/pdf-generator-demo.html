@@ -811,7 +811,7 @@ fetch('/api/get-stripe-key')
 
 document.querySelectorAll('.token-pack-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
-    const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
+    const apiKey = document.getElementById('apiKey')?.value || localStorage.getItem('apiKey');
     if (!apiKey) {
       alert('Please provide your API key');
       return;
@@ -839,27 +839,20 @@ document.querySelectorAll('.token-pack-btn').forEach(btn => {
         return;
       }
 
-      const session = await response.json();
-      if (!session.id) {
-        resultEl.textContent = '❌ Error: No session ID returned from backend.';
-        console.log(session);
+      const { url } = await response.json();
+      if (!url) {
+        resultEl.textContent = '❌ Error: No checkout URL returned from backend.';
+        console.log({ response: await response.json() });
         return;
       }
 
-     const stripe = Stripe('pk_live_51JFeduJqMBxMksyPP8InOjeLA9bL5JgwCEHgZAEHPQq6pPQC5XaWHgesiJlSJfWAYielXDUEEhiIQoo1jkDMVk2M00i7xc8Z73');
+      // Redirect to Stripe checkout
+      window.location.href = url;
 
-      const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
-      if (error) {
-        console.error(error);
-        resultEl.textContent = '❌ Error during checkout.';
-      }
-    } 
-
-    catch (err) {
-  console.error("❌ Error creating token checkout:", err);
-  res.status(500).json({ error: err.message });
-}
-
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      resultEl.textContent = '❌ An unexpected error occurred. Please try again.';
+    }
   });
 });
 

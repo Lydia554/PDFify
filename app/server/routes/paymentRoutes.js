@@ -51,11 +51,13 @@ router.post("/create-checkout-session", async (req, res) => {
 
 
 router.post("/buy-tokens", authenticate, async (req, res) => {
-  const { pack } = req.body; 
+  const { pack } = req.body;
   const user = await User.findById(req.user.userId);
 
   if (!user) return res.status(404).json({ error: "User not found" });
   if (!TOKEN_PRICE_IDS[pack]) return res.status(400).json({ error: "Invalid token pack" });
+
+  console.log("Creating checkout for user:", user.email, "pack:", pack);
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -67,15 +69,15 @@ router.post("/buy-tokens", authenticate, async (req, res) => {
       cancel_url: `${process.env.CANCEL_URL}`,
       metadata: {
         userId: user._id.toString(),
-        priceId: TOKEN_PRICE_IDS[pack]
-      }
+        priceId: TOKEN_PRICE_IDS[pack],
+      },
     });
 
-    log(`Token pack ${pack} checkout session created for user: ${user.email}`);
-    res.json({ url: session.url }); 
+    console.log("Stripe session created:", session.url);
+    res.json({ url: session.url });
   } catch (err) {
     console.error("❌ Error creating token checkout:", err);
-    res.status(500).json({ error: "Failed to create token checkout" });
+    res.status(500).json({ error: err.message });
   }
 });
 
