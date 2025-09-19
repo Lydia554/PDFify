@@ -13,8 +13,6 @@ function extractYouTubeId(url) {
   return null;
 }
 
-
-
 function generatePremiumRecipeHtml(data) {
   const {
     recipeName,
@@ -336,21 +334,13 @@ function generatePremiumRecipeHtml(data) {
         </div>
       </div>
 
-  ${
-  Array.isArray(imageUrls) && imageUrls.length
-    ? `<div class="images">
-        ${imageUrls
-          .map((src) => {
-            // If src is already a base64, leave it. Otherwise, fetch and convert for preview.
-            // This example assumes you already pre-convert local/private images to base64 in backend for previews.
-            const imgSrc = src.startsWith('data:') ? src : src; 
-            return `<img src="${imgSrc}" alt="Recipe Image" style="max-width:280px;height:auto;border-radius:12px;" />`;
-          })
-          .join('')}
-      </div>`
-    : ''
-}
-
+      ${
+        Array.isArray(imageUrls)
+          ? `<div class="images">${imageUrls
+              .map((src) => `<img src="${src}" alt="Recipe Image" loading="lazy" />`)
+              .join('')}</div>`
+          : ''
+      }
 
       <div class="section grid">
         <div>
