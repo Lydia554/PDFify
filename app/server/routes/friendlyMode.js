@@ -11,12 +11,13 @@ const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
 
-// Helper to convert local images to Base64
+
 const convertToBase64 = async (filePath) => {
   const buffer = await fs.promises.readFile(filePath);
   const ext = path.extname(filePath).slice(1);
   return `data:image/${ext};base64,${buffer.toString('base64')}`;
 };
+
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
@@ -49,31 +50,22 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     if (!isPremiumAccess) formData.logoBase64 = null;
 
-    
+    // Normalize ingredients/instructions/items
     if (typeof formData.ingredients === 'string') formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
     if (typeof formData.instructions === 'string') formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
 
     const generateHtml = templateConfig.fn(isPremiumRender);
+    const html = generateHtml(formData);
 
-    // --- PREVIEW: embed local images as Base64 ---
     if (isPreview) {
-      if (Array.isArray(formData.imageUrls)) {
-        for (let i = 0; i < formData.imageUrls.length; i++) {
-          const imgPath = formData.imageUrls[i];
-          if (!imgPath.startsWith('http')) {
-            formData.imageUrls[i] = await convertToBase64(imgPath);
-          }
-        }
-      }
-
-      const html = generateHtml(formData); 
-      await incrementUsage(user, 1, true, plan); 
+      // --- PREVIEW: embed images and return HTML ---
+      const previewBlob = Buffer.from(html, 'utf8');
+      await incrementUsage(user, 1, true, plan); // count preview toward quota
       res.setHeader('Content-Type', 'text/html');
-      return res.send(html);
+      return res.send(previewBlob);
     }
 
     // --- DOWNLOAD: generate PDF ---
-    const html = generateHtml(formData);
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
     const pdfPath = path.join(pdfDir, `pdf_${Date.now()}.pdf`);
@@ -113,5 +105,6 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
 
 module.exports = router;
