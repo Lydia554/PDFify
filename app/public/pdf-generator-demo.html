@@ -853,10 +853,13 @@ document.querySelectorAll('.token-pack-btn').forEach(btn => {
         console.error(error);
         resultEl.textContent = '❌ Error during checkout.';
       }
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      resultEl.textContent = '❌ An unexpected error occurred. Please try again.';
-    }
+    } 
+
+    catch (err) {
+  console.error("❌ Error creating token checkout:", err);
+  res.status(500).json({ error: err.message });
+}
+
   });
 });
 
