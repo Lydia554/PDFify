@@ -59,68 +59,62 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   previewFriendlyBtn?.addEventListener('click', async () => {
-  const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
-  const apiKey = document.getElementById('apiKey').value.trim();
-  const payload = await getFriendlyFormData();
+    const selectedTemplate = document.getElementById('friendly-endpoint-select').value;
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const payload = await getFriendlyFormData();
 
-  payload.template = selectedTemplate;
-  payload.isPreview = true;
-  payload.logo = window.logobase64 || "";
+    payload.template = selectedTemplate;
+    payload.isPreview = true;
+    payload.logo = logobase64;
 
-  const language = document.getElementById('invoiceLanguage')?.value || 'en';
-  payload.language = language;
+const language = document.getElementById('invoiceLanguage')?.value || 'en';
+payload.language = language;
 
-  // Premium template restriction
-  const premiumTemplates = ['invoice-premium', 'recipe-premium'];
-  const userStatus = document.getElementById('userStatus')?.value || 'free';
-  if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
-    alert('This is a premium template. Upgrade your plan to preview it.');
-    return;
-  }
+    
 
-  try {
-    const response = await fetch(`/api/friendly/generate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(payload),
-      credentials: "include",
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      localStorage.removeItem("apiKey");
-      window.location.href = "/login.html";
+    if (premiumTemplates.includes(selectedTemplate) && userStatus === 'free') {
+      alert('This is a premium template. Upgrade your plan to preview it.');
       return;
     }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      alert('Error generating preview: ' + errorText);
-      return;
-    }
+    try {
+      const response = await fetch(`/api/friendly/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
 
-    const blob = await response.blob();
-    const pdfUrl = URL.createObjectURL(blob);
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem("apiKey");
+        window.location.href = "/login.html";
+        return;
+      }
 
-    if (iframe) {
-      // Small delay to ensure PDF viewer loads images
-      setTimeout(() => {
+      if (!response.ok) {
+        const errorText = await response.text();
+        alert('Error generating preview: ' + errorText);
+        return;
+      }
+
+      const blob = await response.blob();
+      const pdfUrl = URL.createObjectURL(blob);
+
+      if (iframe) {
         iframe.src = pdfUrl;
         iframe.style.display = 'block';
         iframe.style.width = '100%';
         iframe.style.height = '600px';
-      }, 100);
-    } else {
-      window.open(pdfUrl, '_blank');
+      } else {
+        window.open(pdfUrl, '_blank');
+      }
+    } catch (err) {
+      alert('Error generating preview: ' + err.message);
     }
-  } catch (err) {
-    console.error('Error generating preview:', err);
-    alert('❌ An unexpected error occurred while generating the preview.');
-  }
-});
-
+  });
 
   async function getFriendlyFormData() {
     const formContainer = document.getElementById('formContainer');

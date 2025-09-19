@@ -1,4 +1,4 @@
-const User = require("../models/User");
+
 
 const PLAN_LIMITS = {
   free: 30,        // Free users: 30 pages/month
@@ -6,45 +6,54 @@ const PLAN_LIMITS = {
   pro: 10000       // Pro users: 10,000 pages/month
 };
 
+const PREVIEW_LIMITS = {
+  free: 3,
+  premium: 10,
+  pro: 25
+};
 
 async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = null) {
   const plan = (forcePlan || user.planType || "free").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
 
-  // Reset monthly usage if needed
+  // Reset monthly usage and preview count if needed
   const now = new Date();
   if (!user.usageLastReset || new Date(user.usageLastReset).getMonth() !== now.getMonth()) {
     user.usageCount = 0;
+    user.previewCount = 0;
     user.usageLastReset = now;
     await user.save();
-    console.log("🔄 Usage reset for new month");
+    console.log("🔄 Usage and preview reset for new month");
   }
 
-  // Preview usage for free plan
-  if (isPreview && plan === "free") {
-    if (user.previewCount < 3) {
+  if (isPreview) {
+    const maxPreviews = PREVIEW_LIMITS[plan] || PREVIEW_LIMITS["free"];
+    user.previewCount = user.previewCount || 0;
+
+    if (user.previewCount < maxPreviews) {
+      
       user.previewCount++;
       await user.save();
-      console.log(`👀 Incremented preview count to ${user.previewCount}`);
+      console.log(`👀 Preview count incremented to ${user.previewCount}/${maxPreviews} (no usage deducted)`);
       return true;
     } else {
-      console.log(`⚠️ Preview limit reached for free plan. Consuming quota now.`);
+      console.log(`⚠️ Preview limit reached for ${plan} plan. Counting toward normal usage.`);
+      
     }
   }
 
+  // Normal page usage
   const limit = PLAN_LIMITS[plan] || PLAN_LIMITS["free"];
   const totalLimit = limit + (user.extraPages || 0);
 
-  // Check total available pages
   if (user.usageCount + pages > totalLimit) {
     console.log(`🚫 Usage limit exceeded for ${plan} plan. Requested ${pages} pages.`);
     return false;
   }
 
-  // Increment usage
   user.usageCount += pages;
 
-  // If we are over the plan limit, deduct from extraPages
+  // Deduct from extraPages if over plan limit
   if (user.usageCount > limit) {
     const over = user.usageCount - limit;
     user.extraPages = Math.max((user.extraPages || 0) - over, 0);
@@ -55,5 +64,4 @@ async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = nu
   return true;
 }
 
-
-module.exports = { incrementUsage, PLAN_LIMITS };
+module.exports = { incrementUsage, PLAN_LIMITS, PREVIEW_LIMITS };
