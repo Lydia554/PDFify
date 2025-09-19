@@ -16,9 +16,9 @@ const PRICE_IDS = {
 
 // Token pack prices
 const TOKEN_PRICE_IDS = {
-  "1000": "price_token_1000",
-  "5000": "price_token_5000",
-  "10000": "price_token_10000"
+  "1000": "price_1S93JEJqMBxMksyPopZlO5L6",
+  "5000": "price_1S93JfJqMBxMksyPoCLyx9ih",
+  "10000": "price_1S93KIJqMBxMksyP8kWbGXqL"
 };
 
 // --- Create subscription checkout session ---
