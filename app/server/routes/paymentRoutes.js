@@ -51,7 +51,7 @@ router.post("/create-checkout-session", async (req, res) => {
 
 // --- Create token pack checkout session ---
 router.post("/buy-tokens", authenticate, async (req, res) => {
-  const { pack } = req.body; // "1000", "5000", "10000"
+  const { pack } = req.body; 
   const user = await User.findById(req.user.userId);
 
   if (!user) return res.status(404).json({ error: "User not found" });
@@ -67,9 +67,13 @@ router.post("/buy-tokens", authenticate, async (req, res) => {
       cancel_url: `${process.env.CANCEL_URL}`,
       metadata: {
         userId: user._id.toString(),
-        priceId: TOKEN_PRICE_IDS[pack] 
+        priceId: TOKEN_PRICE_IDS[pack]
       }
     });
+
+  
+
+
 
     log(`Token pack ${pack} checkout session created for user: ${user.email}`);
     res.json({ id: session.id });
