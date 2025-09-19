@@ -11,13 +11,6 @@ const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
 
-// Convert image file to Base64
-const convertToBase64 = async (filePath) => {
-  const buffer = await fs.promises.readFile(filePath);
-  const ext = path.extname(filePath).slice(1);
-  return `data:image/${ext};base64,${buffer.toString('base64')}`;
-};
-
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
 const recipeTemplateBasic = require('../templates-friendly-mode/recipe');
@@ -53,54 +46,50 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     if (typeof formData.ingredients === 'string') formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
     if (typeof formData.instructions === 'string') formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
 
-    // Convert images to Base64 for PDF rendering
-    if (Array.isArray(formData.imageUrls)) {
-      for (let i = 0; i < formData.imageUrls.length; i++) {
-        formData.imageUrls[i] = await convertToBase64(formData.imageUrls[i]);
-      }
-    }
-
-    // Generate HTML with Base64 images
+    // Generate HTML
     const generateHtml = templateConfig.fn(isPremiumRender);
     const html = generateHtml(formData);
 
-    // Generate PDF using Puppeteer
+    // --- Generate PDF via Puppeteer (used for both preview and download) ---
     const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4' });
     await browser.close();
 
-    // Count usage
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pageCount = pdfDoc.getPageCount();
-    const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
-    if (!usageAllowed) {
-      return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
-    }
 
-    // PRO invoice processing
-    let finalBuffer = pdfBuffer;
-    if (template === 'invoice' && plan === 'pro') {
+    // Count usage
+    const usageAllowed = await incrementUsage(user, pageCount, !!isPreview, plan);
+    if (!usageAllowed) return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
+
+    // PRO invoice processing (PDF/A-3b + ZUGFeRD)
+    if (!isPreview && template === 'invoice' && plan === 'pro') {
       const zugferdXml = generateZugferdXML(formData);
       const xmpTemplatePath = path.resolve(__dirname, "../server/xmp/zugferd.xmp");
-      finalBuffer = await postProcessPdfStrict(pdfBuffer, zugferdXml, {
+      const processedPdf = await postProcessPdfStrict(pdfBuffer, zugferdXml, {
         title: 'Invoice',
         creator: 'PDFify',
         language: formData.language || 'en'
       }, xmpTemplatePath);
+      return res.download(processedPdf, 'invoice.pdf');
     }
 
-    // Send PDF (preview inline, download normally)
+    // --- Send PDF ---
     if (isPreview) {
+      // Inline preview
       res.setHeader('Content-Type', 'application/pdf');
-      return res.send(finalBuffer);
+      res.setHeader('Content-Disposition', 'inline; filename="preview.pdf"');
+      res.setHeader('Content-Length', pdfBuffer.length);
+      return res.send(pdfBuffer);
     } else {
+      // Normal download
       const pdfDir = path.join(__dirname, '../../pdfs');
       if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
       const pdfPath = path.join(pdfDir, `pdf_${Date.now()}.pdf`);
-      fs.writeFileSync(pdfPath, finalBuffer);
-      res.download(pdfPath, err => fs.unlinkSync(pdfPath));
+      fs.writeFileSync(pdfPath, pdfBuffer);
+      return res.download(pdfPath, err => fs.unlinkSync(pdfPath));
     }
 
   } catch (err) {
