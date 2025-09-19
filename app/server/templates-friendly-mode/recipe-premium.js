@@ -334,13 +334,14 @@ function generatePremiumRecipeHtml(data) {
         </div>
       </div>
 
-      ${
-        Array.isArray(imageUrls)
-          ? `<div class="images">${imageUrls
-              .map((src) => `<img src="${src}" alt="Recipe Image" loading="lazy" />`)
-              .join('')}</div>`
-          : ''
-      }
+${
+  Array.isArray(imageUrls)
+    ? `<div class="images">${imageUrls
+        .map((src) => `<img src="${src}" alt="Recipe Image" style="max-width:280px;height:auto;border-radius:12px;" />`)
+        .join('')}</div>`
+    : ''
+}
+
 
       <div class="section grid">
         <div>
