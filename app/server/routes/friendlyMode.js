@@ -32,12 +32,9 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    
     const plan = FORCE_PLAN?.trim() || user.planType || 'free';
-
-    
     const isPremiumAccess = ['premium', 'pro'].includes(plan);
-    const isPremiumRender = isPremiumAccess || user.isPremium; 
+    const isPremiumRender = isPremiumAccess || user.isPremium;
 
     if (templateConfig.premiumOnly && !isPremiumAccess) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
@@ -45,26 +42,22 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     if (!isPremiumAccess) formData.logoBase64 = null;
 
-   
-    if (typeof formData.items === 'string') {
-      formData.items = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean)
-        .map(row => {
-          const [description, quantity, unitPrice] = row.split(',').map(v => v.trim());
-          return { description: description || 'Item', quantity: Number(quantity) || 1, unitPrice: Number(unitPrice) || 0 };
-        });
-    }
-    if (typeof formData.ingredients === 'string') {
-      formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
-    }
-    if (typeof formData.instructions === 'string') {
-      formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
-    }
+    // Normalize ingredients/instructions/items
+    if (typeof formData.ingredients === 'string') formData.ingredients = formData.ingredients.split(/[,;\n]+/).map(i => i.trim()).filter(Boolean);
+    if (typeof formData.instructions === 'string') formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
 
-    // Generate HTML using the proper template
     const generateHtml = templateConfig.fn(isPremiumRender);
     const html = generateHtml(formData);
 
-    // Generate PDF
+    if (isPreview) {
+      // --- PREVIEW: embed images and return HTML ---
+      const previewBlob = Buffer.from(html, 'utf8');
+      await incrementUsage(user, 1, true, plan); // count preview toward quota
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(previewBlob);
+    }
+
+    // --- DOWNLOAD: generate PDF ---
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
     const pdfPath = path.join(pdfDir, `pdf_${Date.now()}.pdf`);
@@ -75,38 +68,35 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     await page.pdf({ path: pdfPath, format: 'A4' });
     await browser.close();
 
-    let pdfBuffer = fs.readFileSync(pdfPath);
+    const pdfBuffer = fs.readFileSync(pdfPath);
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pageCount = pdfDoc.getPageCount();
 
-    
-    const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
+    const usageAllowed = await incrementUsage(user, pageCount, false, plan);
     if (!usageAllowed) {
       fs.unlinkSync(pdfPath);
       return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
     }
 
-    // --- PRO INVOICES: PDF/A-3b + ZUGFeRD + XMP ---
+    // --- PRO invoice processing ---
     if (template === 'invoice' && plan === 'pro') {
       const zugferdXml = generateZugferdXML(formData);
       const xmpTemplatePath = path.resolve(__dirname, "../server/xmp/zugferd.xmp");
-      pdfBuffer = await postProcessPdfStrict(pdfBuffer, zugferdXml, {
+      const processedPdf = await postProcessPdfStrict(pdfBuffer, zugferdXml, {
         title: 'Invoice',
         creator: 'PDFify',
         language: formData.language || 'en'
       }, xmpTemplatePath);
-
-      fs.writeFileSync(pdfPath, pdfBuffer);
+      fs.writeFileSync(pdfPath, processedPdf);
     }
 
-    res.download(pdfPath, err => {
-      fs.unlinkSync(pdfPath);
-    });
+    res.download(pdfPath, err => fs.unlinkSync(pdfPath));
 
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'PDF generation failed' });
   }
 });
+
 
 module.exports = router;
