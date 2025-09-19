@@ -106,26 +106,23 @@ router.post("/consent", authenticate, async (req, res) => {
 
 
 
-router.get("/usage", authenticate, dualAuth, async (req, res) => {
+router.get("/usage", authenticate, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const planType = user.planType || "Free";
+    const planType = user.planType || "free";
 
     res.json({
       email: user.email,
-      apiKey: user.apiKey,
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
+      extraPages: user.extraPages || 0, 
       planType: planType,
     });
-  } catch (error) {
-    console.error("Error in /usage route:", error);
-    res.status(500).json({ error: "Server error" });
+  } catch (err) {
+    console.error("Error fetching usage:", err);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -154,6 +151,7 @@ router.get("/me", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "Error fetching user details" });
   }
 });
+
 
 
 

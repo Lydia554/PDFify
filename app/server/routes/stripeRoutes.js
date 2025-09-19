@@ -29,68 +29,99 @@ router.post(
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object;
-      log("Checkout session completed:", session);
+   if (event.type === "checkout.session.completed") {
+  const session = event.data.object;
+  log("Checkout session completed:", session);
 
-      try {
-        const customerEmail = session.customer_details.email;
-        let user = await User.findOne({ email: customerEmail });
+  try {
+    const customerEmail = session.customer_details.email;
+    let user = await User.findOne({ email: customerEmail });
 
+    const priceId = session.metadata?.priceId || null;
 
-        const subscription = await stripe.subscriptions.retrieve(session.subscription);
-        const priceId = subscription.items.data[0].price.id;
-        const price = await stripe.prices.retrieve(priceId);
-        const planType = price.metadata.plan_type || "premium"; 
+    // --- Token pack mapping ---
+    const tokenMapping = {
+      price_token_1000: 1000,
+      price_token_5000: 5000,
+      price_token_10000: 10000
+    };
 
-        if (!user) {
-          console.warn("User not found for email:", customerEmail);
-
-          const apiKey = require("crypto").randomBytes(24).toString("hex");
-          user = new User({
-            email: customerEmail,
-            apiKey,
-            password: "temporaryPassword123",
-            stripeSubscriptionId: session.subscription,
-            isPremium: true,
-            maxUsage: planType === "pro" ? 10000 : 1000,
-            planType,
-          });
-
-          await user.save();
-
-          await sendEmail({
-            to: "admin@example.com",
-            subject: "User Not Found for Stripe Subscription",
-            text: `A Stripe subscription was completed for email: ${customerEmail}, and a new user was created.`,
-          });
-
-          log("New user created:", user);
-        } else {
-        
-          user.stripeSubscriptionId = session.subscription;
-          user.isPremium = true;
-          user.planType = planType;
-
-          if (planType === "pro") {
-            user.maxUsage += 10000;
-          } else {
-            user.maxUsage += 1000;
-          }
-
-          await user.save();
-          log("User updated:", user);
-        }
-
-        await sendEmail({
-          to: customerEmail,
-          subject: "Payment Successful - Thank You!",
-          text: `Hi ${user.email},\n\nThank you for your payment! Your ${planType} subscription is now active.\n\nBest regards,\nThe PDFify Team`,
-        });
-      } catch (error) {
-        console.error("Error handling checkout completion:", error);
+    if (priceId && tokenMapping[priceId]) {
+      
+      if (!user) {
+        console.warn("User not found for token pack:", customerEmail);
+        return;
       }
+
+      user.extraPages = (user.extraPages || 0) + tokenMapping[priceId];
+      await user.save();
+
+      log(`🪙 Added ${tokenMapping[priceId]} extra pages for ${customerEmail}`);
+
+      await sendEmail({
+        to: customerEmail,
+        subject: "Token Pack Purchased",
+        text: `Hi ${user.email},\n\nYou have successfully purchased ${tokenMapping[priceId]} extra pages!\n\nBest regards,\nThe PDFify Team`,
+      });
+
+      return; 
     }
+
+   
+    const subscription = await stripe.subscriptions.retrieve(session.subscription);
+    const subPriceId = subscription.items.data[0].price.id;
+    const price = await stripe.prices.retrieve(subPriceId);
+    const planType = price.metadata.plan_type || "premium";
+
+    if (!user) {
+      console.warn("User not found for email:", customerEmail);
+
+      const apiKey = require("crypto").randomBytes(24).toString("hex");
+      user = new User({
+        email: customerEmail,
+        apiKey,
+        password: "temporaryPassword123",
+        stripeSubscriptionId: session.subscription,
+        isPremium: true,
+        maxUsage: planType === "pro" ? 10000 : 1000,
+        planType,
+      });
+
+      await user.save();
+
+      await sendEmail({
+        to: "admin@example.com",
+        subject: "User Not Found for Stripe Subscription",
+        text: `A Stripe subscription was completed for email: ${customerEmail}, and a new user was created.`,
+      });
+
+      log("New user created:", user);
+    } else {
+      user.stripeSubscriptionId = session.subscription;
+      user.isPremium = true;
+      user.planType = planType;
+
+      if (planType === "pro") {
+        user.maxUsage += 10000;
+      } else {
+        user.maxUsage += 1000;
+      }
+
+      await user.save();
+      log("User updated:", user);
+    }
+
+    await sendEmail({
+      to: customerEmail,
+      subject: "Payment Successful - Thank You!",
+      text: `Hi ${user.email},\n\nThank you for your payment! Your ${planType} subscription is now active.\n\nBest regards,\nThe PDFify Team`,
+    });
+
+  } catch (error) {
+    console.error("Error handling checkout completion:", error);
+  }
+}
+
 
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object;

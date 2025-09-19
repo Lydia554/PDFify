@@ -526,16 +526,38 @@ console.log(`📄 Shopify invoice page count: ${pageCount}`);
 const { sendEmail: shouldSendEmail = true } = req.body;
 
 
-if (!isPreview && user.usageCount + pageCount > user.maxUsage) {
-  fs.unlinkSync(pdfPath);
-  return res.status(403).json({
-    error: "Monthly usage limit reached. Upgrade to premium for more pages.",
-  });
+if (!isPreview) {
+  const totalLimit = user.maxUsage + (user.extraPages || 0);
+
+  if (user.usageCount + pageCount > totalLimit) {
+    fs.unlinkSync(pdfPath);
+    return res.status(403).json({
+      error: "Monthly usage limit reached. Purchase more pages or upgrade your plan.",
+    });
+  }
 }
 
 
 
-await incrementUsage(user, isPreview, pageCount);
+if (!isPreview) {
+  const normalRemaining = Math.max(user.maxUsage - user.usageCount, 0);
+
+  if (pageCount <= normalRemaining) {
+    
+    await incrementUsage(user, isPreview, pageCount);
+  } else {
+    
+    if (normalRemaining > 0) {
+      await incrementUsage(user, isPreview, normalRemaining);
+      pageCount -= normalRemaining;
+    }
+
+    user.extraPages = Math.max((user.extraPages || 0) - pageCount, 0);
+    user.usageCount += pageCount;
+    await user.save();
+  }
+}
+
 
 
 const freshUser = await User.findById(user._id).lean();

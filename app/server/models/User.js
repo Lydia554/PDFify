@@ -72,7 +72,13 @@ cookieConsentDate: { type: Date },
     // Password reset
     resetToken: { type: String },
     resetTokenExpiry: { type: Date },
+
+    extraPages: { type: Number, default: 0 },
+
   },
+
+
+
   
   { timestamps: true }
 );
