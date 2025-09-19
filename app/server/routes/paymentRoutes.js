@@ -49,7 +49,7 @@ router.post("/create-checkout-session", async (req, res) => {
   }
 });
 
-// --- Create token pack checkout session ---
+
 router.post("/buy-tokens", authenticate, async (req, res) => {
   const { pack } = req.body; 
   const user = await User.findById(req.user.userId);
@@ -71,17 +71,14 @@ router.post("/buy-tokens", authenticate, async (req, res) => {
       }
     });
 
-  
-
-
-
     log(`Token pack ${pack} checkout session created for user: ${user.email}`);
-    res.json({ id: session.id });
+    res.json({ url: session.url }); 
   } catch (err) {
     console.error("❌ Error creating token checkout:", err);
     res.status(500).json({ error: "Failed to create token checkout" });
   }
 });
+
 
 // --- Unsubscribe endpoint ---
 router.post("/unsubscribe", authenticate, dualAuth, async (req, res) => {
