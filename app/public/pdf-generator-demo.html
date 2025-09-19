@@ -818,7 +818,7 @@ document.querySelectorAll('.token-pack-btn').forEach(btn => {
     resultEl.textContent = 'Redirecting to payment...';
     
     try {
-      const response = await axios.post('/buy-tokens', { pack });
+      const response = await axios.post('/api/stripe/buy-tokens', { pack });
       if (response.data?.url) {
         window.location.href = response.data.url; 
       } else {
