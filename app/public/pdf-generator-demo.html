@@ -321,7 +321,7 @@ friendlyBtn.addEventListener('click', () => {
       try {
         const response = await axios.post('/api/user/buy-tokens', { pack });
         if (response.data?.url) {
-          window.location.href = response.data.url; // Redirect to Stripe checkout
+          window.location.href = response.data.url; 
         } else {
           resultEl.textContent = 'Error: Unable to create checkout session.';
         }

@@ -115,9 +115,10 @@ router.get("/usage", authenticate, async (req, res) => {
 
     res.json({
       email: user.email,
+      apiKey: user.apiKey,        
       usageCount: user.usageCount,
       maxUsage: user.maxUsage,
-      extraPages: user.extraPages || 0, 
+      extraPages: user.extraPages || 0,
       planType: planType,
     });
   } catch (err) {
@@ -125,6 +126,7 @@ router.get("/usage", authenticate, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 
 
 
