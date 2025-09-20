@@ -119,24 +119,31 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
-      const gsExe = detectGhostscript();
-      const gsArgs = [
-        "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
-        "-dEmbedAllFonts=true","-dSubsetFonts=true","-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
-        "-dAutoRotatePages=/None",
-        "-sColorConversionStrategy=RGB",
-        "-dProcessColorModel=/DeviceRGB",
-        "-dConvertCMYKImagesToRGB=true",
-        "-dDownsampleColorImages=false",
-        "-dDownsampleGrayImages=false",
-        "-dDownsampleMonoImages=false",
-        "-dPDFSETTINGS=/prepress",
-        "-dColorConversionStrategy=sRGB",
-        "-dDefaultRGBProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
-        `-sOutputICCProfile=${iccPath}`,
-        `-sOutputFile=${tempOutput}`,
-        tempInput.replace(/\\/g,"/")
-      ];
+    const gsExe = detectGhostscript();
+const gsArgs = [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-dNOOUTERSAVE",
+  "-sDEVICE=pdfwrite",
+  "-dEmbedAllFonts=true",
+  "-dSubsetFonts=true",
+  "-dPreserveDocInfo=true",
+  "-dPreserveAnnots=true",
+  "-dPDFACompatibilityPolicy=1",
+  "-dAutoRotatePages=/None",
+  "-dProcessColorModel=/DeviceRGB",
+  "-dConvertCMYKImagesToRGB=true",
+  "-dDownsampleColorImages=false",
+  "-dDownsampleGrayImages=false",
+  "-dDownsampleMonoImages=false",
+  "-dPDFSETTINGS=/prepress",
+  "-dColorConversionStrategy=/sRGB",
+  `-sOutputICCProfile=${iccPath}`, 
+  `-sOutputFile=${tempOutput}`,
+  tempInput.replace(/\\/g, "/")
+];
+
       await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
