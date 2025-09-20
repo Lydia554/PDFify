@@ -60,7 +60,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       console.log("📝 Invoice request data:", JSON.stringify(invoiceData, null, 2));
 
       const orderId = invoiceData.orderId || `order-${Date.now()}`;
-
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.country = country || "default";
@@ -82,8 +81,15 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const page = await browser.newPage();
       await page.emulateMediaType('print');
 
-      // Add PDF/A-clean class for Pro-safe template
-      const html = await generateInvoiceHTML({ ...invoiceData, isPreview, userClass: user.plan === 'pro' ? 'pdfa-clean' : '' });
+      // Apply PDF/A-clean class only for pro users
+      invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
+
+      // Force local logo for free users
+      if (user.plan === "free") {
+        invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
+      }
+
+      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
       const pdfBuffer = await page.pdf({
@@ -96,7 +102,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       await page.close();
 
-      // Count pages
       const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
       const pageCount = pdfDoc.getPageCount();
       totalPages += pageCount;
@@ -112,42 +117,32 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(403).json({ error: 'Monthly limit reached.' });
     }
 
-    // Ghostscript + OutputIntent + optional Pro processing
+    // Ghostscript + ZUGFeRD processing
     for (const { pdfBuffer, orderId, invoiceData, country } of tempResults) {
-      const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
+      const iccPath = path.resolve(__dirname, "./sRGB_v4_ICC_preference.icc");
       const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
-    const gsExe = detectGhostscript();
-const gsArgs = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-dNOOUTERSAVE",
-  "-sDEVICE=pdfwrite",
-  "-dEmbedAllFonts=true",
-  "-dSubsetFonts=true",
-  "-dPreserveDocInfo=true",
-  "-dPreserveAnnots=true",
-  "-dPDFACompatibilityPolicy=1",
-  "-dAutoRotatePages=/None",
-  "-dProcessColorModel=/DeviceRGB",
-  "-dConvertCMYKImagesToRGB=true",
-  "-dDownsampleColorImages=false",
-  "-dDownsampleGrayImages=false",
-  "-dDownsampleMonoImages=false",
-  "-dPDFSETTINGS=/prepress",
-  "-dColorConversionStrategy=/sRGB",
-  `-sOutputICCProfile=${iccPath}`, 
-  `-sOutputFile=${tempOutput}`,
-  tempInput.replace(/\\/g, "/")
-];
-
+      const gsExe = detectGhostscript();
+      const gsArgs = [
+        "-dPDFA=3","-dBATCH","-dNOPAUSE","-dNOOUTERSAVE","-sDEVICE=pdfwrite",
+        "-dEmbedAllFonts=true","-dSubsetFonts=true","-dPreserveDocInfo=true","-dPreserveAnnots=true",
+        "-dPDFACompatibilityPolicy=1","-dAutoRotatePages=/None",
+        "-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB","-dConvertCMYKImagesToRGB=true",
+        "-dDownsampleColorImages=false","-dDownsampleGrayImages=false","-dDownsampleMonoImages=false",
+        "-dPDFSETTINGS=/prepress",
+        "-dColorConversionStrategy=sRGB",
+        "-dDefaultRGBProfile=/app/sRGB_IEC61966-2-1_no_black_scaling.icc",
+        `-sOutputICCProfile=${iccPath}`,
+        `-sOutputFile=${tempOutput}`,
+        tempInput.replace(/\\/g,"/")
+      ];
       await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
+      // Only Pro users get full ZUGFeRD + pdfa-clean processing
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
         const localeMeta = {
@@ -199,5 +194,6 @@ const gsArgs = [
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
+
 
 module.exports = router;
