@@ -1,6 +1,8 @@
 const axios = require("axios");
 const sharp = require("sharp");
 
+
+
 /**
  * Convert image URL (PNG, JPG, or SVG) to Base64 string for embedding in PDF
  * @param {string} url 
@@ -42,11 +44,6 @@ async function generateInvoiceHTML_PdfaSafe(data) {
   // PDF/A safe class
   const userClass = "pdfa-clean";
 
-  // Watermark only for previews/basic
-  const watermarkHTML =
-    data.isBasicUser && data.isPreview
-      ? `<div class="watermark">${locale.watermarkBasic || 'PREVIEW — BASIC VERSION ONLY'}</div>`
-      : "";
 
   // Chart config
   const chartConfig = {

@@ -9,34 +9,36 @@ const axios = require("axios");
  * @param {string} url 
  * @returns {Promise<string>}
  */
-async function getBase64Image(url) {
+
+
+async function getBase64Image(urlOrPath) {
   try {
-    
-    if (url && url.startsWith("http")) {
-      console.log("🔍 Fetching image:", url);
-      const response = await axios.get(url, { responseType: "arraybuffer" });
-      const buffer = response.data;
-      if (url.endsWith(".svg")) {
-        const pngBuffer = await sharp(buffer).png().toBuffer();
+    if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) {
+      console.log("🔍 Fetching image:", urlOrPath);
+      const response = await axios.get(urlOrPath, { responseType: "arraybuffer" });
+      if (urlOrPath.endsWith(".svg")) {
+        const pngBuffer = await sharp(response.data).png().toBuffer();
         console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
         return `data:image/png;base64,${pngBuffer.toString("base64")}`;
       }
+      const buffer = Buffer.from(response.data, "binary");
       console.log("✅ Image fetched, size:", buffer.length);
-      return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
+      return `data:image/png;base64,${buffer.toString("base64")}`;
+    } else {
+   
+      const localPath = path.isAbsolute(urlOrPath) ? urlOrPath : path.join(__dirname, "../public/images", urlOrPath);
+      const buffer = fs.readFileSync(localPath);
+      console.log(`✅ Using local PDFify logo, size: ${buffer.length}`);
+      return `data:image/png;base64,${buffer.toString("base64")}`;
     }
   } catch (err) {
-    console.warn("❌ Could not fetch image from URL, using default logo.", err.message);
+    console.error("❌ Could not fetch image from URL, using default logo.", err.message);
+   
+    const fallbackPath = path.join(__dirname, "../public/images/Logo.png");
+    const buffer = fs.readFileSync(fallbackPath);
+    console.log(`✅ Using local PDFify logo, size: ${buffer.length}`);
+    return `data:image/png;base64,${buffer.toString("base64")}`;
   }
-
-  // Fallback to local PDFify logo
-  const localLogoPath = path.join(__dirname, "../public/images/Logo.png");
-  if (fs.existsSync(localLogoPath)) {
-    const buffer = fs.readFileSync(localLogoPath);
-    console.log("✅ Using local PDFify logo, size:", buffer.length);
-    return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
-  }
-
-  return ""; 
 }
 
 /**
