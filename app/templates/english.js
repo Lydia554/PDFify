@@ -1,66 +1,16 @@
-const fs = require("fs");
-const path = require("path");
-const sharp = require("sharp");
-const axios = require("axios");
-
 /**
- * Convert image URL (PNG, JPG, or SVG) to Base64 string for embedding in PDF
- * Falls back to local PDFify logo if URL is missing or invalid
- * @param {string} url 
- * @returns {Promise<string>}
- */
-
-
-async function getBase64Image(urlOrPath) {
-  try {
-    if (urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")) {
-      console.log("🔍 Fetching image:", urlOrPath);
-      const response = await axios.get(urlOrPath, { responseType: "arraybuffer" });
-      if (urlOrPath.endsWith(".svg")) {
-        const pngBuffer = await sharp(response.data).png().toBuffer();
-        console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
-        return `data:image/png;base64,${pngBuffer.toString("base64")}`;
-      }
-      const buffer = Buffer.from(response.data, "binary");
-      console.log("✅ Image fetched, size:", buffer.length);
-      return `data:image/png;base64,${buffer.toString("base64")}`;
-    } else {
-   
-      const localPath = path.isAbsolute(urlOrPath) ? urlOrPath : path.join(__dirname, "../public/images", urlOrPath);
-      const buffer = fs.readFileSync(localPath);
-      console.log(`✅ Using local PDFify logo, size: ${buffer.length}`);
-      return `data:image/png;base64,${buffer.toString("base64")}`;
-    }
-  } catch (err) {
-    console.error("❌ Could not fetch image from URL, using default logo.", err.message);
-   
-    const fallbackPath = path.join(__dirname, "../public/images/Logo.png");
-    const buffer = fs.readFileSync(fallbackPath);
-    console.log(`✅ Using local PDFify logo, size: ${buffer.length}`);
-    return `data:image/png;base64,${buffer.toString("base64")}`;
-  }
-}
-
-/**
- * Generate HTML invoice for Puppeteer PDF rendering (free template)
- * @param {Object} data 
- * @returns {Promise<string>}
+ * Generate HTML invoice for free users
+ * @param {Object} data
+ * @returns {string}
  */
 async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  const logoUrl = typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length
-    ? data.customLogoUrl.trim()
-    : null; 
+  // Free users always get PDFify logo, local path or URL
+  const logoUrl = "https://pdfify.pro/images/Logo.png";
 
-  const userClass = "pdfa-clean"; 
-
-  const watermarkHTML =
-    data.isBasicUser && data.isPreview
-      ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
-      : "";
-
+  // Chart config (only used if showChart is true)
   const chartConfig = {
     type: "pie",
     data: {
@@ -76,11 +26,15 @@ async function generateInvoiceHTML(data) {
     },
   };
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
-
-  const logoBase64 = await getBase64Image(logoUrl);
   const chartBase64 = data.showChart
-    ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
+    ? `https://quickchart.io/chart?c=${chartConfigEncoded}`
     : "";
+
+  // Watermark only for preview basic users
+  const watermarkHTML =
+    data.isBasicUser && data.isPreview
+      ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
+      : "";
 
   return `
 <html>
@@ -91,19 +45,23 @@ async function generateInvoiceHTML(data) {
       body {
         font-family: 'Open Sans', sans-serif;
         color: #000000ff;
-        background: #ffffff;
+        background: #f4f7fb;
         margin: 0;
         padding: 0;
         min-height: 100vh;
+        position: relative;
       }
 
       .container {
         max-width: 800px;
         margin: 20px auto;
         padding: 30px 40px 60px;
-        background: #ffffff;
-        border-radius: 8px;
-        border: 1px solid #888888;
+        background: linear-gradient(to bottom right, #ffffff, #f0f4ff);
+        border-radius: 16px;
+        border: 1px solid #c5d0f9;
+        box-shadow: 0 6px 15px rgba(42,61,102,0.15);
+        position: relative;
+        z-index: 1;
       }
 
       .table {
@@ -113,27 +71,30 @@ async function generateInvoiceHTML(data) {
       }
 
       .table th, .table td {
-        padding: 10px;
-        border: 1px solid #888888;
+        padding: 12px;
+        border: 1px solid #c5d0f9;
         text-align: left;
       }
 
       .table th {
-        background-color: #dddddd;
+        background-color: #dbe7ff;
+        color: #2a3d66;
         font-weight: 600;
       }
 
       .table td {
-        background-color: #ffffff;
+        background-color: #fdfdff;
+        color: #2a3d66;
       }
 
       .table tr:nth-child(even) td {
-        background-color: #f2f2f2;
+        background-color: #f6f9fe;
       }
 
       .table tfoot td {
-        background-color: #dddddd;
+        background-color: #dbe7ff;
         font-weight: bold;
+        color: #2a3d66;
       }
 
       .total p {
@@ -143,22 +104,38 @@ async function generateInvoiceHTML(data) {
       }
 
       .watermark {
-        display: none !important; /* Free template disables watermark */
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 60px;
+        color: #ffcccc;
+        font-weight: 900;
+        pointer-events: none;
+        user-select: none;
+        z-index: 9999;
+        white-space: nowrap;
       }
 
       .footer {
+        position: static;
         max-width: 800px;
         margin: 40px auto 10px auto;
         padding: 10px;
+        line-height: 1.6;
         font-size: 11px;
-        color: #000000ff;
+        border-radius: 0 0 16px 16px;
+        box-sizing: border-box;
+        color: #2a3d66;
+        background: #e8f0ff;
+        border-top: 1px solid #c5d0f9;
         text-align: center;
-        border-top: 1px solid #888888;
       }
 
       .footer a {
         color: #000000ff;
         text-decoration: none;
+        word-break: break-word;
       }
 
       .footer a:hover {
@@ -166,9 +143,9 @@ async function generateInvoiceHTML(data) {
       }
     </style>
   </head>
-  <body class="${userClass}">
+  <body>
     <div class="container">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height:60px;" />` : ""}
+      <img src="${logoUrl}" alt="Logo" style="height:60px;" />
       <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
 
       <div class="invoice-header">
@@ -251,4 +228,4 @@ async function generateInvoiceHTML(data) {
   `;
 }
 
-module.exports = { generateInvoiceHTML, getBase64Image };
+module.exports = { generateInvoiceHTML };
