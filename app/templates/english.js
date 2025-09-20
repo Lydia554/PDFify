@@ -7,7 +7,7 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // Free users always get PDFify logo, local path or URL
+  // Free users always get PDFify logo
   const logoUrl = "https://pdfify.pro/images/Logo.png";
 
   // Chart config (only used if showChart is true)
@@ -30,7 +30,7 @@ async function generateInvoiceHTML(data) {
     ? `https://quickchart.io/chart?c=${chartConfigEncoded}`
     : "";
 
-  // Watermark only for preview basic users
+  // Watermark only for preview/basic users
   const watermarkHTML =
     data.isBasicUser && data.isPreview
       ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
