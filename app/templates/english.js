@@ -1,70 +1,64 @@
-const axios = require("axios");
-const sharp = require("sharp");
-const fs = require("fs");       
+const fs = require("fs");
 const path = require("path");
+const sharp = require("sharp");
+const axios = require("axios");
 
 /**
  * Convert image URL (PNG, JPG, or SVG) to Base64 string for embedding in PDF
+ * Falls back to local PDFify logo if URL is missing or invalid
  * @param {string} url 
  * @returns {Promise<string>}
  */
-
-
-
 async function getBase64Image(url) {
-  if (!url) return null;
   try {
-    console.log("🔍 Fetching image:", url);
-    const response = await axios.get(url, { responseType: "arraybuffer" });
-
-    if (url.endsWith(".svg")) {
-      const pngBuffer = await sharp(response.data).png().toBuffer();
-      console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
-      return `data:image/png;base64,${pngBuffer.toString("base64")}`;
+    
+    if (url && url.startsWith("http")) {
+      console.log("🔍 Fetching image:", url);
+      const response = await axios.get(url, { responseType: "arraybuffer" });
+      const buffer = response.data;
+      if (url.endsWith(".svg")) {
+        const pngBuffer = await sharp(buffer).png().toBuffer();
+        console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
+        return `data:image/png;base64,${pngBuffer.toString("base64")}`;
+      }
+      console.log("✅ Image fetched, size:", buffer.length);
+      return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
     }
-
-    const buffer = Buffer.from(response.data, "binary");
-    console.log("✅ Image fetched, size:", buffer.length);
-    return `data:image/png;base64,${buffer.toString("base64")}`;
   } catch (err) {
-    console.error("❌ Error fetching image for PDF:", url, err.message);
-
-    // Optional fallback to local default logo
-    const fallbackPath = path.join(__dirname, "../public/default-logo.png");
-    if (fs.existsSync(fallbackPath)) {
-      const data = fs.readFileSync(fallbackPath);
-      return `data:image/png;base64,${Buffer.from(data).toString("base64")}`;
-    }
-
-    return null;
+    console.warn("❌ Could not fetch image from URL, using default logo.", err.message);
   }
+
+  // Fallback to local PDFify logo
+  const localLogoPath = path.join(__dirname, "../public/images/Logo.png");
+  if (fs.existsSync(localLogoPath)) {
+    const buffer = fs.readFileSync(localLogoPath);
+    console.log("✅ Using local PDFify logo, size:", buffer.length);
+    return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
+  }
+
+  return ""; 
 }
 
 /**
- * Generate HTML invoice for Puppeteer PDF rendering
+ * Generate HTML invoice for Puppeteer PDF rendering (free template)
  * @param {Object} data 
  * @returns {Promise<string>}
  */
 async function generateInvoiceHTML(data) {
-  // Safe fallbacks
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
-  
-  // Logo
-  const logoUrl =
-    typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length
-      ? data.customLogoUrl.trim()
-      : "https://pdfify.pro/images/Logo.png";
 
-  // PDF/A safe class
-  const userClass = "pdfa-clean";
+  const logoUrl = typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length
+    ? data.customLogoUrl.trim()
+    : null; 
+
+  const userClass = "pdfa-clean"; 
 
   const watermarkHTML =
     data.isBasicUser && data.isPreview
       ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
       : "";
 
-  // Chart config
   const chartConfig = {
     type: "pie",
     data: {
@@ -81,7 +75,6 @@ async function generateInvoiceHTML(data) {
   };
   const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
 
-  // Embed images as Base64
   const logoBase64 = await getBase64Image(logoUrl);
   const chartBase64 = data.showChart
     ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
@@ -96,23 +89,19 @@ async function generateInvoiceHTML(data) {
       body {
         font-family: 'Open Sans', sans-serif;
         color: #000000ff;
-        background: #f4f7fb;
+        background: #ffffff;
         margin: 0;
         padding: 0;
         min-height: 100vh;
-        position: relative;
       }
 
       .container {
         max-width: 800px;
         margin: 20px auto;
         padding: 30px 40px 60px;
-        background: linear-gradient(to bottom right, #ffffff, #f0f4ff);
-        border-radius: 16px;
-        border: 1px solid #c5d0f9;
-        box-shadow: 0 6px 15px rgba(42,61,102,0.15);
-        position: relative;
-        z-index: 1;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 1px solid #888888;
       }
 
       .table {
@@ -122,30 +111,27 @@ async function generateInvoiceHTML(data) {
       }
 
       .table th, .table td {
-        padding: 12px;
-        border: 1px solid #c5d0f9;
+        padding: 10px;
+        border: 1px solid #888888;
         text-align: left;
       }
 
       .table th {
-        background-color: #dbe7ff;
-        color: #2a3d66;
+        background-color: #dddddd;
         font-weight: 600;
       }
 
       .table td {
-        background-color: #fdfdff;
-        color: #2a3d66;
+        background-color: #ffffff;
       }
 
       .table tr:nth-child(even) td {
-        background-color: #f6f9fe;
+        background-color: #f2f2f2;
       }
 
       .table tfoot td {
-        background-color: #dbe7ff;
+        background-color: #dddddd;
         font-weight: bold;
-        color: #2a3d66;
       }
 
       .total p {
@@ -155,46 +141,27 @@ async function generateInvoiceHTML(data) {
       }
 
       .watermark {
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 60px;
-        color: #ffcccc;
-        font-weight: 900;
-        pointer-events: none;
-        user-select: none;
-        z-index: 9999;
-        white-space: nowrap;
+        display: none !important; /* Free template disables watermark */
       }
 
       .footer {
-        position: static;
         max-width: 800px;
         margin: 40px auto 10px auto;
         padding: 10px;
-        line-height: 1.6;
         font-size: 11px;
-        border-radius: 0 0 16px 16px;
-        box-sizing: border-box;
-        color: #2a3d66;
-        background: #e8f0ff;
-        border-top: 1px solid #c5d0f9;
+        color: #000000ff;
         text-align: center;
+        border-top: 1px solid #888888;
       }
 
       .footer a {
         color: #000000ff;
         text-decoration: none;
-        word-break: break-word;
       }
 
       .footer a:hover {
         text-decoration: underline;
       }
-
-      /* PDF/A-3b overrides */
-      .pdfa-clean .watermark { display: none !important; }
     </style>
   </head>
   <body class="${userClass}">
