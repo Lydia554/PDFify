@@ -6,23 +6,26 @@ const sharp = require("sharp");
  * @param {string} url 
  * @returns {Promise<string>}
  */
+
+
 async function getBase64Image(url) {
+  if (!url) return null;
   try {
     console.log("🔍 Fetching image:", url);
     const response = await axios.get(url, { responseType: "arraybuffer" });
-    if (url.endsWith(".svg")) {
-      const pngBuffer = await sharp(response.data).png().toBuffer();
-      console.log("✅ SVG converted to PNG, size:", pngBuffer.length);
-      return `data:image/png;base64,${pngBuffer.toString("base64")}`;
-    }
-    const buffer = Buffer.from(response.data, "binary");
-    console.log("✅ Image fetched, size:", buffer.length);
-    return `data:image/png;base64,${buffer.toString("base64")}`;
+    return `data:image/png;base64,${Buffer.from(response.data).toString("base64")}`;
   } catch (err) {
-    console.error("❌ Error fetching image for PDF:", url, err);
-    return "";
+    console.error(`❌ Error fetching image for PDF: ${url}`, err.message);
+    // Fallback to a default local logo or just return null
+    const fallbackPath = path.join(__dirname, "../public/default-logo.png");
+    if (fs.existsSync(fallbackPath)) {
+      const data = fs.readFileSync(fallbackPath);
+      return `data:image/png;base64,${Buffer.from(data).toString("base64")}`;
+    }
+    return null;
   }
 }
+
 
 /**
  * Generate HTML invoice for Puppeteer PDF rendering
