@@ -230,43 +230,42 @@ generatePdfBtn.addEventListener('click', async () => {
       localStorage.getItem('apiKey');
     if (!apiKey) throw new Error('API key missing. Please log in or use a valid access link.');
 
-   const response = await fetch('/api/friendly/generate', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey}`,
-  },
-  body: JSON.stringify({ template, ...formData, isPreview: true }),
-  credentials: 'include',
+    const response = await fetch('/api/friendly/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({ template, ...formData }),
+      credentials: 'include',
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem('apiKey');
+      window.location.href = '/login.html';
+      return;
+    }
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to generate PDF');
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${template}_${Date.now()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    friendlyResult.textContent = '✅ PDF downloaded!';
+  } catch (error) {
+    console.error('PDF Generation Error:', error);
+    friendlyResult.textContent = `❌ Error: ${error.message}`;
+  }
 });
-
-if (!response.ok) {
-  const errorData = await response.json();
-  throw new Error(errorData.error || 'Failed to generate PDF');
-}
-
-const blob = await response.blob();
-const url = URL.createObjectURL(blob);
-
-// Show PDF in iframe for preview
-const iframe = document.getElementById('previewFrame');
-if (iframe) {
-  iframe.src = url;
-  iframe.style.display = 'block';
-  iframe.style.width = '100%';
-  iframe.style.height = '600px';
-} else {
-  window.open(url, '_blank');
-}
-
-// Show preview count
-const previewCount = response.headers.get('X-Preview-Count');
-const previewMax = response.headers.get('X-Preview-Max');
-const previewInfoEl = document.getElementById('preview-info');
-if (previewInfoEl && previewCount && previewMax) {
-  previewInfoEl.textContent = `Preview ${previewCount} of ${previewMax} this month.`;
-}
-
 
 
 templateSelect.addEventListener('change', () => renderForm(templateSelect.value));

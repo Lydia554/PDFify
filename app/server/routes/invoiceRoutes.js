@@ -14,6 +14,7 @@ const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
 const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
 const { generateInvoiceHTML } = require("../../templates/english.js"); 
+const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -83,7 +84,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.emulateMediaType('print');
       await page.evaluateOnNewDocument(() => document.documentElement.style.setProperty('--pdf-a-mode', 'true'));
 
-      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
+      // Add pdfa-clean mode to remove transparency
+      const html = await generateInvoiceHTML({ ...invoiceData, isPreview, userClass: "pdfa-clean" });
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
 
       const pdfBuffer = await page.pdf({
@@ -97,11 +99,25 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       await page.close();
 
       // Count pages
-      const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
       const pageCount = pdfDoc.getPageCount();
       totalPages += pageCount;
 
-      tempResults.push({ pdfBuffer, orderId, invoiceData, country });
+      // Always apply OutputIntent for all users
+      const outputIntentDict = pdfDoc.context.obj({
+        Type: PDFName.of("OutputIntent"),
+        S: PDFName.of("GTS_PDFA3"),
+        OutputCondition: PDFString.of("sRGB IEC61966-2.1"),
+        OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+        Info: PDFString.of("sRGB IEC61966-2.1"),
+        DestOutputProfile: await pdfDoc.embedICCProfile(
+          fs.readFileSync(path.resolve(__dirname, "../routes/sRGB_IEC61966-2-1_no_black_scaling.icc"))
+        )
+      });
+      pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentDict]));
+
+      const finalBuffer = await pdfDoc.save();
+      tempResults.push({ pdfBuffer: finalBuffer, orderId, invoiceData, country });
     }
 
     // Check monthly page limit ONCE
@@ -114,7 +130,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     // Ghostscript + ZUGFeRD processing
     for (const { pdfBuffer, orderId, invoiceData, country } of tempResults) {
-      const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
+      const iccPath = path.resolve(__dirname, "../routes/sRGB_IEC61966-2-1_no_black_scaling.icc");
       const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
@@ -125,6 +141,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         "-dEmbedAllFonts=true","-dSubsetFonts=true","-dPreserveDocInfo=true","-dPreserveAnnots=true","-dPDFACompatibilityPolicy=1",
         "-dAutoRotatePages=/None","-sColorConversionStrategy=RGB","-dProcessColorModel=/DeviceRGB",
         "-dConvertCMYKImagesToRGB=true","-dDownsampleColorImages=false","-dDownsampleGrayImages=false","-dDownsampleMonoImages=false","-dPDFSETTINGS=/prepress",
+        "-dColorConversionStrategy=sRGB",
+        `-dDefaultRGBProfile=${iccPath}`,
         `-sOutputICCProfile=${iccPath}`, `-sOutputFile=${tempOutput}`, tempInput.replace(/\\/g,"/")
       ];
       await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
