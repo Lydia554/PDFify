@@ -7,6 +7,7 @@ const sendEmail = require("../sendEmail");
 const { enrichLineItemsWithImages } = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 const { incrementUsage } = require("../utils/usageUtils"); 
+const sendShopifyInvoiceEmail = require("../utils/sendShopifyInvoiceEmail");
 
 function verifyShopifyWebhook(req, res, next) {
   if (process.env.NODE_ENV !== "production") return next();
@@ -128,21 +129,20 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang })
       console.log("✅ Atomic usage increment, new usageCount from DB:", freshUser.usageCount);
     }
 
-    if (order.email) {
-      await sendEmail({
-        to: order.email,
-        subject: `Invoice for Shopify Order ${order.name || order.id}`,
-        text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
-        attachments: [
-          {
-            filename: `Invoice-${order.name || order.id}.pdf`,
-            content: pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ],
-      });
-      console.log(`✉️ Email sent to ${order.email}`);
-    } else {
+if (order.email) {
+  const success = await sendShopifyInvoiceEmail({
+    shopDomain,
+    order,
+    pdfBuffer,
+    accessToken
+  });
+
+  if (!success) {
+    console.warn(`⚠️ Shopify email failed for order ${order.id}`);
+  }
+} 
+
+else {
       console.warn("⚠️ No email found on order, skipping email");
     }
 

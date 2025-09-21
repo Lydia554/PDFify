@@ -12,6 +12,7 @@ const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
+const sendShopifyInvoiceEmail = require("../utils/sendShopifyInvoiceEmail");
 
 const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
@@ -566,22 +567,22 @@ console.log("✅ Usage incremented, new usageCount:", freshUser.usageCount);
 
 
     try {
-    if (order.email && shouldSendEmail) {
-  await sendEmail({
-    to: order.email,
-    subject: `Your Invoice from ${invoiceData.shopName}`,
-    text: "Please find your invoice attached.",
-    attachments: [
-      {
-        filename: `Invoice_${safeOrderId}.pdf`,
-        content: pdfBuffer,
-      },
-    ],
+
+
+if (order.email && shouldSendEmail) {
+  const success = await sendShopifyInvoiceEmail({
+    shopDomain,
+    order,
+    pdfBuffer,
+    accessToken: token
   });
 
+  if (!success) {
+    console.warn(`⚠️ Shopify email failed for order ${order.id}`);
+  }
+}
 
-        console.log("✅ Invoice emailed to:", order.email);
-      } else {
+else {
         console.warn("⚠️ No email found on order, skipping email");
       }
     } catch (emailErr) {
