@@ -658,17 +658,33 @@ router.post("/disconnect", authenticate, dualAuth, async (req, res) => {
 
 
 
+router.get("/config", async (req, res) => {
+  const { shopDomain } = req.query;
+  if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
+
+  try {
+    const shopConfig = await ShopConfig.findOne({ shopDomain });
+    res.json({ allowCustomerPDF: shopConfig?.allowCustomerPDF || false });
+  } catch (err) {
+    console.error("Failed to fetch Shopify config:", err);
+    res.status(500).json({ error: "Failed to fetch config" });
+  }
+});
+
+
 
 router.post("/settings", async (req, res) => {
   const { shopDomain, allowCustomerPDF } = req.body;
   if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
 
   try {
-    const shopConfig = await ShopConfig.findOneAndUpdate(
-      { shopDomain },
-      { allowCustomerPDF },
-      { upsert: true, new: true }
-    );
+  const normalizedShopDomain = shopDomain.trim().toLowerCase();
+const shopConfig = await ShopConfig.findOneAndUpdate(
+  { shopDomain: normalizedShopDomain },
+  { allowCustomerPDF },
+  { upsert: true, new: true }
+);
+
     res.json({ message: "Settings saved", allowCustomerPDF: shopConfig.allowCustomerPDF });
   } catch (err) {
     console.error("Failed to save Shopify settings:", err);
@@ -677,22 +693,7 @@ router.post("/settings", async (req, res) => {
 });
 
 
-router.post("/settings", async (req, res) => {
-  const { shopDomain, allowCustomerPDF } = req.body;
-  if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
 
-  try {
-    const shopConfig = await ShopConfig.findOneAndUpdate(
-      { shopDomain },
-      { allowCustomerPDF },
-      { upsert: true, new: true }
-    );
-    res.json({ message: "Settings saved", allowCustomerPDF: shopConfig.allowCustomerPDF });
-  } catch (err) {
-    console.error("Failed to save Shopify settings:", err);
-    res.status(500).json({ error: "Failed to save settings" });
-  }
-});
 
 
 module.exports = router;
