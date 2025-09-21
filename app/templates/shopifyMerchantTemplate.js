@@ -1,8 +1,7 @@
-const puppeteer = require("puppeteer");
-const { PDFDocument } = require("pdf-lib");
+const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
 
 /**
- * Safely parse number from Shopify string or number
+ * Safely parse numbers
  */
 function parseNumber(value, fallback = 0) {
   const num = typeof value === "number" ? value : parseFloat(value);
@@ -10,133 +9,80 @@ function parseNumber(value, fallback = 0) {
 }
 
 /**
- * Map Shopify order to PDF/A data format
+ * Map Shopify order to simple PDF data
  */
-function mapShopifyOrderToPdfData(order, options = {}) {
-  const { merchant = false } = options;
-
+function mapOrderToPdfData(order) {
   const items = (order.line_items || []).map(item => {
     const price = parseNumber(item.price);
     const quantity = parseNumber(item.quantity, 1);
     const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseNumber(t.price), 0);
     const total = price * quantity + tax;
-
-    return {
-      name: item.title || "Unnamed item",
-      quantity,
-      price: price.toFixed(2),
-      tax: tax.toFixed(2),
-      total: total.toFixed(2),
-      imageBase64: merchant ? "" : item.image || ""
-    };
+    return { name: item.title, quantity, price, tax, total };
   });
 
-  const subtotal = parseNumber(order.subtotal_price).toFixed(2);
-  const tax = parseNumber(order.total_tax).toFixed(2);
-  const total = parseNumber(order.total_price).toFixed(2);
-  const taxRate = parseNumber(order.total_tax) && parseNumber(order.subtotal_price)
-    ? ((parseNumber(order.total_tax) / parseNumber(order.subtotal_price)) * 100).toFixed(2) + "%"
-    : "0%";
+  const subtotal = parseNumber(order.subtotal_price);
+  const tax = parseNumber(order.total_tax);
+  const total = parseNumber(order.total_price);
 
   return {
     customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
-    customerEmail: order.customer?.email || "N/A",
-    orderId: order.name || order.id || "Unknown",
+    orderId: order.name || order.id,
     date: order.created_at ? new Date(order.created_at).toLocaleDateString("de-DE") : new Date().toLocaleDateString("de-DE"),
+    items,
     subtotal,
     tax,
     total,
-    taxRate,
-    items,
-    merchant
   };
 }
 
 /**
- * Generate Shopify PDF HTML
+ * Generate PDF buffer from order data
  */
-function generateShopifyPdfHTML(data) {
-  return `
-<html>
-<head>
-  <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; color:#000; }
-    .container { max-width:800px; margin:20px auto; padding:30px; border:1px solid #000; background:#fff; }
-    h1,h2,h3,p,td,th { color:#000; }
-    .table { width:100%; border-collapse:collapse; margin-top:20px; }
-    .table th, .table td { padding:8px; border:1px solid #000; text-align:left; }
-    .table th { background:#ddd; }
-    .table tfoot td { background:#ddd; font-weight:bold; }
-    .footer { text-align:center; margin-top:30px; font-size:11px; color:#333; border-top:1px solid #000; padding-top:10px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Invoice for ${data.customerName}</h1>
-    <p><strong>Order ID:</strong> ${data.orderId}</p>
-    <p><strong>Date:</strong> ${data.date}</p>
-    ${data.merchant ? "" : `<p><strong>Email:</strong> ${data.customerEmail}</p>`}
+async function createShopifyInvoicePdf(order, options = {}) {
+  const data = mapOrderToPdfData(order);
+  const pdfDoc = await PDFDocument.create();
 
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Item</th>
-          <th>Qty</th>
-          <th>Price</th>
-          <th>Tax</th>
-          <th>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${data.items.map(item => `
-          <tr>
-            <td>${item.name}</td>
-            <td>${item.quantity}</td>
-            <td>${item.price}</td>
-            <td>${item.tax}</td>
-            <td>${item.total}</td>
-          </tr>`).join("")}
-      </tbody>
-      <tfoot>
-        <tr><td colspan="4">Subtotal</td><td>${data.subtotal}</td></tr>
-        <tr><td colspan="4">Tax (${data.taxRate})</td><td>${data.tax}</td></tr>
-        <tr><td colspan="4">Total</td><td>${data.total}</td></tr>
-      </tfoot>
-    </table>
-  </div>
-  <div class="footer">
-    <p>Thanks for using PDFify!</p>
-    <p>&copy; 2025 YourShop — All rights reserved.</p>
-  </div>
-</body>
-</html>`;
-}
+  const page = pdfDoc.addPage([595, 842]); // A4 size
+  const { width } = page.getSize();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
+  let y = 800;
+  const lineHeight = 18;
 
-async function createShopifyInvoicePdf(order, options = {}, xmlBuffer = null) {
-  const data = mapShopifyOrderToPdfData(order, options);
-  const html = generateShopifyPdfHTML(data);
+  page.drawText(`Invoice: ${data.orderId}`, { x: 50, y, size: 14, font, color: rgb(0, 0, 0) });
+  y -= lineHeight;
+  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font, color: rgb(0, 0, 0) });
+  y -= lineHeight;
+  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font, color: rgb(0, 0, 0) });
+  y -= lineHeight * 2;
 
-  console.log("Generated HTML length:", html.length);
-  console.log("Items array:", data.items);
+  // Table headers
+  page.drawText(`Item`, { x: 50, y, size: 12, font, color: rgb(0, 0, 0) });
+  page.drawText(`Qty`, { x: 250, y, size: 12, font, color: rgb(0, 0, 0) });
+  page.drawText(`Price`, { x: 300, y, size: 12, font, color: rgb(0, 0, 0) });
+  page.drawText(`Tax`, { x: 380, y, size: 12, font, color: rgb(0, 0, 0) });
+  page.drawText(`Total`, { x: 450, y, size: 12, font, color: rgb(0, 0, 0) });
+  y -= lineHeight;
 
-  const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-  const page = await browser.newPage();
-  await page.setViewport({ width: 800, height: 1200 });
-
-  // Wait for fonts, CSS, images to load
-  await page.setContent(html, { waitUntil: "networkidle0" });
-
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" }
+  // Table rows
+  data.items.forEach(item => {
+    page.drawText(item.name, { x: 50, y, size: 12, font });
+    page.drawText(String(item.quantity), { x: 250, y, size: 12, font });
+    page.drawText(item.price.toFixed(2), { x: 300, y, size: 12, font });
+    page.drawText(item.tax.toFixed(2), { x: 380, y, size: 12, font });
+    page.drawText(item.total.toFixed(2), { x: 450, y, size: 12, font });
+    y -= lineHeight;
   });
 
-  await browser.close();
+  y -= lineHeight;
+  page.drawText(`Subtotal: ${data.subtotal.toFixed(2)}`, { x: 50, y, size: 12, font });
+  y -= lineHeight;
+  page.drawText(`Tax: ${data.tax.toFixed(2)}`, { x: 50, y, size: 12, font });
+  y -= lineHeight;
+  page.drawText(`Total: ${data.total.toFixed(2)}`, { x: 50, y, size: 12, font });
 
-
-  return pdfBuffer;
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
 }
 
-module.exports = { createShopifyInvoicePdf, mapShopifyOrderToPdfData };
+module.exports = { createShopifyInvoicePdf };
