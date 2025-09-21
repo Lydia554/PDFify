@@ -437,10 +437,9 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
   downloadStatus.textContent = "Generating merchant-compliant PDF...";
 
   try {
-    
     const res = await api.post(
       `/shopify/invoice?preview=false&merchant=true`,
-      { shopDomain, orderId },
+      { shopDomain, orderId, merchant: true },
       { responseType: "blob" }
     );
 
@@ -449,8 +448,10 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Merchant_Invoice_${orderId}.pdf`;
+    a.download = `Order_${orderId}.pdf`; // automatically names the file
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
 
     window.URL.revokeObjectURL(url);
     downloadStatus.textContent = "Merchant PDF downloaded successfully!";
@@ -459,6 +460,9 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
     downloadStatus.textContent = "Failed to download PDF.";
   }
 });
+
+
+
   // ------------------------------
   // On page load, check connection and fetch data
   // ------------------------------
