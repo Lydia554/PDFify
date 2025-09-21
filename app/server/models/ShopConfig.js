@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 
 const ShopConfigSchema = new mongoose.Schema({
@@ -6,7 +5,10 @@ const ShopConfigSchema = new mongoose.Schema({
   customLogoUrl: String,
   showChart: { type: Boolean, default: false },
   theme: { type: String, default: "basic" },
-  isPremium: { type: Boolean, default: false }
+  isPremium: { type: Boolean, default: false },
+
+
+  allowCustomerPDF: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model("ShopConfig", ShopConfigSchema);

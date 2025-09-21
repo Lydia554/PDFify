@@ -657,4 +657,42 @@ router.post("/disconnect", authenticate, dualAuth, async (req, res) => {
 });
 
 
+
+
+router.post("/settings", async (req, res) => {
+  const { shopDomain, allowCustomerPDF } = req.body;
+  if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
+
+  try {
+    const shopConfig = await ShopConfig.findOneAndUpdate(
+      { shopDomain },
+      { allowCustomerPDF },
+      { upsert: true, new: true }
+    );
+    res.json({ message: "Settings saved", allowCustomerPDF: shopConfig.allowCustomerPDF });
+  } catch (err) {
+    console.error("Failed to save Shopify settings:", err);
+    res.status(500).json({ error: "Failed to save settings" });
+  }
+});
+
+
+router.post("/settings", async (req, res) => {
+  const { shopDomain, allowCustomerPDF } = req.body;
+  if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
+
+  try {
+    const shopConfig = await ShopConfig.findOneAndUpdate(
+      { shopDomain },
+      { allowCustomerPDF },
+      { upsert: true, new: true }
+    );
+    res.json({ message: "Settings saved", allowCustomerPDF: shopConfig.allowCustomerPDF });
+  } catch (err) {
+    console.error("Failed to save Shopify settings:", err);
+    res.status(500).json({ error: "Failed to save settings" });
+  }
+});
+
+
 module.exports = router;

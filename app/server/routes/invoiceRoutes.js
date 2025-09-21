@@ -53,18 +53,16 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
     const tempResults = [];
-    let totalPages = 0; 
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw };
-      console.log("📝 Invoice request data:", JSON.stringify(invoiceData, null, 2));
-
       const orderId = invoiceData.orderId || `order-${Date.now()}`;
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.country = country || "default";
       invoiceData.locale = locales[lang] || locales["en"];
 
+      // Germany-specific VAT logic
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.items = invoiceData.items.map(item => {
           const totalNum = parseFloat(item.total || 0);
@@ -81,10 +79,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const page = await browser.newPage();
       await page.emulateMediaType('print');
 
-      // Apply PDF/A-clean class only for pro users
+      // PDF/A-clean class for Pro users
       invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
 
-      // Force local logo for free users
+      // Local logo for free users
       if (user.plan === "free") {
         invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
       }
@@ -102,19 +100,20 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
       await page.close();
 
+      // Count pages
       const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
       const pageCount = pdfDoc.getPageCount();
-      totalPages += pageCount;
 
-      tempResults.push({ pdfBuffer, orderId, invoiceData, country });
-    }
+      // Increment usage **per invoice** to stop early if limit reached
+      const usageAllowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
+      if (!usageAllowed) {
+        await browser.close();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+        return res.status(403).json({ error: 'Monthly limit reached.' });
+      }
 
-    // Check monthly page limit ONCE
-    const usageAllowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
-    if (!usageAllowed) {
-      await browser.close();
-      fs.rmSync(tmpDir, { recursive: true, force: true });
-      return res.status(403).json({ error: 'Monthly limit reached.' });
+      tempResults.push({ pdfBuffer, orderId, invoiceData, country, pageCount });
+      console.log(`📄 Invoice ${orderId} has ${pageCount} page(s).`);
     }
 
     // Ghostscript + ZUGFeRD processing
@@ -124,36 +123,35 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
       fs.writeFileSync(tempInput, pdfBuffer);
 
-     const gsExe = detectGhostscript();
-const gsArgs = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-dNOOUTERSAVE",
-  "-sDEVICE=pdfwrite",
-  "-dEmbedAllFonts=true",
-  "-dSubsetFonts=true",
-  "-dPreserveDocInfo=true",
-  "-dPreserveAnnots=true",
-  "-dPDFACompatibilityPolicy=1",
-  "-dAutoRotatePages=/None",
-  "-dProcessColorModel=/DeviceRGB",
-  "-dConvertCMYKImagesToRGB=true",
-  "-dDownsampleColorImages=false",
-  "-dDownsampleGrayImages=false",
-  "-dDownsampleMonoImages=false",
-  "-dPDFSETTINGS=/prepress",
-  "-dColorConversionStrategy=/sRGB",
-  `-sOutputICCProfile=${iccPath}`, 
-  `-sOutputFile=${tempOutput}`,
-  tempInput.replace(/\\/g, "/")
-];
+      const gsExe = detectGhostscript();
+      const gsArgs = [
+        "-dPDFA=3",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-dNOOUTERSAVE",
+        "-sDEVICE=pdfwrite",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dPreserveDocInfo=true",
+        "-dPreserveAnnots=true",
+        "-dPDFACompatibilityPolicy=1",
+        "-dAutoRotatePages=/None",
+        "-dProcessColorModel=/DeviceRGB",
+        "-dConvertCMYKImagesToRGB=true",
+        "-dDownsampleColorImages=false",
+        "-dDownsampleGrayImages=false",
+        "-dDownsampleMonoImages=false",
+        "-dPDFSETTINGS=/prepress",
+        "-dColorConversionStrategy=/sRGB",
+        `-sOutputICCProfile=${iccPath}`, 
+        `-sOutputFile=${tempOutput}`,
+        tempInput.replace(/\\/g, "/")
+      ];
 
       await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
       let finalPdf = fs.readFileSync(tempOutput);
       fs.unlinkSync(tempInput);
 
-      // Only Pro users get full ZUGFeRD + pdfa-clean processing
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
         const localeMeta = {
@@ -205,6 +203,5 @@ const gsArgs = [
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
-
 
 module.exports = router;
