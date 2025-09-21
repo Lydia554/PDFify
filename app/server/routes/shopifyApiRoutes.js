@@ -12,7 +12,9 @@ const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
-const { createShopifyInvoicePdf } = require(path.join(__dirname, "../templates/shopifyMerchantTemplate"));
+const { createShopifyInvoicePdf } = require("../../templates/shopifyMerchantTemplate");
+
+
 
 const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
