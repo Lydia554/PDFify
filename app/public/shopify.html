@@ -123,57 +123,71 @@
    </section>
 
 
-  <section class="bg-gradient-to-r from-blue-800 via-cyan-700 to-teal-600 text-white shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4 text-white">🛒 Shopify Integration</h2>
-        <p class="text-sm mb-2">
-          <strong>Connected Store:</strong> <span id="connectedShopDomain">No store connected</span>
-        </p>
-
-
-        <label class="text-sm font-semibold mt-4">PDFify API Key</label>
-<input id="merchantApiKey" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter your PDFify API key" />
-
-        <label class="text-sm font-semibold">Shop Domain</label>
-        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="yourstore.myshopify.com" />
-
-        <label class="text-sm font-semibold">Access Token</label>
-        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter your Shopify access token" />
-
-        <div class="flex flex-col sm:flex-row gap-3">
-          <button id="connectShopifyButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Connect Store</button>
-          <button id="downloadCompliantPdf" 
-        class="mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded shadow w-full sm:w-auto">
-  Download Compliant PDF
-</button>
-<p id="downloadResult" class="text-sm mt-2 font-medium text-white"></p>
-
-          <button id="disconnectShopifyButton" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 w-full">Disconnect Store</button>
-        </div>
-        <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
-
-<section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white hidden">
-  <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
-
+<section class="bg-gradient-to-r from-blue-800 via-cyan-700 to-teal-600 text-white shadow-lg rounded-2xl p-8 mb-6">
+  <h2 class="text-2xl font-bold mb-6 flex items-center gap-2">🛒 Shopify Integration</h2>
+  
   <p class="text-sm mb-4">
-    <strong>Status:</strong> <span id="customerPDFStatus">Loading...</span>
+    <strong>Connected Store:</strong> <span id="connectedShopDomain">No store connected</span>
   </p>
 
-  <div class="flex items-center gap-3 mb-4">
-    <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
-    <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">
-      Allow colorful PDF invoices to be sent automatically to customers
-    </label>
+  <div class="space-y-4">
+    <div>
+      <label class="text-sm font-semibold">PDFify API Key</label>
+      <input id="merchantApiKey" class="w-full p-3 border rounded-lg bg-gray-800 border-gray-600 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" placeholder="Enter your PDFify API key" />
+    </div>
+
+    <div>
+      <label class="text-sm font-semibold">Shop Domain</label>
+      <input id="shopDomainInput" class="w-full p-3 border rounded-lg bg-gray-800 border-gray-600 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" placeholder="yourstore.myshopify.com" />
+    </div>
+
+    <div>
+      <label class="text-sm font-semibold">Access Token</label>
+      <input id="shopifyAccessToken" class="w-full p-3 border rounded-lg bg-gray-800 border-gray-600 text-white focus:ring-2 focus:ring-cyan-400 focus:outline-none" placeholder="Enter your Shopify access token" />
+    </div>
   </div>
 
-  <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded shadow">
-    Save Settings
-  </button>
+  <!-- Button group -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+    <button id="connectShopifyButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
+      Connect Store
+    </button>
 
-  <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
+    <button id="downloadCompliantPdf" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-200">
+      ⬇️ Download PDF
+    </button>
+
+    <button id="disconnectShopifyButton" class="bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
+      Disconnect Store
+    </button>
+  </div>
+
+  <p id="downloadResult" class="text-sm mt-3 font-medium text-white"></p>
+  <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
+
+  <!-- Customer PDF Section -->
+  <section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded-2xl p-6 mt-8 text-white hidden">
+    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
+
+    <p class="text-sm mb-4">
+      <strong>Status:</strong> <span id="customerPDFStatus">Loading...</span>
+    </p>
+
+    <div class="flex items-center gap-3 mb-4">
+      <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
+      <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">
+        Allow colorful PDF invoices to be sent automatically to customers
+      </label>
+    </div>
+
+    <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded-lg shadow">
+      Save Settings
+    </button>
+
+    <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
+  </section>
 </section>
 
-
-      </section>
 
 
   </main>
