@@ -21,7 +21,7 @@
       <nav class="space-x-4">
         <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
         <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
-        <a href="/shopify-guide" class="text-purple-400 font-semibold">📑Shopify Guide</a>
+        <a href="/shopify" class="text-purple-400 font-semibold">📑Shopify Guide</a>
         <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
       </nav>
     </div>
@@ -141,6 +141,12 @@
 
         <div class="flex flex-col sm:flex-row gap-3">
           <button id="connectShopifyButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Connect Store</button>
+          <button id="downloadCompliantPdf" 
+        class="mt-4 bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded shadow w-full sm:w-auto">
+  Download Compliant PDF
+</button>
+<p id="downloadResult" class="text-sm mt-2 font-medium text-white"></p>
+
           <button id="disconnectShopifyButton" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 w-full">Disconnect Store</button>
         </div>
         <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
