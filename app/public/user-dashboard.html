@@ -374,85 +374,14 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 
 
 
-
-   
-async function fetchShopifyConnection() {
-  try {
-    const response = await api.get("/shopify/connection");
-    const { connectedShopDomain } = response.data;
-    document.getElementById("connectedShopDomain").textContent = connectedShopDomain || "None";
-  } catch (error) {
-    console.error("Failed to fetch Shopify connection:", error);
-    document.getElementById("connectedShopDomain").textContent = "Error fetching data";
-  }
-}
-
-document.getElementById("connectShopifyButton").addEventListener("click", async () => {
-  const shopDomainInput = document.getElementById("shopDomainInput");
-  const accessTokenInput = document.getElementById("shopifyAccessToken");
-
-  if (!shopDomainInput || !accessTokenInput) {
-    document.getElementById("shopifyResult").textContent = "Missing input elements.";
-    return;
-  }
-
-  const shopDomain = shopDomainInput.value.trim();
-  const accessToken = accessTokenInput.value.trim();
-
-  if (!shopDomain || !accessToken) {
-    document.getElementById("shopifyResult").textContent = "Please enter both shop domain and access token.";
-    return;
-  }
-
-  document.getElementById("connectShopifyButton").disabled = true;
-  document.getElementById("shopifyResult").textContent = "";
-
-  try {
-    const response = await api.post("/shopify/connect", {
-      shopDomain,
-      accessToken,
-    });
-
-    document.getElementById("shopifyResult").textContent =
-      response.data.message || "Shopify store connected!";
-    document.getElementById("connectedShopDomain").textContent = shopDomain;
-  } catch (error) {
-    console.error("Error connecting Shopify store:", error);
-    document.getElementById("shopifyResult").textContent = "Failed to connect Shopify store.";
-  } finally {
-    document.getElementById("connectShopifyButton").disabled = false;
-  }
-});
-
-
-document.getElementById("disconnectShopifyButton").addEventListener("click", async () => {
-  const resultEl = document.getElementById("shopifyResult");
-
-  try {
-    await api.post("/shopify/disconnect");
-    resultEl.textContent = "Shopify store disconnected.";
-    resultEl.className = "result success";
-    resultEl.style.display = "block";
-    document.getElementById("shopifyConnectedStatus").textContent = "Not connected.";
-  } catch (error) {
-    console.error("Error disconnecting Shopify store:", error);
-    resultEl.textContent = "Failed to disconnect Shopify store.";
-    resultEl.className = "result error";
-    resultEl.style.display = "block";
-  }
-});
-
-
-fetchShopifyConnection();
-
-
-
+// Show/hide Customer PDF section
 function showCustomerPdfSection(show) {
   const section = document.getElementById("customerPdfSection");
   if (show) section.classList.remove("hidden");
   else section.classList.add("hidden");
 }
 
+// Fetch customer PDF setting from backend
 async function fetchCustomerPDFSetting(shopDomain) {
   if (!shopDomain) return;
 
@@ -462,10 +391,8 @@ async function fetchCustomerPDFSetting(shopDomain) {
 
   statusEl.textContent = "Loading...";
   try {
-    const res = await fetch(`/api/shopify/config?shopDomain=${encodeURIComponent(shopDomain)}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    checkbox.checked = data.allowCustomerPDF;
+    const res = await api.get(`/shopify/config?shopDomain=${encodeURIComponent(shopDomain)}`);
+    checkbox.checked = res.data.allowCustomerPDF;
     statusEl.textContent = "Loaded";
     resultEl.textContent = "";
   } catch (err) {
@@ -475,62 +402,91 @@ async function fetchCustomerPDFSetting(shopDomain) {
   }
 }
 
-// Only fetch after store is connected
-const shopDomainEl = document.getElementById("connectedShopDomain");
-if (shopDomainEl.textContent && shopDomainEl.textContent !== "None") {
-  showCustomerPdfSection(true);
-  fetchCustomerPDFSetting(shopDomainEl.textContent.trim());
-}
-
-// When user connects a store via your Connect button
+// Connect Shopify store
 document.getElementById("connectShopifyButton").addEventListener("click", async () => {
-  // ...after successfully connecting:
-  showCustomerPdfSection(true);
-  fetchCustomerPDFSetting(document.getElementById("shopDomainInput").value.trim());
+  const shopDomain = document.getElementById("shopDomainInput").value.trim();
+  const accessToken = document.getElementById("shopifyAccessToken").value.trim();
+  const resultEl = document.getElementById("shopifyResult");
+  resultEl.textContent = "";
+
+  if (!shopDomain || !accessToken) {
+    resultEl.textContent = "Please enter both shop domain and access token.";
+    return;
+  }
+
+  document.getElementById("connectShopifyButton").disabled = true;
+  try {
+    await api.post("/shopify/connect", { shopDomain, accessToken });
+    document.getElementById("connectedShopDomain").textContent = shopDomain;
+    showCustomerPdfSection(true);
+    fetchCustomerPDFSetting(shopDomain);
+    resultEl.textContent = "Shopify store connected!";
+  } catch (err) {
+    console.error("Error connecting Shopify store:", err);
+    resultEl.textContent = "Failed to connect Shopify store.";
+  } finally {
+    document.getElementById("connectShopifyButton").disabled = false;
+  }
 });
 
+// Disconnect Shopify store
+document.getElementById("disconnectShopifyButton").addEventListener("click", async () => {
+  const resultEl = document.getElementById("shopifyResult");
+  resultEl.textContent = "";
 
-// Fetch current setting from backend
-async function fetchCustomerPDFSetting() {
   try {
-    const shopDomain = document.getElementById("shopDomainInput").value.trim();
-    if (!shopDomain) throw new Error("Shop domain is missing");
-
-    const response = await api.get(`/shopify/config?shopDomain=${encodeURIComponent(shopDomain)}`);
-    document.getElementById("allowCustomerPDFCheckbox").checked = response.data.allowCustomerPDF;
+    await api.post("/shopify/disconnect");
+    document.getElementById("connectedShopDomain").textContent = "None";
+    showCustomerPdfSection(false);
+    resultEl.textContent = "Shopify store disconnected.";
   } catch (err) {
-    console.error("Failed to fetch customer PDF setting:", err);
-    document.getElementById("customerPdfResult").textContent = "Failed to fetch customer PDF setting";
+    console.error("Error disconnecting Shopify store:", err);
+    resultEl.textContent = "Failed to disconnect Shopify store.";
   }
-}
+});
 
-
-// Save updated setting
+// Save updated Customer PDF setting
 document.getElementById("saveCustomerPDFSettingButton").addEventListener("click", async () => {
+  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
+  const allowCustomerPDF = document.getElementById("allowCustomerPDFCheckbox").checked;
+  const resultEl = document.getElementById("customerPdfResult");
+
+  if (!shopDomain || shopDomain === "None") {
+    resultEl.textContent = "No connected shop to save settings for.";
+    return;
+  }
+
   try {
-    const shopDomain = document.getElementById("shopDomainInput").value.trim();
-    const allowCustomerPDF = document.getElementById("allowCustomerPDFCheckbox").checked;
-
-    if (!shopDomain) throw new Error("Shop domain is missing");
-
-    const response = await api.post("/shopify/settings", {
-      shopDomain,
-      allowCustomerPDF
-    });
-
-    document.getElementById("customerPdfResult").textContent = "Settings saved!";
+    await api.post("/shopify/settings", { shopDomain, allowCustomerPDF });
+    resultEl.textContent = "Settings saved!";
   } catch (err) {
     console.error("Failed to save customer PDF setting:", err);
-    document.getElementById("customerPdfResult").textContent = "Failed to save settings.";
+    resultEl.textContent = "Failed to save settings.";
   }
 });
 
+// On page load, fetch current Shopify connection and Customer PDF setting
+window.addEventListener("DOMContentLoaded", async () => {
+  try {
+    const response = await api.get("/shopify/connection");
+    const { connectedShopDomain } = response.data;
+    const shopDomainEl = document.getElementById("connectedShopDomain");
+    shopDomainEl.textContent = connectedShopDomain || "None";
 
-// Initialize on page load
-fetchCustomerPDFSetting();
-
-
+    if (connectedShopDomain) {
+      showCustomerPdfSection(true);
+      fetchCustomerPDFSetting(connectedShopDomain);
+    } else {
+      showCustomerPdfSection(false);
+    }
+  } catch (err) {
+    console.error("Failed to fetch Shopify connection:", err);
+    document.getElementById("connectedShopDomain").textContent = "Error fetching data";
+    showCustomerPdfSection(false);
+  }
+});
     fetchUserData();
+
   </script>
 
 
