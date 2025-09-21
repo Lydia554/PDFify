@@ -82,18 +82,27 @@
         </div>
         <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
 
+<section class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white">
+  <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+    📨 Customer PDF Settings
+  </h2>
 
-<section class="bg-gray-700 shadow rounded p-6 mb-6">
-  <h2 class="text-xl font-semibold mb-4">📨 Customer PDF Settings</h2>
-  <p class="text-sm mb-2">
+  <p class="text-sm mb-4">
     <strong>Status:</strong> <span id="customerPDFStatus">Loading...</span>
   </p>
-  <label class="text-sm">
-    <input type="checkbox" id="allowCustomerPDFCheckbox">
-    Allow colorful PDF invoices to be sent automatically to customers
-  </label>
-  <button id="saveCustomerPDFSettingButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-2">Save</button>
-  <p id="customerPdfResult" class="text-sm mt-2"></p>
+
+  <div class="flex items-center gap-3 mb-4">
+    <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
+    <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">
+      Allow colorful PDF invoices to be sent automatically to customers
+    </label>
+  </div>
+
+  <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded shadow">
+    Save Settings
+  </button>
+
+  <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
 </section>
 
 
@@ -440,28 +449,38 @@ fetchShopifyConnection();
 // Fetch current setting from backend
 async function fetchCustomerPDFSetting() {
   try {
-    const res = await api.get("/shopify/config");
-    const allowCustomerPDF = res.data.allowCustomerPDF || false;
-    document.getElementById("allowCustomerPDFCheckbox").checked = allowCustomerPDF;
-    document.getElementById("customerPDFStatus").textContent = allowCustomerPDF ? "Allowed ✅" : "Not allowed ❌";
+    const shopDomain = document.getElementById("shopDomainInput").value.trim();
+    if (!shopDomain) throw new Error("Shop domain is missing");
+
+    const response = await api.get(`/shopify/config?shopDomain=${encodeURIComponent(shopDomain)}`);
+    document.getElementById("allowCustomerPDFCheckbox").checked = response.data.allowCustomerPDF;
   } catch (err) {
     console.error("Failed to fetch customer PDF setting:", err);
-    document.getElementById("customerPDFStatus").textContent = "Error";
+    document.getElementById("customerPdfResult").textContent = "Failed to fetch customer PDF setting";
   }
 }
 
+
 // Save updated setting
 document.getElementById("saveCustomerPDFSettingButton").addEventListener("click", async () => {
-  const allowCustomerPDF = document.getElementById("allowCustomerPDFCheckbox").checked;
   try {
-    await api.post("/shopify/settings", { allowCustomerPDF });
-    document.getElementById("customerPDFStatus").textContent = allowCustomerPDF ? "Allowed ✅" : "Not allowed ❌";
+    const shopDomain = document.getElementById("shopDomainInput").value.trim();
+    const allowCustomerPDF = document.getElementById("allowCustomerPDFCheckbox").checked;
+
+    if (!shopDomain) throw new Error("Shop domain is missing");
+
+    const response = await api.post("/shopify/settings", {
+      shopDomain,
+      allowCustomerPDF
+    });
+
     document.getElementById("customerPdfResult").textContent = "Settings saved!";
   } catch (err) {
     console.error("Failed to save customer PDF setting:", err);
     document.getElementById("customerPdfResult").textContent = "Failed to save settings.";
   }
 });
+
 
 // Initialize on page load
 fetchCustomerPDFSetting();
