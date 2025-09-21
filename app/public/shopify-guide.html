@@ -121,6 +121,49 @@
    </section>
   </main>
 
+
+
+    <section class="bg-gradient-to-r from-blue-800 via-cyan-700 to-teal-600 text-white shadow rounded p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4">🛒 Shopify Integration</h2>
+        <p class="text-sm mb-2">
+          <strong>Connected Store:</strong> <span id="connectedShopDomain">No store connected</span>
+        </p>
+        <label class="text-sm font-semibold">Shop Domain</label>
+        <input id="shopDomainInput" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="yourstore.myshopify.com" />
+
+        <label class="text-sm font-semibold">Access Token</label>
+        <input id="shopifyAccessToken" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter your Shopify access token" />
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button id="connectShopifyButton" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Connect Store</button>
+          <button id="disconnectShopifyButton" class="bg-pink-600 text-white px-4 py-2 rounded hover:bg-pink-700 w-full">Disconnect Store</button>
+        </div>
+        <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
+
+<section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white hidden">
+  <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
+
+  <p class="text-sm mb-4">
+    <strong>Status:</strong> <span id="customerPDFStatus">Loading...</span>
+  </p>
+
+  <div class="flex items-center gap-3 mb-4">
+    <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
+    <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">
+      Allow colorful PDF invoices to be sent automatically to customers
+    </label>
+  </div>
+
+  <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded shadow">
+    Save Settings
+  </button>
+
+  <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
+</section>
+
+
+      </section>
+
   <!-- Footer -->
   <footer class="bg-gray-800 border-t border-gray-700 mt-12">
       <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
