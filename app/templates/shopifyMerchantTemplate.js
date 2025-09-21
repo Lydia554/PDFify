@@ -7,6 +7,10 @@ const { PDFDocument } = require("pdf-lib");
  * Convert image URL to Base64 for embedding in PDF
  */
 async function getBase64Image(url) {
+  const placeholder =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAOEAA.."; // Add a real placeholder image Base64
+  if (!url) return placeholder;
+
   try {
     const response = await axios.get(url, { responseType: "arraybuffer" });
     let buffer = response.data;
@@ -14,10 +18,11 @@ async function getBase64Image(url) {
     if (url.endsWith(".svg")) {
       buffer = await sharp(buffer).png().toBuffer();
     }
+
     return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
   } catch (err) {
-    console.error("Error fetching image:", url, err);
-    return "";
+    console.warn("⚠️ Failed to fetch image, using placeholder:", url, err.message);
+    return placeholder;
   }
 }
 
@@ -25,32 +30,37 @@ async function getBase64Image(url) {
  * Map Shopify order to PDF/A data format
  */
 async function mapShopifyOrderToPdfData(order, t) {
-  const items = order.line_items.map(item => {
-    const tax = item.tax_lines?.reduce((sum, t) => sum + parseFloat(t.price), 0) || 0;
-    const total = parseFloat(item.price) * item.quantity + tax;
-    return {
-      name: item.title,
-      quantity: item.quantity,
-      price: parseFloat(item.price).toFixed(2),
-      tax: tax.toFixed(2),
-      total: total.toFixed(2),
-      imageUrl: item.image || ""
-    };
-  });
+  const items = await Promise.all(
+    order.line_items.map(async (item) => {
+      const tax = item.tax_lines?.reduce((sum, t) => sum + parseFloat(t.price), 0) || 0;
+      const total = parseFloat(item.price) * item.quantity + tax;
+      const imageBase64 = await getBase64Image(item.image?.src || item.image);
+      return {
+        name: item.title,
+        quantity: item.quantity,
+        price: parseFloat(item.price).toFixed(2),
+        tax: tax.toFixed(2),
+        total: total.toFixed(2),
+        imageBase64,
+      };
+    })
+  );
 
   return {
-    customerName: `${order.customer.first_name} ${order.customer.last_name}`,
-    customerEmail: order.customer.email,
-    orderId: order.name,
+    customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim(),
+    customerEmail: order.customer?.email || "N/A",
+    orderId: order.name || order.id,
     date: new Date(order.created_at).toLocaleDateString("de-DE"),
-    subtotal: parseFloat(order.subtotal_price).toFixed(2),
-    tax: parseFloat(order.total_tax).toFixed(2),
-    total: parseFloat(order.total_price).toFixed(2),
-    taxRate: order.total_tax ? ((order.total_tax / order.subtotal_price) * 100).toFixed(2) + "%" : "0%",
+    subtotal: parseFloat(order.subtotal_price || 0).toFixed(2),
+    tax: parseFloat(order.total_tax || 0).toFixed(2),
+    total: parseFloat(order.total_price || 0).toFixed(2),
+    taxRate: order.total_tax && order.subtotal_price
+      ? ((order.total_tax / order.subtotal_price) * 100).toFixed(2) + "%"
+      : "0%",
     items,
     showChart: true,
-    customLogoUrl: "https://yourshopifylogo.url/logo.png",
-    locale: t
+    customLogoUrl: order.shop?.logo || "https://yourshopifylogo.url/logo.png",
+    locale: t,
   };
 }
 
@@ -60,16 +70,19 @@ async function mapShopifyOrderToPdfData(order, t) {
 async function generateShopifyPdfHTML(data) {
   const logoBase64 = await getBase64Image(data.customLogoUrl);
 
-  // Simple chart example (optional)
   const chartBase64 = data.showChart
-    ? await getBase64Image(`https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
-        type: "pie",
-        data: {
-          labels: ["Subtotal", "Tax"],
-          datasets: [{ data: [parseFloat(data.subtotal), parseFloat(data.tax)] }]
-        },
-        options: { plugins: { legend: { display: false } } }
-      }))}`)
+    ? await getBase64Image(
+        `https://quickchart.io/chart?c=${encodeURIComponent(
+          JSON.stringify({
+            type: "pie",
+            data: {
+              labels: ["Subtotal", "Tax"],
+              datasets: [{ data: [parseFloat(data.subtotal), parseFloat(data.tax)] }],
+            },
+            options: { plugins: { legend: { display: false } } },
+          })
+        )}`
+      )
     : "";
 
   return `
@@ -111,15 +124,18 @@ async function generateShopifyPdfHTML(data) {
           </tr>
         </thead>
         <tbody>
-          ${data.items.map(item => `
+          ${data.items
+            .map(
+              (item) => `
             <tr>
-              <td>${item.name}${item.imageUrl ? `<br><img src="${item.imageUrl}" class="product-image" />` : ""}</td>
+              <td>${item.name}${item.imageBase64 ? `<br><img src="${item.imageBase64}" class="product-image" />` : ""}</td>
               <td>${item.quantity}</td>
               <td>${item.price}</td>
               <td>${item.tax}</td>
               <td>${item.total}</td>
-            </tr>
-          `).join("")}
+            </tr>`
+            )
+            .join("")}
         </tbody>
         <tfoot>
           <tr><td colspan="4">Subtotal</td><td>${data.subtotal}</td></tr>
@@ -145,9 +161,9 @@ async function generateShopifyPdfHTML(data) {
  */
 async function embedZugferd(pdfBuffer, xmlBuffer) {
   const pdfDoc = await PDFDocument.load(pdfBuffer);
-  await pdfDoc.attach(xmlBuffer, 'zugferd-invoice.xml', {
-    mimeType: 'application/xml',
-    description: 'ZUGFeRD invoice XML'
+  await pdfDoc.attach(xmlBuffer, "zugferd-invoice.xml", {
+    mimeType: "application/xml",
+    description: "ZUGFeRD invoice XML",
   });
   return await pdfDoc.save();
 }
