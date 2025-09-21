@@ -7,11 +7,12 @@ const axios = require("axios");
 const sendEmail = require("../sendEmail");
 const { enrichLineItemsWithImages } = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
-const { incrementUsage } = require("../utils/usageUtils"); 
+const { incrementUsage } = require("../utils/usageUtils");
 
 // Shopify webhook verification
 function verifyShopifyWebhook(req, res, next) {
   if (process.env.NODE_ENV !== "production") return next();
+
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
 
@@ -27,6 +28,7 @@ function verifyShopifyWebhook(req, res, next) {
   next();
 }
 
+// Webhook for new orders
 router.post(
   "/order-created",
   express.raw({
@@ -70,56 +72,47 @@ router.post(
   }
 );
 
-
 async function processOrderAsync({ order, user, accessToken, shopDomain, lang, allowCustomerPDF }) {
   try {
     order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
     const invoiceResponse = await axios.post(
       "https://pdfify.pro/api/shopify/invoice",
-      {
-        orderId: order.id,
-        order,
-        shopDomain,
-        shopifyAccessToken: accessToken,
-        lang,
-        sendEmail: false,
-      },
-      {
-        headers: { Authorization: `Bearer ${user.getDecryptedApiKey()}` },
-        responseType: "arraybuffer",
-      }
+      { orderId: order.id, order, shopDomain, shopifyAccessToken: accessToken, lang, sendEmail: false },
+      { headers: { Authorization: `Bearer ${user.getDecryptedApiKey()}` }, responseType: "arraybuffer" }
     );
 
     const pdfBuffer = Buffer.from(invoiceResponse.data);
-    const pageCount = invoiceResponse.headers["x-pdf-page-count"]
-      ? parseInt(invoiceResponse.headers["x-pdf-page-count"], 10)
-      : null;
 
-    if (pageCount) {
-      await incrementUsage(user, false, pageCount);
-      console.log(`📄 Invoice page count: ${pageCount}, usage updated for user ${user.email}`);
+    // Safely parse page count
+    let pageCount = 1;
+    const headerPageCount = invoiceResponse.headers["x-pdf-page-count"];
+    if (headerPageCount) {
+      const parsed = parseInt(headerPageCount, 10);
+      if (!isNaN(parsed)) pageCount = parsed;
     }
 
-    // Customer PDF sending logic with verbose logs
+    // Send PDF email and increment usage only if allowed
     if (!order.email) {
-      console.warn(`⚠️ Order ${order.id} has no customer email, skipping PDF email.`);
+      console.warn(`⚠️ Order ${order.id} has no customer email, skipping PDF email and usage increment.`);
     } else if (!allowCustomerPDF) {
-      console.log(`⚠️ Merchant has NOT approved customer PDFs for shop ${shopDomain}. PDF email skipped for order ${order.id}.`);
+      console.log(`⚠️ Merchant has NOT approved customer PDFs for shop ${shopDomain}. Skipping PDF email and usage increment.`);
     } else {
       await sendEmail({
         to: order.email,
         subject: `Invoice for Shopify Order ${order.name || order.id}`,
         text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
-        attachments: [
-          {
-            filename: `Invoice-${order.name || order.id}.pdf`,
-            content: pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ],
+        attachments: [{ filename: `Invoice-${order.name || order.id}.pdf`, content: pdfBuffer, contentType: "application/pdf" }],
       });
       console.log(`✉️ Customer PDF SENT for order ${order.id} to ${order.email}`);
+
+      // Increment usage only after sending PDF
+      try {
+        await incrementUsage(user, false, pageCount);
+        console.log(`📄 Invoice page count: ${pageCount}, usage updated for user ${user.email}`);
+      } catch (err) {
+        console.error(`❌ Failed to increment usage for user ${user.email}:`, err);
+      }
     }
 
     console.log(`✅ Finished processing order: ${order.id}`);
