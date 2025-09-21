@@ -31,9 +31,9 @@ function mapShopifyOrderToPdfData(order, options = {}) {
     };
   });
 
-  const subtotal = (parseNumber(order.subtotal_price)).toFixed(2);
-  const tax = (parseNumber(order.total_tax)).toFixed(2);
-  const total = (parseNumber(order.total_price)).toFixed(2);
+  const subtotal = parseNumber(order.subtotal_price).toFixed(2);
+  const tax = parseNumber(order.total_tax).toFixed(2);
+  const total = parseNumber(order.total_price).toFixed(2);
   const taxRate = parseNumber(order.total_tax) && parseNumber(order.subtotal_price)
     ? ((parseNumber(order.total_tax) / parseNumber(order.subtotal_price)) * 100).toFixed(2) + "%"
     : "0%";
@@ -112,41 +112,29 @@ function generateShopifyPdfHTML(data) {
 </html>`;
 }
 
-/**
- * Embed ZUGFeRD XML into PDF
- */
-async function embedZugferd(pdfBuffer, xmlBuffer) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-  await pdfDoc.attach(xmlBuffer, "zugferd-invoice.xml", {
-    mimeType: "application/xml",
-    description: "ZUGFeRD invoice XML",
-  });
-  return pdfDoc.save();
-}
 
-/**
- * Generate Shopify merchant PDF
- */
-async function createShopifyInvoicePdf(order, options = {}, xmlBuffer) {
+async function createShopifyInvoicePdf(order, options = {}, xmlBuffer = null) {
   const data = mapShopifyOrderToPdfData(order, options);
   const html = generateShopifyPdfHTML(data);
 
   console.log("Generated HTML length:", html.length);
+  console.log("Items array:", data.items);
 
-  const browser = await puppeteer.launch({
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
+  const browser = await puppeteer.launch({ args: ["--no-sandbox", "--disable-setuid-sandbox"] });
   const page = await browser.newPage();
   await page.setViewport({ width: 800, height: 1200 });
 
-  await page.setContent(html, { waitUntil: "domcontentloaded" });
-  const pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
+  // Wait for fonts, CSS, images to load
+  await page.setContent(html, { waitUntil: "networkidle0" });
+
+  const pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" }
+  });
 
   await browser.close();
 
-  if (xmlBuffer) {
-    return await embedZugferd(pdfBuffer, xmlBuffer);
-  }
 
   return pdfBuffer;
 }

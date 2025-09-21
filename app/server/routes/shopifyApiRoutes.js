@@ -13,6 +13,9 @@ const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
 const { createShopifyInvoicePdf } = require("../../templates/shopifyMerchantTemplate");
+const { generateZugferdXML } = require("../utils/zugferdHelper");
+const { postProcessPdfStrict } = require("../utils/postProcessPdfStrict");
+
 
 
 
@@ -466,12 +469,34 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         pdfBuffer = fs.readFileSync(pdfPath);
         await incrementUsage(user, 1, isPreview);
 
-        res.set({
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename=${order.name || order.id}.pdf`,
-        });
-        res.send(pdfBuffer);
-        fs.unlinkSync(pdfPath);
+
+        pdfBuffer = fs.readFileSync(pdfPath);
+await incrementUsage(user, 1, isPreview);
+
+// ✅ Only for pro/premium users, embed ZUGFeRD
+if (user.isPremium) {
+  const zugferdXml = generateZugferdXML(order);
+  const localeMeta = {
+    title: `Invoice ${order.name || order.id}`,
+    creator: "Shopify PDFify",
+    language: "en"
+  };
+
+  pdfBuffer = await postProcessPdfStrict(
+    pdfBuffer,      // Puppeteer PDF
+    zugferdXml,     // XML string
+    localeMeta,     // metadata
+    null            // or path to XMP template if you have one
+  );
+}
+
+res.set({
+  "Content-Type": "application/pdf",
+  "Content-Disposition": isPreview ? "inline" : `attachment; filename=${order.name || order.id}.pdf`,
+});
+res.send(pdfBuffer);
+fs.unlinkSync(pdfPath);
+
         return;
       }
     }
