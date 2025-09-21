@@ -2,43 +2,58 @@ const puppeteer = require("puppeteer");
 const { PDFDocument } = require("pdf-lib");
 
 /**
+ * Safely parse number from Shopify string or number
+ */
+function parseNumber(value, fallback = 0) {
+  const num = typeof value === "number" ? value : parseFloat(value);
+  return isNaN(num) ? fallback : num;
+}
+
+/**
  * Map Shopify order to PDF/A data format
  */
 function mapShopifyOrderToPdfData(order, options = {}) {
   const { merchant = false } = options;
 
-  const items = order.line_items.map(item => {
-    const tax = item.tax_lines?.reduce((sum, t) => sum + parseFloat(t.price), 0) || 0;
-    const total = parseFloat(item.price) * item.quantity + tax;
+  const items = (order.line_items || []).map(item => {
+    const price = parseNumber(item.price);
+    const quantity = parseNumber(item.quantity, 1);
+    const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseNumber(t.price), 0);
+    const total = price * quantity + tax;
 
     return {
-      name: item.title,
-      quantity: item.quantity,
-      price: parseFloat(item.price).toFixed(2),
+      name: item.title || "Unnamed item",
+      quantity,
+      price: price.toFixed(2),
       tax: tax.toFixed(2),
       total: total.toFixed(2),
       imageBase64: merchant ? "" : item.image || ""
     };
   });
 
+  const subtotal = (parseNumber(order.subtotal_price)).toFixed(2);
+  const tax = (parseNumber(order.total_tax)).toFixed(2);
+  const total = (parseNumber(order.total_price)).toFixed(2);
+  const taxRate = parseNumber(order.total_tax) && parseNumber(order.subtotal_price)
+    ? ((parseNumber(order.total_tax) / parseNumber(order.subtotal_price)) * 100).toFixed(2) + "%"
+    : "0%";
+
   return {
-    customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim(),
+    customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
     customerEmail: order.customer?.email || "N/A",
-    orderId: order.name || order.id,
-    date: new Date(order.created_at).toLocaleDateString("de-DE"),
-    subtotal: parseFloat(order.subtotal_price || 0).toFixed(2),
-    tax: parseFloat(order.total_tax || 0).toFixed(2),
-    total: parseFloat(order.total_price || 0).toFixed(2),
-    taxRate: order.total_tax && order.subtotal_price
-      ? ((order.total_tax / order.subtotal_price) * 100).toFixed(2) + "%"
-      : "0%",
+    orderId: order.name || order.id || "Unknown",
+    date: order.created_at ? new Date(order.created_at).toLocaleDateString("de-DE") : new Date().toLocaleDateString("de-DE"),
+    subtotal,
+    tax,
+    total,
+    taxRate,
     items,
     merchant
   };
 }
 
 /**
- * Generate simple merchant PDF HTML
+ * Generate Shopify PDF HTML
  */
 function generateShopifyPdfHTML(data) {
   return `
@@ -116,7 +131,7 @@ async function createShopifyInvoicePdf(order, options = {}, xmlBuffer) {
   const data = mapShopifyOrderToPdfData(order, options);
   const html = generateShopifyPdfHTML(data);
 
-  console.log("Generated HTML length:", html.length); // sanity check
+  console.log("Generated HTML length:", html.length);
 
   const browser = await puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
