@@ -82,10 +82,8 @@
         </div>
         <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
 
-<section class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white">
-  <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
-    📨 Customer PDF Settings
-  </h2>
+<section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white hidden">
+  <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
 
   <p class="text-sm mb-4">
     <strong>Status:</strong> <span id="customerPDFStatus">Loading...</span>
@@ -375,6 +373,8 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 
 
 
+
+
    
 async function fetchShopifyConnection() {
   try {
@@ -444,6 +444,50 @@ document.getElementById("disconnectShopifyButton").addEventListener("click", asy
 
 
 fetchShopifyConnection();
+
+
+
+function showCustomerPdfSection(show) {
+  const section = document.getElementById("customerPdfSection");
+  if (show) section.classList.remove("hidden");
+  else section.classList.add("hidden");
+}
+
+async function fetchCustomerPDFSetting(shopDomain) {
+  if (!shopDomain) return;
+
+  const statusEl = document.getElementById("customerPDFStatus");
+  const checkbox = document.getElementById("allowCustomerPDFCheckbox");
+  const resultEl = document.getElementById("customerPdfResult");
+
+  statusEl.textContent = "Loading...";
+  try {
+    const res = await fetch(`/api/shopify/config?shopDomain=${encodeURIComponent(shopDomain)}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    checkbox.checked = data.allowCustomerPDF;
+    statusEl.textContent = "Loaded";
+    resultEl.textContent = "";
+  } catch (err) {
+    console.error("Failed to fetch customer PDF setting:", err);
+    statusEl.textContent = "Error";
+    resultEl.textContent = "Failed to fetch customer PDF setting.";
+  }
+}
+
+// Only fetch after store is connected
+const shopDomainEl = document.getElementById("connectedShopDomain");
+if (shopDomainEl.textContent && shopDomainEl.textContent !== "None") {
+  showCustomerPdfSection(true);
+  fetchCustomerPDFSetting(shopDomainEl.textContent.trim());
+}
+
+// When user connects a store via your Connect button
+document.getElementById("connectShopifyButton").addEventListener("click", async () => {
+  // ...after successfully connecting:
+  showCustomerPdfSection(true);
+  fetchCustomerPDFSetting(document.getElementById("shopDomainInput").value.trim());
+});
 
 
 // Fetch current setting from backend
