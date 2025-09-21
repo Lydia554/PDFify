@@ -343,7 +343,9 @@ const premiumTemplate = `
 
 }
 
-
+// ----------------------------
+// /invoice POST route
+// ----------------------------
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -391,6 +393,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const isMerchant = req.query.merchant === "true";
 
     let pdfBuffer;
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
 
     // ----------------------------
     // Merchant PDF
@@ -398,10 +402,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     if (isMerchant) {
       try {
         console.log("🔹 Generating merchant PDF for user:", user.email);
-
         pdfBuffer = await createShopifyInvoicePdf(order, { merchant: true });
 
-        await incrementUsage(user, "merchant");
+        // Increment usage safely (numeric pages)
+        await incrementUsage(user, 1, isPreview);
 
         res.set({
           "Content-Type": "application/pdf",
@@ -411,10 +415,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       } catch (err) {
         console.error("❌ Merchant template failed, falling back to Puppeteer:", err);
 
-        // Fallback to Puppeteer
+        // Fallback Puppeteer rendering
         const enrichedItems = order.line_items.map(item => {
           const price = parseFloat(item.price) || 0;
-          const quantity = parseFloat(item.quantity) || 1;
+          const quantity = parseFloat(item.quantity) || 0;
           const total = price * quantity;
           return {
             ...item,
@@ -447,9 +451,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         const html = generateInvoiceHTML(invoiceData, true, lang, t);
         console.log("🔹 Merchant fallback HTML length:", html.length);
 
-        const pdfDir = path.join(__dirname, "../pdfs");
-        if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-
         const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
         const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
         const page = await browser.newPage();
@@ -463,7 +464,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         await browser.close();
 
         pdfBuffer = fs.readFileSync(pdfPath);
-        await incrementUsage(user, "merchant");
+        await incrementUsage(user, 1, isPreview);
 
         res.set({
           "Content-Type": "application/pdf",
@@ -490,7 +491,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     const enrichedItems = order.line_items.map(item => {
       const price = parseFloat(item.price) || 0;
-      const quantity = parseFloat(item.quantity) || 1;
+      const quantity = parseFloat(item.quantity) || 0;
       const total = price * quantity;
       subtotal += total;
       return {
@@ -528,9 +529,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       locale,
     };
 
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
@@ -547,7 +545,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     await browser.close();
 
     pdfBuffer = fs.readFileSync(pdfPath);
-    await incrementUsage(user, "customer");
+    await incrementUsage(user, 1, isPreview);
 
     res.set({
       "Content-Type": "application/pdf",
@@ -561,7 +559,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 
 router.get("/connection", authenticate, dualAuth, async (req, res) => {
