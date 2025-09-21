@@ -464,48 +464,59 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       locale,
     };
 
-    // Puppeteer customer PDF
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-    const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
+  // ------------------------------
+// Puppeteer PDF generation with debug
+// ------------------------------
+const pdfDir = path.join(__dirname, "../pdfs");
+if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
-    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-    const page = await browser.newPage();
-    const html = generateInvoiceHTML(invoiceData, true, lang, t);
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
-      displayHeaderFooter: true,
-      headerTemplate: `<div style="font-size:10px; margin-left:40px; color:#555;"></div>`,
-      footerTemplate: `
-        <div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">
-          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-        </div>
-      `,
-    });
-    await browser.close();
+const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
+const debugDir = path.join(pdfDir, "debug");
+if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+const debugHtmlPath = path.join(debugDir, `Invoice_shopify-${order.id}.html`);
 
-    pdfBuffer = fs.readFileSync(pdfPath);
+try {
+  // Save HTML snapshot for debugging
+  const html = generateInvoiceHTML(invoiceData, true, lang, t);
+  fs.writeFileSync(debugHtmlPath, html, "utf8");
+  console.log(`DEBUG: HTML snapshot saved at ${debugHtmlPath}`);
+  console.log("DEBUG: Order line items:", order.line_items);
+  console.log("DEBUG: Number of items:", order.line_items.length);
 
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": isPreview
-        ? "inline"
-        : `attachment; filename=${order.name || order.id}.pdf`,
-    });
-    res.send(pdfBuffer);
+  // Launch Puppeteer
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+  const page = await browser.newPage();
 
-    // Clean up
-    fs.unlinkSync(pdfPath);
+  await page.setContent(html, { waitUntil: "networkidle0" });
+  console.log("DEBUG: HTML content set in Puppeteer page.");
 
-  } catch (error) {
-    console.error("❌ Shopify invoice generation error:", error);
-    res.status(500).json({ error: "PDF generation failed" });
-  }
-});
+  await page.pdf({
+    path: pdfPath,
+    format: "A4",
+    printBackground: true,
+    margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+    displayHeaderFooter: true,
+    headerTemplate: `<div style="font-size:10px; margin-left:40px; color:#555;"></div>`,
+    footerTemplate: `
+      <div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">
+        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+      </div>
+    `,
+  });
+
+  await browser.close();
+  console.log(`DEBUG: PDF generated successfully at ${pdfPath}`);
+
+  // Read PDF buffer
+  pdfBuffer = fs.readFileSync(pdfPath);
+
+} catch (err) {
+  console.error("❌ Puppeteer PDF generation error:", err);
+  return res.status(500).json({ error: "PDF generation failed (Puppeteer)" });
+}
 
 
 
