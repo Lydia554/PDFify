@@ -421,38 +421,44 @@ async function fetchOrders(shopDomain) {
     }
   });
 
-  // ------------------------------
-  // Download selected order invoice
-  // ------------------------------
-  document.getElementById("downloadOrderPdf").addEventListener("click", async () => {
-    const orderId = document.getElementById("orderSelector").value;
-    const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
-    const downloadStatus = document.getElementById("downloadStatus");
+// ------------------------------
+// Download selected order invoice (merchant-compliant)
+// ------------------------------
+document.getElementById("downloadOrderPdf").addEventListener("click", async () => {
+  const orderId = document.getElementById("orderSelector").value;
+  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
+  const downloadStatus = document.getElementById("downloadStatus");
 
-    if (!orderId || orderId === "Loading orders..." || shopDomain === "No store connected") {
-      downloadStatus.textContent = "Please connect a store and select an order.";
-      return;
-    }
+  if (!orderId || orderId === "Loading orders..." || shopDomain === "No store connected") {
+    downloadStatus.textContent = "Please connect a store and select an order.";
+    return;
+  }
 
-    downloadStatus.textContent = "Generating PDF...";
-    try {
-      const res = await api.post(`/shopify/invoice?preview=false`, { shopDomain, orderId }, { responseType: "blob" });
-      const blob = new Blob([res.data], { type: "application/pdf" });
-      const url = window.URL.createObjectURL(blob);
+  downloadStatus.textContent = "Generating merchant-compliant PDF...";
 
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `Invoice_${orderId}.pdf`;
-      a.click();
+  try {
+    
+    const res = await api.post(
+      `/shopify/invoice?preview=false&merchant=true`,
+      { shopDomain, orderId },
+      { responseType: "blob" }
+    );
 
-      window.URL.revokeObjectURL(url);
-      downloadStatus.textContent = "PDF downloaded successfully!";
-    } catch (err) {
-      console.error("Failed to download PDF:", err);
-      downloadStatus.textContent = "Failed to download PDF.";
-    }
-  });
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
 
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Merchant_Invoice_${orderId}.pdf`;
+    a.click();
+
+    window.URL.revokeObjectURL(url);
+    downloadStatus.textContent = "Merchant PDF downloaded successfully!";
+  } catch (err) {
+    console.error("Failed to download merchant PDF:", err);
+    downloadStatus.textContent = "Failed to download PDF.";
+  }
+});
   // ------------------------------
   // On page load, check connection and fetch data
   // ------------------------------

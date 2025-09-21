@@ -345,22 +345,6 @@ const premiumTemplate = `
 
 
 
-const express = require("express");
-const router = express.Router();
-const puppeteer = require("puppeteer");
-const path = require("path");
-const fs = require("fs");
-const axios = require("axios");
-const { PDFDocument } = require("pdf-lib");
-const ShopConfig = require("../models/ShopConfig");
-const User = require("../models/User");
-const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
-const { resolveShopifyToken } = require("../utils/shopifyHelpers");
-const { resolveLanguage } = require("../utils/resolveLanguage");
-const { incrementUsage } = require("../utils/usageUtils");
-const { createShopifyInvoicePdf } = require("../../templates/shopifyMerchantTemplate"); // merchant template
-const { generateInvoiceHTML, formatPrice } = require("../utils/invoiceHelpers"); // your existing helpers
 
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
