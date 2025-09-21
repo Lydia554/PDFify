@@ -71,7 +71,7 @@ router.post(
 );
 
 
-aasync function processOrderAsync({ order, user, accessToken, shopDomain, lang, allowCustomerPDF }) {
+async function processOrderAsync({ order, user, accessToken, shopDomain, lang, allowCustomerPDF }) {
   try {
     order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
