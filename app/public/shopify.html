@@ -379,6 +379,54 @@ window.addEventListener("DOMContentLoaded", async () => {
     showCustomerPdfSection(false);
   }
 });
+
+
+
+document.getElementById("downloadCompliantPdf").addEventListener("click", async () => {
+  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
+  const resultEl = document.getElementById("downloadResult");
+  resultEl.textContent = "";
+
+  if (!shopDomain || shopDomain === "No store connected") {
+    resultEl.textContent = "Please connect a Shopify store first.";
+    return;
+  }
+
+  const apiKeyInput = document.getElementById("merchantApiKey");
+  const apiKey = apiKeyInput?.value || localStorage.getItem("apiKey");
+
+  if (!apiKey) {
+    resultEl.textContent = "Please enter your PDFify API key.";
+    return;
+  }
+
+  resultEl.textContent = "Generating PDF…";
+
+  try {
+    // Call your backend endpoint that generates the PDF
+    const response = await api.post("/generate-invoice", {
+      shopDomain,
+      // optional: specify invoice parameters
+    }, {
+      responseType: "blob" // important for file download
+    });
+
+    // Convert blob to download
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Invoice-${shopDomain}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    resultEl.textContent = "PDF downloaded successfully!";
+  } catch (err) {
+    console.error("Failed to download PDF:", err);
+    resultEl.textContent = "Failed to download PDF. Check your API key and store connection.";
+  }
+});
    
 
   </script>
