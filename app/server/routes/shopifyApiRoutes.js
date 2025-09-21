@@ -357,17 +357,15 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     let orderId = req.body.orderId;
     let order = req.body.order || null;
 
-    // Shopify token
-    const token = await resolveShopifyToken(req, shopDomain);
-    if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
-
-    // Normalize orderId from gid:// format
-    if (typeof orderId === "string" && orderId.startsWith("gid://")) {
-      orderId = orderId.split("/").pop();
-    }
-
-    // Fetch order if not provided
+    // Fetch Shopify order if not provided
     if (!order && orderId) {
+      const token = await resolveShopifyToken(req, shopDomain);
+      if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
+
+      if (typeof orderId === "string" && orderId.startsWith("gid://")) {
+        orderId = orderId.split("/").pop();
+      }
+
       try {
         const resp = await axios.get(`https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`, {
           headers: { "X-Shopify-Access-Token": token },
@@ -389,121 +387,50 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       : await User.findOne({ connectedShopDomain: shopDomain });
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Apply FORCE_PLAN if set
-    if (FORCE_PLAN) user.planType = FORCE_PLAN;
-
     const isPreview = req.query.preview === "true";
     const isMerchant = req.query.merchant === "true";
 
     let pdfBuffer;
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
 
     // ----------------------------
-    // Merchant PDF
+    // Merchant PDF (always compliant)
     // ----------------------------
     if (isMerchant) {
       try {
         console.log("🔹 Generating merchant PDF for user:", user.email);
-        pdfBuffer = await createShopifyInvoicePdf(order, { merchant: true });
 
-        // Increment usage safely (numeric pages)
+        // Generate ZUGFeRD XML for compliance
+        const zugferdXml = generateZugferdXML(order);
+
+        // Generate merchant PDF (no images/logos)
+        pdfBuffer = await createShopifyInvoicePdf(order, { merchant: true }, zugferdXml);
+
+        // Increment usage (1 page by default)
         await incrementUsage(user, 1, isPreview);
 
         res.set({
           "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename=${order.name || order.id}.pdf`,
+          "Content-Disposition": isPreview
+            ? "inline"
+            : `attachment; filename=${order.name || order.id}.pdf`,
         });
         return res.send(pdfBuffer);
       } catch (err) {
-        console.error("❌ Merchant template failed, falling back to Puppeteer:", err);
-
-        // Fallback Puppeteer rendering
-        const enrichedItems = order.line_items.map(item => {
-          const price = parseFloat(item.price) || 0;
-          const quantity = parseFloat(item.quantity) || 0;
-          const total = price * quantity;
-          return {
-            ...item,
-            price,
-            quantity,
-            formattedPrice: formatPrice(price, order.currency),
-            formattedTotal: formatPrice(total, order.currency),
-          };
-        });
-
-        const invoiceData = {
-          shopName: shopConfig.shopName || shopDomain,
-          date: new Date(order.created_at).toISOString().slice(0, 10),
-          items: enrichedItems,
-          formattedSubtotal: formatPrice(order.subtotal_price || 0, order.currency),
-          formattedTaxTotal: formatPrice(order.total_tax || 0, order.currency),
-          formattedTotal: formatPrice(order.total_price || 0, order.currency),
-          customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim(),
-          shippingAddress: order.shipping_address
-            ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.city || ""}`
-            : "N/A",
-          billingAddress: order.billing_address
-            ? `${order.billing_address.address1 || ""}, ${order.billing_address.city || ""}`
-            : "N/A",
-          showChart: shopConfig?.showChart,
-          customLogoUrl: shopConfig?.customLogoUrl,
-          fallbackLogoUrl: "/assets/default-logo.png",
-        };
-
-        const html = generateInvoiceHTML(invoiceData, true, lang, t);
-        console.log("🔹 Merchant fallback HTML length:", html.length);
-
-        const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
-        const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-        const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: "networkidle0" });
-        await page.pdf({
-          path: pdfPath,
-          format: "A4",
-          printBackground: true,
-          margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
-        });
-        await browser.close();
-
-        pdfBuffer = fs.readFileSync(pdfPath);
-        await incrementUsage(user, 1, isPreview);
-
-
-        pdfBuffer = fs.readFileSync(pdfPath);
-await incrementUsage(user, 1, isPreview);
-
-// ✅ Only for pro/premium users, embed ZUGFeRD
-if (user.isPremium) {
-  const zugferdXml = generateZugferdXML(order);
-  const localeMeta = {
-    title: `Invoice ${order.name || order.id}`,
-    creator: "Shopify PDFify",
-    language: "en"
-  };
-
-  pdfBuffer = await postProcessPdfStrict(
-    pdfBuffer,      // Puppeteer PDF
-    zugferdXml,     // XML string
-    localeMeta,     // metadata
-    null            // or path to XMP template if you have one
-  );
-}
-
-res.set({
-  "Content-Type": "application/pdf",
-  "Content-Disposition": isPreview ? "inline" : `attachment; filename=${order.name || order.id}.pdf`,
-});
-res.send(pdfBuffer);
-fs.unlinkSync(pdfPath);
-
-        return;
+        console.error("❌ Merchant PDF generation failed:", err);
+        return res.status(500).json({ error: "Failed to generate merchant PDF" });
       }
     }
 
     // ----------------------------
-    // Customer PDF
+    // Customer PDF (depends on shop config)
     // ----------------------------
+    if (!shopConfig.allowCustomerPDF) {
+      return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
+    }
+
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
+
     const currency = order.currency || "EUR";
     const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
     const locale = localeMap[lang] || "en-US";
@@ -529,7 +456,6 @@ fs.unlinkSync(pdfPath);
     });
 
     const rawTotal = subtotal + taxTotal;
-
     const invoiceData = {
       shopName: shopConfig.shopName || shopDomain,
       date: new Date(order.created_at).toISOString().slice(0, 10),
@@ -555,7 +481,7 @@ fs.unlinkSync(pdfPath);
     };
 
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
-    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const browser = await require("puppeteer").launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     const html = generateInvoiceHTML(invoiceData, user.isPremium, lang, t);
     console.log("🔹 Customer PDF HTML length:", html.length);
