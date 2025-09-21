@@ -153,9 +153,6 @@
     Connect Store
   </button>
 
-  <button id="downloadCompliantPdf" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-200">
-    ⬇️ Download PDF
-  </button>
 
   <button id="disconnectShopifyButton" class="bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
     Disconnect Store
@@ -310,34 +307,42 @@
   // ------------------------------
   // Fetch Shopify orders
   // ------------------------------
-  async function fetchOrders(shopDomain) {
-    if (!shopDomain) return;
+async function fetchOrders(shopDomain) {
+  if (!shopDomain) return;
 
-    const orderSelector = document.getElementById("orderSelector");
-    const orderContainer = document.getElementById("orderDownloadContainer");
-    const downloadStatus = document.getElementById("downloadStatus");
+  const orderSelector = document.getElementById("orderSelector");
+  const orderContainer = document.getElementById("orderDownloadContainer");
+  const downloadStatus = document.getElementById("downloadStatus");
 
-    orderSelector.innerHTML = `<option>Loading orders...</option>`;
-    downloadStatus.textContent = "";
-    orderContainer.classList.remove("hidden");
+  orderSelector.innerHTML = `<option>Loading orders...</option>`;
+  downloadStatus.textContent = "";
+  orderContainer.classList.remove("hidden");
 
-    try {
-      const res = await api.get(`/shopify/orders?shopDomain=${encodeURIComponent(shopDomain)}`);
-      const orders = res.data.orders || [];
+  try {
+    const res = await api.get(`/shopify/orders?shopDomain=${encodeURIComponent(shopDomain)}`);
+    
+    // Check if orders array exists
+    const orders = Array.isArray(res.data.orders) ? res.data.orders : [];
 
-      if (!orders.length) {
-        orderSelector.innerHTML = `<option>No orders found</option>`;
-        return;
-      }
-
-      orderSelector.innerHTML = orders
-        .map(order => `<option value="${order.id}">#${order.name || order.id} - ${order.total_price} ${order.currency}</option>`)
-        .join("");
-    } catch (err) {
-      console.error("Failed to fetch orders:", err);
-      orderSelector.innerHTML = `<option>Error loading orders</option>`;
+    if (!orders.length) {
+      orderSelector.innerHTML = `<option>No orders found</option>`;
+      return;
     }
+
+    orderSelector.innerHTML = orders
+      .map(order => {
+        const name = order.name || order.id || "Unknown";
+        const total = order.total_price || "0.00";
+        const currency = order.currency || "USD";
+        return `<option value="${order.id}">#${name} - ${total} ${currency}</option>`;
+      })
+      .join("");
+  } catch (err) {
+    console.error("Failed to fetch orders:", err);
+    orderSelector.innerHTML = `<option>Error loading orders</option>`;
   }
+}
+
 
   // ------------------------------
   // Handle store connected
