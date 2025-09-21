@@ -147,45 +147,60 @@
     </div>
   </div>
 
-  <!-- Button group -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
-    <button id="connectShopifyButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
-      Connect Store
-    </button>
+<!-- Button group -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+  <button id="connectShopifyButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
+    Connect Store
+  </button>
 
-    <button id="downloadCompliantPdf" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-200">
-      ⬇️ Download PDF
-    </button>
+  <button id="downloadCompliantPdf" class="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transform hover:scale-105 transition duration-200">
+    ⬇️ Download PDF
+  </button>
 
-    <button id="disconnectShopifyButton" class="bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
-      Disconnect Store
-    </button>
+  <button id="disconnectShopifyButton" class="bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
+    Disconnect Store
+  </button>
+</div>
+
+<p id="downloadResult" class="text-sm mt-3 font-medium text-white"></p>
+<p id="shopifyResult" class="text-sm font-bold mt-3"></p>
+
+<!-- Order Dropdown Section -->
+<div id="orderDownloadContainer" class="hidden mt-6 p-4 border border-gray-600 rounded-lg bg-gray-900 text-white">
+  <h3 class="text-lg font-bold mb-3">Download Order Invoice</h3>
+  
+  <select id="orderSelector" class="w-full p-2 rounded bg-gray-800 text-white mb-3">
+    <option value="">Loading orders...</option>
+  </select>
+
+  <button id="downloadOrderPdf" 
+          class="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded shadow">
+    Download PDF
+  </button>
+
+  <p id="downloadStatus" class="text-sm mt-2 text-white"></p>
+</div>
+
+<!-- Customer PDF Section -->
+<section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded-2xl p-6 mt-8 text-white hidden">
+  <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
+
+  <p class="text-sm mb-4">
+    <strong>Status:</strong> <span id="customerPDFStatus">Loading...</span>
+  </p>
+
+  <div class="flex items-center gap-3 mb-4">
+    <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
+    <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">
+      Allow colorful PDF invoices to be sent automatically to customers
+    </label>
   </div>
 
-  <p id="downloadResult" class="text-sm mt-3 font-medium text-white"></p>
-  <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
+  <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded-lg shadow">
+    Save Settings
+  </button>
 
-  <!-- Customer PDF Section -->
-  <section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded-2xl p-6 mt-8 text-white hidden">
-    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
-
-    <p class="text-sm mb-4">
-      <strong>Status:</strong> <span id="customerPDFStatus">Loading...</span>
-    </p>
-
-    <div class="flex items-center gap-3 mb-4">
-      <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
-      <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">
-        Allow colorful PDF invoices to be sent automatically to customers
-      </label>
-    </div>
-
-    <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded-lg shadow">
-      Save Settings
-    </button>
-
-    <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
-  </section>
+  <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
 </section>
 
 
@@ -381,53 +396,82 @@ window.addEventListener("DOMContentLoaded", async () => {
 });
 
 
+async function fetchOrders(shopDomain) {
+  const orderSelector = document.getElementById("orderSelector");
+  const orderContainer = document.getElementById("orderDownloadContainer");
+  const downloadStatus = document.getElementById("downloadStatus");
 
-document.getElementById("downloadCompliantPdf").addEventListener("click", async () => {
-  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
-  const resultEl = document.getElementById("downloadResult");
-  resultEl.textContent = "";
+  if (!shopDomain) return;
 
-  if (!shopDomain || shopDomain === "No store connected") {
-    resultEl.textContent = "Please connect a Shopify store first.";
-    return;
-  }
-
-  const apiKeyInput = document.getElementById("merchantApiKey");
-  const apiKey = apiKeyInput?.value || localStorage.getItem("apiKey");
-
-  if (!apiKey) {
-    resultEl.textContent = "Please enter your PDFify API key.";
-    return;
-  }
-
-  resultEl.textContent = "Generating PDF…";
+  orderSelector.innerHTML = `<option>Loading orders...</option>`;
+  downloadStatus.textContent = "";
+  orderContainer.classList.remove("hidden");
 
   try {
-    // Call your backend endpoint that generates the PDF
-    const response = await api.post("/generate-invoice", {
-      shopDomain,
-      // optional: specify invoice parameters
-    }, {
-      responseType: "blob" // important for file download
-    });
+    const res = await api.get(`/shopify/orders?shopDomain=${encodeURIComponent(shopDomain)}`);
+    const orders = res.data.orders || [];
 
-    // Convert blob to download
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Invoice-${shopDomain}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    if (orders.length === 0) {
+      orderSelector.innerHTML = `<option>No orders found</option>`;
+      return;
+    }
+
+    orderSelector.innerHTML = orders
+      .map(order => `<option value="${order.id}">#${order.name || order.id} - ${order.total_price} ${order.currency}</option>`)
+      .join("");
+  } catch (err) {
+    console.error("Failed to fetch orders:", err);
+    orderSelector.innerHTML = `<option>Error loading orders</option>`;
+  }
+}
+
+// Download selected order's invoice
+document.getElementById("downloadOrderPdf").addEventListener("click", async () => {
+  const orderId = document.getElementById("orderSelector").value;
+  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
+  const downloadStatus = document.getElementById("downloadStatus");
+
+  if (!orderId || orderId === "Loading orders...") {
+    downloadStatus.textContent = "Please select an order first.";
+    return;
+  }
+
+  downloadStatus.textContent = "Generating PDF...";
+
+  try {
+    const res = await api.post(`/shopify/invoice?preview=false`, { shopDomain, orderId }, { responseType: "blob" });
+
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoice_${orderId}.pdf`;
+    a.click();
+
     window.URL.revokeObjectURL(url);
-
-    resultEl.textContent = "PDF downloaded successfully!";
+    downloadStatus.textContent = "PDF downloaded successfully!";
   } catch (err) {
     console.error("Failed to download PDF:", err);
-    resultEl.textContent = "Failed to download PDF. Check your API key and store connection.";
+    downloadStatus.textContent = "Failed to download PDF.";
   }
 });
-   
+
+// When store connects, auto-fetch orders
+async function handleStoreConnected(shopDomain) {
+  document.getElementById("connectedShopDomain").textContent = shopDomain;
+  showCustomerPdfSection(true);
+  fetchCustomerPDFSetting(shopDomain);
+  fetchOrders(shopDomain);
+}
+
+// If already connected on page load, fetch orders immediately
+window.addEventListener("DOMContentLoaded", async () => {
+  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
+  if (shopDomain && shopDomain !== "No store connected" && shopDomain !== "None") {
+    fetchOrders(shopDomain);
+  }
+});
 
   </script>
 

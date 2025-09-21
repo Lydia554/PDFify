@@ -693,6 +693,31 @@ const shopConfig = await ShopConfig.findOneAndUpdate(
 });
 
 
+router.get("/orders", authenticate, dualAuth, async (req, res) => {
+  const shopDomain = req.query.shopDomain;
+  if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
+
+  try {
+    const token = await resolveShopifyToken(req, shopDomain);
+    if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
+
+    const shopifyOrdersUrl = `https://${shopDomain}/admin/api/2023-10/orders.json?limit=10&status=any&fields=id,name,created_at`;
+    const response = await axios.get(shopifyOrdersUrl, {
+      headers: { "X-Shopify-Access-Token": token },
+    });
+
+    const orders = response.data.orders.map(o => ({
+      id: o.id,
+      name: o.name,
+      date: new Date(o.created_at).toISOString().slice(0, 10),
+    }));
+
+    res.json({ orders });
+  } catch (err) {
+    console.error("❌ Failed to fetch orders:", err.response?.data || err.message);
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
 
 
 
