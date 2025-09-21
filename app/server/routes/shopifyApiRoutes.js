@@ -12,6 +12,7 @@ const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
+const { createShopifyInvoicePdf } = require(path.join(__dirname, "../templates/shopifyMerchantTemplate"));
 
 const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
@@ -344,7 +345,6 @@ const premiumTemplate = `
 
 
 
-
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -364,10 +364,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
       try {
         const orderResponse = await axios.get(shopifyOrderUrl, {
-          headers: {
-            "X-Shopify-Access-Token": token,
-            "Content-Type": "application/json",
-          },
+          headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" },
         });
         order = orderResponse.data.order;
       } catch (err) {
@@ -380,15 +377,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
-
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
-const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig });
+    const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig });
 
-
-    
-    if (!orderId && order?.id) {
-      orderId = order.id;
-    }
+    if (!orderId && order?.id) orderId = order.id;
 
     let user = req.user?.userId
       ? await User.findById(req.user.userId)
@@ -396,190 +388,147 @@ const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig }
 
     if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
+    const isPreview = req.query.preview === "true";
+    const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
+    const isMerchant = req.query.merchant === "true"; // <-- new query parameter
 
-    
-const isPreview = req.query.preview === "true";
-const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
+    let pdfBuffer;
 
+    if (isMerchant) {
+      // Use merchant template directly
+      pdfBuffer = await createShopifyInvoicePdf(order, t, null);
+    } else {
+      // Customer invoice logic (your existing code)
+      const currency = order.currency || "EUR";
+      const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
+      const locale = localeMap[lang] || "en-US";
 
-console.log("🧾 Shopify order currency:", order.currency);
+      let subtotal = 0;
+      let taxTotal = 0;
 
+      if (Array.isArray(order.tax_lines)) {
+        taxTotal = order.tax_lines.reduce((sum, line) => sum + parseFloat(line.price || 0), 0);
+      }
 
-const currency = order.currency || "EUR";
+      const enrichedItems = order.line_items.map(item => {
+        const price = parseFloat(item.price) || 0;
+        const quantity = parseFloat(item.quantity) || 0;
+        const itemTotal = price * quantity;
+        subtotal += itemTotal;
 
-const localeMap = {
-  de: "de-DE",
-  en: "en-US",
-  sl: "sl-SI",
-};
-const locale = localeMap[lang] || "en-US";
+        return {
+          ...item,
+          price,
+          quantity,
+          formattedPrice: formatPrice(price, currency, locale),
+          formattedTotal: formatPrice(itemTotal, currency, locale),
+        };
+      });
 
-let subtotal = 0;
-let taxTotal = 0;
+      const rawTotal = subtotal + taxTotal;
+      const customerName = `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim();
 
-if (Array.isArray(order.tax_lines)) {
-  taxTotal = order.tax_lines.reduce((sum, line) => {
-    const price = parseFloat(line.price);
-    return sum + (isNaN(price) ? 0 : price);
-  }, 0);
-}
+      const shippingAddress = order.shipping_address
+        ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.zip || ""} ${order.shipping_address.city || ""}, ${order.shipping_address.country || ""}`
+        : "N/A";
 
-const enrichedItems = order.line_items.map(item => {
-  const price = parseFloat(item.price);
-  const quantity = parseFloat(item.quantity);
-  const safePrice = isNaN(price) ? 0 : price;
-  const safeQuantity = isNaN(quantity) ? 0 : quantity;
-  const itemTotal = safePrice * safeQuantity;
-  subtotal += itemTotal;
+      const billingAddress = order.billing_address
+        ? `${order.billing_address.address1 || ""}, ${order.billing_address.zip || ""} ${order.billing_address.city || ""}, ${order.billing_address.country || ""}`
+        : "N/A";
 
-  return {
-    ...item,
-    price: safePrice,
-    quantity: safeQuantity,
-    formattedPrice: formatPrice(safePrice, currency, locale),
-    formattedTotal: formatPrice(itemTotal, currency, locale),
-  };
-});
+      const invoiceData = {
+        shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
+        date: new Date(order.created_at).toISOString().slice(0, 10),
+        items: enrichedItems,
+        subtotal,
+        taxTotal,
+        total: rawTotal,
+        formattedSubtotal: formatPrice(subtotal, currency, locale),
+        formattedTaxTotal: formatPrice(taxTotal, currency, locale),
+        formattedTotal: formatPrice(rawTotal, currency, locale),
+        showChart: isPremium && shopConfig?.showChart,
+        customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
+        fallbackLogoUrl: "/assets/default-logo.png",
+        customerName,
+        shippingAddress,
+        billingAddress,
+        currency,
+        locale,
+      };
 
-const rawTotal = subtotal + taxTotal;
+      const pdfDir = path.join(__dirname, "../pdfs");
+      if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
+      const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
 
+      const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+      const page = await browser.newPage();
 
-const customerName = `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim();
+      const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
+      await page.setContent(html, { waitUntil: "networkidle0" });
+      await page.pdf({
+        path: pdfPath,
+        format: "A4",
+        printBackground: true,
+        margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+        displayHeaderFooter: true,
+        headerTemplate: `<div style="font-size:10px; margin-left:40px; color:#555;"></div>`,
+        footerTemplate: `
+          <div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">
+            Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+          </div>
+        `,
+      });
+      await browser.close();
 
-const shippingAddress = order.shipping_address
-  ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.zip || ""} ${order.shipping_address.city || ""}, ${order.shipping_address.country || ""}`
-  : "N/A";
-
-const billingAddress = order.billing_address
-  ? `${order.billing_address.address1 || ""}, ${order.billing_address.zip || ""} ${order.billing_address.city || ""}, ${order.billing_address.country || ""}`
-  : "N/A";
-
-
-const invoiceData = {
-  shopName: shopConfig?.shopName || shopDomain || "Unnamed Shop",
-  date: new Date(order.created_at).toISOString().slice(0, 10),
-  items: enrichedItems,
-  subtotal,
-  taxTotal,
-  total: rawTotal,
-  formattedSubtotal: formatPrice(subtotal, currency, locale),
-  formattedTaxTotal: formatPrice(taxTotal, currency, locale),
-  formattedTotal: formatPrice(rawTotal, currency, locale),
-  showChart: isPremium && shopConfig?.showChart,
-  customLogoUrl: isPremium ? shopConfig?.customLogoUrl : null,
-  fallbackLogoUrl: "/assets/default-logo.png",
-   customerName,
-  shippingAddress,
-  billingAddress,
-  currency,
-  locale,
-};
-
-
-
-const safeOrderId = `shopify-${order.id}`;
-const pdfDir = path.join(__dirname, "../pdfs");
-if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-
-const pdfPath = path.join(pdfDir, `Invoice_${safeOrderId}.pdf`);
-const browser = await puppeteer.launch({
-  headless: true,
-  args: ["--no-sandbox", "--disable-setuid-sandbox"],
-});
-const page = await browser.newPage();
-
-const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
-
-await page.setContent(html, { waitUntil: "networkidle0" });
-await page.pdf({
-  path: pdfPath,
-  format: "A4",
-  printBackground: true,
-  margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
-  displayHeaderFooter: true,
-    headerTemplate: `<div style="font-size:10px; margin-left:40px; color:#555;"></div>`,
-  footerTemplate: `
-    <div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">
-      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-    </div>
-  `,
-});
-
-await browser.close();
-
-
-await new Promise((res) => setTimeout(res, 100));
-
-
-let pdfBuffer = fs.readFileSync(pdfPath);
-let retries = 0;
-while (pdfBuffer.length < 1000 && retries < 5) {
-  await new Promise((res) => setTimeout(res, 100)); 
-  pdfBuffer = fs.readFileSync(pdfPath);
-  retries++;
-}
-
-const pdfDoc = await PDFDocument.load(pdfBuffer);
-const pageCount = pdfDoc.getPageCount();
-console.log(`📄 Shopify invoice page count: ${pageCount}`);
-
-const { sendEmail: shouldSendEmail = true } = req.body;
-
-
-if (!isPreview) {
-  const totalLimit = user.maxUsage + (user.extraPages || 0);
-
-  if (user.usageCount + pageCount > totalLimit) {
-    fs.unlinkSync(pdfPath);
-    return res.status(403).json({
-      error: "Monthly usage limit reached. Purchase more pages or upgrade your plan.",
-    });
-  }
-}
-
-
-
-if (!isPreview) {
-  const normalRemaining = Math.max(user.maxUsage - user.usageCount, 0);
-
-  if (pageCount <= normalRemaining) {
-    
-    await incrementUsage(user, isPreview, pageCount);
-  } else {
-    
-    if (normalRemaining > 0) {
-      await incrementUsage(user, isPreview, normalRemaining);
-      pageCount -= normalRemaining;
+      await new Promise((res) => setTimeout(res, 100));
+      pdfBuffer = fs.readFileSync(pdfPath);
+      let retries = 0;
+      while (pdfBuffer.length < 1000 && retries < 5) {
+        await new Promise((res) => setTimeout(res, 100));
+        pdfBuffer = fs.readFileSync(pdfPath);
+        retries++;
+      }
     }
 
-    user.extraPages = Math.max((user.extraPages || 0) - pageCount, 0);
-    user.usageCount += pageCount;
-    await user.save();
-  }
-}
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
+    console.log(`📄 Shopify invoice page count: ${pageCount}`);
 
+    const { sendEmail: shouldSendEmail = true } = req.body;
 
+    if (!isPreview) {
+      const totalLimit = user.maxUsage + (user.extraPages || 0);
+      if (user.usageCount + pageCount > totalLimit) {
+        return res.status(403).json({
+          error: "Monthly usage limit reached. Purchase more pages or upgrade your plan.",
+        });
+      }
 
-const freshUser = await User.findById(user._id).lean();
-console.log("✅ Usage incremented, new usageCount:", freshUser.usageCount);
+      const normalRemaining = Math.max(user.maxUsage - user.usageCount, 0);
+      if (pageCount <= normalRemaining) {
+        await incrementUsage(user, isPreview, pageCount);
+      } else {
+        if (normalRemaining > 0) {
+          await incrementUsage(user, isPreview, normalRemaining);
+          pageCount -= normalRemaining;
+        }
+        user.extraPages = Math.max((user.extraPages || 0) - pageCount, 0);
+        user.usageCount += pageCount;
+        await user.save();
+      }
+    }
 
-
+    const freshUser = await User.findById(user._id).lean();
+    console.log("✅ Usage incremented, new usageCount:", freshUser.usageCount);
 
     try {
-    if (order.email && shouldSendEmail) {
-  await sendEmail({
-    to: order.email,
-    subject: `Your Invoice from ${invoiceData.shopName}`,
-    text: "Please find your invoice attached.",
-    attachments: [
-      {
-        filename: `Invoice_${safeOrderId}.pdf`,
-        content: pdfBuffer,
-      },
-    ],
-  });
-
-
+      if (order.email && shouldSendEmail) {
+        await sendEmail({
+          to: order.email,
+          subject: `Your Invoice from ${invoiceData.shopName}`,
+          text: "Please find your invoice attached.",
+          attachments: [{ filename: `Invoice_shopify-${order.id}.pdf`, content: pdfBuffer }],
+        });
         console.log("✅ Invoice emailed to:", order.email);
       } else {
         console.warn("⚠️ No email found on order, skipping email");
@@ -592,21 +541,17 @@ console.log("✅ Usage incremented, new usageCount:", freshUser.usageCount);
       "Content-Type": "application/pdf",
       "Content-Disposition": isPreview
         ? "inline"
-        : `attachment; filename=Invoice_${safeOrderId}.pdf`,
+        : `attachment; filename=Invoice_shopify-${order.id}.pdf`,
     });
-
-    
     res.send(pdfBuffer);
 
-    fs.unlinkSync(pdfPath);
+    if (!isMerchant) fs.unlinkSync(path.join(__dirname, "../pdfs", `Invoice_shopify-${order.id}.pdf`));
+
   } catch (error) {
     console.error("❌ Shopify invoice generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-
-
 
 
 
