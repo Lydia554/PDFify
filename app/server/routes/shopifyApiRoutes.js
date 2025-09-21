@@ -345,7 +345,6 @@ const premiumTemplate = `
 
 
 
-
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -374,14 +373,13 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       }
     }
 
-    if (!order || !order.line_items) {
+    if (!order || !order.line_items || !order.line_items.length) {
+      console.log("⚠️ Order is missing line_items or line_items is empty", order);
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
     const shopConfig = await ShopConfig.findOne({ shopDomain }) || {};
     const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig });
-
-    if (!orderId && order?.id) orderId = order.id;
 
     let user = req.user?.userId
       ? await User.findById(req.user.userId)
@@ -390,13 +388,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
     const isPreview = req.query.preview === "true";
-    const isMerchant = req.query.merchant === "true"; // <-- new query param
-
-    let pdfBuffer;
+    const isMerchant = req.query.merchant === "true";
 
     if (isMerchant) {
-      // ✅ Generate merchant-compliant PDF directly
-      pdfBuffer = await createShopifyInvoicePdf(order, t, null);
+      const pdfBuffer = await createShopifyInvoicePdf(order, t, null);
       res.set({
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename=${order.name || order.id}.pdf`,
@@ -405,7 +400,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     // ------------------------------
-    // Customer PDF logic (existing)
+    // Customer PDF logic
     // ------------------------------
     const currency = order.currency || "EUR";
     const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
@@ -413,7 +408,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     let subtotal = 0;
     let taxTotal = 0;
-
     if (Array.isArray(order.tax_lines)) {
       taxTotal = order.tax_lines.reduce((sum, line) => sum + parseFloat(line.price || 0), 0);
     }
@@ -421,25 +415,21 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const enrichedItems = order.line_items.map(item => {
       const price = parseFloat(item.price) || 0;
       const quantity = parseFloat(item.quantity) || 0;
-      const itemTotal = price * quantity;
-      subtotal += itemTotal;
-
+      subtotal += price * quantity;
       return {
         ...item,
         price,
         quantity,
         formattedPrice: formatPrice(price, currency, locale),
-        formattedTotal: formatPrice(itemTotal, currency, locale),
+        formattedTotal: formatPrice(price * quantity, currency, locale),
       };
     });
 
     const rawTotal = subtotal + taxTotal;
     const customerName = `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim();
-
     const shippingAddress = order.shipping_address
       ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.zip || ""} ${order.shipping_address.city || ""}, ${order.shipping_address.country || ""}`
       : "N/A";
-
     const billingAddress = order.billing_address
       ? `${order.billing_address.address1 || ""}, ${order.billing_address.zip || ""} ${order.billing_address.city || ""}, ${order.billing_address.country || ""}`
       : "N/A";
@@ -464,59 +454,66 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       locale,
     };
 
-  // ------------------------------
-// Puppeteer PDF generation with debug
-// ------------------------------
-const pdfDir = path.join(__dirname, "../pdfs");
-if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+    // ------------------------------
+    // Puppeteer PDF with debugging
+    // ------------------------------
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
+    const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
+    const debugDir = path.join(pdfDir, "debug");
+    if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+    const debugHtmlPath = path.join(debugDir, `Invoice_shopify-${order.id}.html`);
 
-const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
-const debugDir = path.join(pdfDir, "debug");
-if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
-const debugHtmlPath = path.join(debugDir, `Invoice_shopify-${order.id}.html`);
+    const html = generateInvoiceHTML(invoiceData, true, lang, t);
+    fs.writeFileSync(debugHtmlPath, html, "utf8");
+    console.log(`DEBUG: HTML snapshot saved at ${debugHtmlPath}`);
+    console.log("DEBUG: Order line items:", order.line_items);
+    console.log("DEBUG: Number of items:", order.line_items.length);
 
-try {
-  // Save HTML snapshot for debugging
-  const html = generateInvoiceHTML(invoiceData, true, lang, t);
-  fs.writeFileSync(debugHtmlPath, html, "utf8");
-  console.log(`DEBUG: HTML snapshot saved at ${debugHtmlPath}`);
-  console.log("DEBUG: Order line items:", order.line_items);
-  console.log("DEBUG: Number of items:", order.line_items.length);
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    console.log("DEBUG: HTML content set in Puppeteer page.");
 
-  // Launch Puppeteer
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-  const page = await browser.newPage();
+    // Wait for all images to load
+    await page.evaluate(async () => {
+      const imgs = Array.from(document.images);
+      await Promise.all(imgs.map(img => {
+        if (img.complete) return;
+        return new Promise(resolve => { img.onload = img.onerror = resolve; });
+      }));
+    });
 
-  await page.setContent(html, { waitUntil: "networkidle0" });
-  console.log("DEBUG: HTML content set in Puppeteer page.");
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+      displayHeaderFooter: true,
+      headerTemplate: `<div style="font-size:10px; margin-left:40px; color:#555;"></div>`,
+      footerTemplate: `<div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`,
+    });
 
-  await page.pdf({
-    path: pdfPath,
-    format: "A4",
-    printBackground: true,
-    margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
-    displayHeaderFooter: true,
-    headerTemplate: `<div style="font-size:10px; margin-left:40px; color:#555;"></div>`,
-    footerTemplate: `
-      <div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">
-        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-      </div>
-    `,
-  });
+    await browser.close();
+    console.log(`DEBUG: PDF generated successfully at ${pdfPath}`);
 
-  await browser.close();
-  console.log(`DEBUG: PDF generated successfully at ${pdfPath}`);
+    const pdfBuffer = fs.readFileSync(pdfPath);
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": isPreview ? "inline" : `attachment; filename=${order.name || order.id}.pdf`,
+    });
+    res.send(pdfBuffer);
 
-  // Read PDF buffer
-  pdfBuffer = fs.readFileSync(pdfPath);
+    // Cleanup
+    fs.unlinkSync(pdfPath);
 
-} catch (err) {
-  console.error("❌ Puppeteer PDF generation error:", err);
-  return res.status(500).json({ error: "PDF generation failed (Puppeteer)" });
-}
+  } catch (error) {
+    console.error("❌ Shopify invoice generation error:", error);
+    res.status(500).json({ error: "PDF generation failed" });
+  }
+});
+
+
 
 
 
