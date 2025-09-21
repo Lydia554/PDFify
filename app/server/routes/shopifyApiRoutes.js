@@ -343,9 +343,7 @@ const premiumTemplate = `
 
 }
 
-// ----------------------------
-// /invoice POST route
-// ----------------------------
+
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -392,35 +390,131 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const isPreview = req.query.preview === "true";
     const isMerchant = req.query.merchant === "true";
 
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-
     let pdfBuffer;
 
     // ----------------------------
-    // Merchant or Customer PDF
+    // Merchant PDF
     // ----------------------------
-    const pdfData = mapShopifyOrderToPdfData(order, { merchant: isMerchant });
+    if (isMerchant) {
+      try {
+        console.log("🔹 Generating merchant PDF for user:", user.email);
 
-    // Generate HTML using customer template style
-    const html = generateInvoiceHTML({
+        pdfBuffer = await createShopifyInvoicePdf(order, { merchant: true });
+
+        await incrementUsage(user, "merchant");
+
+        res.set({
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename=${order.name || order.id}.pdf`,
+        });
+        return res.send(pdfBuffer);
+      } catch (err) {
+        console.error("❌ Merchant template failed, falling back to Puppeteer:", err);
+
+        // Fallback to Puppeteer
+        const enrichedItems = order.line_items.map(item => {
+          const price = parseFloat(item.price) || 0;
+          const quantity = parseFloat(item.quantity) || 1;
+          const total = price * quantity;
+          return {
+            ...item,
+            price,
+            quantity,
+            formattedPrice: formatPrice(price, order.currency),
+            formattedTotal: formatPrice(total, order.currency),
+          };
+        });
+
+        const invoiceData = {
+          shopName: shopConfig.shopName || shopDomain,
+          date: new Date(order.created_at).toISOString().slice(0, 10),
+          items: enrichedItems,
+          formattedSubtotal: formatPrice(order.subtotal_price || 0, order.currency),
+          formattedTaxTotal: formatPrice(order.total_tax || 0, order.currency),
+          formattedTotal: formatPrice(order.total_price || 0, order.currency),
+          customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim(),
+          shippingAddress: order.shipping_address
+            ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.city || ""}`
+            : "N/A",
+          billingAddress: order.billing_address
+            ? `${order.billing_address.address1 || ""}, ${order.billing_address.city || ""}`
+            : "N/A",
+          showChart: shopConfig?.showChart,
+          customLogoUrl: shopConfig?.customLogoUrl,
+          fallbackLogoUrl: "/assets/default-logo.png",
+        };
+
+        const html = generateInvoiceHTML(invoiceData, true, lang, t);
+        console.log("🔹 Merchant fallback HTML length:", html.length);
+
+        const pdfDir = path.join(__dirname, "../pdfs");
+        if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
+
+        const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
+        const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: "networkidle0" });
+        await page.pdf({
+          path: pdfPath,
+          format: "A4",
+          printBackground: true,
+          margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+        });
+        await browser.close();
+
+        pdfBuffer = fs.readFileSync(pdfPath);
+        await incrementUsage(user, "merchant");
+
+        res.set({
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename=${order.name || order.id}.pdf`,
+        });
+        res.send(pdfBuffer);
+        fs.unlinkSync(pdfPath);
+        return;
+      }
+    }
+
+    // ----------------------------
+    // Customer PDF
+    // ----------------------------
+    const currency = order.currency || "EUR";
+    const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
+    const locale = localeMap[lang] || "en-US";
+
+    let subtotal = 0;
+    let taxTotal = 0;
+    if (Array.isArray(order.tax_lines)) {
+      taxTotal = order.tax_lines.reduce((sum, line) => sum + parseFloat(line.price || 0), 0);
+    }
+
+    const enrichedItems = order.line_items.map(item => {
+      const price = parseFloat(item.price) || 0;
+      const quantity = parseFloat(item.quantity) || 1;
+      const total = price * quantity;
+      subtotal += total;
+      return {
+        ...item,
+        price,
+        quantity,
+        formattedPrice: formatPrice(price, currency, locale),
+        formattedTotal: formatPrice(total, currency, locale),
+      };
+    });
+
+    const rawTotal = subtotal + taxTotal;
+
+    const invoiceData = {
       shopName: shopConfig.shopName || shopDomain,
       date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: pdfData.items.map(item => ({
-        ...item,
-        price: parseFloat(item.price),
-        quantity: parseFloat(item.quantity),
-        formattedPrice: formatPrice(parseFloat(item.price), order.currency),
-        formattedTotal: formatPrice(parseFloat(item.total), order.currency),
-        tax: parseFloat(item.tax),
-      })),
-      subtotal: parseFloat(pdfData.subtotal),
-      taxTotal: parseFloat(pdfData.tax),
-      total: parseFloat(pdfData.total),
-      formattedSubtotal: formatPrice(parseFloat(pdfData.subtotal), order.currency),
-      formattedTaxTotal: formatPrice(parseFloat(pdfData.tax), order.currency),
-      formattedTotal: formatPrice(parseFloat(pdfData.total), order.currency),
-      customerName: pdfData.customerName,
+      items: enrichedItems,
+      subtotal,
+      taxTotal,
+      total: rawTotal,
+      formattedSubtotal: formatPrice(subtotal, currency, locale),
+      formattedTaxTotal: formatPrice(taxTotal, currency, locale),
+      formattedTotal: formatPrice(rawTotal, currency, locale),
+      customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim(),
       shippingAddress: order.shipping_address
         ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.city || ""}`
         : "N/A",
@@ -430,33 +524,37 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       showChart: shopConfig?.showChart,
       customLogoUrl: shopConfig?.customLogoUrl,
       fallbackLogoUrl: "/assets/default-logo.png",
-      currency: order.currency || "EUR",
-      locale: lang || "en-US",
-    }, isMerchant || user.isPremium, lang, t);
+      currency,
+      locale,
+    };
 
-    console.log("🔹 Generated PDF HTML length:", html.length);
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
 
+    const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
+    const html = generateInvoiceHTML(invoiceData, user.isPremium, lang, t);
+    console.log("🔹 Customer PDF HTML length:", html.length);
+
     await page.setContent(html, { waitUntil: "networkidle0" });
-    pdfBuffer = await page.pdf({
+    await page.pdf({
+      path: pdfPath,
       format: "A4",
       printBackground: true,
       margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
     });
     await browser.close();
 
-    // Increment usage
-    await incrementUsage(user, isMerchant ? "merchant" : "customer");
+    pdfBuffer = fs.readFileSync(pdfPath);
+    await incrementUsage(user, "customer");
 
-    // Send PDF response
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": isPreview
-        ? "inline"
-        : `attachment; filename=${order.name || order.id}.pdf`,
+      "Content-Disposition": isPreview ? "inline" : `attachment; filename=${order.name || order.id}.pdf`,
     });
     res.send(pdfBuffer);
+    fs.unlinkSync(pdfPath);
 
   } catch (err) {
     console.error("❌ Invoice route error:", err);
