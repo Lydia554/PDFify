@@ -345,7 +345,22 @@ const premiumTemplate = `
 
 
 
-
+const express = require("express");
+const router = express.Router();
+const puppeteer = require("puppeteer");
+const path = require("path");
+const fs = require("fs");
+const axios = require("axios");
+const { PDFDocument } = require("pdf-lib");
+const ShopConfig = require("../models/ShopConfig");
+const User = require("../models/User");
+const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
+const { resolveShopifyToken } = require("../utils/shopifyHelpers");
+const { resolveLanguage } = require("../utils/resolveLanguage");
+const { incrementUsage } = require("../utils/usageUtils");
+const { createShopifyInvoicePdf } = require("../../templates/shopifyMerchantTemplate"); // merchant template
+const { generateInvoiceHTML, formatPrice } = require("../utils/invoiceHelpers"); // your existing helpers
 
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
@@ -363,9 +378,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     if (!order && orderId) {
-      const shopifyOrderUrl = `https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`;
       try {
-        const orderResponse = await axios.get(shopifyOrderUrl, {
+        const orderResponse = await axios.get(`https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`, {
           headers: { "X-Shopify-Access-Token": token, "Content-Type": "application/json" },
         });
         order = orderResponse.data.order;
@@ -387,27 +401,25 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     let user = req.user?.userId
       ? await User.findById(req.user.userId)
       : await User.findOne({ connectedShopDomain: shopDomain });
-
     if (!user) return res.status(404).json({ error: "User not found for this shop" });
 
     const isPreview = req.query.preview === "true";
-    const isPremium = FORCE_PLAN === "pro" || FORCE_PLAN === "true" || FORCE_PLAN === "1";
-    const isMerchant = req.query.merchant === "true"; // <-- new query parameter
+    const isPremium = process.env.FORCE_PLAN === "pro" || process.env.FORCE_PLAN === "true" || process.env.FORCE_PLAN === "1";
+    const isMerchant = req.query.merchant === "true";
 
     let pdfBuffer;
 
     if (isMerchant) {
-      // Use merchant template directly
+      // MERCHANT PDF (no email)
       pdfBuffer = await createShopifyInvoicePdf(order, t, null);
     } else {
-      // Customer invoice logic (your existing code)
+      // CUSTOMER PDF
       const currency = order.currency || "EUR";
       const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
       const locale = localeMap[lang] || "en-US";
 
       let subtotal = 0;
       let taxTotal = 0;
-
       if (Array.isArray(order.tax_lines)) {
         taxTotal = order.tax_lines.reduce((sum, line) => sum + parseFloat(line.price || 0), 0);
       }
@@ -417,7 +429,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         const quantity = parseFloat(item.quantity) || 0;
         const itemTotal = price * quantity;
         subtotal += itemTotal;
-
         return {
           ...item,
           price,
@@ -429,11 +440,9 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
       const rawTotal = subtotal + taxTotal;
       const customerName = `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim();
-
       const shippingAddress = order.shipping_address
         ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.zip || ""} ${order.shipping_address.city || ""}, ${order.shipping_address.country || ""}`
         : "N/A";
-
       const billingAddress = order.billing_address
         ? `${order.billing_address.address1 || ""}, ${order.billing_address.zip || ""} ${order.billing_address.city || ""}, ${order.billing_address.country || ""}`
         : "N/A";
@@ -464,7 +473,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
       const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
       const page = await browser.newPage();
-
       const html = generateInvoiceHTML(invoiceData, isPremium, lang, t);
       await page.setContent(html, { waitUntil: "networkidle0" });
       await page.pdf({
@@ -474,19 +482,15 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
         displayHeaderFooter: true,
         headerTemplate: `<div style="font-size:10px; margin-left:40px; color:#555;"></div>`,
-        footerTemplate: `
-          <div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">
-            Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-          </div>
-        `,
+        footerTemplate: `<div style="font-size:10px; width:100%; text-align:center; color:#555; margin-bottom:20px;">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>`,
       });
       await browser.close();
 
-      await new Promise((res) => setTimeout(res, 100));
+      await new Promise(res => setTimeout(res, 100));
       pdfBuffer = fs.readFileSync(pdfPath);
       let retries = 0;
       while (pdfBuffer.length < 1000 && retries < 5) {
-        await new Promise((res) => setTimeout(res, 100));
+        await new Promise(res => setTimeout(res, 100));
         pdfBuffer = fs.readFileSync(pdfPath);
         retries++;
       }
@@ -501,9 +505,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     if (!isPreview) {
       const totalLimit = user.maxUsage + (user.extraPages || 0);
       if (user.usageCount + pageCount > totalLimit) {
-        return res.status(403).json({
-          error: "Monthly usage limit reached. Purchase more pages or upgrade your plan.",
-        });
+        return res.status(403).json({ error: "Monthly usage limit reached. Purchase more pages or upgrade your plan." });
       }
 
       const normalRemaining = Math.max(user.maxUsage - user.usageCount, 0);
@@ -523,20 +525,19 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const freshUser = await User.findById(user._id).lean();
     console.log("✅ Usage incremented, new usageCount:", freshUser.usageCount);
 
-    try {
-      if (order.email && shouldSendEmail) {
+    // Only send email for customers, not merchants
+    if (!isMerchant && order.email && shouldSendEmail) {
+      try {
         await sendEmail({
           to: order.email,
-          subject: `Your Invoice from ${invoiceData.shopName}`,
+          subject: `Your Invoice from ${shopConfig?.shopName || shopDomain}`,
           text: "Please find your invoice attached.",
           attachments: [{ filename: `Invoice_shopify-${order.id}.pdf`, content: pdfBuffer }],
         });
         console.log("✅ Invoice emailed to:", order.email);
-      } else {
-        console.warn("⚠️ No email found on order, skipping email");
+      } catch (emailErr) {
+        console.error("❌ Failed to send invoice email:", emailErr);
       }
-    } catch (emailErr) {
-      console.error("❌ Failed to send invoice email:", emailErr);
     }
 
     res.set({
@@ -548,12 +549,12 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     res.send(pdfBuffer);
 
     if (!isMerchant) fs.unlinkSync(path.join(__dirname, "../pdfs", `Invoice_shopify-${order.id}.pdf`));
-
   } catch (error) {
     console.error("❌ Shopify invoice generation error:", error);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 
 
