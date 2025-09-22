@@ -14,12 +14,10 @@ const { incrementUsage } = require("../utils/usageUtils");
 
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
 
-const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf } = require("../Helpers/pdf-helpers");
+const { postProcessPdf } = require("../Helpers/pdf-helpers");
 
 
-require('dotenv').config();
 const router = express.Router();
-
 
 
 function formatPrice(amount, currency = "EUR", locale = "de-DE") {
@@ -394,9 +392,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const subtotal = items.reduce((sum, i) => sum + i.net, 0);
     const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
     const total = subtotal + taxTotal;
-    const currency = order.currency || "EUR";
-    const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
-    const locale = localeMap[lang] || "en-US";
 
     const invoiceData = {
       orderId: order.name || order.id,
@@ -414,33 +409,27 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     let pdfBuffer;
 
+    // ----------------------------
+    // Merchant PDF (ZUGFeRD / PDF/A-3b)
+    // ----------------------------
+    if (isMerchant) {
+      const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
 
-// ----------------------------
-// Merchant PDF (ZUGFeRD / PDF/A-3b)
-// ----------------------------
-if (isMerchant) {
-  // 1️⃣ Generate PDF bytes directly
-  const pdfBytes = await createShopifyInvoiceZugferd(invoiceData);
+      // Use the unified postProcessPdf from pdf-helpers
+      pdfBuffer = await postProcessPdf(
+        await pdfDoc.save(),
+        { ...invoiceData, creator: user.email || "Merchant", locale: { language: lang || "en" } },
+        path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
+      );
 
-  // 2️⃣ Post-process PDF: ICC profile, XMP, ZUGFeRD XML, Trailer ID
-  pdfBuffer = await postProcessPdfStrict(
-    pdfBytes,
-    generateZugferdXML(invoiceData),
-    { title: `Invoice ${invoiceData.orderId}`, creator: user.email || "Merchant", language: lang || "en" },
-    path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
-  );
+      await incrementUsage(user, 1, isPreview);
 
-  // 3️⃣ Increment usage
-  await incrementUsage(user, 1, isPreview);
-
-  // 4️⃣ Send PDF
-  res.set({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
-  });
-  return res.send(pdfBuffer);
-}
-
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
+      });
+      return res.send(pdfBuffer);
+    }
 
     // ----------------------------
     // Customer PDF (HTML / Puppeteer)
@@ -449,23 +438,21 @@ if (isMerchant) {
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
     }
 
-    const formattedItems = items.map((i) => ({
-      ...i,
-      formattedPrice: formatPrice(i.price, currency, locale),
-      formattedNet: formatPrice(i.net, currency, locale),
-      formattedTax: formatPrice(i.tax, currency, locale),
-      formattedTotal: formatPrice(i.total, currency, locale),
-    }));
-
     const htmlData = {
       ...invoiceData,
-      items: formattedItems,
-      formattedSubtotal: formatPrice(subtotal, currency, locale),
-      formattedTaxTotal: formatPrice(taxTotal, currency, locale),
-      formattedTotal: formatPrice(total, currency, locale),
+      items: items.map(i => ({
+        ...i,
+        formattedPrice: formatPrice(i.price, order.currency || "EUR", lang || "en"),
+        formattedNet: formatPrice(i.net, order.currency || "EUR", lang || "en"),
+        formattedTax: formatPrice(i.tax, order.currency || "EUR", lang || "en"),
+        formattedTotal: formatPrice(i.total, order.currency || "EUR", lang || "en"),
+      })),
+      formattedSubtotal: formatPrice(subtotal, order.currency || "EUR", lang || "en"),
+      formattedTaxTotal: formatPrice(taxTotal, order.currency || "EUR", lang || "en"),
+      formattedTotal: formatPrice(total, order.currency || "EUR", lang || "en"),
       shopName: shopConfig.shopName || shopDomain,
-      currency,
-      locale,
+      currency: order.currency || "EUR",
+      locale: lang || "en",
       customLogoUrl: shopConfig.customLogoUrl,
       fallbackLogoUrl: "/assets/default-logo.png",
     };
@@ -496,8 +483,6 @@ if (isMerchant) {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-
 
 
 
