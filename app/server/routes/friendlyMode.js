@@ -5,11 +5,11 @@ const fs = require('fs');
 const puppeteer = require('puppeteer');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
-const { postProcessPdfStrict } = require("../utils/postProcessPdfStrict");
-const { generateZugferdXML } = require("../utils/zugferdHelper");
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
+
+const { embedIccProfile, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
@@ -32,12 +32,9 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
 
-    
     const plan = FORCE_PLAN?.trim() || user.planType || 'free';
-
-    
     const isPremiumAccess = ['premium', 'pro'].includes(plan);
-    const isPremiumRender = isPremiumAccess || user.isPremium; 
+    const isPremiumRender = isPremiumAccess || user.isPremium;
 
     if (templateConfig.premiumOnly && !isPremiumAccess) {
       return res.status(403).json({ error: 'This template is available for premium users only.' });
@@ -45,7 +42,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     if (!isPremiumAccess) formData.logoBase64 = null;
 
-   
+    // Parse items, ingredients, instructions
     if (typeof formData.items === 'string') {
       formData.items = formData.items.split(/\n|;/).map(row => row.trim()).filter(Boolean)
         .map(row => {
@@ -60,7 +57,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
       formData.instructions = formData.instructions.split(';').map(i => i.trim()).filter(Boolean);
     }
 
-    // Generate HTML using the proper template
+    // Generate HTML
     const generateHtml = templateConfig.fn(isPremiumRender);
     const html = generateHtml(formData);
 
@@ -79,23 +76,18 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pageCount = pdfDoc.getPageCount();
 
-    
+    // Increment usage
     const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
     if (!usageAllowed) {
       fs.unlinkSync(pdfPath);
       return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
     }
 
-    // --- PRO INVOICES: PDF/A-3b + ZUGFeRD + XMP ---
+    // --- PRO INVOICES: PDF/A-3b + ZUGFeRD ---
     if (template === 'invoice' && plan === 'pro') {
-      const zugferdXml = generateZugferdXML(formData);
-      const xmpTemplatePath = path.resolve(__dirname, "../server/xmp/zugferd.xmp");
-      pdfBuffer = await postProcessPdfStrict(pdfBuffer, zugferdXml, {
-        title: 'Invoice',
-        creator: 'PDFify',
-        language: formData.language || 'en'
-      }, xmpTemplatePath);
-
+      await embedIccProfile(pdfDoc); // OutputIntent
+      embedXmlIntoPdf(pdfDoc, generateZugferdXML(formData));
+      pdfBuffer = await pdfDoc.save();
       fs.writeFileSync(pdfPath, pdfBuffer);
     }
 
