@@ -2,24 +2,23 @@ const express = require("express");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios");
-const ShopConfig = require("../models/ShopConfig");
-const User = require("../models/User"); 
 const puppeteer = require("puppeteer");
-const authenticate = require("../middleware/authenticate"); 
+
+const ShopConfig = require("../models/ShopConfig");
+const User = require("../models/User");
+const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
-const {resolveShopifyToken} = require("../utils/shopifyHelpers");
+const { resolveShopifyToken } = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
-require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
+
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
-const { generateZugferdXML } = require("../Helpers/pdf-helpers");
+const { generateInvoiceHTML } = require("../../templates/shopifyCustomerTemplate");
+const { generateZugferdXML, embedXmp } = require("../Helpers/pdf-helpers");
 const { postProcessPdfStrict } = require("../Helpers/postProcessPdfStrict");
 
-
-
-
-
-
+require('dotenv').config();
+const router = express.Router();
 
 
 
@@ -29,9 +28,6 @@ function formatPrice(amount, currency = "EUR", locale = "de-DE") {
 
 
 
-
-
-const router = express.Router();
 require('dotenv').config();
 
 function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
@@ -347,8 +343,6 @@ const premiumTemplate = `
 }
 
 
-
-
 // ----------------------------
 // Generate invoice PDF
 // ----------------------------
@@ -389,26 +383,22 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const isMerchant = req.query.merchant === "true";
 
     // Map order items
-    const items = (order.line_items || []).map((item, idx) => {
+    const items = (order.line_items || []).map((item) => {
       const quantity = parseFloat(item.quantity || 1);
       const price = parseFloat(item.price || 0);
       const net = price * quantity;
       const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
       const total = net + tax;
-      return {
-        name: item.title || item.name || "Item",
-        quantity,
-        price,
-        net,
-        tax,
-        total,
-      };
+      return { name: item.title || item.name || "Item", quantity, price, net, tax, total };
     });
 
     const subtotal = items.reduce((sum, i) => sum + i.net, 0);
     const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
     const total = subtotal + taxTotal;
     const vatRate = 21;
+    const currency = order.currency || "EUR";
+    const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
+    const locale = localeMap[lang] || "en-US";
 
     const invoiceData = {
       orderId: order.name || order.id,
@@ -432,33 +422,19 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     if (isMerchant) {
       const zugferdXml = generateZugferdXML(invoiceData);
 
-      // Generate PDFDocument from template
       const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
 
-  
-
-      // Embed XMP metadata
       await embedXmp(pdfDoc);
 
+      const pdfBytes = await pdfDoc.save();
 
-      // Save initial PDF bytes from template
-let pdfBytes = await pdfDoc.save();
+      pdfBuffer = await postProcessPdfStrict(
+        pdfBytes,
+        zugferdXml,
+        { title: `Invoice ${invoiceData.orderId}`, creator: user.email || "Merchant", language: lang || "en" },
+        path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
+      );
 
-// Post-process for strict PDF/A-3b with ZUGFeRD XML
-pdfBuffer = await postProcessPdfStrict(
-  pdfBytes,
-  zugferdXml,
-  {
-    title: `Invoice ${invoiceData.orderId}`,
-    creator: user.email || "Merchant",
-    language: lang || "en"
-  },
-  path.join(__dirname, "../Helpers/xmp/zugferd.xmp") 
-);
-
-     
-
-      // Increment usage
       await incrementUsage(user, 1, isPreview);
 
       res.set({
@@ -477,27 +453,20 @@ pdfBuffer = await postProcessPdfStrict(
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
     }
 
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-
-    const currency = order.currency || "EUR";
-    const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
-    const locale = localeMap[lang] || "en-US";
-
-    const formattedItems = items.map(i => ({
+    const formattedItems = items.map((i) => ({
       ...i,
-      formattedPrice: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.price),
-      formattedNet: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.net),
-      formattedTax: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.tax),
-      formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.total),
+      formattedPrice: formatPrice(i.price, currency, locale),
+      formattedNet: formatPrice(i.net, currency, locale),
+      formattedTax: formatPrice(i.tax, currency, locale),
+      formattedTotal: formatPrice(i.total, currency, locale),
     }));
 
     const htmlData = {
       ...invoiceData,
       items: formattedItems,
-      formattedSubtotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(subtotal),
-      formattedTaxTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(taxTotal),
-      formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(total),
+      formattedSubtotal: formatPrice(subtotal, currency, locale),
+      formattedTaxTotal: formatPrice(taxTotal, currency, locale),
+      formattedTotal: formatPrice(total, currency, locale),
       shopName: shopConfig.shopName || shopDomain,
       currency,
       locale,
@@ -505,17 +474,15 @@ pdfBuffer = await postProcessPdfStrict(
       fallbackLogoUrl: "/assets/default-logo.png",
     };
 
+    const pdfDir = path.join(__dirname, "../pdfs");
+    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
+
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     const html = await generateInvoiceHTML(htmlData);
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
-    });
+    await page.pdf({ path: pdfPath, format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
     await browser.close();
 
     pdfBuffer = fs.readFileSync(pdfPath);
@@ -533,7 +500,6 @@ pdfBuffer = await postProcessPdfStrict(
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 
 
