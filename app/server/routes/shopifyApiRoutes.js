@@ -13,7 +13,6 @@ const { resolveLanguage } = require("../utils/resolveLanguage");
 const { incrementUsage } = require("../utils/usageUtils");
 
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
-const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
 
 const { generateZugferdXML, embedXmp } = require("../Helpers/pdf-helpers");
 const { postProcessPdfStrict } = require("../Helpers/postProcessPdfStrict");
