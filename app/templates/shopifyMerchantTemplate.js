@@ -36,50 +36,82 @@ function mapOrderToPdfData(order) {
 }
 
 /**
+ * Draw a table cell with optional border
+ */
+function drawCell(page, text, x, y, width, height, font, size = 10, align = "left") {
+  // Draw text
+  let textX = x + 2; // padding
+  if (align === "right") textX = x + width - (text.length * size * 0.5) - 2;
+  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
+
+  // Draw border rectangle
+  page.drawRectangle({
+    x, y,
+    width, height,
+    borderColor: rgb(0, 0, 0),
+    borderWidth: 0.5,
+    color: undefined
+  });
+}
+
+/**
  * Generate PDF buffer from order data
  */
-async function createShopifyInvoicePdf(order, options = {}) {
+async function createShopifyInvoicePdf(order) {
   const data = mapOrderToPdfData(order);
   const pdfDoc = await PDFDocument.create();
-
   const page = pdfDoc.addPage([595, 842]); // A4 size
   const { width } = page.getSize();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  let y = 800;
-  const lineHeight = 18;
+  let y = 780;
+  const lineHeight = 20;
 
-  page.drawText(`Invoice: ${data.orderId}`, { x: 50, y, size: 14, font, color: rgb(0, 0, 0) });
+  // Header
+  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 16, font, color: rgb(0, 0, 0) });
   y -= lineHeight;
   page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font, color: rgb(0, 0, 0) });
   y -= lineHeight;
   page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font, color: rgb(0, 0, 0) });
   y -= lineHeight * 2;
 
-  // Table headers
-  page.drawText(`Item`, { x: 50, y, size: 12, font, color: rgb(0, 0, 0) });
-  page.drawText(`Qty`, { x: 250, y, size: 12, font, color: rgb(0, 0, 0) });
-  page.drawText(`Price`, { x: 300, y, size: 12, font, color: rgb(0, 0, 0) });
-  page.drawText(`Tax`, { x: 380, y, size: 12, font, color: rgb(0, 0, 0) });
-  page.drawText(`Total`, { x: 450, y, size: 12, font, color: rgb(0, 0, 0) });
-  y -= lineHeight;
+  // Table setup
+  const colWidths = [180, 60, 80, 80, 80];
+  const headers = ["Item", "Qty", "Price", "Tax", "Total"];
+  let x = 50;
+  const rowHeight = 20;
 
-  // Table rows
-  data.items.forEach(item => {
-    page.drawText(item.name, { x: 50, y, size: 12, font });
-    page.drawText(String(item.quantity), { x: 250, y, size: 12, font });
-    page.drawText(item.price.toFixed(2), { x: 300, y, size: 12, font });
-    page.drawText(item.tax.toFixed(2), { x: 380, y, size: 12, font });
-    page.drawText(item.total.toFixed(2), { x: 450, y, size: 12, font });
-    y -= lineHeight;
+  // Draw header row
+  headers.forEach((header, i) => {
+    drawCell(page, header, x, y, colWidths[i], rowHeight, font, 10, i > 1 ? "right" : "left");
+    x += colWidths[i];
   });
 
-  y -= lineHeight;
-  page.drawText(`Subtotal: ${data.subtotal.toFixed(2)}`, { x: 50, y, size: 12, font });
-  y -= lineHeight;
-  page.drawText(`Tax: ${data.tax.toFixed(2)}`, { x: 50, y, size: 12, font });
-  y -= lineHeight;
-  page.drawText(`Total: ${data.total.toFixed(2)}`, { x: 50, y, size: 12, font });
+  y -= rowHeight;
+
+  // Draw item rows
+  data.items.forEach(item => {
+    x = 50;
+    const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
+    row.forEach((cell, i) => {
+      drawCell(page, cell, x, y, colWidths[i], rowHeight, font, 10, i > 1 ? "right" : "left");
+      x += colWidths[i];
+    });
+    y -= rowHeight;
+  });
+
+  // Totals section
+  y -= rowHeight;
+  drawCell(page, "Subtotal", 50, y, 400, rowHeight, font, 10, "right");
+  drawCell(page, data.subtotal.toFixed(2), 450, y, 80, rowHeight, font, 10, "right");
+  y -= rowHeight;
+
+  drawCell(page, "Tax", 50, y, 400, rowHeight, font, 10, "right");
+  drawCell(page, data.tax.toFixed(2), 450, y, 80, rowHeight, font, 10, "right");
+  y -= rowHeight;
+
+  drawCell(page, "Total", 50, y, 400, rowHeight, font, 12, "right");
+  drawCell(page, data.total.toFixed(2), 450, y, 80, rowHeight, font, 12, "right");
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
