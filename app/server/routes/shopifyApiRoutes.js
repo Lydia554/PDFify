@@ -572,11 +572,21 @@ router.get("/orders", authenticate, dualAuth, async (req, res) => {
   const shopDomain = req.query.shopDomain;
   if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
 
+  const fromDate = req.query.from; 
+  const toDate = req.query.to;     
+
   try {
     const token = await resolveShopifyToken(req, shopDomain);
     if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
 
-    const shopifyOrdersUrl = `https://${shopDomain}/admin/api/2023-10/orders.json?limit=10&status=any&fields=id,name,created_at`;
+    let shopifyOrdersUrl = `https://${shopDomain}/admin/api/2023-10/orders.json?limit=50&status=any&fields=id,name,created_at`;
+
+    
+    const params = [];
+    if (fromDate) params.push(`created_at_min=${encodeURIComponent(fromDate + "T00:00:00Z")}`);
+    if (toDate) params.push(`created_at_max=${encodeURIComponent(toDate + "T23:59:59Z")}`);
+    if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
+
     const response = await axios.get(shopifyOrdersUrl, {
       headers: { "X-Shopify-Access-Token": token },
     });
