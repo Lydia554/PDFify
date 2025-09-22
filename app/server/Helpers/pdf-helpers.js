@@ -27,8 +27,15 @@ async function embedXmp(pdfDoc, xmpFileName = "zugferd.xmp") {
   const xmpPath = path.resolve(__dirname, "xmp", xmpFileName);
   if (!fs.existsSync(xmpPath)) throw new Error("XMP file not found at " + xmpPath);
   const xmpTemplate = fs.readFileSync(xmpPath, "utf8");
-  pdfDoc.setMetadata(xmpTemplate);
+
+  // Create a metadata stream
+  const xmpStream = pdfDoc.context.flateStream(Buffer.from(xmpTemplate, "utf8"));
+  const xmpRef = pdfDoc.context.register(xmpStream);
+
+  // Add it to the catalog
+  pdfDoc.catalog.set(PDFName.of("Metadata"), xmpRef);
 }
+
 
 // Embed ZUGFeRD XML into PDF
 function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
