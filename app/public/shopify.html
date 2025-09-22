@@ -468,7 +468,7 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
   // ------------------------------
   window.addEventListener("DOMContentLoaded", async () => {
     try {
-      const response = await api.get("/shopify/connection");
+      const response = await api.get("/api/shopify/connection");
       const { connectedShopDomain } = response.data;
       const shopDomainEl = document.getElementById("connectedShopDomain");
       shopDomainEl.textContent = connectedShopDomain || "None";
