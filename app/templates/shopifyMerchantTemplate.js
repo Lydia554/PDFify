@@ -55,7 +55,7 @@ async function createShopifyInvoicePdf(order) {
   const data = mapOrderToPdfData(order);
   const pdfDoc = await PDFDocument.create();
 
-  // Register fontkit for embedding TTF
+  // Register fontkit for custom TTF fonts
   pdfDoc.registerFontkit(fontkit);
 
   // Embed Liberation Sans fonts
@@ -64,17 +64,19 @@ async function createShopifyInvoicePdf(order) {
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-  // Embed sRGB ICC profile for OutputIntent (PDF/A requirement)
-  const iccProfile = fs.readFileSync(path.resolve(__dirname, './sRGB_v4_ICC_preference.icc'));
-  pdfDoc.catalog.set('OutputIntents', [
-    pdfDoc.context.obj({
-      Type: 'OutputIntent',
-      S: 'GTS_PDFA1',
-      OutputConditionIdentifier: 'sRGB IEC61966-2.1',
-      Info: 'sRGB IEC61966-2.1',
-      DestOutputProfile: pdfDoc.context.stream(iccProfile)
-    })
-  ]);
+  // Embed sRGB ICC profile exactly like Ghostscript pipeline
+const iccProfilePath = path.resolve(__dirname, './sRGB_v4_ICC_preference.icc');
+const iccProfile = fs.readFileSync(iccProfilePath);
+pdfDoc.catalog.set('OutputIntents', [
+  pdfDoc.context.obj({
+    Type: 'OutputIntent',
+    S: 'GTS_PDFA1',
+    OutputConditionIdentifier: 'sRGB IEC61966-2.1',
+    Info: 'sRGB IEC61966-2.1',
+    DestOutputProfile: pdfDoc.context.stream(iccProfile)
+  })
+]);
+
 
   // Add page
   const page = pdfDoc.addPage([595, 842]); // A4
