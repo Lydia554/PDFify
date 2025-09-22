@@ -5,7 +5,7 @@ const { PDFName } = require("pdf-lib");
 
 // Embed ICC profile for PDF/A
 async function embedIccProfile(pdfDoc) {
-  const iccBytes = fs.readFileSync(path.resolve(__dirname, './sRGB_v4_ICC_preference.icc'));
+  const iccBytes = fs.readFileSync(path.resolve(__dirname, '../routes/sRGB_v4_ICC_preference.icc'));   
   const iccStream = pdfDoc.context.flateStream(iccBytes);
   const iccRef = pdfDoc.context.register(iccStream);
   pdfDoc.catalog.set('OutputIntents', [
