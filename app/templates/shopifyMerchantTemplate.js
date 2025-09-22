@@ -58,8 +58,8 @@ async function createShopifyInvoicePdf(order) {
   pdfDoc.registerFontkit(fontkit);
 
   // Embed Liberation Sans fonts
-  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './LiberationSans-Regular.ttf'));
-  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './LiberationSans-Bold.ttf'));
+ const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
+  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Bold.ttf'));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
