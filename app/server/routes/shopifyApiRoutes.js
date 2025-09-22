@@ -344,6 +344,8 @@ const premiumTemplate = `
 
 }
 
+
+
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -394,8 +396,21 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       try {
         console.log("🔹 Generating merchant PDF for user:", user.email);
 
-        // Generate ZUGFeRD XML for compliance
-        const zugferdXml = generateZugferdXML(order);
+        // Map Shopify order to invoice data for ZUGFeRD
+        const invoiceData = {
+          orderId: order.name || order.id,
+          date: new Date(order.created_at).toISOString().slice(0, 10),
+          items: order.line_items.map(item => ({
+            name: item.title || item.name || "Item",
+            total: parseFloat(item.price) * parseFloat(item.quantity),
+            tax: parseFloat(item.tax_lines?.reduce((sum, t) => sum + parseFloat(t.price || 0), 0)) || 0,
+          })),
+          subtotal: order.subtotal_price ? parseFloat(order.subtotal_price) : 0,
+          tax: order.total_tax ? parseFloat(order.total_tax) : 0,
+          total: order.total_price ? parseFloat(order.total_price) : 0,
+        };
+
+        const zugferdXml = generateZugferdXML(invoiceData);
 
         // Generate PDFDocument from template
         const pdfDoc = await createShopifyInvoiceZugferd(order);
@@ -427,7 +442,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     // ----------------------------
-    // Customer PDF (depends on shop config)
+    // Customer PDF
     // ----------------------------
     if (!shopConfig.allowCustomerPDF) {
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
@@ -455,8 +470,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         ...item,
         price,
         quantity,
-        formattedPrice: formatPrice(price, currency, locale),
-        formattedTotal: formatPrice(total, currency, locale),
+        formattedPrice: new Intl.NumberFormat(locale, { style: "currency", currency }).format(price),
+        formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(total),
       };
     });
 
@@ -468,9 +483,9 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       subtotal,
       taxTotal,
       total: rawTotal,
-      formattedSubtotal: formatPrice(subtotal, currency, locale),
-      formattedTaxTotal: formatPrice(taxTotal, currency, locale),
-      formattedTotal: formatPrice(rawTotal, currency, locale),
+      formattedSubtotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(subtotal),
+      formattedTaxTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(taxTotal),
+      formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(rawTotal),
       customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim(),
       shippingAddress: order.shipping_address
         ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.city || ""}`
@@ -489,7 +504,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     const html = generateInvoiceHTML(invoiceData, user.isPremium, lang, t);
-
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({
       path: pdfPath,
@@ -514,7 +528,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
 
 router.get("/connection", authenticate, dualAuth, async (req, res) => {
 

@@ -22,21 +22,26 @@ function mapOrderToPdfData(order) {
     const quantity = parseNumber(item.quantity, 1);
     const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseNumber(t.price), 0);
     const total = price * quantity + tax;
-    return { name: item.title, quantity, price, tax, total };
+    const net = price * quantity; // net before tax
+    return { name: item.title, quantity, price, tax, total, net };
   });
+
+  const subtotal = items.reduce((sum, i) => sum + i.net, 0);
+  const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
+  const total = subtotal + taxTotal;
 
   return {
     customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
     orderId: order.name || order.id,
     date: order.created_at ? new Date(order.created_at).toLocaleDateString("de-DE") : new Date().toLocaleDateString("de-DE"),
     items,
-    subtotal: parseNumber(order.subtotal_price),
-    tax: parseNumber(order.total_tax),
-    total: parseNumber(order.total_price),
+    subtotal,
+    tax: taxTotal,
+    total,
+    vatRate: 21, // default VAT rate for ZUGFeRD
     iban: order.payment?.iban || "DE89370400440532013000",
     bic: order.payment?.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
-    vatRate: 21, // default VAT rate for ZUGFeRD
   };
 }
 

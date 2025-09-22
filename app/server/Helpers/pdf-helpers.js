@@ -47,12 +47,14 @@ function generateZugferdXML(data) {
   const subtotal = (data.subtotal ?? 0).toFixed(2);
   const tax = (data.tax ?? 0).toFixed(2);
   const total = (data.total ?? 0).toFixed(2);
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1">
   <rsm:ExchangedDocument>
     <ram:ID>${data.orderId}</ram:ID>
     <ram:IssueDateTime>${data.date}</ram:IssueDateTime>
   </rsm:ExchangedDocument>
+
   <rsm:SupplyChainTradeTransaction>
     ${data.items.map((item, idx) => `
     <ram:IncludedSupplyChainTradeLineItem>
@@ -65,13 +67,31 @@ function generateZugferdXML(data) {
       <ram:SpecifiedLineTradeSettlement>
         <ram:ApplicableTradeTax>
           <ram:CalculatedAmount>${item.tax.toFixed(2)}</ram:CalculatedAmount>
+          <ram:TypeCode>VAT</ram:TypeCode>
+          <ram:CategoryCode>S</ram:CategoryCode>
+          <ram:RateApplicablePercent>${vatRate}</ram:RateApplicablePercent>
         </ram:ApplicableTradeTax>
         <ram:TradeSettlementLineAmount>${item.total.toFixed(2)}</ram:TradeSettlementLineAmount>
+        <ram:NetLineAmount>${item.net.toFixed(2)}</ram:NetLineAmount>
       </ram:SpecifiedLineTradeSettlement>
     </ram:IncludedSupplyChainTradeLineItem>
     `).join("")}
+
+    <!-- Totals summary -->
+    <ram:SpecifiedTradeSettlementHeader>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>${tax}</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:CategoryCode>S</ram:CategoryCode>
+        <ram:RateApplicablePercent>${vatRate}</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+      <ram:LineTotalAmount>${subtotal}</ram:LineTotalAmount>
+      <ram:GrandTotalAmount>${total}</ram:GrandTotalAmount>
+    </ram:SpecifiedTradeSettlementHeader>
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
+
 
 module.exports = { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML };
