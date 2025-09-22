@@ -14,7 +14,7 @@ const { incrementUsage } = require("../utils/usageUtils");
 
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
 
-const { postProcessPdf } = require("../Helpers/pdf-helpers");
+
 
 
 const router = express.Router();
@@ -414,21 +414,18 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     // ----------------------------
 
 if (isMerchant) {
-  // Create the base PDF (already as bytes)
-  const pdfBytes = await createShopifyInvoiceZugferd(invoiceData);
+  // 1️⃣ Generate PDF with invoice content + ZUGFeRD
+  const pdfBuffer = await createShopifyInvoiceZugferd(invoiceData);
 
-  // Post-process PDF (ICC, XMP, ZUGFeRD, Trailer ID)
-  pdfBuffer = await postProcessPdf(pdfBytes, {
-    ...invoiceData,
-    creator: user.email || "Merchant",
-    locale: { language: lang || "en" }
-  }, path.join(__dirname, "../Helpers/xmp/zugferd.xmp"));
-
+  // 2️⃣ Increment usage
   await incrementUsage(user, 1, isPreview);
 
+  // 3️⃣ Send PDF
   res.set({
     "Content-Type": "application/pdf",
-    "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
+    "Content-Disposition": isPreview
+      ? "inline"
+      : `attachment; filename=${invoiceData.orderId}.pdf`,
   });
   return res.send(pdfBuffer);
 }
