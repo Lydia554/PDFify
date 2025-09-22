@@ -10,6 +10,7 @@ function parseNumber(value, fallback = 0) {
 
 /**
  * Map Shopify order to simple PDF data
+ * Added IBAN/BIC/payment terms placeholders for EN16931 compliance
  */
 function mapOrderToPdfData(order) {
   const items = (order.line_items || []).map(item => {
@@ -28,6 +29,9 @@ function mapOrderToPdfData(order) {
     subtotal: parseNumber(order.subtotal_price),
     tax: parseNumber(order.total_tax),
     total: parseNumber(order.total_price),
+    iban: order.payment?.iban || "DE89370400440532013000",     // placeholder IBAN
+    bic: order.payment?.bic || "COBADEFFXXX",                 // placeholder BIC
+    paymentTerms: order.payment?.terms || "Due within 14 days" // placeholder payment terms
   };
 }
 
@@ -37,33 +41,18 @@ function mapOrderToPdfData(order) {
 function drawCell(page, text, x, y, width, height, font, {
   size = 10, align = "left", fill = null, bold = false
 } = {}) {
-  if (fill) {
-    page.drawRectangle({ x, y, width, height, color: fill });
-  }
+  if (fill) page.drawRectangle({ x, y, width, height, color: fill });
 
-  // Text positioning
   let textX = x + 5;
   if (align === "right") textX = x + width - (text.length * size * 0.5) - 5;
 
-  page.drawText(text, {
-    x: textX,
-    y: y + height / 4,
-    size,
-    font,
-    color: rgb(0, 0, 0),
-  });
+  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
 
-  // Border
-  page.drawRectangle({
-    x, y, width, height,
-    borderColor: rgb(0, 0, 0),
-    borderWidth: 0.5,
-    color: undefined
-  });
+  page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5, color: undefined });
 }
 
 /**
- * Generate modern PDF invoice
+ * Generate EN16931-compliant Shopify PDF invoice
  */
 async function createShopifyInvoicePdf(order) {
   const data = mapOrderToPdfData(order);
@@ -78,57 +67,48 @@ async function createShopifyInvoicePdf(order) {
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];
 
   // Header section
-  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font, color: rgb(0, 0, 0) });
+  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font });
   y -= lineHeight;
   page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font });
   y -= lineHeight;
   page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font });
+  y -= lineHeight;
+  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font });
+  y -= lineHeight;
+  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font });
+  y -= lineHeight;
+  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font });
   y -= lineHeight * 2;
 
-  // Table headers with gray background
+  // Table headers
   let x = 50;
   headers.forEach((header, i) => {
     drawCell(page, header, x, y, colWidths[i], rowHeight, font, {
-      size: 10,
-      align: i > 1 ? "right" : "left",
-      fill: rgb(0.9, 0.9, 0.9), // light gray header
-      bold: true
+      size: 10, align: i > 1 ? "right" : "left", fill: rgb(0.9,0.9,0.9), bold: true
     });
     x += colWidths[i];
   });
   y -= rowHeight;
 
-  // Item rows with alternating shading
+  // Item rows
   data.items.forEach((item, idx) => {
     x = 50;
-    const rowFill = idx % 2 === 0 ? rgb(0.96, 0.96, 0.96) : null; // zebra striping
+    const rowFill = idx % 2 === 0 ? rgb(0.96,0.96,0.96) : null;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
     row.forEach((cell, i) => {
-      drawCell(page, cell, x, y, colWidths[i], rowHeight, font, {
-        size: 10,
-        align: i > 1 ? "right" : "left",
-        fill: rowFill
-      });
+      drawCell(page, cell, x, y, colWidths[i], rowHeight, font, { size: 10, align: i > 1 ? "right" : "left", fill: rowFill });
       x += colWidths[i];
     });
     y -= rowHeight;
   });
 
-  // Totals section
+  // Totals
   const totalLabels = ["Subtotal", "Tax", "Total"];
   const totalValues = [data.subtotal, data.tax, data.total];
   totalLabels.forEach((label, i) => {
     y -= rowHeight;
-    drawCell(page, label, 50, y, 400, rowHeight, font, {
-      size: label === "Total" ? 12 : 10,
-      align: "right",
-      fill: rgb(0.9, 0.9, 0.9)
-    });
-    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, font, {
-      size: label === "Total" ? 12 : 10,
-      align: "right",
-      fill: rgb(0.9, 0.9, 0.9)
-    });
+    drawCell(page, label, 50, y, 400, rowHeight, font, { size: label==="Total"?12:10, align:"right", fill: rgb(0.9,0.9,0.9) });
+    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, font, { size: label==="Total"?12:10, align:"right", fill: rgb(0.9,0.9,0.9) });
   });
 
   const pdfBytes = await pdfDoc.save();

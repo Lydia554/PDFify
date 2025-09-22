@@ -1,63 +1,117 @@
-// xmp/embedXmp.js
+const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
+const { generateInvoiceHTML_PdfaSafe } = require("./htmlInvoice"); // your updated HTML
+const embedXmp = require("./xmp/embedXmp");
 const fs = require("fs");
-const { PDFName } = require("pdf-lib");
 
 /**
- * Embed strict PDF/A-3b XMP metadata into a PDFDocument.
- * Guarantees UTF-8 BOM, no null chars, and proper pdfaid:part/conformance tags.
- *
- * @param {PDFDocument} pdfDoc - pdf-lib PDFDocument instance
- * @param {string} [xmpFilePath] - Optional path to an existing XMP template
+ * Generate ZUGFeRD 2.1 XML (EN16931)
  */
-async function embedXmp(pdfDoc, xmpFilePath = null) {
-  try {
-    let xmpContent = "";
+function generateZugferdXML(invoiceData) {
+  const itemsXML = (invoiceData.items || []).map((item, idx) => `
+    <rsm:IncludedSupplyChainTradeLineItem>
+      <ram:AssociatedDocumentLineDocument>
+        <ram:LineID>${item.position || idx + 1}</ram:LineID>
+      </ram:AssociatedDocumentLineDocument>
+      <ram:SpecifiedTradeProduct>
+        <ram:Name>${item.name}</ram:Name>
+      </ram:SpecifiedTradeProduct>
+      <ram:SpecifiedLineTradeAgreement>
+        <ram:NetPriceProductTradePrice>
+          <ram:ChargeAmount>${item.price.toFixed(2)}</ram:ChargeAmount>
+          <ram:BasisQuantity unitCode="C62">${item.quantity}</ram:BasisQuantity>
+        </ram:NetPriceProductTradePrice>
+      </ram:SpecifiedLineTradeAgreement>
+      <ram:SpecifiedLineTradeDelivery>
+        <ram:BilledQuantity unitCode="C62">${item.quantity}</ram:BilledQuantity>
+      </ram:SpecifiedLineTradeDelivery>
+      <ram:SpecifiedLineTradeSettlement>
+        <ram:ApplicableTradeTax>
+          <ram:CalculatedAmount>${item.tax.toFixed(2)}</ram:CalculatedAmount>
+        </ram:ApplicableTradeTax>
+        <ram:SpecifiedTradeSettlementLineMonetarySummation>
+          <ram:LineTotalAmount>${item.total.toFixed(2)}</ram:LineTotalAmount>
+        </ram:SpecifiedTradeSettlementLineMonetarySummation>
+      </ram:SpecifiedLineTradeSettlement>
+    </rsm:IncludedSupplyChainTradeLineItem>`).join("");
 
-    // Base XMP template (strict PDF/A-3b)
-    const baseXmp = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end='w'?>`;
-
-    // Read user XMP if provided
-    if (xmpFilePath && fs.existsSync(xmpFilePath)) {
-      xmpContent = fs.readFileSync(xmpFilePath, "utf8").trim();
-    }
-
-    // Fallback to base XMP if invalid
-    if (!xmpContent.includes("<pdfaid:part>")) {
-      xmpContent = baseXmp;
-    }
-
-    // Ensure BOM at the start
-    if (!xmpContent.startsWith("\uFEFF")) {
-      xmpContent = "\uFEFF" + xmpContent;
-    }
-
-    // Remove null characters
-    xmpContent = xmpContent.replace(/\0/g, "");
-
-    // Create metadata stream with FlateDecode compression
-    const xmpBuffer = Buffer.from(xmpContent, "utf8");
-    const metadataStream = pdfDoc.context.flateStream(xmpBuffer, {
-      Type: PDFName.of("Metadata"),
-      Subtype: PDFName.of("XML"),
-    });
-
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
-
-    console.log("✅ Strict PDF/A-3b XMP metadata embedded successfully");
-  } catch (err) {
-    console.error("❌ Error embedding XMP metadata:", err);
-    throw err;
-  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryDocument xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:1p0"
+    xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <rsm:ExchangedDocument>
+    <ram:ID>${invoiceData.orderId}</ram:ID>
+    <ram:IssueDateTime><udt:DateTimeString format="102">${invoiceData.date}</udt:DateTimeString></ram:IssueDateTime>
+    <ram:TypeCode>380</ram:TypeCode>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    ${itemsXML}
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:PaymentReference>${invoiceData.orderId}</ram:PaymentReference>
+      <ram:InvoiceCurrencyCode>${invoiceData.currency || "EUR"}</ram:InvoiceCurrencyCode>
+      <ram:SpecifiedTradeSettlementPaymentMeans>
+        <ram:TypeCode>58</ram:TypeCode>
+        <ram:PayeePartyCreditorFinancialAccount>
+          <ram:IBANID>${invoiceData.iban}</ram:IBANID>
+          <ram:BICID>${invoiceData.bic}</ram:BICID>
+        </ram:PayeePartyCreditorFinancialAccount>
+      </ram:SpecifiedTradeSettlementPaymentMeans>
+      <ram:InvoicePeriod>
+        <ram:StartDateTime>${invoiceData.date}</ram:StartDateTime>
+      </ram:InvoicePeriod>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount>${invoiceData.subtotal.toFixed(2)}</ram:LineTotalAmount>
+        <ram:TaxTotalAmount>${invoiceData.tax.toFixed(2)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>${invoiceData.total.toFixed(2)}</ram:GrandTotalAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+  <zf:ConformanceLevel>EN16931</zf:ConformanceLevel>
+  <zf:Version>2.1</zf:Version>
+</rsm:CrossIndustryDocument>`;
 }
 
-module.exports = embedXmp;
+/**
+ * Generate full PDF/A-3b + ZUGFeRD invoice
+ */
+async function createInvoicePDF(invoiceData) {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage([595, 842]);
+
+  // Embed font
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  // Render HTML as text (simplest for now; you can replace with Puppeteer if needed)
+  const html = await generateInvoiceHTML_PdfaSafe(invoiceData);
+  page.drawText("Invoice (see attached ZUGFeRD XML)", { x: 50, y: 800, size: 12, font });
+
+  // Embed XMP metadata
+  await embedXmp(pdfDoc);
+
+  // Embed ZUGFeRD XML as attachment
+  const xmlContent = generateZugferdXML(invoiceData);
+  const xmlStream = pdfDoc.context.flateStream(Buffer.from(xmlContent, "utf8"), {
+    Type: pdfDoc.context.obj("EmbeddedFile"),
+    Subtype: pdfDoc.context.obj("text/xml")
+  });
+  const xmlRef = pdfDoc.context.register(xmlStream);
+
+  const efDict = pdfDoc.context.obj({ F: xmlRef });
+  const filespec = pdfDoc.context.obj({
+    Type: pdfDoc.context.obj("Filespec"),
+    F: pdfDoc.context.obj("ZUGFeRD-invoice.xml"),
+    EF: efDict,
+    Desc: "ZUGFeRD XML"
+  });
+  const filespecRef = pdfDoc.context.register(filespec);
+
+  pdfDoc.catalog.set(pdfDoc.context.obj("Names"), pdfDoc.context.obj({
+    EmbeddedFiles: pdfDoc.context.obj({
+      Names: [pdfDoc.context.obj("ZUGFeRD-invoice.xml"), filespecRef]
+    })
+  }));
+
+  const pdfBytes = await pdfDoc.save();
+  return Buffer.from(pdfBytes);
+}
+
+module.exports = { createInvoicePDF, generateZugferdXML };

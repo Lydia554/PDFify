@@ -1,8 +1,6 @@
 const axios = require("axios");
 const sharp = require("sharp");
 
-
-
 /**
  * Convert image URL (PNG, JPG, or SVG) to Base64 string for embedding in PDF
  * @param {string} url 
@@ -28,6 +26,7 @@ async function getBase64Image(url) {
 
 /**
  * Generate HTML invoice for Puppeteer PDF rendering
+ * Black-and-white, PDF/A-3b safe, EN16931-compliant
  * @param {Object} data 
  * @returns {Promise<string>}
  */
@@ -35,43 +34,8 @@ async function generateInvoiceHTML_PdfaSafe(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // Logo
-  const logoUrl =
-    typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length
-      ? data.customLogoUrl.trim()
-      : "https://pdfify.pro/images/Logo.png";
-
   // PDF/A safe class
   const userClass = "pdfa-clean";
-
-
-  // Chart config
-  const chartConfig = {
-    type: "pie",
-    data: {
-      labels: ["Subtotal", "Tax"],
-      datasets: [
-        {
-          data: [
-            Number(String(data.subtotal).replace(/[^\d.-]/g, "")) || 0,
-            Number(String(data.tax).replace(/[^\d.-]/g, "")) || 0,
-          ],
-        },
-      ],
-    },
-    options: {
-      plugins: {
-        legend: { display: false }
-      }
-    }
-  };
-  const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
-
-  // Embed images as Base64
-  const logoBase64 = await getBase64Image(logoUrl);
-  const chartBase64 = data.showChart
-    ? await getBase64Image(`https://quickchart.io/chart?c=${chartConfigEncoded}`)
-    : "";
 
   return `
 <html>
@@ -108,6 +72,8 @@ async function generateInvoiceHTML_PdfaSafe(data) {
         padding: 10px;
         border: 1px solid #000;
         text-align: left;
+        background-color: #fff;
+        color: #000;
       }
 
       .table th {
@@ -115,12 +81,8 @@ async function generateInvoiceHTML_PdfaSafe(data) {
         font-weight: bold;
       }
 
-      .table td {
-        background-color: #fff;
-      }
-
       .table tr:nth-child(even) td {
-        background-color: #f2f2f2;
+        background-color: #f9f9f9;
       }
 
       .table tfoot td {
@@ -134,26 +96,12 @@ async function generateInvoiceHTML_PdfaSafe(data) {
         font-size: 1.1em;
       }
 
-      .watermark {
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 50px;
-        color: #999;
-        font-weight: 700;
-        pointer-events: none;
-        user-select: none;
-        z-index: 9999;
-        white-space: nowrap;
-      }
-
       .footer {
         text-align: center;
         margin-top: 40px;
         padding: 10px;
         font-size: 11px;
-        color: #333;
+        color: #000;
         border-top: 1px solid #000;
       }
 
@@ -166,13 +114,11 @@ async function generateInvoiceHTML_PdfaSafe(data) {
         text-decoration: underline;
       }
 
-      /* PDF/A-3b overrides */
       .pdfa-clean .watermark { display: none !important; }
     </style>
   </head>
   <body class="${userClass}">
     <div class="container">
-      ${logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height:60px;" />` : ""}
       <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
 
       <div class="invoice-header">
@@ -180,6 +126,9 @@ async function generateInvoiceHTML_PdfaSafe(data) {
         <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
         <p><strong>${locale.customer || "Customer"}:</strong> ${data.customerName || ""}</p>
         <p><strong>${locale.email || "Email"}:</strong> ${data.customerEmail || ""}</p>
+        <p><strong>IBAN:</strong> ${data.iban || ""}</p>
+        <p><strong>BIC:</strong> ${data.bic || ""}</p>
+        <p><strong>Payment Terms:</strong> ${data.paymentTerms || ""}</p>
       </div>
 
       <table class="table">
@@ -227,18 +176,7 @@ async function generateInvoiceHTML_PdfaSafe(data) {
       <div class="total">
         <p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p>
       </div>
-
-      ${
-        chartBase64
-          ? `<div class="chart-container">
-              <h2>${locale.breakdown || "Breakdown"}</h2>
-              <img src="${chartBase64}" alt="${locale.invoiceBreakdown || "Invoice Breakdown"}" style="max-width:400px;display:block;margin:auto;" />
-            </div>`
-          : ""
-      }
     </div>
-
-    ${watermarkHTML}
 
     <div class="footer">
       <p>${locale.thanks || "Thanks for using our service!"}</p>
