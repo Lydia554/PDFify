@@ -66,11 +66,11 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
 }
 
 /**
- * Embed ZUGFeRD XML into PDF with correct keys
+ * Embed ZUGFeRD XML into PDF
  */
 function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   const xmlBuffer = Buffer.from(xmlContent, "utf8");
-  const xmlStream = pdfDoc.context.flateStream(xmlBuffer);
+  const xmlStream = pdfDoc.context.flateStream(xmlBuffer, { Subtype: PDFName.of("application/xml") });
   const xmlStreamRef = pdfDoc.context.register(xmlStream);
 
   const fileSpecDict = pdfDoc.context.obj({
@@ -78,15 +78,14 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
     F: PDFString.of(fileName),
     UF: PDFString.of(fileName),
     Desc: PDFString.of("ZUGFeRD Invoice XML"),
-    AFRelationship: PDFName.of("Data"),
     EF: pdfDoc.context.obj({ F: xmlStreamRef }),
-    Subtype: PDFName.of("application/xml"),
+    AFRelationship: PDFName.of("Data"),
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // EmbeddedFiles name tree for VeraPDF compliance
+  // Name tree for embedded files (VeraPDF compliance)
   const efNames = pdfDoc.context.obj({ Names: [PDFString.of(fileName), fileSpecRef] });
   const efNameTreeRef = pdfDoc.context.register(efNames);
   const namesDict = pdfDoc.context.obj({ EmbeddedFiles: efNameTreeRef });
@@ -131,7 +130,7 @@ function generateZugferdXML(invoiceData) {
 }
 
 /**
- * Run Ghostscript to enforce PDF/A-3b compliance
+ * Enforce PDF/A-3b via Ghostscript
  */
 function enforcePdfA3b(inputPath, outputPath) {
   const gsCmd = `gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE -sProcessColorModel=DeviceRGB \
@@ -140,7 +139,7 @@ function enforcePdfA3b(inputPath, outputPath) {
 }
 
 /**
- * All-in-one post-process for PDF/A-3b + ZUGFeRD
+ * All-in-one post-process PDF
  */
 async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -151,30 +150,25 @@ async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
   await embedXmp(pdfDoc, xmpTemplatePath, {
-    title: `Invoice ${invoiceData.orderId || "PDFify"}`,
+    title: `Invoice ${invoiceData.orderId}`,
     creator: invoiceData.creator || "PDFify",
     language: invoiceData.locale?.language || "en",
   });
 
-  let outputPdf = await pdfDoc.save({ useObjectStreams: false });
-
-  // Add trailer ID at end of file
+  // Proper trailer ID
   const id = crypto.randomBytes(16).toString("hex");
-  const trailerId = `\ntrailer\n<< /ID [<${id}> <${id}>] >>\n%%EOF`;
-  outputPdf = Buffer.concat([outputPdf, Buffer.from(trailerId, "utf8")]);
+  pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([PDFString.of(id), PDFString.of(id)]));
 
-  // Save temp file for Ghostscript pass
+  // Save PDF to temp for Ghostscript
   const tempInput = path.resolve(__dirname, "temp-input.pdf");
   const tempOutput = path.resolve(__dirname, "temp-output.pdf");
-  fs.writeFileSync(tempInput, outputPdf);
+  fs.writeFileSync(tempInput, await pdfDoc.save({ useObjectStreams: false }));
 
-  // Enforce PDF/A-3b with Ghostscript
+  // Ghostscript enforcement
   enforcePdfA3b(tempInput, tempOutput);
 
-  // Read final output
   const finalPdf = fs.readFileSync(tempOutput);
 
-  // Cleanup
   fs.unlinkSync(tempInput);
   fs.unlinkSync(tempOutput);
 
