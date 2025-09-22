@@ -5,9 +5,12 @@ const { PDFName } = require("pdf-lib");
 
 // Embed ICC profile for PDF/A
 async function embedIccProfile(pdfDoc) {
-  const iccBytes = fs.readFileSync(path.resolve(__dirname, '../routes/sRGB_v4_ICC_preference.icc'));   
+  const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
+  if (!fs.existsSync(iccPath)) throw new Error("ICC profile not found at " + iccPath);
+  const iccBytes = fs.readFileSync(iccPath);
   const iccStream = pdfDoc.context.flateStream(iccBytes);
   const iccRef = pdfDoc.context.register(iccStream);
+
   pdfDoc.catalog.set('OutputIntents', [
     pdfDoc.context.obj({
       Type: 'OutputIntent',
@@ -20,8 +23,10 @@ async function embedIccProfile(pdfDoc) {
 }
 
 // Embed XMP metadata
-async function embedXmp(pdfDoc, xmpPath = "zugferd.xmp") {
-  const xmpTemplate = fs.readFileSync(path.resolve(__dirname, xmpPath), "utf8");
+async function embedXmp(pdfDoc, xmpFileName = "zugferd.xmp") {
+  const xmpPath = path.resolve(__dirname, "xmp", xmpFileName);
+  if (!fs.existsSync(xmpPath)) throw new Error("XMP file not found at " + xmpPath);
+  const xmpTemplate = fs.readFileSync(xmpPath, "utf8");
   pdfDoc.setMetadata(xmpTemplate);
 }
 
@@ -41,7 +46,7 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   return fileSpecRef;
 }
 
-// ZUGFeRD XML generator
+// ZUGFeRD XML generator (dynamic)
 function generateZugferdXML(data) {
   const vatRate = data.vatRate ?? 21;
   const subtotal = (data.subtotal ?? 0).toFixed(2);
@@ -77,7 +82,6 @@ function generateZugferdXML(data) {
     </ram:IncludedSupplyChainTradeLineItem>
     `).join("")}
 
-    <!-- Totals summary -->
     <ram:SpecifiedTradeSettlementHeader>
       <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
       <ram:ApplicableTradeTax>
@@ -92,6 +96,5 @@ function generateZugferdXML(data) {
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
-
 
 module.exports = { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML };
