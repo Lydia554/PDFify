@@ -425,8 +425,9 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       total,
       vatRate,
       customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
-      iban: order.payment?.iban || "DE89370400440532013000",
-      bic: order.payment?.bic || "COBADEFFXXX",
+   iban: shopConfig.iban || "DE89370400440532013000",
+bic: shopConfig.bic || "COBADEFFXXX",
+
       paymentTerms: order.payment?.terms || "Due within 14 days",
     };
 

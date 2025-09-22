@@ -7,8 +7,11 @@ const ShopConfigSchema = new mongoose.Schema({
   theme: { type: String, default: "basic" },
   isPremium: { type: Boolean, default: false },
 
+  allowCustomerPDF: { type: Boolean, default: false },
 
-  allowCustomerPDF: { type: Boolean, default: false }
+  // Bank details for invoices
+  iban: { type: String, default: "" },
+  bic: { type: String, default: "" },
 });
 
 module.exports = mongoose.model("ShopConfig", ShopConfigSchema);
