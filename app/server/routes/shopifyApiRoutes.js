@@ -13,7 +13,8 @@ const { resolveLanguage } = require("../utils/resolveLanguage");
 const { incrementUsage } = require("../utils/usageUtils");
 
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
-const { generateInvoiceHTML } = require("../../templates/shopifyCustomerTemplate");
+const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
+
 const { generateZugferdXML, embedXmp } = require("../Helpers/pdf-helpers");
 const { postProcessPdfStrict } = require("../Helpers/postProcessPdfStrict");
 
@@ -342,7 +343,6 @@ const premiumTemplate = `
 
 }
 
-
 // ----------------------------
 // Generate invoice PDF
 // ----------------------------
@@ -420,14 +420,11 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     // Merchant PDF (ZUGFeRD / PDF/A-3b)
     // ----------------------------
     if (isMerchant) {
-      const zugferdXml = generateZugferdXML(invoiceData);
-
       const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
-
+      const zugferdXml = generateZugferdXML(invoiceData);
       await embedXmp(pdfDoc);
 
       const pdfBytes = await pdfDoc.save();
-
       pdfBuffer = await postProcessPdfStrict(
         pdfBytes,
         zugferdXml,
@@ -439,9 +436,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
       res.set({
         "Content-Type": "application/pdf",
-        "Content-Disposition": isPreview
-          ? "inline"
-          : `attachment; filename=${invoiceData.orderId}.pdf`,
+        "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
       });
       return res.send(pdfBuffer);
     }
@@ -480,8 +475,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
-   const html = await generateCustomerInvoiceHTML(htmlData, true, lang, t);
-await page.setContent(html, { waitUntil: "networkidle0" });
+    const html = generateCustomerInvoiceHTML(htmlData, true, lang, {}); 
+    await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
     await browser.close();
 
