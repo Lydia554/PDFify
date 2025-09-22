@@ -11,7 +11,7 @@ const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
-const { createShopifyInvoiceZugferd } = require("../shopify-zugferd-template");
+const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
 
 
 
