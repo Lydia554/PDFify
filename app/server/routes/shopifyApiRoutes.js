@@ -413,20 +413,22 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     };
 
     let pdfBuffer;
+
+
 // ----------------------------
 // Merchant PDF (ZUGFeRD / PDF/A-3b)
 // ----------------------------
 if (isMerchant) {
-  // 1️⃣ Create the basic PDF (HTML → PDF)
-  const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
-  const pdfBytes = await pdfDoc.save();
+  // 1️⃣ Generate PDF bytes directly
+  const pdfBytes = await createShopifyInvoiceZugferd(invoiceData);
 
   // 2️⃣ Post-process PDF: ICC profile, XMP, ZUGFeRD XML, Trailer ID
-  pdfBuffer = await postProcessPdf(pdfBytes, {
-    ...invoiceData,
-    creator: user.email || "Merchant",
-    locale: { language: lang || "en" },
-  }, path.join(__dirname, "../Helpers/xmp/zugferd.xmp")); // optional template
+  pdfBuffer = await postProcessPdfStrict(
+    pdfBytes,
+    generateZugferdXML(invoiceData),
+    { title: `Invoice ${invoiceData.orderId}`, creator: user.email || "Merchant", language: lang || "en" },
+    path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
+  );
 
   // 3️⃣ Increment usage
   await incrementUsage(user, 1, isPreview);
