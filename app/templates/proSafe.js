@@ -34,68 +34,64 @@ async function generateInvoiceHTML_PdfaSafe(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // PDF/A safe class
-  const userClass = "pdfa-clean";
-
   return `
 <html>
   <head>
-<style>
-  body {
-    font-family: 'Liberation Sans', sans-serif;
-    color: #000;
-    background: #fff;
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-  }
-  .container {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 30px 40px 40px;
-    background: #fff;
-    border: 1px solid #000;
-  }
-  h1, h2, h3, p, td, th {
-    color: #000;
-  }
-  .table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 20px;
-  }
-  .table th, .table td {
-    padding: 10px;
-    border: 1px solid #000;
-    text-align: left;
-    background-color: #fff; /* remove gray */
-    color: #000;
-  }
-  .table th {
-    font-weight: bold;
-  }
-  .table tfoot td {
-    font-weight: bold;
-    background-color: #fff; /* remove gray */
-  }
-  .total p {
-    font-weight: bold;
-    color: #000;
-    font-size: 1.1em;
-  }
-  .footer {
-    text-align: center;
-    margin-top: 40px;
-    padding: 10px;
-    font-size: 11px;
-    color: #000;
-    border-top: 1px solid #000;
-  }
-  .pdfa-clean .watermark { display: none !important; }
-</style>
-
+    <style>
+      body {
+        font-family: 'Liberation Sans', sans-serif;
+        color: #000;
+        background: #fff;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 30px 40px 40px;
+        background: #fff;
+        border: 1px solid #000;
+      }
+      h1, h2, h3, p, td, th {
+        color: #000;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .table th, .table td {
+        padding: 10px;
+        border: 1px solid #000;
+        text-align: left;
+        background-color: #fff; /* strictly white */
+        color: #000;
+      }
+      .table th {
+        font-weight: bold;
+      }
+      .table tfoot td {
+        font-weight: bold;
+        background-color: #fff; /* strictly white */
+      }
+      .total p {
+        font-weight: bold;
+        color: #000;
+        font-size: 1.1em;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 40px;
+        padding: 10px;
+        font-size: 11px;
+        color: #000;
+        border-top: 1px solid #000;
+      }
+      .pdfa-clean .watermark { display: none !important; }
+    </style>
   </head>
-  <body class="${userClass}">
+  <body class="pdfa-clean">
     <div class="container">
       <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
 

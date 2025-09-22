@@ -1,6 +1,7 @@
 const { PDFDocument, rgb } = require("pdf-lib");
 const fs = require("fs");
 const path = require("path");
+const fontkit = require("@pdf-lib/fontkit"); // <-- required for custom fonts
 
 /**
  * Safely parse numbers
@@ -52,7 +53,9 @@ function drawCell(page, text, x, y, width, height, font, { size = 10, align = "l
 async function createShopifyInvoicePdf(order) {
   const data = mapOrderToPdfData(order);
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4
+
+  // Register fontkit for custom TTF fonts
+  pdfDoc.registerFontkit(fontkit);
 
   // Embed Liberation Sans fonts for PDF/A compliance
   const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
@@ -60,6 +63,7 @@ async function createShopifyInvoicePdf(order) {
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
+  const page = pdfDoc.addPage([595, 842]); // A4
   let y = 780;
   const lineHeight = 24;
   const rowHeight = 24;
