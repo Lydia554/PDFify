@@ -371,7 +371,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   return res.status(400).json({ error: "Invalid or missing order data" });
 }
 
-console.log("✅ Shopify order fetched:", JSON.stringify(order, null, 2));
+
 
 
     const shopConfig = (await ShopConfig.findOne({ shopDomain })) || {};
