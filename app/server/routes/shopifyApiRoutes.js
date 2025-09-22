@@ -414,8 +414,7 @@ console.log("✅ Shopify order fetched:", JSON.stringify(order, null, 2));
     };
 
 
-    const pdfData = mapOrderToPdfData(order);
-console.log("✅ PDF data mapped from Shopify order:", JSON.stringify(pdfData, null, 2));
+
 
 
     let pdfBuffer;
@@ -425,21 +424,19 @@ console.log("✅ PDF data mapped from Shopify order:", JSON.stringify(pdfData, n
     // ----------------------------
 
 if (isMerchant) {
-  pdfBuffer = await createShopifyInvoiceZugferd(order); 
+// Map order to PDF-ready data
+const pdfData = mapOrderToPdfData(order);
+console.log("✅ PDF data mapped:", JSON.stringify(pdfData, null, 2));
 
+// Generate PDF
+const pdfBuffer = await createShopifyInvoiceZugferd(pdfData);
 
-  // 2️⃣ Increment usage
-  await incrementUsage(user, 1, isPreview);
-
-  // 3️⃣ Send PDF
-  res.set({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": isPreview
-      ? "inline"
-      : `attachment; filename=${invoiceData.orderId}.pdf`,
-  });
-  return res.send(pdfBuffer);
-}
+// Send PDF to front-end
+res.set({
+  "Content-Type": "application/pdf",
+  "Content-Disposition": `attachment; filename=${pdfData.orderId}.pdf`,
+});
+res.send(pdfBuffer);
 
     // ----------------------------
     // Customer PDF (HTML / Puppeteer)
