@@ -414,21 +414,44 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     let pdfBuffer;
 
     // ----------------------------
-    // Merchant PDF (PDF-lib + ZUGFeRD / PDF/A-3b)
+    // Merchant PDF (PDF-lib + ZUGFeRD + Ghostscript)
     // ----------------------------
-    if (isMerchant) {
-      pdfBuffer = await createShopifyInvoiceZugferd(order);
-      await incrementUsage(user, 1, isPreview);
+   if (isMerchant) {
+  // 1️⃣ Generate raw PDF from pdf-lib
+  let rawPdf = await createShopifyInvoiceZugferd(order);
 
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
-      });
-      return res.send(pdfBuffer);
-    }
+  // 2️⃣ Post-process PDF (embed proper XMP, trailer ID, ZUGFeRD)
+  rawPdf = await postProcessPdf(rawPdf, {
+    ...invoiceData,
+    creator: "PDFify",
+  });
+
+  // 3️⃣ Temp files for Ghostscript
+  const tmpRawPath = path.join(__dirname, "../pdfs", `tmp-merchant-${order.id}.pdf`);
+  const tmpFinalPath = path.join(__dirname, "../pdfs", `Invoice_shopify-${order.id}.pdf`);
+  fs.writeFileSync(tmpRawPath, rawPdf);
+
+  // 4️⃣ Run Ghostscript to enforce PDF/A-3b
+  execSync(`gs -dPDFA=3 -dBATCH -dNOPAUSE -sProcessColorModel=DeviceRGB -sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile="${tmpFinalPath}" "${tmpRawPath}"`);
+
+  pdfBuffer = fs.readFileSync(tmpFinalPath);
+
+  // Cleanup temp files
+  fs.unlinkSync(tmpRawPath);
+  fs.unlinkSync(tmpFinalPath);
+
+  await incrementUsage(user, 1, isPreview);
+
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
+  });
+  return res.send(pdfBuffer);
+}
+
 
     // ----------------------------
-    // Customer PDF (Puppeteer HTML → PDF)
+    // Customer PDF (HTML → Puppeteer)
     // ----------------------------
     if (!shopConfig.allowCustomerPDF) {
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
@@ -458,7 +481,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const html = generateCustomerInvoiceHTML(htmlData, true, lang, {});
     await page.setContent(html, { waitUntil: "networkidle0" });
 
-    // Generate PDF directly from Puppeteer
     pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
