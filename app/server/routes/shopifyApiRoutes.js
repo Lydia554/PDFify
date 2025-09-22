@@ -12,7 +12,7 @@ const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
-const { embedIccProfile, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
+const { generateZugferdXML } = require("../Helpers/pdf-helpers");
 const { postProcessPdfStrict } = require("../Helpers/postProcessPdfStrict");
 
 

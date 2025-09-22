@@ -53,4 +53,39 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   return fileSpecRef;
 }
 
-module.exports = { embedIccProfile, embedXmp, embedXmlIntoPdf };
+
+
+function generateZugferdXML(invoiceData) {
+  
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1">
+  <rsm:ExchangedDocument>
+    <ram:ID>${invoiceData.orderId}</ram:ID>
+    <ram:IssueDateTime>${invoiceData.date}</ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    ${invoiceData.items?.map((item, idx) => `
+      <ram:IncludedSupplyChainTradeLineItem>
+        <ram:AssociatedDocumentLineDocument>
+          <ram:LineID>${idx + 1}</ram:LineID>
+        </ram:AssociatedDocumentLineDocument>
+        <ram:SpecifiedTradeProduct>
+          <ram:Name>${item.name}</ram:Name>
+        </ram:SpecifiedTradeProduct>
+        <ram:SpecifiedLineTradeSettlement>
+          <ram:ApplicableTradeTax>
+            <ram:CalculatedAmount>${item.tax}</ram:CalculatedAmount>
+            <ram:TypeCode>VAT</ram:TypeCode>
+            <ram:RateApplicablePercent>${item.taxRate ?? 21}</ram:RateApplicablePercent>
+          </ram:ApplicableTradeTax>
+          <ram:TradeSettlementLineAmount>${item.total}</ram:TradeSettlementLineAmount>
+          <ram:NetLineAmount>${item.net}</ram:NetLineAmount>
+        </ram:SpecifiedLineTradeSettlement>
+      </ram:IncludedSupplyChainTradeLineItem>
+    `).join("")}
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>`;
+}
+
+module.exports = { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML };
+
