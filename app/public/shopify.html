@@ -162,6 +162,26 @@
 <p id="downloadResult" class="text-sm mt-3 font-medium text-white"></p>
 <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
 
+
+
+<!-- Date Range Picker -->
+<div class="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
+  <div>
+    <label for="fromDate" class="text-sm font-medium">From</label>
+    <input type="date" id="fromDate" class="w-full p-2 rounded bg-gray-800 text-white border border-gray-600 focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+  </div>
+  <div>
+    <label for="toDate" class="text-sm font-medium">To</label>
+    <input type="date" id="toDate" class="w-full p-2 rounded bg-gray-800 text-white border border-gray-600 focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+  </div>
+  <div>
+    <button id="applyDateFilter" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow w-full">
+      Apply
+    </button>
+  </div>
+</div>
+
+
 <!-- Order Dropdown Section -->
 <div id="orderDownloadContainer" class="hidden mt-6 p-4 border border-gray-600 rounded-lg bg-gray-900 text-white">
   <h3 class="text-lg font-bold mb-3">Download Order Invoice</h3>
@@ -484,6 +504,41 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
       showCustomerPdfSection(false);
     }
   });
+
+
+  document.getElementById("applyDateFilter").addEventListener("click", async () => {
+  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
+  if (!shopDomain || shopDomain === "None") return;
+
+  const fromDate = document.getElementById("fromDate").value;
+  const toDate = document.getElementById("toDate").value;
+
+  const orderSelector = document.getElementById("orderSelector");
+  orderSelector.innerHTML = `<option>Loading orders...</option>`;
+
+  try {
+    const res = await api.get(`/shopify/orders?shopDomain=${encodeURIComponent(shopDomain)}&from=${fromDate}&to=${toDate}`);
+    const orders = Array.isArray(res.data.orders) ? res.data.orders : [];
+
+    if (!orders.length) {
+      orderSelector.innerHTML = `<option>No orders found for selected dates</option>`;
+      return;
+    }
+
+    orderSelector.innerHTML = orders
+      .map(order => {
+        const name = order.name || order.id || "Unknown";
+        const total = order.total_price || "0.00";
+        const currency = order.currency || "USD";
+        return `<option value="${order.id}">#${name} - ${total} ${currency}</option>`;
+      })
+      .join("");
+  } catch (err) {
+    console.error("Failed to fetch filtered orders:", err);
+    orderSelector.innerHTML = `<option>Error loading orders</option>`;
+  }
+});
+
 </script>
 
 
