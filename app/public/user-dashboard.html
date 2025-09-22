@@ -80,6 +80,21 @@
         </form>
       </section>
 
+      <section class="bg-gray-700 shadow rounded p-6 mb-6">
+  <h2 class="text-xl font-semibold mb-4">🏦 Bank Details for Invoices</h2>
+  <form id="updateBankForm">
+    <label class="text-sm font-semibold">IBAN</label>
+    <input type="text" id="iban" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="DE89 3704 0044 0532 0130 00" />
+
+    <label class="text-sm font-semibold">BIC / SWIFT</label>
+    <input type="text" id="bic" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="COBADEFFXXX" />
+
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Bank Details</button>
+    <p id="bankResult" class="text-sm mt-2 font-bold"></p>
+  </form>
+</section>
+
+
       <section class="bg-gray-700 shadow rounded p-6 mb-10">
         <h2 class="text-xl font-semibold mb-4">🗑 Delete Your Account</h2>
         <button id="deleteAccountButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Delete Account</button>
@@ -332,6 +347,52 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 
 
     fetchUserData();
+
+
+
+    const bankForm = document.getElementById("updateBankForm");
+const bankResult = document.getElementById("bankResult");
+
+bankForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  bankResult.textContent = "";
+
+  const iban = document.getElementById("iban").value.trim();
+  const bic = document.getElementById("bic").value.trim();
+
+  if (!iban || !bic) {
+    bankResult.textContent = "Please enter both IBAN and BIC.";
+    return;
+  }
+
+  try {
+    const response = await api.put("/shop-config/update", { iban, bic });
+    if (response.status === 200) {
+      bankResult.textContent = "Bank details updated successfully!";
+    } else {
+      bankResult.textContent = "Failed to update bank details. Please try again.";
+    }
+  } catch (error) {
+    console.error("Error updating bank details:", error);
+    bankResult.textContent = "Error saving bank details. Check console for details.";
+  }
+});
+
+// Optional: Fetch existing bank details to prefill the form
+async function loadBankDetails() {
+  try {
+    const response = await api.get("/shop-config");
+    if (response.status === 200 && response.data) {
+      document.getElementById("iban").value = response.data.iban || "";
+      document.getElementById("bic").value = response.data.bic || "";
+    }
+  } catch (error) {
+    console.error("Failed to load bank details:", error);
+  }
+}
+
+loadBankDetails();
+
 
   </script>
 
