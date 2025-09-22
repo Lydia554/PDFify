@@ -3,6 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const axios = require("axios");
 const puppeteer = require("puppeteer");
+const { execSync } = require("child_process");
 
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User");
