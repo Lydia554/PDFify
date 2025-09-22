@@ -5,7 +5,7 @@ const fs = require("fs");
 const axios = require("axios");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
-const { PDFDocument } = require("pdf-lib");
+
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
@@ -14,12 +14,9 @@ require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
 const { createShopifyInvoicePdf } = require("../../templates/shopifyMerchantTemplate");
 const { generateZugferdXML } = require("../utils/zugferdHelper");
-const { postProcessPdfStrict } = require("../utils/postProcessPdfStrict");
 
 
 
-
-const FORCE_PLAN = process.env.FORCE_PLAN || null;
 
 
 

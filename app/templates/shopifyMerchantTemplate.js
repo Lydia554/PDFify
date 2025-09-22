@@ -1,4 +1,6 @@
-const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+const { PDFDocument, rgb } = require("pdf-lib");
+const fs = require("fs");
+const path = require("path");
 
 /**
  * Safely parse numbers
@@ -10,7 +12,6 @@ function parseNumber(value, fallback = 0) {
 
 /**
  * Map Shopify order to simple PDF data
- * Added IBAN/BIC/payment terms placeholders for EN16931 compliance
  */
 function mapOrderToPdfData(order) {
   const items = (order.line_items || []).map(item => {
@@ -29,36 +30,36 @@ function mapOrderToPdfData(order) {
     subtotal: parseNumber(order.subtotal_price),
     tax: parseNumber(order.total_tax),
     total: parseNumber(order.total_price),
-    iban: order.payment?.iban || "DE89370400440532013000",     // placeholder IBAN
-    bic: order.payment?.bic || "COBADEFFXXX",                 // placeholder BIC
-    paymentTerms: order.payment?.terms || "Due within 14 days" // placeholder payment terms
+    iban: order.payment?.iban || "DE89370400440532013000",
+    bic: order.payment?.bic || "COBADEFFXXX",
+    paymentTerms: order.payment?.terms || "Due within 14 days"
   };
 }
 
 /**
- * Draw table cell with optional fill and border
+ * Draw a black-and-white table cell
  */
-function drawCell(page, text, x, y, width, height, font, {
-  size = 10, align = "left", fill = null, bold = false
-} = {}) {
-  if (fill) page.drawRectangle({ x, y, width, height, color: fill });
-
-  let textX = x + 5;
-  if (align === "right") textX = x + width - (text.length * size * 0.5) - 5;
-
-  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
-
+function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left" } = {}) {
+  // Draw black border
   page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5, color: undefined });
+
+  // Draw text
+  let textX = x + 2;
+  if (align === "right") textX = x + width - (text.length * size * 0.5) - 2;
+  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
 }
 
 /**
- * Generate EN16931-compliant Shopify PDF invoice
+ * Generate strict black-and-white Shopify PDF invoice
  */
 async function createShopifyInvoicePdf(order) {
   const data = mapOrderToPdfData(order);
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  // Embed a real TTF font for PDF/A-3b compliance
+  const fontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/Arial.ttf')); // add your TTF file
+  const font = await pdfDoc.embedFont(fontBytes);
 
   let y = 780;
   const lineHeight = 24;
@@ -67,36 +68,33 @@ async function createShopifyInvoicePdf(order) {
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];
 
   // Header section
-  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font });
+  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font });
+  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font });
+  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font });
+  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font });
+  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font });
+  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
   y -= lineHeight * 2;
 
   // Table headers
   let x = 50;
   headers.forEach((header, i) => {
-    drawCell(page, header, x, y, colWidths[i], rowHeight, font, {
-      size: 10, align: i > 1 ? "right" : "left", fill: rgb(0.9,0.9,0.9), bold: true
-    });
+    drawCell(page, header, x, y, colWidths[i], rowHeight, font, { size: 10, align: i > 1 ? "right" : "left" });
     x += colWidths[i];
   });
   y -= rowHeight;
 
   // Item rows
-  data.items.forEach((item, idx) => {
+  data.items.forEach(item => {
     x = 50;
-    const rowFill = idx % 2 === 0 ? rgb(0.96,0.96,0.96) : null;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
     row.forEach((cell, i) => {
-      drawCell(page, cell, x, y, colWidths[i], rowHeight, font, { size: 10, align: i > 1 ? "right" : "left", fill: rowFill });
+      drawCell(page, cell, x, y, colWidths[i], rowHeight, font, { size: 10, align: i > 1 ? "right" : "left" });
       x += colWidths[i];
     });
     y -= rowHeight;
@@ -107,8 +105,8 @@ async function createShopifyInvoicePdf(order) {
   const totalValues = [data.subtotal, data.tax, data.total];
   totalLabels.forEach((label, i) => {
     y -= rowHeight;
-    drawCell(page, label, 50, y, 400, rowHeight, font, { size: label==="Total"?12:10, align:"right", fill: rgb(0.9,0.9,0.9) });
-    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, font, { size: label==="Total"?12:10, align:"right", fill: rgb(0.9,0.9,0.9) });
+    drawCell(page, label, 50, y, 400, rowHeight, font, { size: label==="Total"?12:10, align:"right" });
+    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, font, { size: label==="Total"?12:10, align:"right" });
   });
 
   const pdfBytes = await pdfDoc.save();
