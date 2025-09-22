@@ -1,7 +1,7 @@
 const { PDFDocument, rgb } = require("pdf-lib");
 const fs = require("fs");
 const path = require("path");
-const fontkit = require("@pdf-lib/fontkit"); // <-- required for custom fonts
+const fontkit = require("@pdf-lib/fontkit"); // required for custom fonts
 
 /**
  * Safely parse numbers
@@ -49,20 +49,34 @@ function drawCell(page, text, x, y, width, height, font, { size = 10, align = "l
 
 /**
  * Generate strict black-and-white Shopify PDF invoice
+ * PDF/A-3b compliant with ICC profile
  */
 async function createShopifyInvoicePdf(order) {
   const data = mapOrderToPdfData(order);
   const pdfDoc = await PDFDocument.create();
 
-  // Register fontkit for custom TTF fonts
+  // Register fontkit for embedding TTF
   pdfDoc.registerFontkit(fontkit);
 
-  // Embed Liberation Sans fonts for PDF/A compliance
+  // Embed Liberation Sans fonts
   const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
   const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Bold.ttf'));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
+  // Embed sRGB ICC profile for OutputIntent (PDF/A requirement)
+  const iccProfile = fs.readFileSync(path.resolve(__dirname, './sRGB_v4_ICC_preference.icc'));
+  pdfDoc.catalog.set('OutputIntents', [
+    pdfDoc.context.obj({
+      Type: 'OutputIntent',
+      S: 'GTS_PDFA1',
+      OutputConditionIdentifier: 'sRGB IEC61966-2.1',
+      Info: 'sRGB IEC61966-2.1',
+      DestOutputProfile: pdfDoc.context.stream(iccProfile)
+    })
+  ]);
+
+  // Add page
   const page = pdfDoc.addPage([595, 842]); // A4
   let y = 780;
   const lineHeight = 24;

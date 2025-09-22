@@ -1,7 +1,25 @@
 const { PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const { generateInvoiceHTML_PdfaSafe } = require("./htmlInvoice"); // your updated HTML
-const embedXmp = require("./xmp/embedXmp");
 const fs = require("fs");
+const path = require("path");
+
+/**
+ * Embed PDF/A XMP metadata
+ */
+async function embedXmp(pdfDoc) {
+  const xmpTemplate = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about=""
+      xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`;
+  pdfDoc.setMetadata(xmpTemplate);
+}
 
 /**
  * Generate ZUGFeRD 2.1 XML (EN16931)
@@ -80,11 +98,23 @@ async function createInvoicePDF(invoiceData) {
   // Embed font
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  // Render HTML as text (simplest for now; you can replace with Puppeteer if needed)
+  // Add OutputIntent (ICC profile) for PDF/A
+  const iccProfile = fs.readFileSync(path.resolve(__dirname, './sRGB_v4_ICC_preference.icc'));
+  pdfDoc.catalog.set('OutputIntents', [
+    pdfDoc.context.obj({
+      Type: 'OutputIntent',
+      S: 'GTS_PDFA1',
+      OutputConditionIdentifier: 'sRGB IEC61966-2.1',
+      Info: 'sRGB IEC61966-2.1',
+      DestOutputProfile: pdfDoc.context.stream(iccProfile)
+    })
+  ]);
+
+  // Render HTML as text (simplest)
   const html = await generateInvoiceHTML_PdfaSafe(invoiceData);
   page.drawText("Invoice (see attached ZUGFeRD XML)", { x: 50, y: 800, size: 12, font });
 
-  // Embed XMP metadata
+  // Embed XMP metadata for PDF/A
   await embedXmp(pdfDoc);
 
   // Embed ZUGFeRD XML as attachment
