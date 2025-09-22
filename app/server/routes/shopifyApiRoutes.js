@@ -30,7 +30,7 @@ function formatPrice(amount, currency = "EUR", locale = "de-DE") {
 
 require('dotenv').config();
 
-function generateInvoiceHTML(invoiceData, isPremium, lang, t) {
+function generateCustomerInvoiceHTML(invoiceData, isPremium, lang, t) {
 const {
   shopName,
   date,
@@ -480,8 +480,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
-    const html = await generateInvoiceHTML(htmlData);
-    await page.setContent(html, { waitUntil: "networkidle0" });
+   const html = await generateCustomerInvoiceHTML(htmlData, true, lang, t);
+await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
     await browser.close();
 
