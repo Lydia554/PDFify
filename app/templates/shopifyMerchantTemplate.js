@@ -65,7 +65,7 @@ async function createShopifyInvoicePdf(order) {
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
   // Embed sRGB ICC profile exactly like Ghostscript pipeline
-const iccProfilePath = path.resolve(__dirname, './sRGB_v4_ICC_preference.icc');
+const iccProfilePath = path.resolve(__dirname, '../server/routes/sRGB_v4_ICC_preference.icc');
 const iccProfile = fs.readFileSync(iccProfilePath);
 pdfDoc.catalog.set('OutputIntents', [
   pdfDoc.context.obj({
