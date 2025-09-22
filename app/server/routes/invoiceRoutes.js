@@ -9,7 +9,7 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateZugferdXML, embedIccProfile, embedXmp, embedXmlIntoPdf } = require("../utils/pdf-helpers");
+const { generateZugferdXML, embedIccProfile, embedXmp, embedXmlIntoPdf } = require("../server/Helpers/pdf-helpers");
 const { createShopifyInvoicePdf } = require("../utils/shopifyPdf");
 
 const locales = {
