@@ -1,4 +1,5 @@
 const express = require("express");
+const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -9,8 +10,8 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
-const { embedIccProfile, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
-
+const { generateInvoiceHTML } = require("../../templates/english.js");
+const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf } = require("../Helpers/pdf-helpers");
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -24,6 +25,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
+  let browser;
   try {
     let requests = req.body.requests;
     if (!Array.isArray(requests)) requests = [{ data: req.body.data, isPreview: req.body.isPreview }];
@@ -32,6 +34,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
@@ -42,7 +45,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.country = country || "default";
       invoiceData.locale = locales[lang] || locales["en"];
 
-      // Germany-specific VAT logic
+      // Germany VAT logic
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.items = invoiceData.items.map(item => {
           const totalNum = parseFloat(item.total || 0);
@@ -52,41 +55,64 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         });
       }
 
-      // Tax rate string
       invoiceData.taxRate = typeof invoiceData.taxRate === "number"
         ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
         : invoiceData.taxRate || '21%';
-let pdfDoc = await createShopifyInvoicePdf(invoiceData); 
-let pdfBytes = await pdfDoc.save();
 
-if (user.plan === "pro") {
-  const zugferdXml = generateZugferdXML(invoiceData);
-  pdfBytes = await postProcessPdfStrict(
-    pdfBytes,
-    zugferdXml,
-    {
-      title: `Invoice ${invoiceData.orderId}`,
-      creator: user.email || "Pro User",
-      language: lang || "en"
-    },
-    path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
-  );
-}
+      const page = await browser.newPage();
+      await page.emulateMediaType('print');
 
-const pdfDocFinal = await require("pdf-lib").PDFDocument.load(pdfBytes);
-const pageCount = pdfDocFinal.getPageCount();
+      // User class / logo
+      invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
+      if (user.plan === "free") invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
 
+      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
+      await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
+
+      const pdfBuffer = await page.pdf({
+        format: "A4",
+        printBackground: true,
+        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        displayHeaderFooter: false,
+        tagged: true
+      });
+      await page.close();
+
+      // Count pages
+      const PDFLib = require("pdf-lib");
+      const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
+      const pageCount = pdfDoc.getPageCount();
+
+      // Increment usage
       const usageAllowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
       if (!usageAllowed) {
+        await browser.close();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
         return res.status(403).json({ error: 'Monthly limit reached.' });
       }
 
-      results.push({ pdfBuffer, orderId });
-      console.log(`📄 Invoice ${orderId} generated (${pageCount} page(s))`);
+      let finalPdf = pdfBuffer;
+
+      // Pro users: embed ICC, XMP, and ZUGFeRD
+      if (user.plan === "pro") {
+        const zugferdXml = generateZugferdXML(invoiceData);
+        const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
+
+        await embedIccProfile(pdfDocPro);
+        await embedXmp(pdfDocPro);
+        embedXmlIntoPdf(pdfDocPro, zugferdXml);
+
+        finalPdf = await pdfDocPro.save();
+      }
+
+      results.push({ pdfBuffer: finalPdf, orderId });
+      console.log(`📄 Invoice ${orderId} generated with ${pageCount} page(s).`);
     }
 
     await user.save();
+    await browser.close();
 
+    // Send PDF(s)
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       res.set({
@@ -97,7 +123,7 @@ const pageCount = pdfDocFinal.getPageCount();
       return res.send(pdfBuffer);
     }
 
-    // Multiple invoices → ZIP
+    // Multiple PDFs => ZIP
     const archive = archiver("zip", { zlib: { level: 9 } });
     res.set({
       "Content-Type": "application/zip",
@@ -109,8 +135,11 @@ const pageCount = pdfDocFinal.getPageCount();
 
   } catch (err) {
     console.error("❌ Exception in /generate-invoice:", err);
+    if (browser) await browser.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
     res.status(500).json({ error: "Internal Server Error", details: err.message });
   } finally {
+    if (browser) await browser.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });

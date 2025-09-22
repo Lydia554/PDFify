@@ -14,8 +14,8 @@ const { incrementUsage } = require("../utils/usageUtils");
 
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
 
-const { generateZugferdXML, embedXmp } = require("../Helpers/pdf-helpers");
-const { postProcessPdfStrict } = require("../Helpers/postProcessPdfStrict");
+const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf } = require("../Helpers/pdf-helpers");
+
 
 require('dotenv').config();
 const router = express.Router();
@@ -388,13 +388,12 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       const net = price * quantity;
       const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
       const total = net + tax;
-      return { name: item.title || item.name || "Item", quantity, price, net, tax, total };
+      return { name: item.title || item.name || "Item", quantity, price, net, tax, total, taxRate: 21 };
     });
 
     const subtotal = items.reduce((sum, i) => sum + i.net, 0);
     const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
     const total = subtotal + taxTotal;
-    const vatRate = 21;
     const currency = order.currency || "EUR";
     const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
     const locale = localeMap[lang] || "en-US";
@@ -406,7 +405,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       subtotal,
       tax: taxTotal,
       total,
-      vatRate,
+      vatRate: 21,
       customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
       iban: shopConfig.iban || "DE89370400440532013000",
       bic: shopConfig.bic || "COBADEFFXXX",
@@ -414,31 +413,32 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     };
 
     let pdfBuffer;
+// ----------------------------
+// Merchant PDF (ZUGFeRD / PDF/A-3b)
+// ----------------------------
+if (isMerchant) {
+  // 1️⃣ Create the basic PDF (HTML → PDF)
+  const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
+  const pdfBytes = await pdfDoc.save();
 
-    // ----------------------------
-    // Merchant PDF (ZUGFeRD / PDF/A-3b)
-    // ----------------------------
-    if (isMerchant) {
-      const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
-      const zugferdXml = generateZugferdXML(invoiceData);
-      await embedXmp(pdfDoc);
+  // 2️⃣ Post-process PDF: ICC profile, XMP, ZUGFeRD XML, Trailer ID
+  pdfBuffer = await postProcessPdf(pdfBytes, {
+    ...invoiceData,
+    creator: user.email || "Merchant",
+    locale: { language: lang || "en" },
+  }, path.join(__dirname, "../Helpers/xmp/zugferd.xmp")); // optional template
 
-      const pdfBytes = await pdfDoc.save();
-      pdfBuffer = await postProcessPdfStrict(
-        pdfBytes,
-        zugferdXml,
-        { title: `Invoice ${invoiceData.orderId}`, creator: user.email || "Merchant", language: lang || "en" },
-        path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
-      );
+  // 3️⃣ Increment usage
+  await incrementUsage(user, 1, isPreview);
 
-      await incrementUsage(user, 1, isPreview);
+  // 4️⃣ Send PDF
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
+  });
+  return res.send(pdfBuffer);
+}
 
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
-      });
-      return res.send(pdfBuffer);
-    }
 
     // ----------------------------
     // Customer PDF (HTML / Puppeteer)
@@ -474,7 +474,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
-    const html = generateCustomerInvoiceHTML(htmlData, true, lang, {}); 
+    const html = generateCustomerInvoiceHTML(htmlData, true, lang, {});
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
     await browser.close();
@@ -494,6 +494,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 
 

@@ -9,7 +9,7 @@ const { incrementUsage } = require("../utils/usageUtils");
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
-const { generateZugferdXML, postProcessPdfStrict } = require("../Helpers/pdf-helpers");
+const { generateZugferdXML, embedIccProfile, embedXmp, embedXmlIntoPdf } = require("../Helpers/pdf-helpers");
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
@@ -31,6 +31,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
+  let browser;
   try {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
@@ -65,38 +66,29 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const html = generateHtml(formData);
 
     // Puppeteer PDF generation
-    const pdfDir = path.join(__dirname, '../../pdfs');
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
-    const pdfPath = path.join(pdfDir, `pdf_${Date.now()}.pdf`);
-
-    const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+    const pdfPath = path.join(tmpDir, `pdf_${Date.now()}.pdf`);
+    browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+    let pdfBuffer = await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
     await browser.close();
-
-    let pdfBuffer = fs.readFileSync(pdfPath);
-    let pageCount = 0;
 
     // --- PRO invoices: PDF/A-3b + ZUGFeRD ---
     if (template === 'invoice' && plan === 'pro') {
       const zugferdXml = generateZugferdXML(formData);
-      pdfBuffer = await postProcessPdfStrict(
-        pdfBuffer,
-        zugferdXml,
-        {
-          title: `Invoice ${formData.orderId || 'PDFify'}`,
-          creator: user.email || 'Pro User',
-          language: formData.locale?.language || 'en'
-        },
-        path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
-      );
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+      await embedIccProfile(pdfDoc);
+      await embedXmp(pdfDoc);
+      embedXmlIntoPdf(pdfDoc, zugferdXml);
+
+      pdfBuffer = await pdfDoc.save();
       fs.writeFileSync(pdfPath, pdfBuffer);
     }
 
-    // Load PDF for page count and usage
+    // Page count & usage
     const pdfDocFinal = await PDFDocument.load(pdfBuffer);
-    pageCount = pdfDocFinal.getPageCount();
+    const pageCount = pdfDocFinal.getPageCount();
 
     const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
     if (!usageAllowed) {
@@ -111,8 +103,11 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
   } catch (err) {
     console.error("❌ PDF generation failed:", err);
+    if (browser) await browser.close();
+    fs.rmSync(tmpDir, { recursive: true, force: true });
     res.status(500).json({ error: 'PDF generation failed', details: err.message });
   } finally {
+    if (browser) await browser.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
