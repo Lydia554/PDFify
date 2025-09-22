@@ -9,8 +9,8 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
-const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
-const { createShopifyInvoicePdf } = require("../utils/shopifyPdf");
+const { embedIccProfile, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
+const { createShopifyInvoicePdf } = require("../utils/shopifyPdf"); // your new helper
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -60,10 +60,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       // Generate PDF using the new helper
       let pdfBuffer = await createShopifyInvoicePdf(invoiceData);
 
-      // Embed ICC, XMP, and ZUGFeRD XML for pro users
+      // Pro users: embed ICC profile + ZUGFeRD XML directly
       if (user.plan === "pro") {
-        embedIccProfile(pdfBuffer); // embed OutputIntent
-        embedXmp(pdfBuffer, path.resolve(__dirname, "../server/xmp/zugferd.xmp"));
+        embedIccProfile(pdfBuffer);
         const zugferdXml = generateZugferdXML(invoiceData);
         embedXmlIntoPdf(pdfBuffer, zugferdXml);
       }
