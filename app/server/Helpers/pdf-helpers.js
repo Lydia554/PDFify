@@ -8,7 +8,8 @@ const { PDFDocument, PDFName } = require("pdf-lib");
  * Embed ICC profile for PDF/A compliance
  */
 async function embedIccProfile(pdfDoc) {
-const iccPath = path.resolve(__dirname, "./routes/sRGB2014.icc");
+const iccPath = path.resolve(__dirname, "sRGB2014.icc");
+
 
   const iccBytes = fs.readFileSync(iccPath);
 
@@ -22,7 +23,7 @@ const iccPath = path.resolve(__dirname, "./routes/sRGB2014.icc");
         Type: PDFName.of("OutputIntent"),
         S: PDFName.of("GTS_PDFA1"),
         OutputConditionIdentifier: "sRGB2014",
-        Info: "sRGB IEC61966-2.1",
+        Info: "sRGB2014",
         DestOutputProfile: iccRef,
       }),
     ])
@@ -34,8 +35,12 @@ const iccPath = path.resolve(__dirname, "./routes/sRGB2014.icc");
  */
 async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
+  let xmpContent;
 
-  let xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+  if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
+    xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
+  } else {
+    xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=""
@@ -51,6 +56,7 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end='w'?>`;
+  }
 
   xmpContent = Buffer.from(xmpContent, "utf8");
 
@@ -62,6 +68,7 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
 }
+
 
 /**
  * Embed ZUGFeRD XML into PDF
