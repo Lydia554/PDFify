@@ -366,7 +366,13 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       order = resp.data.order;
     }
 
-    if (!order || !order.line_items) return res.status(400).json({ error: "Invalid or missing order data" });
+   if (!order || !order.line_items) {
+  console.error("❌ Invalid or missing order data:", order);
+  return res.status(400).json({ error: "Invalid or missing order data" });
+}
+
+console.log("✅ Shopify order fetched:", JSON.stringify(order, null, 2));
+
 
     const shopConfig = (await ShopConfig.findOne({ shopDomain })) || {};
     const { lang } = await resolveLanguage({ req, order, shopDomain, shopConfig });
@@ -406,6 +412,11 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       bic: shopConfig.bic || "COBADEFFXXX",
       paymentTerms: order.payment?.terms || "Due within 14 days",
     };
+
+
+    const pdfData = mapOrderToPdfData(order);
+console.log("✅ PDF data mapped from Shopify order:", JSON.stringify(pdfData, null, 2));
+
 
     let pdfBuffer;
 
