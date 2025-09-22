@@ -367,7 +367,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     if (!order || !order.line_items) {
-      console.error("❌ Invalid or missing order data:", order);
       return res.status(400).json({ error: "Invalid or missing order data" });
     }
 
@@ -415,11 +414,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     let pdfBuffer;
 
     // ----------------------------
-    // Merchant PDF (ZUGFeRD / PDF/A-3b)
+    // Merchant PDF (PDF-lib + ZUGFeRD / PDF/A-3b)
     // ----------------------------
     if (isMerchant) {
       pdfBuffer = await createShopifyInvoiceZugferd(order);
-
       await incrementUsage(user, 1, isPreview);
 
       res.set({
@@ -430,7 +428,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     // ----------------------------
-    // Customer PDF (HTML / Puppeteer + PDF/A-3b)
+    // Customer PDF (Puppeteer HTML → PDF)
     // ----------------------------
     if (!shopConfig.allowCustomerPDF) {
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
@@ -455,40 +453,20 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       fallbackLogoUrl: "/assets/default-logo.png",
     };
 
-    // 1️⃣ Generate PDF via Puppeteer
-    const pdfDir = path.join(__dirname, "../pdfs");
-    if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
-
-    const tempPdfPath = path.join(pdfDir, `temp-${order.id}.pdf`);
-    const finalPdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
-
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     const html = generateCustomerInvoiceHTML(htmlData, true, lang, {});
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: tempPdfPath, format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
+
+    // Generate PDF directly from Puppeteer
+    pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: 40, bottom: 40, left: 40, right: 40 },
+    });
+
     await browser.close();
-
-    let tempPdfBytes = fs.readFileSync(tempPdfPath);
-
-    // 2️⃣ Post-process via pdf-lib
-    const { postProcessPdf } = require("../utils/pdf-helpers"); // your pdf-helpers.js
-    const postProcessedPdf = await postProcessPdf(tempPdfBytes, invoiceData);
-
-    fs.writeFileSync(finalPdfPath, postProcessedPdf);
-
-    // 3️⃣ Run Ghostscript to enforce PDF/A-3b compliance
-    const { execSync } = require("child_process");
-    const gsOutputPath = path.join(pdfDir, `PDF_A3B-${order.id}.pdf`);
-    execSync(`gs -dPDFA=3 -dBATCH -dNOPAUSE -sProcessColorModel=DeviceRGB -sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile="${gsOutputPath}" "${finalPdfPath}"`);
-
-    pdfBuffer = fs.readFileSync(gsOutputPath);
-
     await incrementUsage(user, 1, isPreview);
-
-    // Cleanup temp files
-    fs.unlinkSync(tempPdfPath);
-    fs.unlinkSync(finalPdfPath);
 
     res.set({
       "Content-Type": "application/pdf",
@@ -501,8 +479,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
-
-
 
 router.get("/connection", authenticate, dualAuth, async (req, res) => {
 
