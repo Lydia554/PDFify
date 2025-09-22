@@ -4,7 +4,7 @@ const fs = require("fs");
 const axios = require("axios");
 const ShopConfig = require("../models/ShopConfig");
 const User = require("../models/User"); 
-
+const puppeteer = require("puppeteer");
 const authenticate = require("../middleware/authenticate"); 
 const dualAuth = require("../middleware/dualAuth");
 const {resolveShopifyToken} = require("../utils/shopifyHelpers");
@@ -12,6 +12,8 @@ const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
+const { embedIccProfile, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
+
 
 
 
@@ -342,9 +344,6 @@ const premiumTemplate = `
 
 }
 
-// ----------------------------
-// /invoice POST route
-// ----------------------------
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -398,9 +397,17 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         // Generate ZUGFeRD XML for compliance
         const zugferdXml = generateZugferdXML(order);
 
-        // Generate merchant PDF (no images/logos)
-        pdfBuffer = await createShopifyInvoiceZugferd(order);
+        // Generate PDFDocument from template
+        const pdfDoc = await createShopifyInvoiceZugferd(order);
 
+        // Embed ICC profile for PDF/A
+        await embedIccProfile(pdfDoc);
+
+        // Embed ZUGFeRD XML into PDF
+        embedXmlIntoPdf(pdfDoc, zugferdXml);
+
+        // Save final PDF buffer
+        pdfBuffer = await pdfDoc.save();
 
         // Increment usage (1 page by default)
         await incrementUsage(user, 1, isPreview);
@@ -412,6 +419,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
             : `attachment; filename=${order.name || order.id}.pdf`,
         });
         return res.send(pdfBuffer);
+
       } catch (err) {
         console.error("❌ Merchant PDF generation failed:", err);
         return res.status(500).json({ error: "Failed to generate merchant PDF" });
@@ -478,10 +486,9 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     };
 
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
-    const browser = await require("puppeteer").launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     const html = generateInvoiceHTML(invoiceData, user.isPremium, lang, t);
-    console.log("🔹 Customer PDF HTML length:", html.length);
 
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({
