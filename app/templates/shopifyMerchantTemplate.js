@@ -48,8 +48,7 @@ function drawCell(page, text, x, y, width, height, font, { size = 10, align = "l
 }
 
 /**
- * Generate strict black-and-white Shopify PDF invoice
- * PDF/A-3b compliant with ICC profile
+ * Generate strict black-and-white Shopify PDF invoice with ICC profile for PDF/A
  */
 async function createShopifyInvoicePdf(order) {
   const data = mapOrderToPdfData(order);
@@ -59,24 +58,26 @@ async function createShopifyInvoicePdf(order) {
   pdfDoc.registerFontkit(fontkit);
 
   // Embed Liberation Sans fonts
-  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
-  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Bold.ttf'));
+  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './LiberationSans-Regular.ttf'));
+  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './LiberationSans-Bold.ttf'));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-  // Embed sRGB ICC profile exactly like Ghostscript pipeline
-const iccProfilePath = path.resolve(__dirname, '../server/routes/sRGB_v4_ICC_preference.icc');
-const iccProfile = fs.readFileSync(iccProfilePath);
-pdfDoc.catalog.set('OutputIntents', [
-  pdfDoc.context.obj({
-    Type: 'OutputIntent',
-    S: 'GTS_PDFA1',
-    OutputConditionIdentifier: 'sRGB IEC61966-2.1',
-    Info: 'sRGB IEC61966-2.1',
-    DestOutputProfile: pdfDoc.context.stream(iccProfile)
-  })
-]);
+  // Embed sRGB ICC profile for OutputIntent
+  const iccPath = path.resolve(__dirname, './sRGB_v4_ICC_preference.icc');
+  const iccBytes = fs.readFileSync(iccPath);
+  const iccStream = pdfDoc.context.flateStream(iccBytes);
+  const iccRef = pdfDoc.context.register(iccStream);
 
+  pdfDoc.catalog.set('OutputIntents', [
+    pdfDoc.context.obj({
+      Type: 'OutputIntent',
+      S: 'GTS_PDFA1',
+      OutputConditionIdentifier: 'sRGB IEC61966-2.1',
+      Info: 'sRGB IEC61966-2.1',
+      DestOutputProfile: iccRef
+    })
+  ]);
 
   // Add page
   const page = pdfDoc.addPage([595, 842]); // A4
