@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1">
+  <rsm:ExchangedDocument>
+    <ram:ID>ORDER12345</ram:ID>
+    <ram:IssueDateTime>2025-09-22</ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+
+  <rsm:SupplyChainTradeTransaction>
+    <ram:IncludedSupplyChainTradeLineItem>
+      <ram:AssociatedDocumentLineDocument>
+        <ram:LineID>1</ram:LineID>
+      </ram:AssociatedDocumentLineDocument>
+      <ram:SpecifiedTradeProduct>
+        <ram:Name>Product A</ram:Name>
+      </ram:SpecifiedTradeProduct>
+      <ram:SpecifiedLineTradeSettlement>
+        <ram:ApplicableTradeTax>
+          <ram:CalculatedAmount>2.10</ram:CalculatedAmount>
+          <ram:TypeCode>VAT</ram:TypeCode>
+          <ram:CategoryCode>S</ram:CategoryCode>
+          <ram:RateApplicablePercent>21</ram:RateApplicablePercent>
+        </ram:ApplicableTradeTax>
+        <ram:TradeSettlementLineAmount>12.10</ram:TradeSettlementLineAmount>
+        <ram:NetLineAmount>10.00</ram:NetLineAmount>
+      </ram:SpecifiedLineTradeSettlement>
+    </ram:IncludedSupplyChainTradeLineItem>
+
+    <!-- Totals summary -->
+    <ram:SpecifiedTradeSettlementHeader>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>2.10</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        <ram:CategoryCode>S</ram:CategoryCode>
+        <ram:RateApplicablePercent>21</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+      <ram:LineTotalAmount>10.00</ram:LineTotalAmount>
+      <ram:GrandTotalAmount>12.10</ram:GrandTotalAmount>
+    </ram:SpecifiedTradeSettlementHeader>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>
