@@ -1,7 +1,9 @@
-const { PDFDocument, rgb } = require("pdf-lib");
+// shopify-zugferd-template.js
 const fs = require("fs");
 const path = require("path");
-const fontkit = require("@pdf-lib/fontkit"); // required for custom fonts
+const { PDFDocument, rgb } = require("pdf-lib");
+const fontkit = require("@pdf-lib/fontkit");
+const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML } = require("./Helpers/pdf-helpers");
 
 /**
  * Safely parse numbers
@@ -12,10 +14,10 @@ function parseNumber(value, fallback = 0) {
 }
 
 /**
- * Map Shopify order to simple PDF data
+ * Map Shopify order to PDF-ready data
  */
 function mapOrderToPdfData(order) {
-  const items = (order.line_items || []).map(item => {
+  const items = (order.line_items || []).map((item) => {
     const price = parseNumber(item.price);
     const quantity = parseNumber(item.quantity, 1);
     const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseNumber(t.price), 0);
@@ -33,54 +35,37 @@ function mapOrderToPdfData(order) {
     total: parseNumber(order.total_price),
     iban: order.payment?.iban || "DE89370400440532013000",
     bic: order.payment?.bic || "COBADEFFXXX",
-    paymentTerms: order.payment?.terms || "Due within 14 days"
+    paymentTerms: order.payment?.terms || "Due within 14 days",
+    vatRate: 21, // default VAT rate for ZUGFeRD
   };
 }
 
 /**
- * Draw a black-and-white table cell
+ * Draw table cell
  */
 function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left" } = {}) {
-  page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5, color: undefined });
+  page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5 });
   let textX = x + 2;
   if (align === "right") textX = x + width - (text.length * size * 0.5) - 2;
   page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
 }
 
 /**
- * Generate strict black-and-white Shopify PDF invoice with ICC profile for PDF/A
+ * Generate Shopify PDF invoice with ZUGFeRD / PDF/A-3b support
  */
-async function createShopifyInvoicePdf(order) {
+async function createShopifyInvoiceZugferd(order) {
   const data = mapOrderToPdfData(order);
   const pdfDoc = await PDFDocument.create();
-
-  // Register fontkit for custom TTF fonts
   pdfDoc.registerFontkit(fontkit);
 
-  // Embed Liberation Sans fonts
- const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
+  // Embed fonts
+  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
   const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Bold.ttf'));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-  // Embed sRGB ICC profile for OutputIntent
-  const iccPath = path.resolve(__dirname, './sRGB_v4_ICC_preference.icc');
-  const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.flateStream(iccBytes);
-  const iccRef = pdfDoc.context.register(iccStream);
-
-  pdfDoc.catalog.set('OutputIntents', [
-    pdfDoc.context.obj({
-      Type: 'OutputIntent',
-      S: 'GTS_PDFA1',
-      OutputConditionIdentifier: 'sRGB IEC61966-2.1',
-      Info: 'sRGB IEC61966-2.1',
-      DestOutputProfile: iccRef
-    })
-  ]);
-
-  // Add page
-  const page = pdfDoc.addPage([595, 842]); // A4
+  // Add A4 page
+  const page = pdfDoc.addPage([595, 842]);
   let y = 780;
   const lineHeight = 24;
   const rowHeight = 24;
@@ -88,17 +73,17 @@ async function createShopifyInvoicePdf(order) {
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];
 
   // Header section
-  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0,0,0) });
+  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font: boldFont });
   y -= lineHeight;
-  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
+  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font: regularFont });
   y -= lineHeight;
-  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
+  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font: regularFont });
   y -= lineHeight;
-  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
+  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font: regularFont });
   y -= lineHeight;
-  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
+  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font: regularFont });
   y -= lineHeight;
-  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
+  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font: regularFont });
   y -= lineHeight * 2;
 
   // Table headers
@@ -109,8 +94,8 @@ async function createShopifyInvoicePdf(order) {
   });
   y -= rowHeight;
 
-  // Item rows
-  data.items.forEach(item => {
+  // Table rows
+  data.items.forEach((item) => {
     x = 50;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
     row.forEach((cell, i) => {
@@ -125,12 +110,18 @@ async function createShopifyInvoicePdf(order) {
   const totalValues = [data.subtotal, data.tax, data.total];
   totalLabels.forEach((label, i) => {
     y -= rowHeight;
-    drawCell(page, label, 50, y, 400, rowHeight, boldFont, { size: label==="Total"?12:10, align:"right" });
-    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, boldFont, { size: label==="Total"?12:10, align:"right" });
+    drawCell(page, label, 50, y, 400, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right" });
+    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right" });
   });
+
+  // Embed PDF/A and ZUGFeRD
+  await embedIccProfile(pdfDoc);
+  await embedXmp(pdfDoc);
+  const xmlContent = generateZugferdXML(data);
+  embedXmlIntoPdf(pdfDoc, xmlContent);
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }
 
-module.exports = { createShopifyInvoicePdf };
+module.exports = { createShopifyInvoiceZugferd };

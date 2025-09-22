@@ -30,7 +30,7 @@ async function getBase64Image(url) {
  * @param {Object} data 
  * @returns {Promise<string>}
  */
-async function generateInvoiceHTML_PdfaSafe(data) {
+async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
@@ -162,4 +162,4 @@ async function generateInvoiceHTML_PdfaSafe(data) {
   `;
 }
 
-module.exports = { generateInvoiceHTML_PdfaSafe, getBase64Image };
+module.exports = { generateInvoiceHTML, getBase64Image };

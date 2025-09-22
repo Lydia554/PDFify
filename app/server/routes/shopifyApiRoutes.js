@@ -1,5 +1,4 @@
 const express = require("express");
-const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const axios = require("axios");
@@ -12,8 +11,8 @@ const {resolveShopifyToken} = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
-const { createShopifyInvoicePdf } = require("../../templates/shopifyMerchantTemplate");
-const { generateZugferdXML } = require("../utils/zugferdHelper");
+const { createShopifyInvoiceZugferd } = require("../shopify-zugferd-template");
+
 
 
 
@@ -400,7 +399,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         const zugferdXml = generateZugferdXML(order);
 
         // Generate merchant PDF (no images/logos)
-        pdfBuffer = await createShopifyInvoicePdf(order, { merchant: true }, zugferdXml);
+        pdfBuffer = await createShopifyInvoiceZugferd(order);
+
 
         // Increment usage (1 page by default)
         await incrementUsage(user, 1, isPreview);
