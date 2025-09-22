@@ -36,34 +36,30 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
-    const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
-
-    xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+    xmpContent = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about=""
-        xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-        xmlns:dc="http://purl.org/dc/elements/1.1/"
-        pdfaid:part="3"
-        pdfaid:conformance="B">
-      <dc:title>${title}</dc:title>
-      <dc:creator>${creator}</dc:creator>
-      <dc:language>${language}</dc:language>
+    <rdf:Description rdf:about='' xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end='w'?>`;
   }
 
-  // Ensure UTF-8 without BOM
-  xmpContent = Buffer.from(xmpContent, "utf8").toString("utf8");
+  const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
+  xmpContent = xmpContent
+    .replace(/<dc:title>.*<\/dc:title>/, `<dc:title>${title}</dc:title>`)
+    .replace(/<dc:creator>.*<\/dc:creator>/, `<dc:creator>${creator}</dc:creator>`)
+    .replace(/<dc:language>.*<\/dc:language>/, `<dc:language>${language}</dc:language>`);
+
+  if (!xmpContent.startsWith("\uFEFF")) xmpContent = "\uFEFF" + xmpContent;
 
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
   });
-
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
 }
@@ -73,21 +69,15 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
  */
 function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   const xmlBuffer = Buffer.from(xmlContent, "utf8");
-
-  // Use stream instead of flateStream
-  const xmlStream = pdfDoc.context.stream(xmlBuffer, {
-    Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("application/xml"),
-  });
-  const xmlRef = pdfDoc.context.register(xmlStream);
+  const xmlStream = pdfDoc.context.flateStream(xmlBuffer);
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
     F: fileName,
     UF: fileName,
-    Desc: "ZUGFeRD Invoice XML",
-    EF: pdfDoc.context.obj({ F: xmlRef, UF: xmlRef }),
     AFRelationship: PDFName.of("Data"),
+    Desc: "ZUGFeRD Invoice XML",
+    EF: pdfDoc.context.obj({ F: xmlStream }),
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
@@ -95,7 +85,6 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
 
   return fileSpecRef;
 }
-
 
 /**
  * Generate minimal ZUGFeRD XML
@@ -144,18 +133,17 @@ async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   const zugferdXml = generateZugferdXML(invoiceData);
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  // Embed XMP metadata
+  // Embed XMP metadata (dynamic or template)
   await embedXmp(pdfDoc, xmpTemplatePath, {
     title: `Invoice ${invoiceData.orderId || "PDFify"}`,
     creator: invoiceData.creator || "PDFify",
-    language: invoiceData.locale?.language || "en",
+    language: invoiceData.locale?.language || "en"
   });
 
-  // Correct Trailer ID: raw 16-byte array
-  const id = crypto.randomBytes(16);
-  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id, id]));
+  // Add Trailer ID for strict PDF/A-3b
+  const id = crypto.randomBytes(16).toString("hex");
+  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([PDFName.of(id), PDFName.of(id)]));
 
-  // Save PDF without object streams (required by VeraPDF for strict PDF/A-3b)
   return await pdfDoc.save({ useObjectStreams: false });
 }
 
@@ -164,5 +152,5 @@ module.exports = {
   embedXmp,
   embedXmlIntoPdf,
   generateZugferdXML,
-  postProcessPdf,
+  postProcessPdf
 };
