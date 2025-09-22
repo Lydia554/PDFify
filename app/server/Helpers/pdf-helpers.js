@@ -29,57 +29,61 @@ async function embedIccProfile(pdfDoc) {
 }
 
 /**
- * Embed dynamic XMP metadata or fallback (PDF/A-3b safe)
+ * Embed dynamic XMP metadata or fallback
  */
 async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   let xmpContent = "";
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
+    const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
+
     xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about='' xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
+    <rdf:Description rdf:about=""
+        xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        pdfaid:part="3"
+        pdfaid:conformance="B">
+      <dc:title>${title}</dc:title>
+      <dc:creator>${creator}</dc:creator>
+      <dc:language>${language}</dc:language>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end='w'?>`;
   }
 
-  const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
-  xmpContent = xmpContent
-    .replace(/<dc:title>.*<\/dc:title>/, `<dc:title>${title}</dc:title>`)
-    .replace(/<dc:creator>.*<\/dc:creator>/, `<dc:creator>${creator}</dc:creator>`)
-    .replace(/<dc:language>.*<\/dc:language>/, `<dc:language>${language}</dc:language>`);
-
-  // Remove BOM for PDF/A-3b
-  xmpContent = xmpContent.replace(/^\uFEFF/, "");
+  // Ensure UTF-8 without BOM
+  xmpContent = Buffer.from(xmpContent, "utf8").toString("utf8");
 
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
   });
+
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
 }
 
 /**
- * Embed ZUGFeRD XML into PDF (strict PDF/A-3b)
+ * Embed ZUGFeRD XML into PDF
  */
 function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   const xmlBuffer = Buffer.from(xmlContent, "utf8");
   const xmlStream = pdfDoc.context.flateStream(xmlBuffer);
-  const xmlStreamRef = pdfDoc.context.register(xmlStream); // indirect stream
+  const xmlStreamRef = pdfDoc.context.register(xmlStream);
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
     F: fileName,
     UF: fileName,
-    AFRelationship: PDFName.of("Data"),
     Desc: "ZUGFeRD Invoice XML",
-    EF: pdfDoc.context.obj({ F: xmlStreamRef }), // reference indirect stream
+    EF: pdfDoc.context.obj({ F: xmlStreamRef }),
+    AFRelationship: PDFName.of("Data"),
+    Subtype: PDFName.of("application/xml"), // MIME type required by PDF/A-3b
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
@@ -135,17 +139,18 @@ async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   const zugferdXml = generateZugferdXML(invoiceData);
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  // Embed XMP metadata (dynamic or template)
+  // Embed XMP metadata
   await embedXmp(pdfDoc, xmpTemplatePath, {
     title: `Invoice ${invoiceData.orderId || "PDFify"}`,
     creator: invoiceData.creator || "PDFify",
-    language: invoiceData.locale?.language || "en"
+    language: invoiceData.locale?.language || "en",
   });
 
-  // Add Trailer ID for strict PDF/A-3b
-  const id = crypto.randomBytes(16).toString("hex");
-  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([PDFName.of(id), PDFName.of(id)]));
+  // Correct Trailer ID: raw 16-byte array
+  const id = crypto.randomBytes(16);
+  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id, id]));
 
+  // Save PDF without object streams (required by VeraPDF for strict PDF/A-3b)
   return await pdfDoc.save({ useObjectStreams: false });
 }
 
@@ -154,5 +159,5 @@ module.exports = {
   embedXmp,
   embedXmlIntoPdf,
   generateZugferdXML,
-  postProcessPdf
+  postProcessPdf,
 };
