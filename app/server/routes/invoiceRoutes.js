@@ -56,20 +56,26 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.taxRate = typeof invoiceData.taxRate === "number"
         ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
         : invoiceData.taxRate || '21%';
+let pdfDoc = await createShopifyInvoicePdf(invoiceData); 
+let pdfBytes = await pdfDoc.save();
 
-      // Generate PDF using the new helper
-      let pdfBuffer = await createShopifyInvoicePdf(invoiceData);
+if (user.plan === "pro") {
+  const zugferdXml = generateZugferdXML(invoiceData);
+  pdfBytes = await postProcessPdfStrict(
+    pdfBytes,
+    zugferdXml,
+    {
+      title: `Invoice ${invoiceData.orderId}`,
+      creator: user.email || "Pro User",
+      language: lang || "en"
+    },
+    path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
+  );
+}
 
-      // Pro users: embed ICC profile + ZUGFeRD XML directly
-      if (user.plan === "pro") {
-        embedIccProfile(pdfBuffer);
-        const zugferdXml = generateZugferdXML(invoiceData);
-        embedXmlIntoPdf(pdfBuffer, zugferdXml);
-      }
+const pdfDocFinal = await require("pdf-lib").PDFDocument.load(pdfBytes);
+const pageCount = pdfDocFinal.getPageCount();
 
-      // Count pages for usage
-      const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
-      const pageCount = pdfDoc.getPageCount();
       const usageAllowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
       if (!usageAllowed) {
         return res.status(403).json({ error: 'Monthly limit reached.' });

@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const puppeteer = require('puppeteer');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
-
-const { embedIccProfile, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
+const { generateZugferdXML, postProcessPdfStrict } = require("../Helpers/pdf-helpers");
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
@@ -27,6 +27,9 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
   const templateConfig = templates[template];
   if (!templateConfig) return res.status(400).json({ error: 'Invalid template' });
+
+  const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
+  fs.mkdirSync(tmpDir, { recursive: true });
 
   try {
     const user = await User.findById(req.user.userId);
@@ -61,7 +64,7 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const generateHtml = templateConfig.fn(isPremiumRender);
     const html = generateHtml(formData);
 
-    // Generate PDF
+    // Puppeteer PDF generation
     const pdfDir = path.join(__dirname, '../../pdfs');
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
     const pdfPath = path.join(pdfDir, `pdf_${Date.now()}.pdf`);
@@ -69,35 +72,48 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     const browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    await page.pdf({ path: pdfPath, format: 'A4' });
+    await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
     await browser.close();
 
     let pdfBuffer = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-    const pageCount = pdfDoc.getPageCount();
+    let pageCount = 0;
 
-    // Increment usage
+    // --- PRO invoices: PDF/A-3b + ZUGFeRD ---
+    if (template === 'invoice' && plan === 'pro') {
+      const zugferdXml = generateZugferdXML(formData);
+      pdfBuffer = await postProcessPdfStrict(
+        pdfBuffer,
+        zugferdXml,
+        {
+          title: `Invoice ${formData.orderId || 'PDFify'}`,
+          creator: user.email || 'Pro User',
+          language: formData.locale?.language || 'en'
+        },
+        path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
+      );
+      fs.writeFileSync(pdfPath, pdfBuffer);
+    }
+
+    // Load PDF for page count and usage
+    const pdfDocFinal = await PDFDocument.load(pdfBuffer);
+    pageCount = pdfDocFinal.getPageCount();
+
     const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
     if (!usageAllowed) {
       fs.unlinkSync(pdfPath);
       return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
     }
 
-    // --- PRO INVOICES: PDF/A-3b + ZUGFeRD ---
-    if (template === 'invoice' && plan === 'pro') {
-      await embedIccProfile(pdfDoc); // OutputIntent
-      embedXmlIntoPdf(pdfDoc, generateZugferdXML(formData));
-      pdfBuffer = await pdfDoc.save();
-      fs.writeFileSync(pdfPath, pdfBuffer);
-    }
-
+    // Send PDF
     res.download(pdfPath, err => {
       fs.unlinkSync(pdfPath);
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'PDF generation failed' });
+    console.error("❌ PDF generation failed:", err);
+    res.status(500).json({ error: 'PDF generation failed', details: err.message });
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   }
 });
 

@@ -13,6 +13,8 @@ require('dotenv').config();
 const { incrementUsage } = require("../utils/usageUtils");
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
 const { embedIccProfile, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
+const { postProcessPdfStrict } = require("../Helpers/postProcessPdfStrict");
+
 
 
 
@@ -347,6 +349,9 @@ const premiumTemplate = `
 
 
 
+// ----------------------------
+// Generate invoice PDF
+// ----------------------------
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -364,23 +369,18 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         orderId = orderId.split("/").pop();
       }
 
-      try {
-        const resp = await axios.get(`https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`, {
-          headers: { "X-Shopify-Access-Token": token },
-        });
-        order = resp.data.order;
-      } catch (err) {
-        console.error("❌ Failed to fetch order:", err.response?.data || err.message);
-        return res.status(500).json({ error: "Failed to fetch order from Shopify" });
-      }
+      const resp = await axios.get(`https://${shopDomain}/admin/api/2023-10/orders/${orderId}.json`, {
+        headers: { "X-Shopify-Access-Token": token },
+      });
+      order = resp.data.order;
     }
 
     if (!order || !order.line_items) return res.status(400).json({ error: "Invalid or missing order data" });
 
     const shopConfig = (await ShopConfig.findOne({ shopDomain })) || {};
-    const { lang, t } = await resolveLanguage({ req, order, shopDomain, shopConfig });
+    const { lang } = await resolveLanguage({ req, order, shopDomain, shopConfig });
 
-    let user = req.user?.userId
+    const user = req.user?.userId
       ? await User.findById(req.user.userId)
       : await User.findOne({ connectedShopDomain: shopDomain });
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -388,15 +388,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const isPreview = req.query.preview === "true";
     const isMerchant = req.query.merchant === "true";
 
-    // ----------------------------
-    // Map Shopify order to unified invoice data
-    // ----------------------------
-    const quantitySafe = (q) => parseFloat(q || 1);
-    const priceSafe = (p) => parseFloat(p || 0);
-
-    const items = (order.line_items || []).map((item) => {
-      const quantity = quantitySafe(item.quantity);
-      const price = priceSafe(item.price);
+    // Map order items
+    const items = (order.line_items || []).map((item, idx) => {
+      const quantity = parseFloat(item.quantity || 1);
+      const price = parseFloat(item.price || 0);
       const net = price * quantity;
       const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
       const total = net + tax;
@@ -413,7 +408,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const subtotal = items.reduce((sum, i) => sum + i.net, 0);
     const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
     const total = subtotal + taxTotal;
-
     const vatRate = 21;
 
     const invoiceData = {
@@ -425,9 +419,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       total,
       vatRate,
       customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
-   iban: shopConfig.iban || "DE89370400440532013000",
-bic: shopConfig.bic || "COBADEFFXXX",
-
+      iban: shopConfig.iban || "DE89370400440532013000",
+      bic: shopConfig.bic || "COBADEFFXXX",
       paymentTerms: order.payment?.terms || "Due within 14 days",
     };
 
@@ -437,37 +430,44 @@ bic: shopConfig.bic || "COBADEFFXXX",
     // Merchant PDF (ZUGFeRD / PDF/A-3b)
     // ----------------------------
     if (isMerchant) {
-      try {
-        console.log("🔹 Generating merchant PDF for user:", user.email);
+      const zugferdXml = generateZugferdXML(invoiceData);
 
-        const zugferdXml = generateZugferdXML(invoiceData);
+      // Generate PDFDocument from template
+      const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
 
-        // Generate PDFDocument from template
-        const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
+  
 
-        // Embed ICC profile for PDF/A
-        await embedIccProfile(pdfDoc);
+      // Embed XMP metadata
+      await embedXmp(pdfDoc);
 
-        // Embed ZUGFeRD XML into PDF
-        embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-        pdfBuffer = await pdfDoc.save();
+      // Save initial PDF bytes from template
+let pdfBytes = await pdfDoc.save();
 
-        // Increment usage (1 page by default)
-        await incrementUsage(user, 1, isPreview);
+// Post-process for strict PDF/A-3b with ZUGFeRD XML
+pdfBuffer = await postProcessPdfStrict(
+  pdfBytes,
+  zugferdXml,
+  {
+    title: `Invoice ${invoiceData.orderId}`,
+    creator: user.email || "Merchant",
+    language: lang || "en"
+  },
+  path.join(__dirname, "../Helpers/xmp/zugferd.xmp") 
+);
 
-        res.set({
-          "Content-Type": "application/pdf",
-          "Content-Disposition": isPreview
-            ? "inline"
-            : `attachment; filename=${invoiceData.orderId}.pdf`,
-        });
-        return res.send(pdfBuffer);
+     
 
-      } catch (err) {
-        console.error("❌ Merchant PDF generation failed:", err);
-        return res.status(500).json({ error: "Failed to generate merchant PDF" });
-      }
+      // Increment usage
+      await incrementUsage(user, 1, isPreview);
+
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": isPreview
+          ? "inline"
+          : `attachment; filename=${invoiceData.orderId}.pdf`,
+      });
+      return res.send(pdfBuffer);
     }
 
     // ----------------------------
@@ -484,7 +484,6 @@ bic: shopConfig.bic || "COBADEFFXXX",
     const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
     const locale = localeMap[lang] || "en-US";
 
-    // Format numbers for HTML PDF
     const formattedItems = items.map(i => ({
       ...i,
       formattedPrice: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.price),
@@ -535,17 +534,6 @@ bic: shopConfig.bic || "COBADEFFXXX",
   }
 });
 
-
-router.get("/connection", authenticate, dualAuth, async (req, res) => {
-
-  try {
-    const connectedShopDomain = req.fullUser.connectedShopDomain || null;
-    res.json({ connectedShopDomain });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to fetch Shopify connection" });
-  }
-});
 
 
 router.post("/connect", authenticate, dualAuth, async (req, res) => {
