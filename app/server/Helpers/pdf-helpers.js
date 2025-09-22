@@ -1,7 +1,6 @@
-// pdf-helpers.js
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 
 /**
  * Embed ICC profile for PDF/A compliance
@@ -28,16 +27,16 @@ async function embedIccProfile(pdfDoc) {
 }
 
 /**
- * Embed XMP metadata with PDF/A-3b schema
+ * Embed XMP metadata
  */
 async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
-  let xmpContent;
 
+  let xmpContent;
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
-    xmpContent = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
+    xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=""
@@ -79,20 +78,11 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
     Desc: PDFHexString.fromText("ZUGFeRD Invoice XML"),
     AFRelationship: PDFName.of("Data"),
     EF: pdfDoc.context.obj({ F: xmlStreamRef }),
-    Subtype: PDFName.of("XML"), 
+    Subtype: PDFName.of("application/xml"),
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
-
-  
-  const hexId = PDFHexString.fromText(
-    Math.random().toString(36).slice(2, 18) + Math.random().toString(36).slice(2, 18)
-  );
-
-  if (!pdfDoc.context.trailer.has(PDFName.of("ID"))) {
-    pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([hexId, hexId]));
-  }
 
   return fileSpecRef;
 }
@@ -108,7 +98,9 @@ function generateZugferdXML(invoiceData) {
     <ram:IssueDateTime>${invoiceData.date}</ram:IssueDateTime>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
-    ${invoiceData.items?.map((item, idx) => `
+    ${invoiceData.items
+      ?.map(
+        (item, idx) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
           <ram:LineID>${idx + 1}</ram:LineID>
@@ -126,7 +118,9 @@ function generateZugferdXML(invoiceData) {
           <ram:NetLineAmount>${item.net}</ram:NetLineAmount>
         </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>
-    `).join("")}
+    `
+      )
+      .join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
@@ -147,6 +141,14 @@ async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
     creator: invoiceData.creator || "PDFify",
     language: invoiceData.locale?.language || "en",
   });
+
+  // ✅ Set trailer ID safely
+  const hexId = PDFHexString.fromText(
+    Math.random().toString(36).slice(2, 18) + Math.random().toString(36).slice(2, 18)
+  );
+  if (!pdfDoc.context.trailer.get(PDFName.of("ID"))) {
+    pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([hexId, hexId]));
+  }
 
   return await pdfDoc.save({ useObjectStreams: false });
 }
