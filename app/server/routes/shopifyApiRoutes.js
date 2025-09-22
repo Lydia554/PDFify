@@ -11,6 +11,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { resolveShopifyToken } = require("../utils/shopifyHelpers");
 const { resolveLanguage } = require("../utils/resolveLanguage");
 const { incrementUsage } = require("../utils/usageUtils");
+const { postProcessPdf } = require("../server/Helpers/pdf-helpers");
 
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
 
