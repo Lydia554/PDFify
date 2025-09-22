@@ -1,9 +1,9 @@
-
+// shopifyMerchantTemplate.js
 const fs = require("fs");
 const path = require("path");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML } = require("../server/Helpers/pdf-helpers");
+const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML } = require("../Helpers/pdf-helpers");
 
 /**
  * Safely parse numbers
@@ -16,14 +16,22 @@ function parseNumber(value, fallback = 0) {
 /**
  * Map Shopify order to PDF-ready data
  */
-function mapOrderToPdfData(order) {
+function mapOrderToPdfData(order, shopConfig = {}) {
   const items = (order.line_items || []).map((item) => {
     const price = parseNumber(item.price);
     const quantity = parseNumber(item.quantity, 1);
     const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseNumber(t.price), 0);
-    const total = price * quantity + tax;
-    const net = price * quantity; // net before tax
-    return { name: item.title, quantity, price, tax, total, net };
+    const net = price * quantity;
+    const total = net + tax;
+    return {
+      name: item.title || item.name || "Item",
+      quantity,
+      price,
+      net,
+      tax,
+      total,
+      taxRate: 21
+    };
   });
 
   const subtotal = items.reduce((sum, i) => sum + i.net, 0);
@@ -31,16 +39,16 @@ function mapOrderToPdfData(order) {
   const total = subtotal + taxTotal;
 
   return {
-    customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
     orderId: order.name || order.id,
-    date: order.created_at ? new Date(order.created_at).toLocaleDateString("de-DE") : new Date().toLocaleDateString("de-DE"),
+    date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+    customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
     items,
     subtotal,
     tax: taxTotal,
     total,
-    vatRate: 21, // default VAT rate for ZUGFeRD
-    iban: order.payment?.iban || "DE89370400440532013000",
-    bic: order.payment?.bic || "COBADEFFXXX",
+    vatRate: 21,
+    iban: shopConfig.iban || "DE89370400440532013000",
+    bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
   };
 }
@@ -56,20 +64,20 @@ function drawCell(page, text, x, y, width, height, font, { size = 10, align = "l
 }
 
 /**
- * Generate Shopify PDF invoice with ZUGFeRD / PDF/A-3b support
+ * Generate Shopify invoice PDF with ZUGFeRD / PDF/A-3b
  */
-async function createShopifyInvoiceZugferd(order) {
-  const data = mapOrderToPdfData(order);
+async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
+  const data = mapOrderToPdfData(order, shopConfig);
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
-  // Embed fonts
-  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
-  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Bold.ttf'));
+  // Load fonts
+  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "./fonts/LiberationSans-Regular.ttf"));
+  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "./fonts/LiberationSans-Bold.ttf"));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-  // Add A4 page
+  // Add page
   const page = pdfDoc.addPage([595, 842]);
   let y = 780;
   const lineHeight = 24;
@@ -77,7 +85,7 @@ async function createShopifyInvoiceZugferd(order) {
   const colWidths = [180, 60, 80, 80, 80];
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];
 
-  // Header section
+  // Header
   page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font: boldFont });
   y -= lineHeight;
   page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font: regularFont });
@@ -100,7 +108,7 @@ async function createShopifyInvoiceZugferd(order) {
   y -= rowHeight;
 
   // Table rows
-  data.items.forEach((item) => {
+  data.items.forEach(item => {
     x = 50;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
     row.forEach((cell, i) => {
@@ -119,7 +127,7 @@ async function createShopifyInvoiceZugferd(order) {
     drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right" });
   });
 
-  // Embed PDF/A and ZUGFeRD
+  // Embed PDF/A-3b + ZUGFeRD
   await embedIccProfile(pdfDoc);
   await embedXmp(pdfDoc);
   const xmlContent = generateZugferdXML(data);
