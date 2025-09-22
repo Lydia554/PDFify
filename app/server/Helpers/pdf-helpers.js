@@ -29,14 +29,14 @@ async function embedIccProfile(pdfDoc) {
 }
 
 /**
- * Embed dynamic XMP metadata or fallback
+ * Embed dynamic XMP metadata or fallback (PDF/A-3b safe)
  */
 async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   let xmpContent = "";
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
-    xmpContent = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
+    xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about='' xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
@@ -54,7 +54,8 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
     .replace(/<dc:creator>.*<\/dc:creator>/, `<dc:creator>${creator}</dc:creator>`)
     .replace(/<dc:language>.*<\/dc:language>/, `<dc:language>${language}</dc:language>`);
 
-  if (!xmpContent.startsWith("\uFEFF")) xmpContent = "\uFEFF" + xmpContent;
+  // Remove BOM for PDF/A-3b
+  xmpContent = xmpContent.replace(/^\uFEFF/, "");
 
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
     Type: PDFName.of("Metadata"),
@@ -65,11 +66,12 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
 }
 
 /**
- * Embed ZUGFeRD XML into PDF
+ * Embed ZUGFeRD XML into PDF (strict PDF/A-3b)
  */
 function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   const xmlBuffer = Buffer.from(xmlContent, "utf8");
   const xmlStream = pdfDoc.context.flateStream(xmlBuffer);
+  const xmlStreamRef = pdfDoc.context.register(xmlStream); // indirect stream
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
@@ -77,7 +79,7 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
     UF: fileName,
     AFRelationship: PDFName.of("Data"),
     Desc: "ZUGFeRD Invoice XML",
-    EF: pdfDoc.context.obj({ F: xmlStream }),
+    EF: pdfDoc.context.obj({ F: xmlStreamRef }), // reference indirect stream
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
