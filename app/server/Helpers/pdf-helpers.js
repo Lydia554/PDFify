@@ -142,12 +142,15 @@ async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
     language: invoiceData.locale?.language || "en",
   });
 
-  // ✅ Set trailer ID safely
+  // ✅ Safe trailer ID
   const hexId = PDFHexString.fromText(
     Math.random().toString(36).slice(2, 18) + Math.random().toString(36).slice(2, 18)
   );
-  if (!pdfDoc.context.trailer.get(PDFName.of("ID"))) {
-    pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([hexId, hexId]));
+  const trailer = pdfDoc.context.trailer || pdfDoc.context.obj({});
+  pdfDoc.context.trailer = trailer;
+
+  if (!trailer.has(PDFName.of("ID"))) {
+    trailer.set(PDFName.of("ID"), pdfDoc.context.obj([hexId, hexId]));
   }
 
   return await pdfDoc.save({ useObjectStreams: false });
