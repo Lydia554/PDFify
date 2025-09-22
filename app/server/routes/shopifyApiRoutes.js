@@ -413,10 +413,6 @@ console.log("✅ Shopify order fetched:", JSON.stringify(order, null, 2));
       paymentTerms: order.payment?.terms || "Due within 14 days",
     };
 
-
-
-
-
     let pdfBuffer;
 
     // ----------------------------
@@ -424,26 +420,21 @@ console.log("✅ Shopify order fetched:", JSON.stringify(order, null, 2));
     // ----------------------------
 
 if (isMerchant) {
-  // 1️⃣ Map order to PDF-ready data
-  const pdfData = mapOrderToPdfData(order);
-  console.log("✅ PDF data mapped from Shopify order:", JSON.stringify(pdfData, null, 2));
+  pdfBuffer = await createShopifyInvoiceZugferd(order); 
 
-  // 2️⃣ Generate merchant PDF
-  const pdfBuffer = await createShopifyInvoiceZugferd(pdfData);
 
-  // 3️⃣ Increment usage
+  // 2️⃣ Increment usage
   await incrementUsage(user, 1, isPreview);
 
-  // 4️⃣ Send PDF to front-end
+  // 3️⃣ Send PDF
   res.set({
     "Content-Type": "application/pdf",
     "Content-Disposition": isPreview
       ? "inline"
-      : `attachment; filename=${pdfData.orderId}.pdf`,
+      : `attachment; filename=${invoiceData.orderId}.pdf`,
   });
   return res.send(pdfBuffer);
 }
-
 
     // ----------------------------
     // Customer PDF (HTML / Puppeteer)
