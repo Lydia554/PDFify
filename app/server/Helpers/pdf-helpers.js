@@ -1,7 +1,7 @@
 // pdf-helpers.js
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 
 /**
  * Embed ICC profile for PDF/A compliance
@@ -37,7 +37,7 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
-    xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+    xmpContent = `<?xpacket begin='\uFEFF' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=""
@@ -55,10 +55,10 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
 <?xpacket end='w'?>`;
   }
 
-  const metadataStream = pdfDoc.context.flateStream(
-    Buffer.from(xmpContent, "utf8"),
-    { Type: PDFName.of("Metadata"), Subtype: PDFName.of("XML") }
-  );
+  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+  });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
@@ -74,16 +74,22 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
-    F: PDFHexString.fromText(fileName), // PDF/A compliant filename
+    F: PDFHexString.fromText(fileName),
     UF: PDFHexString.fromText(fileName),
     Desc: PDFHexString.fromText("ZUGFeRD Invoice XML"),
     AFRelationship: PDFName.of("Data"),
     EF: pdfDoc.context.obj({ F: xmlStreamRef }),
-    Subtype: PDFName.of("application/xml"),
+    Subtype: PDFString.of("application/xml"),
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+
+  // ✅ Add trailer ID for PDF/A
+  const idHex = PDFHexString.fromText(
+    Math.random().toString(36).slice(2, 18) + Math.random().toString(36).slice(2, 18)
+  );
+  pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([idHex, idHex]));
 
   return fileSpecRef;
 }
@@ -124,7 +130,6 @@ function generateZugferdXML(invoiceData) {
 
 /**
  * Post-process PDF for PDF/A-3b + ZUGFeRD
- * Ghostscript should be used **after this** to fully validate PDF/A-3b
  */
 async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
