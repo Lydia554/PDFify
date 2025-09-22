@@ -366,13 +366,10 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       order = resp.data.order;
     }
 
-   if (!order || !order.line_items) {
-  console.error("❌ Invalid or missing order data:", order);
-  return res.status(400).json({ error: "Invalid or missing order data" });
-}
-
-
-
+    if (!order || !order.line_items) {
+      console.error("❌ Invalid or missing order data:", order);
+      return res.status(400).json({ error: "Invalid or missing order data" });
+    }
 
     const shopConfig = (await ShopConfig.findOne({ shopDomain })) || {};
     const { lang } = await resolveLanguage({ req, order, shopDomain, shopConfig });
@@ -411,6 +408,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
       iban: shopConfig.iban || "DE89370400440532013000",
       bic: shopConfig.bic || "COBADEFFXXX",
       paymentTerms: order.payment?.terms || "Due within 14 days",
+      creator: "PDFify",
+      locale: { language: lang || "en" },
     };
 
     let pdfBuffer;
@@ -418,26 +417,20 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     // ----------------------------
     // Merchant PDF (ZUGFeRD / PDF/A-3b)
     // ----------------------------
+    if (isMerchant) {
+      pdfBuffer = await createShopifyInvoiceZugferd(order);
 
-if (isMerchant) {
-  pdfBuffer = await createShopifyInvoiceZugferd(order); 
+      await incrementUsage(user, 1, isPreview);
 
-
-  // 2️⃣ Increment usage
-  await incrementUsage(user, 1, isPreview);
-
-  // 3️⃣ Send PDF
-  res.set({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": isPreview
-      ? "inline"
-      : `attachment; filename=${invoiceData.orderId}.pdf`,
-  });
-  return res.send(pdfBuffer);
-}
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
+      });
+      return res.send(pdfBuffer);
+    }
 
     // ----------------------------
-    // Customer PDF (HTML / Puppeteer)
+    // Customer PDF (HTML / Puppeteer + PDF/A-3b)
     // ----------------------------
     if (!shopConfig.allowCustomerPDF) {
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
@@ -462,20 +455,40 @@ if (isMerchant) {
       fallbackLogoUrl: "/assets/default-logo.png",
     };
 
+    // 1️⃣ Generate PDF via Puppeteer
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir);
 
-    const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
+    const tempPdfPath = path.join(pdfDir, `temp-${order.id}.pdf`);
+    const finalPdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
+
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     const html = generateCustomerInvoiceHTML(htmlData, true, lang, {});
     await page.setContent(html, { waitUntil: "networkidle0" });
-    await page.pdf({ path: pdfPath, format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
+    await page.pdf({ path: tempPdfPath, format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
     await browser.close();
 
-    pdfBuffer = fs.readFileSync(pdfPath);
+    let tempPdfBytes = fs.readFileSync(tempPdfPath);
+
+    // 2️⃣ Post-process via pdf-lib
+    const { postProcessPdf } = require("../utils/pdf-helpers"); // your pdf-helpers.js
+    const postProcessedPdf = await postProcessPdf(tempPdfBytes, invoiceData);
+
+    fs.writeFileSync(finalPdfPath, postProcessedPdf);
+
+    // 3️⃣ Run Ghostscript to enforce PDF/A-3b compliance
+    const { execSync } = require("child_process");
+    const gsOutputPath = path.join(pdfDir, `PDF_A3B-${order.id}.pdf`);
+    execSync(`gs -dPDFA=3 -dBATCH -dNOPAUSE -sProcessColorModel=DeviceRGB -sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile="${gsOutputPath}" "${finalPdfPath}"`);
+
+    pdfBuffer = fs.readFileSync(gsOutputPath);
+
     await incrementUsage(user, 1, isPreview);
-    fs.unlinkSync(pdfPath);
+
+    // Cleanup temp files
+    fs.unlinkSync(tempPdfPath);
+    fs.unlinkSync(finalPdfPath);
 
     res.set({
       "Content-Type": "application/pdf",

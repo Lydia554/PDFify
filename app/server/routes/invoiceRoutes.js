@@ -3,15 +3,17 @@ const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
+const { execFile } = require("child_process");
 const archiver = require("archiver");
 const router = express.Router();
 
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
+const { generateZugferdXML } = require('../utils/zugferdHelper');
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateInvoiceHTML } = require("../../templates/english.js");
-const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf } = require("../Helpers/pdf-helpers");
+const { postProcessPdfStrict } = require('../utils/postProcessPdfStrict');
+const { generateInvoiceHTML } = require("../../templates/english.js"); 
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -20,6 +22,20 @@ const locales = {
 };
 
 const FORCE_PLAN = process.env.FORCE_PLAN;
+
+// Detect Ghostscript dynamically
+function detectGhostscript() {
+  const possiblePaths = [
+    '/usr/bin/gs', '/usr/local/bin/gs',
+    'C:\\Program Files\\gs\\bin\\gswin64c.exe',
+    'C:\\Program Files (x86)\\gs\\bin\\gswin32c.exe'
+  ];
+  for (const p of possiblePaths) if (fs.existsSync(p)) return p;
+  const { execSync } = require('child_process');
+  try { if (execSync('gs -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gs'; } catch {}
+  try { if (execSync('gswin64c -v', { stdio: 'pipe' }).toString().includes('Ghostscript')) return 'gswin64c'; } catch {}
+  throw new Error('Ghostscript not found. Please install it or add it to PATH.');
+}
 
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
@@ -36,6 +52,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
     const results = [];
+    const tempResults = [];
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw };
@@ -45,7 +62,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.country = country || "default";
       invoiceData.locale = locales[lang] || locales["en"];
 
-      // Germany VAT logic
+      // Germany-specific VAT logic
       if (country === "germany" && Array.isArray(invoiceData.items)) {
         invoiceData.items = invoiceData.items.map(item => {
           const totalNum = parseFloat(item.total || 0);
@@ -62,9 +79,13 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const page = await browser.newPage();
       await page.emulateMediaType('print');
 
-      // User class / logo
+      // PDF/A-clean class for Pro users
       invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
-      if (user.plan === "free") invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
+
+      // Local logo for free users
+      if (user.plan === "free") {
+        invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
+      }
 
       const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
       await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
@@ -73,17 +94,17 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         format: "A4",
         printBackground: true,
         margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+        preferCSSPageSize: false,
         displayHeaderFooter: false,
         tagged: true
       });
       await page.close();
 
       // Count pages
-      const PDFLib = require("pdf-lib");
-      const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
+      const pdfDoc = await require("pdf-lib").PDFDocument.load(pdfBuffer);
       const pageCount = pdfDoc.getPageCount();
 
-      // Increment usage
+      // Increment usage **per invoice** to stop early if limit reached
       const usageAllowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
       if (!usageAllowed) {
         await browser.close();
@@ -91,28 +112,68 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
         return res.status(403).json({ error: 'Monthly limit reached.' });
       }
 
-      let finalPdf = pdfBuffer;
+      tempResults.push({ pdfBuffer, orderId, invoiceData, country, pageCount });
+      console.log(`📄 Invoice ${orderId} has ${pageCount} page(s).`);
+    }
 
-      // Pro users: embed ICC, XMP, and ZUGFeRD
+    // Ghostscript + ZUGFeRD processing
+    for (const { pdfBuffer, orderId, invoiceData, country } of tempResults) {
+      const iccPath = path.resolve(__dirname, "./sRGB_v4_ICC_preference.icc");
+      const tempInput = path.join(tmpDir, `${orderId}-input.pdf`);
+      const tempOutput = path.join(tmpDir, `${orderId}-output.pdf`);
+      fs.writeFileSync(tempInput, pdfBuffer);
+
+      const gsExe = detectGhostscript();
+      const gsArgs = [
+        "-dPDFA=3",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-dNOOUTERSAVE",
+        "-sDEVICE=pdfwrite",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dPreserveDocInfo=true",
+        "-dPreserveAnnots=true",
+        "-dPDFACompatibilityPolicy=1",
+        "-dAutoRotatePages=/None",
+        "-dProcessColorModel=/DeviceRGB",
+        "-dConvertCMYKImagesToRGB=true",
+        "-dDownsampleColorImages=false",
+        "-dDownsampleGrayImages=false",
+        "-dDownsampleMonoImages=false",
+        "-dPDFSETTINGS=/prepress",
+        "-dColorConversionStrategy=/sRGB",
+        `-sOutputICCProfile=${iccPath}`, 
+        `-sOutputFile=${tempOutput}`,
+        tempInput.replace(/\\/g, "/")
+      ];
+
+      await new Promise((resolve, reject) => execFile(gsExe, gsArgs, err => err ? reject(err) : resolve()));
+      let finalPdf = fs.readFileSync(tempOutput);
+      fs.unlinkSync(tempInput);
+
       if (user.plan === "pro") {
         const zugferdXml = generateZugferdXML(invoiceData);
-        const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
+        const localeMeta = {
+          title: invoiceData.locale.invoiceTitle || 'Invoice',
+          creator: 'PDFify',
+          language: country === 'germany' ? 'de' : country === 'slovenia' ? 'sl' : 'en'
+        };
 
-        await embedIccProfile(pdfDocPro);
-        await embedXmp(pdfDocPro);
-        embedXmlIntoPdf(pdfDocPro, zugferdXml);
-
-        finalPdf = await pdfDocPro.save();
+        finalPdf = await postProcessPdfStrict(
+          finalPdf,
+          zugferdXml,
+          localeMeta,
+          path.resolve(__dirname, "../server/xmp/zugferd.xmp")
+        );
       }
 
       results.push({ pdfBuffer: finalPdf, orderId });
-      console.log(`📄 Invoice ${orderId} generated with ${pageCount} page(s).`);
     }
 
     await user.save();
     await browser.close();
 
-    // Send PDF(s)
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       res.set({
@@ -123,7 +184,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.send(pdfBuffer);
     }
 
-    // Multiple PDFs => ZIP
     const archive = archiver("zip", { zlib: { level: 9 } });
     res.set({
       "Content-Type": "application/zip",

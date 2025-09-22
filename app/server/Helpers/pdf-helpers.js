@@ -1,8 +1,8 @@
+// pdf-helpers.js
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
-const { execSync } = require("child_process");
+const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 
 /**
  * Embed ICC profile for PDF/A compliance
@@ -20,8 +20,8 @@ async function embedIccProfile(pdfDoc) {
       pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
         S: PDFName.of("GTS_PDFA1"),
-        OutputConditionIdentifier: PDFString.of("sRGB2014"),
-        Info: PDFString.of("sRGB2014"),
+        OutputConditionIdentifier: PDFHexString.fromText("sRGB2014"),
+        Info: PDFHexString.fromText("sRGB2014"),
         DestOutputProfile: iccRef,
       }),
     ])
@@ -29,7 +29,7 @@ async function embedIccProfile(pdfDoc) {
 }
 
 /**
- * Embed XMP metadata with PDF/A-3b schema
+ * Embed XMP metadata (well-formed UTF-8) with PDF/A-3b schema
  */
 async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
@@ -38,9 +38,9 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
-    xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    xmpContent = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="PDFify">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description rdf:about=""
         xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
         xmlns:dc="http://purl.org/dc/elements/1.1/"
@@ -53,12 +53,16 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end='w'?>`;
+<?xpacket end="w"?>`;
   }
 
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
+  // Ensure UTF-8 encoding
+  xmpContent = Buffer.from(xmpContent, "utf8");
+
+  const metadataStream = pdfDoc.context.flateStream(xmpContent, {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
   });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
@@ -66,31 +70,25 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
 }
 
 /**
- * Embed ZUGFeRD XML into PDF
+ * Embed ZUGFeRD XML into PDF with explicit Subtype
  */
 function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   const xmlBuffer = Buffer.from(xmlContent, "utf8");
-  const xmlStream = pdfDoc.context.flateStream(xmlBuffer, { Subtype: PDFName.of("application/xml") });
+  const xmlStream = pdfDoc.context.flateStream(xmlBuffer);
   const xmlStreamRef = pdfDoc.context.register(xmlStream);
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
-    F: PDFString.of(fileName),
-    UF: PDFString.of(fileName),
-    Desc: PDFString.of("ZUGFeRD Invoice XML"),
-    EF: pdfDoc.context.obj({ F: xmlStreamRef }),
+    F: fileName,
+    UF: fileName,
+    Desc: PDFName.of("ZUGFeRD Invoice XML"),
     AFRelationship: PDFName.of("Data"),
+    EF: pdfDoc.context.obj({ F: xmlStreamRef }),
+    Subtype: PDFName.of("application/xml"), // <-- Explicit MIME type
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
-
-  // Name tree for embedded files (VeraPDF compliance)
-  const efNames = pdfDoc.context.obj({ Names: [PDFString.of(fileName), fileSpecRef] });
-  const efNameTreeRef = pdfDoc.context.register(efNames);
-  const namesDict = pdfDoc.context.obj({ EmbeddedFiles: efNameTreeRef });
-  const namesDictRef = pdfDoc.context.register(namesDict);
-  pdfDoc.catalog.set(PDFName.of("Names"), namesDictRef);
 
   return fileSpecRef;
 }
@@ -130,49 +128,28 @@ function generateZugferdXML(invoiceData) {
 }
 
 /**
- * Enforce PDF/A-3b via Ghostscript
- */
-function enforcePdfA3b(inputPath, outputPath) {
-  const gsCmd = `gs -dPDFA=3 -dBATCH -dNOPAUSE -dNOOUTERSAVE -sProcessColorModel=DeviceRGB \
--sDEVICE=pdfwrite -sPDFACompatibilityPolicy=1 -sOutputFile="${outputPath}" "${inputPath}"`;
-  execSync(gsCmd, { stdio: "inherit" });
-}
-
-/**
- * All-in-one post-process PDF
+ * Post-process PDF: embed ICC, XMP, ZUGFeRD, trailer ID
  */
 async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
   await embedIccProfile(pdfDoc);
-
   const zugferdXml = generateZugferdXML(invoiceData);
   embedXmlIntoPdf(pdfDoc, zugferdXml);
-
   await embedXmp(pdfDoc, xmpTemplatePath, {
     title: `Invoice ${invoiceData.orderId}`,
     creator: invoiceData.creator || "PDFify",
     language: invoiceData.locale?.language || "en",
   });
 
-  // Proper trailer ID
+  let outputPdf = await pdfDoc.save({ useObjectStreams: false });
+
+  // Manual trailer ID (ISO 32000-1 compliant)
   const id = crypto.randomBytes(16).toString("hex");
-  pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([PDFString.of(id), PDFString.of(id)]));
+  const trailerId = `\ntrailer\n<< /ID [<${id}> <${id}>] >>\n%%EOF`;
+  outputPdf = Buffer.concat([outputPdf, Buffer.from(trailerId, "utf8")]);
 
-  // Save PDF to temp for Ghostscript
-  const tempInput = path.resolve(__dirname, "temp-input.pdf");
-  const tempOutput = path.resolve(__dirname, "temp-output.pdf");
-  fs.writeFileSync(tempInput, await pdfDoc.save({ useObjectStreams: false }));
-
-  // Ghostscript enforcement
-  enforcePdfA3b(tempInput, tempOutput);
-
-  const finalPdf = fs.readFileSync(tempOutput);
-
-  fs.unlinkSync(tempInput);
-  fs.unlinkSync(tempOutput);
-
-  return finalPdf;
+  return outputPdf;
 }
 
 module.exports = {
@@ -180,6 +157,5 @@ module.exports = {
   embedXmp,
   embedXmlIntoPdf,
   generateZugferdXML,
-  enforcePdfA3b,
   postProcessPdf,
 };
