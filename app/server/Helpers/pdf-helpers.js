@@ -79,17 +79,20 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
     Desc: PDFHexString.fromText("ZUGFeRD Invoice XML"),
     AFRelationship: PDFName.of("Data"),
     EF: pdfDoc.context.obj({ F: xmlStreamRef }),
-    Subtype: PDFString.of("application/xml"),
+    Subtype: PDFName.of("XML"), 
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // ✅ Add trailer ID for PDF/A
-  const idHex = PDFHexString.fromText(
+  
+  const hexId = PDFHexString.fromText(
     Math.random().toString(36).slice(2, 18) + Math.random().toString(36).slice(2, 18)
   );
-  pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([idHex, idHex]));
+
+  if (!pdfDoc.context.trailer.has(PDFName.of("ID"))) {
+    pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([hexId, hexId]));
+  }
 
   return fileSpecRef;
 }
