@@ -346,6 +346,7 @@ const premiumTemplate = `
 
 
 
+
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
   try {
     const shopDomain = req.body.shopDomain || req.headers["x-shopify-shop-domain"];
@@ -387,33 +388,61 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const isPreview = req.query.preview === "true";
     const isMerchant = req.query.merchant === "true";
 
+    // ----------------------------
+    // Map Shopify order to unified invoice data
+    // ----------------------------
+    const quantitySafe = (q) => parseFloat(q || 1);
+    const priceSafe = (p) => parseFloat(p || 0);
+
+    const items = (order.line_items || []).map((item) => {
+      const quantity = quantitySafe(item.quantity);
+      const price = priceSafe(item.price);
+      const net = price * quantity;
+      const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+      const total = net + tax;
+      return {
+        name: item.title || item.name || "Item",
+        quantity,
+        price,
+        net,
+        tax,
+        total,
+      };
+    });
+
+    const subtotal = items.reduce((sum, i) => sum + i.net, 0);
+    const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
+    const total = subtotal + taxTotal;
+
+    const vatRate = 21;
+
+    const invoiceData = {
+      orderId: order.name || order.id,
+      date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+      items,
+      subtotal,
+      tax: taxTotal,
+      total,
+      vatRate,
+      customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
+      iban: order.payment?.iban || "DE89370400440532013000",
+      bic: order.payment?.bic || "COBADEFFXXX",
+      paymentTerms: order.payment?.terms || "Due within 14 days",
+    };
+
     let pdfBuffer;
 
     // ----------------------------
-    // Merchant PDF (always compliant)
+    // Merchant PDF (ZUGFeRD / PDF/A-3b)
     // ----------------------------
     if (isMerchant) {
       try {
         console.log("🔹 Generating merchant PDF for user:", user.email);
 
-        // Map Shopify order to invoice data for ZUGFeRD
-        const invoiceData = {
-          orderId: order.name || order.id,
-          date: new Date(order.created_at).toISOString().slice(0, 10),
-          items: order.line_items.map(item => ({
-            name: item.title || item.name || "Item",
-            total: parseFloat(item.price) * parseFloat(item.quantity),
-            tax: parseFloat(item.tax_lines?.reduce((sum, t) => sum + parseFloat(t.price || 0), 0)) || 0,
-          })),
-          subtotal: order.subtotal_price ? parseFloat(order.subtotal_price) : 0,
-          tax: order.total_tax ? parseFloat(order.total_tax) : 0,
-          total: order.total_price ? parseFloat(order.total_price) : 0,
-        };
-
         const zugferdXml = generateZugferdXML(invoiceData);
 
         // Generate PDFDocument from template
-        const pdfDoc = await createShopifyInvoiceZugferd(order);
+        const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
 
         // Embed ICC profile for PDF/A
         await embedIccProfile(pdfDoc);
@@ -421,7 +450,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
         // Embed ZUGFeRD XML into PDF
         embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-        // Save final PDF buffer
         pdfBuffer = await pdfDoc.save();
 
         // Increment usage (1 page by default)
@@ -431,7 +459,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
           "Content-Type": "application/pdf",
           "Content-Disposition": isPreview
             ? "inline"
-            : `attachment; filename=${order.name || order.id}.pdf`,
+            : `attachment; filename=${invoiceData.orderId}.pdf`,
         });
         return res.send(pdfBuffer);
 
@@ -442,7 +470,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     }
 
     // ----------------------------
-    // Customer PDF
+    // Customer PDF (HTML / Puppeteer)
     // ----------------------------
     if (!shopConfig.allowCustomerPDF) {
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
@@ -455,55 +483,32 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     const localeMap = { de: "de-DE", en: "en-US", sl: "sl-SI" };
     const locale = localeMap[lang] || "en-US";
 
-    let subtotal = 0;
-    let taxTotal = 0;
-    if (Array.isArray(order.tax_lines)) {
-      taxTotal = order.tax_lines.reduce((sum, line) => sum + parseFloat(line.price || 0), 0);
-    }
+    // Format numbers for HTML PDF
+    const formattedItems = items.map(i => ({
+      ...i,
+      formattedPrice: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.price),
+      formattedNet: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.net),
+      formattedTax: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.tax),
+      formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(i.total),
+    }));
 
-    const enrichedItems = order.line_items.map(item => {
-      const price = parseFloat(item.price) || 0;
-      const quantity = parseFloat(item.quantity) || 0;
-      const total = price * quantity;
-      subtotal += total;
-      return {
-        ...item,
-        price,
-        quantity,
-        formattedPrice: new Intl.NumberFormat(locale, { style: "currency", currency }).format(price),
-        formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(total),
-      };
-    });
-
-    const rawTotal = subtotal + taxTotal;
-    const invoiceData = {
-      shopName: shopConfig.shopName || shopDomain,
-      date: new Date(order.created_at).toISOString().slice(0, 10),
-      items: enrichedItems,
-      subtotal,
-      taxTotal,
-      total: rawTotal,
+    const htmlData = {
+      ...invoiceData,
+      items: formattedItems,
       formattedSubtotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(subtotal),
       formattedTaxTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(taxTotal),
-      formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(rawTotal),
-      customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim(),
-      shippingAddress: order.shipping_address
-        ? `${order.shipping_address.address1 || ""}, ${order.shipping_address.city || ""}`
-        : "N/A",
-      billingAddress: order.billing_address
-        ? `${order.billing_address.address1 || ""}, ${order.billing_address.city || ""}`
-        : "N/A",
-      showChart: shopConfig?.showChart,
-      customLogoUrl: shopConfig?.customLogoUrl,
-      fallbackLogoUrl: "/assets/default-logo.png",
+      formattedTotal: new Intl.NumberFormat(locale, { style: "currency", currency }).format(total),
+      shopName: shopConfig.shopName || shopDomain,
       currency,
       locale,
+      customLogoUrl: shopConfig.customLogoUrl,
+      fallbackLogoUrl: "/assets/default-logo.png",
     };
 
     const pdfPath = path.join(pdfDir, `Invoice_shopify-${order.id}.pdf`);
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
-    const html = generateInvoiceHTML(invoiceData, user.isPremium, lang, t);
+    const html = await generateInvoiceHTML(htmlData);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({
       path: pdfPath,
@@ -515,19 +520,20 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     pdfBuffer = fs.readFileSync(pdfPath);
     await incrementUsage(user, 1, isPreview);
+    fs.unlinkSync(pdfPath);
 
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": isPreview ? "inline" : `attachment; filename=${order.name || order.id}.pdf`,
+      "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
     });
     res.send(pdfBuffer);
-    fs.unlinkSync(pdfPath);
 
   } catch (err) {
     console.error("❌ Invoice route error:", err);
     res.status(500).json({ error: "PDF generation failed" });
   }
 });
+
 
 router.get("/connection", authenticate, dualAuth, async (req, res) => {
 
