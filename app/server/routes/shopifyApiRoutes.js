@@ -536,6 +536,22 @@ pdfBuffer = await postProcessPdfStrict(
 
 
 
+
+
+router.get("/connection", authenticate, dualAuth, async (req, res) => {
+
+  try {
+    const connectedShopDomain = req.fullUser.connectedShopDomain || null;
+    res.json({ connectedShopDomain });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch Shopify connection" });
+  }
+});
+
+
+
+
 router.post("/connect", authenticate, dualAuth, async (req, res) => {
   try {
     const { shopDomain, accessToken } = req.body;
