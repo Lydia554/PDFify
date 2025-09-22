@@ -424,7 +424,6 @@ console.log("✅ Shopify order fetched:", JSON.stringify(order, null, 2));
     // ----------------------------
 
 if (isMerchant) {
-// Map order to PDF-ready data
 const pdfData = mapOrderToPdfData(order);
 console.log("✅ PDF data mapped:", JSON.stringify(pdfData, null, 2));
 
@@ -437,6 +436,7 @@ res.set({
   "Content-Disposition": `attachment; filename=${pdfData.orderId}.pdf`,
 });
 res.send(pdfBuffer);
+}
 
     // ----------------------------
     // Customer PDF (HTML / Puppeteer)
