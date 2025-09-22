@@ -412,24 +412,26 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     // ----------------------------
     // Merchant PDF (ZUGFeRD / PDF/A-3b)
     // ----------------------------
-    if (isMerchant) {
-      const pdfDoc = await createShopifyInvoiceZugferd(invoiceData);
 
-      // Use the unified postProcessPdf from pdf-helpers
-      pdfBuffer = await postProcessPdf(
-        await pdfDoc.save(),
-        { ...invoiceData, creator: user.email || "Merchant", locale: { language: lang || "en" } },
-        path.join(__dirname, "../Helpers/xmp/zugferd.xmp")
-      );
+if (isMerchant) {
+  // Create the base PDF (already as bytes)
+  const pdfBytes = await createShopifyInvoiceZugferd(invoiceData);
 
-      await incrementUsage(user, 1, isPreview);
+  // Post-process PDF (ICC, XMP, ZUGFeRD, Trailer ID)
+  pdfBuffer = await postProcessPdf(pdfBytes, {
+    ...invoiceData,
+    creator: user.email || "Merchant",
+    locale: { language: lang || "en" }
+  }, path.join(__dirname, "../Helpers/xmp/zugferd.xmp"));
 
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
-      });
-      return res.send(pdfBuffer);
-    }
+  await incrementUsage(user, 1, isPreview);
+
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
+  });
+  return res.send(pdfBuffer);
+}
 
     // ----------------------------
     // Customer PDF (HTML / Puppeteer)
