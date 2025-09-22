@@ -1,3 +1,6 @@
+
+
+// pdf-helpers.js
 const fs = require("fs");
 const path = require("path");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
@@ -27,12 +30,12 @@ async function embedIccProfile(pdfDoc) {
 }
 
 /**
- * Embed XMP metadata
+ * Embed XMP metadata with PDF/A-3b schema
  */
 async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
   const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
-
   let xmpContent;
+
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
@@ -54,10 +57,10 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
 <?xpacket end='w'?>`;
   }
 
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-  });
+  const metadataStream = pdfDoc.context.flateStream(
+    Buffer.from(xmpContent, "utf8"),
+    { Type: PDFName.of("Metadata"), Subtype: PDFName.of("XML") }
+  );
 
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
@@ -73,7 +76,7 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
-    F: PDFHexString.fromText(fileName),
+    F: PDFHexString.fromText(fileName), // PDF/A compliant filename
     UF: PDFHexString.fromText(fileName),
     Desc: PDFHexString.fromText("ZUGFeRD Invoice XML"),
     AFRelationship: PDFName.of("Data"),
@@ -98,9 +101,7 @@ function generateZugferdXML(invoiceData) {
     <ram:IssueDateTime>${invoiceData.date}</ram:IssueDateTime>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
-    ${invoiceData.items
-      ?.map(
-        (item, idx) => `
+    ${invoiceData.items?.map((item, idx) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
           <ram:LineID>${idx + 1}</ram:LineID>
@@ -118,15 +119,14 @@ function generateZugferdXML(invoiceData) {
           <ram:NetLineAmount>${item.net}</ram:NetLineAmount>
         </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>
-    `
-      )
-      .join("")}
+    `).join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
 
 /**
  * Post-process PDF for PDF/A-3b + ZUGFeRD
+ * Ghostscript should be used **after this** to fully validate PDF/A-3b
  */
 async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   const pdfDoc = await PDFDocument.load(pdfBytes);
@@ -141,17 +141,6 @@ async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
     creator: invoiceData.creator || "PDFify",
     language: invoiceData.locale?.language || "en",
   });
-
-  // ✅ Safe trailer ID
-  const hexId = PDFHexString.fromText(
-    Math.random().toString(36).slice(2, 18) + Math.random().toString(36).slice(2, 18)
-  );
-  const trailer = pdfDoc.context.trailer || pdfDoc.context.obj({});
-  pdfDoc.context.trailer = trailer;
-
-  if (!trailer.has(PDFName.of("ID"))) {
-    trailer.set(PDFName.of("ID"), pdfDoc.context.obj([hexId, hexId]));
-  }
 
   return await pdfDoc.save({ useObjectStreams: false });
 }
