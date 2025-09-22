@@ -40,82 +40,60 @@ async function generateInvoiceHTML_PdfaSafe(data) {
   return `
 <html>
   <head>
-    <style>
-      body {
-        font-family: 'Arial', sans-serif;
-        color: #000;
-        background: #fff;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-      }
+<style>
+  body {
+    font-family: 'Liberation Sans', sans-serif;
+    color: #000;
+    background: #fff;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+  .container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 30px 40px 40px;
+    background: #fff;
+    border: 1px solid #000;
+  }
+  h1, h2, h3, p, td, th {
+    color: #000;
+  }
+  .table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+  }
+  .table th, .table td {
+    padding: 10px;
+    border: 1px solid #000;
+    text-align: left;
+    background-color: #fff; /* remove gray */
+    color: #000;
+  }
+  .table th {
+    font-weight: bold;
+  }
+  .table tfoot td {
+    font-weight: bold;
+    background-color: #fff; /* remove gray */
+  }
+  .total p {
+    font-weight: bold;
+    color: #000;
+    font-size: 1.1em;
+  }
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    padding: 10px;
+    font-size: 11px;
+    color: #000;
+    border-top: 1px solid #000;
+  }
+  .pdfa-clean .watermark { display: none !important; }
+</style>
 
-      .container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 30px 40px 40px;
-        background: #fff;
-        border: 1px solid #000;
-      }
-
-      h1, h2, h3, p, td, th {
-        color: #000;
-      }
-
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-
-      .table th, .table td {
-        padding: 10px;
-        border: 1px solid #000;
-        text-align: left;
-        background-color: #fff;
-        color: #000;
-      }
-
-      .table th {
-        background-color: #ddd;
-        font-weight: bold;
-      }
-
-      .table tr:nth-child(even) td {
-        background-color: #f9f9f9;
-      }
-
-      .table tfoot td {
-        background-color: #ddd;
-        font-weight: bold;
-      }
-
-      .total p {
-        font-weight: bold;
-        color: #000;
-        font-size: 1.1em;
-      }
-
-      .footer {
-        text-align: center;
-        margin-top: 40px;
-        padding: 10px;
-        font-size: 11px;
-        color: #000;
-        border-top: 1px solid #000;
-      }
-
-      .footer a {
-        color: #000;
-        text-decoration: none;
-      }
-
-      .footer a:hover {
-        text-decoration: underline;
-      }
-
-      .pdfa-clean .watermark { display: none !important; }
-    </style>
   </head>
   <body class="${userClass}">
     <div class="container">

@@ -40,10 +40,7 @@ function mapOrderToPdfData(order) {
  * Draw a black-and-white table cell
  */
 function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left" } = {}) {
-  // Draw black border
   page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5, color: undefined });
-
-  // Draw text
   let textX = x + 2;
   if (align === "right") textX = x + width - (text.length * size * 0.5) - 2;
   page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
@@ -57,9 +54,11 @@ async function createShopifyInvoicePdf(order) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
 
-  // Embed a real TTF font for PDF/A-3b compliance
-  const fontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/Arial.ttf')); // add your TTF file
-  const font = await pdfDoc.embedFont(fontBytes);
+  // Embed Liberation Sans fonts for PDF/A compliance
+  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Regular.ttf'));
+  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, './fonts/LiberationSans-Bold.ttf'));
+  const regularFont = await pdfDoc.embedFont(regularFontBytes);
+  const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
   let y = 780;
   const lineHeight = 24;
@@ -68,23 +67,23 @@ async function createShopifyInvoicePdf(order) {
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];
 
   // Header section
-  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font, color: rgb(0,0,0) });
+  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
+  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
+  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
+  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
+  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
   y -= lineHeight;
-  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font, color: rgb(0,0,0) });
+  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font: regularFont, color: rgb(0,0,0) });
   y -= lineHeight * 2;
 
   // Table headers
   let x = 50;
   headers.forEach((header, i) => {
-    drawCell(page, header, x, y, colWidths[i], rowHeight, font, { size: 10, align: i > 1 ? "right" : "left" });
+    drawCell(page, header, x, y, colWidths[i], rowHeight, boldFont, { size: 10, align: i > 1 ? "right" : "left" });
     x += colWidths[i];
   });
   y -= rowHeight;
@@ -94,7 +93,7 @@ async function createShopifyInvoicePdf(order) {
     x = 50;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
     row.forEach((cell, i) => {
-      drawCell(page, cell, x, y, colWidths[i], rowHeight, font, { size: 10, align: i > 1 ? "right" : "left" });
+      drawCell(page, cell, x, y, colWidths[i], rowHeight, regularFont, { size: 10, align: i > 1 ? "right" : "left" });
       x += colWidths[i];
     });
     y -= rowHeight;
@@ -105,8 +104,8 @@ async function createShopifyInvoicePdf(order) {
   const totalValues = [data.subtotal, data.tax, data.total];
   totalLabels.forEach((label, i) => {
     y -= rowHeight;
-    drawCell(page, label, 50, y, 400, rowHeight, font, { size: label==="Total"?12:10, align:"right" });
-    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, font, { size: label==="Total"?12:10, align:"right" });
+    drawCell(page, label, 50, y, 400, rowHeight, boldFont, { size: label==="Total"?12:10, align:"right" });
+    drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, boldFont, { size: label==="Total"?12:10, align:"right" });
   });
 
   const pdfBytes = await pdfDoc.save();
