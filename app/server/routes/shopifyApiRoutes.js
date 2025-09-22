@@ -414,8 +414,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     // ----------------------------
 
 if (isMerchant) {
-  // 1️⃣ Generate PDF with invoice content + ZUGFeRD
-  const pdfBuffer = await createShopifyInvoiceZugferd(invoiceData);
+  pdfBuffer = await createShopifyInvoiceZugferd(order); 
+}
 
   // 2️⃣ Increment usage
   await incrementUsage(user, 1, isPreview);
