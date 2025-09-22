@@ -8,7 +8,7 @@ const { PDFDocument, PDFName } = require("pdf-lib");
  * Embed ICC profile for PDF/A compliance
  */
 async function embedIccProfile(pdfDoc) {
-const iccPath = path.resolve(__dirname, "./routes/sRGB_IEC61966-2-1.icc");
+const iccPath = path.resolve(__dirname, "./routes/sRGB2014.icc");
 
   const iccBytes = fs.readFileSync(iccPath);
 
@@ -21,7 +21,7 @@ const iccPath = path.resolve(__dirname, "./routes/sRGB_IEC61966-2-1.icc");
       pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
         S: PDFName.of("GTS_PDFA1"),
-        OutputConditionIdentifier: "sRGB IEC61966-2.1",
+        OutputConditionIdentifier: "sRGB2014",
         Info: "sRGB IEC61966-2.1",
         DestOutputProfile: iccRef,
       }),
