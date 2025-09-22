@@ -2,13 +2,12 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+const { PDFDocument, PDFName } = require("pdf-lib");
 
 /**
  * Embed ICC profile for PDF/A compliance
  */
 async function embedIccProfile(pdfDoc) {
-  // Use a validated sRGB monitor profile (IEC61966-2.1)
   const iccPath = path.resolve(__dirname, "../routes/sRGB_v4_ICC_preference.icc");
   const iccBytes = fs.readFileSync(iccPath);
 
@@ -33,13 +32,12 @@ async function embedIccProfile(pdfDoc) {
  * Embed dynamic XMP metadata or fallback
  */
 async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
-  const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
-
   let xmpContent = "";
-
   if (xmpTemplatePath && fs.existsSync(xmpTemplatePath)) {
     xmpContent = fs.readFileSync(xmpTemplatePath, "utf8");
   } else {
+    const { title = "Invoice", creator = "PDFify", language = "en" } = localeMeta;
+
     xmpContent = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='PDFify'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -55,10 +53,12 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end='r'?>`;
+<?xpacket end='w'?>`;
   }
 
   // Ensure UTF-8 without BOM
+  xmpContent = Buffer.from(xmpContent, "utf8").toString("utf8");
+
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpContent, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
@@ -73,16 +73,21 @@ async function embedXmp(pdfDoc, xmpTemplatePath = null, localeMeta = {}) {
  */
 function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
   const xmlBuffer = Buffer.from(xmlContent, "utf8");
-  const xmlStream = pdfDoc.context.flateStream(xmlBuffer);
+
+  // Use stream instead of flateStream
+  const xmlStream = pdfDoc.context.stream(xmlBuffer, {
+    Type: PDFName.of("EmbeddedFile"),
+    Subtype: PDFName.of("application/xml"),
+  });
+  const xmlRef = pdfDoc.context.register(xmlStream);
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
     F: fileName,
     UF: fileName,
     Desc: "ZUGFeRD Invoice XML",
+    EF: pdfDoc.context.obj({ F: xmlRef, UF: xmlRef }),
     AFRelationship: PDFName.of("Data"),
-    Subtype: PDFName.of("application/xml"),
-    EF: pdfDoc.context.obj({ F: xmlStream }),
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
@@ -90,6 +95,7 @@ function embedXmlIntoPdf(pdfDoc, xmlContent, fileName = "zugferd-invoice.xml") {
 
   return fileSpecRef;
 }
+
 
 /**
  * Generate minimal ZUGFeRD XML
@@ -142,17 +148,14 @@ async function postProcessPdf(pdfBytes, invoiceData, xmpTemplatePath = null) {
   await embedXmp(pdfDoc, xmpTemplatePath, {
     title: `Invoice ${invoiceData.orderId || "PDFify"}`,
     creator: invoiceData.creator || "PDFify",
-    language: invoiceData.locale?.language || "en"
+    language: invoiceData.locale?.language || "en",
   });
 
-  // Add Trailer ID (proper PDF string objects)
-  const idBytes = crypto.randomBytes(16);
-  const idArray = pdfDoc.context.obj([
-    PDFString.of(idBytes.toString("hex")),
-    PDFString.of(idBytes.toString("hex"))
-  ]);
-  pdfDoc.catalog.set(PDFName.of("ID"), idArray);
+  // Correct Trailer ID: raw 16-byte array
+  const id = crypto.randomBytes(16);
+  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id, id]));
 
+  // Save PDF without object streams (required by VeraPDF for strict PDF/A-3b)
   return await pdfDoc.save({ useObjectStreams: false });
 }
 
@@ -161,5 +164,5 @@ module.exports = {
   embedXmp,
   embedXmlIntoPdf,
   generateZugferdXML,
-  postProcessPdf
+  postProcessPdf,
 };
