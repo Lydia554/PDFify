@@ -572,19 +572,44 @@ code {
 }
 
 /* Compact Timeline style for left panel */
-.left-panel section {
-  background-color: #2a2f3b;
-  padding: 0.8rem 1rem;
-  border-radius: 10px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+
+.left-panel {
+  position: relative;
+  padding-left: 2rem;
 }
 
-.left-panel section h2::before {
-  content: "•";
-  color: #7c3aed;
-  display: inline-block;
-  width: 1rem;
-  margin-right: 0.3rem;
+.left-panel::before {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #7c3aed; 
+}
+
+.left-panel section {
+  position: relative;
+  margin-bottom: 1.5rem;
+  padding-left: 1rem;
+}
+
+.left-panel section::before {
+  content: "";
+  position: absolute;
+  left: -1.3rem;
+  top: 0.5rem;
+  width: 12px;
+  height: 12px;
+  background: #7c3aed; 
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+/* Optional: add a subtle hover effect on steps */
+.left-panel section:hover {
+  background-color: #3b3f51;
+  transition: background-color 0.3s;
 }
 
 /* Compact right panel cards */
