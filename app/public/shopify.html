@@ -7,168 +7,145 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="icon" href="images/Icon.png" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="Icon.png">
-  <script src="js/cookie-consent.js"></script>
 </head>
-<body class="bg-gray-900 text-white">
+<body class="bg-gray-900 text-white leading-relaxed">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
   <!-- Header -->
-  <header class="bg-gray-700 shadow fixed top-0 left-0 right-0 z-50">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+  <header class="bg-gray-700 fixed top-0 left-0 right-0 z-50 shadow">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
       <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
-      <nav class="space-x-4">
+      <nav class="space-x-6 text-lg">
         <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
         <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
-        <a href="/shopify" class="text-purple-400 font-semibold">📑Shopify</a>
+        <a href="/shopify" class="text-purple-400 font-semibold">📑 Shopify</a>
         <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
       </nav>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="pt-24 max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+  <!-- Hero Section -->
+  <section class="pt-28 pb-16 text-center">
+    <h1 class="text-4xl font-extrabold tracking-wide bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 bg-clip-text text-transparent mb-6">
+      🛠️ Connect Your Shopify Store to PDFify
+    </h1>
+    <p class="max-w-2xl mx-auto text-gray-300 text-lg">
+      Follow these steps to connect Shopify and start auto-generating beautiful PDF invoices.
+    </p>
+  </section>
 
-    <!-- LEFT COLUMN: Shopify Steps & Invoice Example -->
-    <div class="space-y-10">
+  <!-- Two Column Layout -->
+  <main class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 px-6">
 
-      <h1 class="text-3xl tracking-wider font-extrabold leading-relaxed mb-6 bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 bg-clip-text text-transparent text-center">
-        🛠️ How to Connect Your Shopify Store to PDFify
-      </h1>
+    <!-- LEFT SIDE: Shopify Instructions & Invoice Preview -->
+    <div class="space-y-12">
 
-      <!-- Shopify Steps -->
-      <section>
-        <h2 class="text-xl font-semibold text-purple-300 mb-2">✅ Step 1: Create a Custom App</h2>
-        <ol class="list-decimal list-inside space-y-1 text-gray-300">
-          <li>Go to your Shopify Admin → <strong>Apps</strong></li>
-          <li>Click <strong>App and sales channel settings</strong></li>
-          <li>Click <strong>Develop apps for your store</strong></li>
-          <li>Click <strong>Create an app</strong></li>
-          <li>Name it <code class="bg-purple-700 text-purple-300 px-2 rounded">PDFify Connector</code></li>
-        </ol>
-      </section>
+      <!-- Steps -->
+      <div class="space-y-10">
+        <div>
+          <h2 class="text-2xl font-bold text-purple-300 mb-4">Step 1: Create a Custom App</h2>
+          <ul class="list-disc list-inside space-y-2 text-gray-300">
+            <li>Shopify Admin → <strong>Apps</strong></li>
+            <li>App and sales channel settings → Develop apps → Create an app</li>
+            <li>Name it <code class="bg-purple-700 px-2 py-1 rounded">PDFify Connector</code></li>
+          </ul>
+        </div>
 
-      <section>
-        <h2 class="text-xl font-semibold text-purple-300 mb-2">✅ Step 2: Set Required Permissions</h2>
-        <ul class="list-disc list-inside space-y-1 text-gray-300">
-          <li>Go to the <strong>Configuration</strong> tab</li>
-          <li>Enable these permissions:
-            <ul class="ml-6 list-disc space-y-1">
-              <li><code class="bg-purple-700 text-purple-300 px-2 rounded">read_orders</code></li>
-              <li><code class="bg-purple-700 text-purple-300 px-2 rounded">write_orders</code> <span class="text-xs text-gray-500">(optional)</span></li>
-              <li><code class="bg-purple-700 text-purple-300 px-2 rounded">read_products</code></li>
-            </ul>
-          </li>
-          <li>Save changes</li>
-        </ul>
-      </section>
+        <div>
+          <h2 class="text-2xl font-bold text-purple-300 mb-4">Step 2: Set Permissions</h2>
+          <ul class="list-disc list-inside space-y-2 text-gray-300">
+            <li>Configuration → Admin API scopes</li>
+            <li>Enable:
+              <ul class="ml-6 list-disc space-y-1">
+                <li><code class="bg-purple-700 px-2 py-1 rounded">read_orders</code></li>
+                <li><code class="bg-purple-700 px-2 py-1 rounded">write_orders</code> <span class="text-xs text-gray-400">(optional)</span></li>
+                <li><code class="bg-purple-700 px-2 py-1 rounded">read_products</code></li>
+              </ul>
+            </li>
+          </ul>
+        </div>
 
-      <section>
-        <h2 class="text-xl font-semibold text-purple-300 mb-2">✅ Step 3: Install the App</h2>
-        <ul class="list-disc list-inside space-y-1 text-gray-300">
-          <li>Return to the <strong>Overview</strong> tab</li>
-          <li>Click <strong>Install app</strong></li>
-          <li>Confirm installation</li>
-        </ul>
-      </section>
+        <div>
+          <h2 class="text-2xl font-bold text-purple-300 mb-4">Step 3: Install the App</h2>
+          <p class="text-gray-300">Return to the Overview tab → Install app → Confirm installation</p>
+        </div>
 
-      <section>
-        <h2 class="text-xl font-semibold text-purple-300 mb-2">✅ Step 4: Copy Your Access Token</h2>
-        <ul class="list-disc list-inside space-y-1 text-gray-300">
-          <li>Go to <strong>API credentials</strong> tab</li>
-          <li>Click <strong>Reveal token once</strong></li>
-          <li>Copy token (<code class="bg-purple-700 text-purple-300 px-2 rounded">shpat_...</code>)</li>
-        </ul>
-      </section>
+        <div>
+          <h2 class="text-2xl font-bold text-purple-300 mb-4">Step 4: Copy Your Access Token</h2>
+          <p class="text-gray-300">API credentials → Reveal token once → Copy <code class="bg-purple-700 px-2 py-1 rounded">shpat_...</code></p>
+        </div>
 
-      <section>
-        <h2 class="text-xl font-semibold text-purple-300 mb-2">✅ Step 5: Paste the Token into PDFify</h2>
-        <ul class="list-disc list-inside space-y-1 text-gray-300">
-          <li>Paste <code class="bg-purple-700 text-purple-300 px-2 rounded">shpat_...</code> into PDFify</li>
-          <li>Enter store domain: <code class="bg-purple-700 text-purple-300 px-2 rounded">your-shop.myshopify.com</code></li>
-        </ul>
-      </section>
+        <div>
+          <h2 class="text-2xl font-bold text-purple-300 mb-4">Step 5: Paste Into PDFify</h2>
+          <p class="text-gray-300">Paste token & store domain into PDFify settings</p>
+        </div>
+      </div>
 
       <!-- Invoice Example -->
-      <section class="py-10 px-6 bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 rounded-lg shadow text-center">
-        <h2 class="text-3xl font-bold mb-4">🧾 Shopify Invoice Example</h2>
-        <p class="mb-6">Preview a real invoice generated by PDFify.</p>
-        <div class="image-toggle-container mb-4 cursor-pointer max-w-lg mx-auto" onclick="toggleImage(this)">
-          <img src="/demo/Shopify-Invoice-Premium-1.jpg" alt="Invoice 1" class="w-full rounded" />
-          <img src="/demo/Shopify-Invoice-Premium-2.jpg" alt="Invoice 2" class="w-full rounded hidden" />
+      <div class="bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 rounded-xl p-8 text-center shadow-lg">
+        <h3 class="text-3xl font-bold mb-4">🧾 Shopify Invoice Example</h3>
+        <p class="mb-8 text-gray-100">See what your invoices will look like.</p>
+        <div class="cursor-pointer max-w-md mx-auto mb-6" onclick="toggleImage(this)">
+          <img src="/demo/Shopify-Invoice-Premium-1.jpg" alt="Invoice 1" class="rounded-lg shadow-lg w-full" />
+          <img src="/demo/Shopify-Invoice-Premium-2.jpg" alt="Invoice 2" class="rounded-lg shadow-lg w-full hidden" />
         </div>
-        <a href="/demo/Shopify-Invoice-Premium.pdf?v=2" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-lg">Download Full PDF</a>
-      </section>
-
+        <a href="/demo/Shopify-Invoice-Premium.pdf" class="inline-block bg-purple-700 hover:bg-purple-800 px-6 py-3 rounded-lg font-semibold">Download Full PDF</a>
+      </div>
     </div>
 
-    <!-- RIGHT COLUMN: Inputs, Buttons, Date Pickers -->
-    <div class="space-y-8">
+    <!-- RIGHT SIDE: Interactive Inputs & Buttons -->
+    <div class="space-y-12">
 
-      <!-- Shopify Integration Card -->
-      <section class="bg-gray-800 p-6 rounded-lg shadow space-y-4">
-        <h2 class="text-2xl font-bold">🛒 Shopify Integration</h2>
-        <p class="text-sm"><strong>Connected Store:</strong> <span id="connectedShopDomain">No store connected</span></p>
-
-        <div>
-          <label class="text-sm font-semibold">PDFify API Key</label>
-          <input id="merchantApiKey" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white" placeholder="Enter API key" />
+      <!-- Shopify Connection -->
+      <div class="space-y-4">
+        <h2 class="text-2xl font-bold mb-4">🛒 Connect Your Store</h2>
+        <input id="merchantApiKey" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-white" placeholder="PDFify API key" />
+        <input id="shopDomainInput" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-white" placeholder="yourstore.myshopify.com" />
+        <input id="shopifyAccessToken" class="w-full p-3 rounded-lg bg-gray-800 border border-gray-700 text-white" placeholder="Shopify access token" />
+        <div class="flex gap-4 mt-6">
+          <button class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold">Connect Store</button>
+          <button class="flex-1 bg-pink-600 hover:bg-pink-700 py-3 rounded-lg font-semibold">Disconnect Store</button>
         </div>
+      </div>
 
-        <div>
-          <label class="text-sm font-semibold">Shop Domain</label>
-          <input id="shopDomainInput" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white" placeholder="yourstore.myshopify.com" />
-        </div>
-
-        <div>
-          <label class="text-sm font-semibold">Access Token</label>
-          <input id="shopifyAccessToken" class="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white" placeholder="Enter Shopify token" />
-        </div>
-
-        <!-- Button group -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-          <button id="connectShopifyButton" class="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg">Connect Store</button>
-          <button id="disconnectShopifyButton" class="bg-pink-600 hover:bg-pink-700 py-2 rounded-lg">Disconnect Store</button>
-        </div>
-      </section>
-
-      <!-- Date Range Picker -->
-      <section class="bg-gray-800 p-6 rounded-lg shadow">
-        <h3 class="text-lg font-bold mb-4">📅 Select Date Range</h3>
+      <!-- Date Picker -->
+      <div class="space-y-4">
+        <h2 class="text-2xl font-bold mb-4">📅 Filter Orders</h2>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <input type="date" id="fromDate" class="p-2 rounded bg-gray-700 border border-gray-600 text-white" />
-          <input type="date" id="toDate" class="p-2 rounded bg-gray-700 border border-gray-600 text-white" />
-          <button id="applyDateFilter" class="bg-green-600 hover:bg-green-700 py-2 rounded-lg">Apply</button>
+          <input type="date" class="p-3 rounded-lg bg-gray-800 border border-gray-700 text-white" />
+          <input type="date" class="p-3 rounded-lg bg-gray-800 border border-gray-700 text-white" />
+          <button class="bg-green-600 hover:bg-green-700 py-3 rounded-lg font-semibold">Apply</button>
         </div>
-      </section>
+      </div>
 
       <!-- Customer PDF Settings -->
-      <section id="customerPdfSection" class="bg-gray-800 p-6 rounded-lg shadow">
-        <h2 class="text-xl font-bold mb-2">📨 Customer PDF Settings</h2>
-        <div class="flex items-center gap-2 mb-4">
-          <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
-          <label for="allowCustomerPDFCheckbox" class="text-sm">Allow automatic PDF invoices to customers</label>
+      <div class="space-y-4">
+        <h2 class="text-2xl font-bold mb-4">📨 Customer PDF Settings</h2>
+        <div class="flex items-center gap-3">
+          <input type="checkbox" class="h-5 w-5 accent-green-400" />
+          <label>Automatically send PDF invoices to customers</label>
         </div>
-        <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 py-2 px-4 rounded-lg">Save Settings</button>
-      </section>
+        <button class="bg-green-600 hover:bg-green-700 py-3 px-6 rounded-lg font-semibold">Save Settings</button>
+      </div>
     </div>
-
   </main>
 
   <!-- Footer -->
-  <footer class="bg-gray-800 border-t border-gray-700 mt-12">
-    <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-      &copy; 2025 PDFify. Built with ❤️ for creators and developers.
-    </div>
+  <footer class="mt-20 py-8 text-center text-sm text-gray-500 border-t border-gray-800">
+    &copy; 2025 PDFify. Built with ❤️ for creators and developers.
   </footer>
+
+</body>
+</html>
 
 
 <script>
 
-
-   function toggleImage(container) {
+function toggleImage(container) {
       const imgs = container.querySelectorAll("img");
       imgs.forEach(img => img.classList.toggle("hidden"));
     }
+
   // ------------------------------
   // Collapsible sections (optional)
   // ------------------------------
