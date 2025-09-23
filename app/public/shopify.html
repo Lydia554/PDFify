@@ -13,6 +13,7 @@
 </head>
 <body class="pt-20">
 
+
   <!-- Header -->
   <header>
     <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
@@ -31,36 +32,36 @@
 
     <!-- Left: Timeline Steps -->
     <section>
-      <h2 class="text-2xl font-bold mb-6 text-purple-300">🛠️ Shopify Setup Steps</h2>
-      <div class="relative">
+      <h2 class="text-2xl font-bold mb-6 text-purple-300 fade-up">🛠️ Shopify Setup Steps</h2>
+      <div class="relative fade-up">
         <div class="absolute left-4 top-0 w-1 bg-purple-600 h-full rounded-full"></div>
         <div class="space-y-10 pl-12">
 
-          <div class="relative">
+          <div class="relative fade-up">
             <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
             <h3 class="text-lg font-semibold text-white">Step 1: Create a Custom App</h3>
             <p class="text-gray-300 text-sm">Go to Shopify Admin → Apps → Develop Apps → Create an App</p>
           </div>
 
-          <div class="relative">
+          <div class="relative fade-up">
             <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
             <h3 class="text-lg font-semibold text-white">Step 2: Set Permissions</h3>
             <p class="text-gray-300 text-sm">Enable <code class="bg-purple-700 px-1">read_orders</code>, <code class="bg-purple-700 px-1">write_orders</code>, <code class="bg-purple-700 px-1">read_products</code></p>
           </div>
 
-          <div class="relative">
+          <div class="relative fade-up">
             <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
             <h3 class="text-lg font-semibold text-white">Step 3: Install the App</h3>
             <p class="text-gray-300 text-sm">Return to Overview → Install App → Confirm</p>
           </div>
 
-          <div class="relative">
+          <div class="relative fade-up">
             <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
             <h3 class="text-lg font-semibold text-white">Step 4: Copy Access Token</h3>
             <p class="text-gray-300 text-sm">Get token from API Credentials → Reveal token once → Copy</p>
           </div>
 
-          <div class="relative">
+          <div class="relative fade-up">
             <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
             <h3 class="text-lg font-semibold text-white">Step 5: Paste Token into PDFify</h3>
             <p class="text-gray-300 text-sm">Paste <code class="bg-purple-700 px-1">shpat_...</code> & Store Domain → Done!</p>
@@ -70,25 +71,25 @@
       </div>
     </section>
 
-    <!-- Right: Controls -->
+    <!-- Right: Controls & Examples -->
     <section class="space-y-6">
-      <h2 class="text-2xl font-bold text-purple-300">⚙️ PDFify Controls</h2>
 
-      <!-- API Inputs -->
-      <div class="space-y-4">
+      <!-- Controls -->
+      <div class="fade-up space-y-4">
+        <h2 class="text-2xl font-bold text-purple-300">⚙️ PDFify Controls</h2>
+
         <input id="merchantApiKey" placeholder="PDFify API Key" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-400 focus:outline-none" />
         <input id="shopDomainInput" placeholder="yourstore.myshopify.com" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-400 focus:outline-none" />
         <input id="shopifyAccessToken" placeholder="Shopify Access Token" class="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-purple-400 focus:outline-none" />
-      </div>
 
-      <!-- Button Group -->
-      <div class="flex gap-4">
-        <button id="connectShopifyButton" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Connect</button>
-        <button id="disconnectShopifyButton" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-lg">Disconnect</button>
+        <div class="flex gap-4">
+          <button id="connectShopifyButton" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">Connect</button>
+          <button id="disconnectShopifyButton" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white py-2 rounded-lg">Disconnect</button>
+        </div>
       </div>
 
       <!-- Date Range Picker -->
-      <div class="bg-gray-900 p-4 rounded-lg border border-gray-700">
+      <div class="fade-up bg-gray-900 p-4 rounded-lg border border-gray-700">
         <h3 class="text-white mb-2">📅 Date Range</h3>
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <input type="date" id="fromDate" class="p-2 rounded-lg bg-gray-800 text-white border border-gray-600" />
@@ -98,11 +99,33 @@
       </div>
 
       <!-- Order Dropdown -->
-      <div id="orderDownloadContainer" class="hidden bg-gray-900 p-4 rounded-lg border border-gray-700">
+      <div id="orderDownloadContainer" class="fade-up hidden bg-gray-900 p-4 rounded-lg border border-gray-700">
         <h3 class="text-white mb-2">Download Order Invoice</h3>
         <select id="orderSelector" class="w-full p-2 rounded bg-gray-800 text-white mb-2"></select>
         <button id="downloadOrderPdf" class="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded">Download PDF</button>
       </div>
+
+      <!-- Shopify Invoice Example -->
+      <div class="fade-up bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 p-6 rounded-xl shadow text-white">
+        <h3 class="text-xl font-bold mb-4">🧾 Shopify Invoice Example</h3>
+        <div class="mb-4 cursor-pointer max-w-full mx-auto" onclick="toggleImage(this)">
+          <img src="/demo/Shopify-Invoice-Premium-1.jpg" alt="Invoice 1" class="w-full object-cover rounded" />
+          <img src="/demo/Shopify-Invoice-Premium-2.jpg" alt="Invoice 2" class="w-full object-cover rounded hidden" />
+        </div>
+        <a href="/demo/Shopify-Invoice-Premium.pdf?v=2" class="inline-block bg-purple-600 px-4 py-2 rounded hover:bg-purple-700">Download Full PDF</a>
+      </div>
+
+      <!-- Customer PDF Settings -->
+      <section id="customerPdfSection" class="fade-up bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 p-6 rounded-xl shadow mt-6 hidden">
+        <h3 class="text-lg font-bold mb-3">📨 Customer PDF Settings</h3>
+        <p class="text-sm mb-3">Status: <span id="customerPDFStatus">Loading...</span></p>
+        <div class="flex items-center gap-3 mb-4">
+          <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
+          <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">Allow colorful PDF invoices automatically to customers</label>
+        </div>
+        <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg">Save Settings</button>
+        <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
+      </section>
 
     </section>
   </main>
@@ -121,10 +144,22 @@
 
 <script>
 
+   const fadeElements = document.querySelectorAll('.fade-up');
+    const onScroll = () => {
+      fadeElements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight - 50) {
+          el.classList.add('show');
+        }
+      });
+    };
+    window.addEventListener('scroll', onScroll);
+    onScroll();
 
-  function toggleImage(container) {
-      const imgs = container.querySelectorAll("img");
-      imgs.forEach(img => img.classList.toggle("hidden"));
+    // Toggle example images
+    function toggleImage(container){
+      const imgs = container.querySelectorAll('img');
+      imgs.forEach(img => img.classList.toggle('hidden'));
     }
   // ------------------------------
   // Collapsible sections (optional)
