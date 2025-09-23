@@ -30,46 +30,51 @@
   <!-- Main Layout -->
   <main class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10">
 
-    <!-- Left: Timeline Steps -->
-    <section>
-      <h2 class="text-2xl font-bold mb-6 text-purple-300 fade-up">🛠️ Shopify Setup Steps</h2>
+<!-- Left: Timeline Steps with Scroll Progress -->
+<section class="relative">
+  <h2 class="text-2xl font-bold mb-6 text-purple-300 fade-up">🛠️ Shopify Setup Steps</h2>
+
+  <div class="relative pl-12">
+    <!-- Full line background -->
+    <div class="absolute left-4 top-0 w-1 bg-purple-600 h-full rounded-full"></div>
+    <!-- Animated fill line -->
+    <div id="progressLine" class="absolute left-4 top-0 w-1 bg-green-400 h-0 rounded-full transition-all duration-300"></div>
+
+    <div class="space-y-10">
+      <!-- Step 1 -->
       <div class="relative fade-up">
-        <div class="absolute left-4 top-0 w-1 bg-purple-600 h-full rounded-full"></div>
-        <div class="space-y-10 pl-12">
-
-          <div class="relative fade-up">
-            <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
-            <h3 class="text-lg font-semibold text-white">Step 1: Create a Custom App</h3>
-            <p class="text-gray-300 text-sm">Go to Shopify Admin → Apps → Develop Apps → Create an App</p>
-          </div>
-
-          <div class="relative fade-up">
-            <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
-            <h3 class="text-lg font-semibold text-white">Step 2: Set Permissions</h3>
-            <p class="text-gray-300 text-sm">Enable <code class="bg-purple-700 px-1">read_orders</code>, <code class="bg-purple-700 px-1">write_orders</code>, <code class="bg-purple-700 px-1">read_products</code></p>
-          </div>
-
-          <div class="relative fade-up">
-            <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
-            <h3 class="text-lg font-semibold text-white">Step 3: Install the App</h3>
-            <p class="text-gray-300 text-sm">Return to Overview → Install App → Confirm</p>
-          </div>
-
-          <div class="relative fade-up">
-            <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
-            <h3 class="text-lg font-semibold text-white">Step 4: Copy Access Token</h3>
-            <p class="text-gray-300 text-sm">Get token from API Credentials → Reveal token once → Copy</p>
-          </div>
-
-          <div class="relative fade-up">
-            <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full"></div>
-            <h3 class="text-lg font-semibold text-white">Step 5: Paste Token into PDFify</h3>
-            <p class="text-gray-300 text-sm">Paste <code class="bg-purple-700 px-1">shpat_...</code> & Store Domain → Done!</p>
-          </div>
-
-        </div>
+        <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full" id="circle1"></div>
+        <h3 class="text-lg font-semibold text-white">Step 1: Create a Custom App</h3>
+        <p class="text-gray-300 text-sm">Go to Shopify Admin → Apps → Develop Apps → Create an App</p>
       </div>
-    </section>
+      <!-- Step 2 -->
+      <div class="relative fade-up">
+        <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full" id="circle2"></div>
+        <h3 class="text-lg font-semibold text-white">Step 2: Set Permissions</h3>
+        <p class="text-gray-300 text-sm">Enable <code class="bg-purple-700 px-1">read_orders</code>, <code class="bg-purple-700 px-1">write_orders</code>, <code class="bg-purple-700 px-1">read_products</code></p>
+      </div>
+      <!-- Step 3 -->
+      <div class="relative fade-up">
+        <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full" id="circle3"></div>
+        <h3 class="text-lg font-semibold text-white">Step 3: Install the App</h3>
+        <p class="text-gray-300 text-sm">Return to Overview → Install App → Confirm</p>
+      </div>
+      <!-- Step 4 -->
+      <div class="relative fade-up">
+        <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full" id="circle4"></div>
+        <h3 class="text-lg font-semibold text-white">Step 4: Copy Access Token</h3>
+        <p class="text-gray-300 text-sm">Get token from API Credentials → Reveal token once → Copy</p>
+      </div>
+      <!-- Step 5 -->
+      <div class="relative fade-up">
+        <div class="absolute -left-7 top-1 w-5 h-5 bg-purple-600 rounded-full" id="circle5"></div>
+        <h3 class="text-lg font-semibold text-white">Step 5: Paste Token into PDFify</h3>
+        <p class="text-gray-300 text-sm">Paste <code class="bg-purple-700 px-1">shpat_...</code> & Store Domain → Done!</p>
+      </div>
+    </div>
+  </div>
+</section>
+
 
     <!-- Right: Controls & Examples -->
     <section class="space-y-6">
@@ -161,6 +166,32 @@
       const imgs = container.querySelectorAll('img');
       imgs.forEach(img => img.classList.toggle('hidden'));
     }
+
+
+const progressLine = document.getElementById('progressLine');
+const steps = document.querySelectorAll('.fade-up');
+
+function updateProgressLine() {
+  const scrollTop = window.scrollY;
+  const start = steps[0].offsetTop - window.innerHeight / 2;
+  const end = steps[steps.length - 1].offsetTop;
+  let height = scrollTop - start;
+  height = Math.max(0, Math.min(height, end - start));
+  progressLine.style.height = height + 'px';
+
+  // Highlight milestone circles when reached
+  steps.forEach((step, idx) => {
+    const circle = document.getElementById(`circle${idx + 1}`);
+    if (scrollTop + window.innerHeight / 2 > step.offsetTop) {
+      circle.classList.add('bg-green-400');
+    } else {
+      circle.classList.remove('bg-green-400');
+    }
+  });
+}
+
+window.addEventListener('scroll', updateProgressLine);
+updateProgressLine();
   // ------------------------------
   // Collapsible sections (optional)
   // ------------------------------
