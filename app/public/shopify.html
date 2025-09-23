@@ -515,7 +515,7 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
-  padding-top: 6rem; /* header space */
+  padding-top: 6rem;
   background-color: #1d222b;
   color: #ddd;
   line-height: 1.6;
@@ -524,56 +524,59 @@ body {
 main {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
-  padding: 2rem;
+  gap: 1.5rem;
+  padding: 1.5rem;
   width: 100%;
   box-sizing: border-box;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 h1 {
   width: 100%;
   text-align: center;
   margin-bottom: 2rem;
+  font-size: 2rem;
 }
 
 h2 {
   color: #d8b4fe;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
 
 section {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 ol, ul {
-  margin-left: 1.5rem;
-  margin-bottom: 1rem;
+  margin-left: 1.2rem;
+  margin-bottom: 0.8rem;
 }
 
 code {
   background-color: #2a1f3d;
-  padding: 0.2em 0.4em;
+  padding: 0.15em 0.3em;
   border-radius: 4px;
   font-family: Consolas, monospace;
-  font-size: 0.95em;
+  font-size: 0.9em;
   color: #e9d5ff;
 }
 
 .left-panel, .right-panel {
   flex: 1 1 45%;
-  min-width: 300px;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
-/* Timeline style for left panel */
+/* Compact Timeline style for left panel */
 .left-panel section {
   background-color: #2a2f3b;
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 
 .left-panel section h2::before {
@@ -581,41 +584,41 @@ code {
   color: #7c3aed;
   display: inline-block;
   width: 1rem;
-  margin-right: 0.5rem;
+  margin-right: 0.3rem;
 }
 
-/* Right panel cards */
+/* Compact right panel cards */
 .right-panel > div, .right-panel section {
   background-color: #2a2f3b;
-  padding: 1rem 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 
-/* Shopify invoice example image */
+/* Shopify invoice*/
 .image-toggle-container img {
-  max-width: 100%;
+  max-width: 80%;
   height: auto;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
-/* Header tweaks */
+/* Header*/
 header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
   z-index: 1000;
 }
 
-/* Footer tweaks */
+/* Footer */
 footer {
   background-color: #111827;
   border-top: 1px solid #374151;
   color: #aaa;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
   text-align: center;
   font-size: 0.875rem;
 }
