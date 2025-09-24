@@ -544,6 +544,18 @@ header {
 }
 
 
+header nav {
+  display: flex;
+  gap: 2rem; 
+  align-items: center;
+}
+
+header nav a {
+  padding: 0.5rem 0.75rem; 
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
 
 h1 {
   width: 100%;
@@ -642,14 +654,14 @@ code {
 
 .animate-fade-in {
   animation: fade-in 1s ease-out forwards;
-  opacity: 1 !important; /* force visible in case animation fails */
+  opacity: 1 !important; 
 }
 
 h1.bg-clip-text {
   color: transparent;
   background-clip: text;
   -webkit-background-clip: text;
-  /* fallback gradient color if needed */
+
 }
 
 
