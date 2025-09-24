@@ -145,25 +145,32 @@
       <p id="shopifyResult" class="text-sm font-bold mt-3"></p>
     </section>
 
-    <!-- Date Picker Card -->
-    <div class="mb-6 p-6 bg-gray-900 border border-gray-700 rounded-2xl shadow-lg">
-      <h3 class="text-lg font-bold text-white mb-4">📅 Select Date Range</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-        <div>
-          <label for="fromDate" class="block text-sm font-semibold text-gray-300 mb-1">From</label>
-          <input type="date" id="fromDate" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-600 focus:ring-2 focus:ring-cyan-400 focus:outline-none">
-        </div>
-        <div>
-          <label for="toDate" class="block text-sm font-semibold text-gray-300 mb-1">To</label>
-          <input type="date" id="toDate" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-600 focus:ring-2 focus:ring-cyan-400 focus:outline-none">
-        </div>
-        <div>
-          <button id="applyDateFilter" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-3 rounded-lg shadow-lg transition duration-200">
-            Apply
-          </button>
-        </div>
-      </div>
+ <!-- Date Range & ZIP Download Card -->
+<div class="mb-6 p-6 bg-gray-900 border border-gray-700 rounded-2xl shadow-lg">
+  <h3 class="text-lg font-bold text-white mb-4">📅 Select Date Range & Download Invoices</h3>
+  
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end mb-4">
+    <div>
+      <label for="fromDate" class="block text-sm font-semibold text-gray-300 mb-1">From</label>
+      <input type="date" id="fromDate" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-600 focus:ring-2 focus:ring-cyan-400 focus:outline-none">
     </div>
+    <div>
+      <label for="toDate" class="block text-sm font-semibold text-gray-300 mb-1">To</label>
+      <input type="date" id="toDate" class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-600 focus:ring-2 focus:ring-cyan-400 focus:outline-none">
+    </div>
+    <div>
+      <button id="applyDateFilter" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-3 rounded-lg shadow-lg transition duration-200">
+        Apply Filter
+      </button>
+    </div>
+  </div>
+
+  <button id="downloadAllZip" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-lg shadow-lg transition duration-200">
+    Download All PDFs (ZIP)
+  </button>
+  <p id="zipStatus" class="text-sm mt-2 text-white"></p>
+</div>
+
 
     <!-- Orders Dropdown -->
     <div id="orderDownloadContainer" class="hidden mt-6 p-4 border border-gray-600 rounded-lg bg-gray-900 text-white">
@@ -176,6 +183,8 @@
       </button>
       <p id="downloadStatus" class="text-sm mt-2 text-white"></p>
     </div>
+
+
 
     <!-- Customer PDF Section -->
     <section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded-2xl p-6 mt-6 text-white hidden">
@@ -506,6 +515,41 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
     orderSelector.innerHTML = `<option>Error loading orders</option>`;
   }
 });
+
+document.getElementById("downloadAllZip").addEventListener("click", async () => {
+  const shopDomain = document.getElementById("connectedShopDomain").textContent.trim();
+  const fromDate = document.getElementById("fromDate").value;
+  const toDate = document.getElementById("toDate").value;
+  const zipStatus = document.getElementById("zipStatus");
+
+  if (!shopDomain || shopDomain === "No store connected") {
+    zipStatus.textContent = "Please connect a store first.";
+    return;
+  }
+
+  zipStatus.textContent = "Generating ZIP file... This may take a few seconds.";
+
+  try {
+    const res = await axios.post("/shopify/invoices/zip", { shopDomain, from: fromDate, to: toDate }, { responseType: "blob" });
+
+    const blob = new Blob([res.data], { type: "application/zip" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Invoices_${fromDate || "start"}_to_${toDate || "end"}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    zipStatus.textContent = "ZIP file downloaded!";
+  } catch (err) {
+    console.error(err);
+    zipStatus.textContent = "Failed to generate ZIP.";
+  }
+});
+
 
 </script>
 

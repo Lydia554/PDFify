@@ -13,6 +13,7 @@ const { resolveLanguage } = require("../utils/resolveLanguage");
 const { incrementUsage } = require("../utils/usageUtils");
 
 const { createShopifyInvoiceZugferd } = require("../../templates/shopifyMerchantTemplate");
+const JSZip = require("jszip");
 
 
 
@@ -603,6 +604,66 @@ router.get("/orders", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to fetch orders" });
   }
 });
+
+router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
+  try {
+    const { shopDomain, from, to } = req.body;
+    if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
+
+    const token = await resolveShopifyToken(req, shopDomain);
+    if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
+
+    // Fetch all orders in the date range
+    let shopifyOrdersUrl = `https://${shopDomain}/admin/api/2023-10/orders.json?limit=50&status=any&fields=id,name,created_at`;
+
+    const params = [];
+    if (from) params.push(`created_at_min=${encodeURIComponent(from + "T00:00:00Z")}`);
+    if (to) params.push(`created_at_max=${encodeURIComponent(to + "T23:59:59Z")}`);
+    if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
+
+    const response = await axios.get(shopifyOrdersUrl, { headers: { "X-Shopify-Access-Token": token } });
+    const orders = response.data.orders;
+
+    if (!orders.length) return res.status(404).json({ error: "No orders found in this range" });
+
+    const zip = new JSZip();
+
+    // Process orders in batches of 20
+    for (let i = 0; i < orders.length; i += 20) {
+      const batch = orders.slice(i, i + 20);
+
+      const pdfPromises = batch.map(async (order) => {
+        let orderData = order;
+        if (!orderData.line_items) {
+          // Fetch full order if line_items missing
+          const fullOrderResp = await axios.get(`https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`, {
+            headers: { "X-Shopify-Access-Token": token },
+          });
+          orderData = fullOrderResp.data.order;
+        }
+
+        // Generate PDF (merchant version)
+        const pdfBuffer = await createShopifyInvoiceZugferd(orderData);
+        zip.file(`Invoice_${orderData.name}.pdf`, pdfBuffer);
+      });
+
+      await Promise.all(pdfPromises); 
+    }
+
+    // Generate ZIP
+    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename=Invoices_${from || "start"}_to_${to || "end"}.zip`,
+    });
+    res.send(zipBuffer);
+  } catch (err) {
+    console.error("Failed to generate ZIP:", err);
+    res.status(500).json({ error: "Failed to generate ZIP" });
+  }
+});
+
 
 
 
