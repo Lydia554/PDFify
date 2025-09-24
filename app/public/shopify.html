@@ -494,7 +494,8 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
   orderSelector.innerHTML = `<option>Loading orders...</option>`;
 
   try {
-    const res = await api.get(`/shopify/orders?shopDomain=${encodeURIComponent(shopDomain)}&from=${fromDate}&to=${toDate}`);
+    const res = await api.get(`/api/shopify/orders?shopDomain=${encodeURIComponent(shopDomain)}&from=${fromDate}&to=${toDate}`);
+
     const orders = Array.isArray(res.data.orders) ? res.data.orders : [];
 
     if (!orders.length) {
@@ -530,7 +531,8 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
   zipStatus.textContent = "Generating ZIP file... This may take a few seconds.";
 
   try {
-    const res = await axios.post("/shopify/invoices/zip", { shopDomain, from: fromDate, to: toDate }, { responseType: "blob" });
+    const res = await axios.post("/api/shopify/invoices/zip", { shopDomain, from: fromDate, to: toDate }, { responseType: "blob" });
+
 
     const blob = new Blob([res.data], { type: "application/zip" });
     const url = window.URL.createObjectURL(blob);
