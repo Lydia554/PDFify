@@ -543,17 +543,22 @@ header {
   z-index: 1000;
 }
 
-
 header nav {
   display: flex;
-  gap: 2rem; 
-  align-items: center;
+  gap: 2rem;      
+  align-items: center; 
+  flex-wrap: nowrap;   
 }
 
 header nav a {
-   
+  display: inline-flex;
+  align-items: center; 
+  gap: 0.3rem;        
+  white-space: nowrap; 
+  text-decoration: none;
+  color: inherit;
   font-weight: 500;
-  transition: color 0.2s;
+  font-size: 1rem;
 }
 
 
