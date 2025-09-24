@@ -146,7 +146,8 @@
       </div>
     </footer>
 
-  <script>
+ <script type="module">
+  import { initBuyTokens } from '/js/buy-tokens.js';
     
     const api = axios.create({
       baseURL: "/api",
@@ -430,7 +431,7 @@ async function loadBankDetails() {
 
 loadBankDetails();
 
-
+  initBuyTokens();
 
 
 
