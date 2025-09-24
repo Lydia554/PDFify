@@ -185,6 +185,21 @@
     </div>
 
 
+    <!-- Customer PDF Section -->
+    <section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded-2xl p-6 mt-6 text-white hidden">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
+      <p class="text-sm mb-4"><strong>Status:</strong> <span id="customerPDFStatus">Loading...</span></p>
+      <div class="flex items-center gap-3 mb-4">
+        <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
+        <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">Allow colorful PDF invoices to be sent automatically to customers</label>
+      </div>
+      <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded-lg shadow">
+        Save Settings
+      </button>
+      <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
+    </section>
+
+
     <!-- Token Packs Sidebar Section -->
 <section class="mt-6 p-5 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-xl border border-gray-700">
   <h3 class="text-xl font-bold text-emerald-300 mb-3 flex items-center gap-2">🪙 Buy Tokens</h3>
@@ -217,20 +232,6 @@
 </section>
 
 
-
-    <!-- Customer PDF Section -->
-    <section id="customerPdfSection" class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded-2xl p-6 mt-6 text-white hidden">
-      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">📨 Customer PDF Settings</h2>
-      <p class="text-sm mb-4"><strong>Status:</strong> <span id="customerPDFStatus">Loading...</span></p>
-      <div class="flex items-center gap-3 mb-4">
-        <input type="checkbox" id="allowCustomerPDFCheckbox" class="h-5 w-5 accent-green-400">
-        <label for="allowCustomerPDFCheckbox" class="text-sm font-medium">Allow colorful PDF invoices to be sent automatically to customers</label>
-      </div>
-      <button id="saveCustomerPDFSettingButton" class="bg-green-500 hover:bg-green-600 transition duration-200 text-white font-semibold px-6 py-2 rounded-lg shadow">
-        Save Settings
-      </button>
-      <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
-    </section>
   </div>
 
 
