@@ -200,6 +200,40 @@
       <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
     </section>
   </div>
+
+<!-- Token Packs Sidebar Section -->
+<section class="mt-6 p-5 bg-gradient-to-b from-gray-800 to-gray-900 rounded-2xl shadow-xl border border-gray-700">
+  <h3 class="text-xl font-bold text-emerald-300 mb-3 flex items-center gap-2">🪙 Buy Tokens</h3>
+  <p class="text-gray-400 mb-5 text-sm">Add extra PDF pages beyond your monthly limit.</p>
+
+  <div class="space-y-3">
+    <!-- 1,000 Pages Pack -->
+    <button data-pack="1000" 
+      class="token-pack-btn w-full flex flex-col items-center bg-emerald-600 text-white px-4 py-3 rounded-lg shadow hover:bg-emerald-700 hover:scale-105 transition-transform">
+      <span class="text-lg font-semibold">🟢 1,000 Pages</span>
+      <span class="text-sm font-bold mt-1">€5</span>
+    </button>
+
+    <!-- 5,000 Pages Pack -->
+    <button data-pack="5000" 
+      class="token-pack-btn w-full flex flex-col items-center bg-blue-600 text-white px-4 py-3 rounded-lg shadow hover:bg-blue-700 hover:scale-105 transition-transform">
+      <span class="text-lg font-semibold">🔵 5,000 Pages</span>
+      <span class="text-sm font-bold mt-1">€25</span>
+    </button>
+
+    <!-- 10,000 Pages Pack -->
+    <button data-pack="10000" 
+      class="token-pack-btn w-full flex flex-col items-center bg-purple-600 text-white px-4 py-3 rounded-lg shadow hover:bg-purple-700 hover:scale-105 transition-transform">
+      <span class="text-lg font-semibold">🟣 10,000 Pages</span>
+      <span class="text-sm font-bold mt-1">€50</span>
+    </button>
+  </div>
+
+  <p id="token-purchase-result" class="mt-4 text-sm text-gray-300"></p>
+</section>
+
+
+
 </main>
 
 
@@ -555,6 +589,54 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
     zipStatus.textContent = "Failed to generate ZIP.";
   }
 });
+
+document.querySelectorAll('.token-pack-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const apiKey = document.getElementById('apiKey')?.value || localStorage.getItem('apiKey');
+    if (!apiKey) {
+      alert('Please provide your API key');
+      return;
+    }
+
+    const pack = btn.dataset.pack;
+    const resultEl = document.getElementById('token-purchase-result');
+    resultEl.textContent = 'Redirecting to payment...';
+
+    try {
+      const response = await fetch('/api/stripe/buy-tokens', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ pack }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Error creating token checkout session:", error);
+        resultEl.textContent = `❌ Error: ${error.error || "Failed to create checkout session"}`;
+        return;
+      }
+
+      const { url } = await response.json();
+      if (!url) {
+        resultEl.textContent = '❌ Error: No checkout URL returned from backend.';
+        console.log({ response: await response.json() });
+        return;
+      }
+
+   
+      window.location.href = url;
+
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      resultEl.textContent = '❌ An unexpected error occurred. Please try again.';
+    }
+  });
+});
+
 
 
 
