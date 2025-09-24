@@ -187,35 +187,6 @@ John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.
     </button>
   </section>
 
-<!-- Token Purchase Section -->
-<section class="mt-12 text-center fade-in-up border-t border-gray-600 pt-8">
-  <h3 class="text-2xl font-bold text-emerald-300 mb-4 animate-pulse">🪙 Buy Token Packs – Extra Pages!</h3>
-  <p class="text-gray-400 mb-6">Purchase additional PDF pages to go beyond your monthly limit.</p>
-
-  <div class="flex flex-wrap justify-center gap-4">
-    <!-- 1,000 Pages Pack -->
-    <button data-pack="1000" 
-      class="token-pack-btn inline-block bg-emerald-600 text-white px-8 py-4 rounded-md font-bold hover:bg-emerald-700 transition-transform hover:scale-105 shadow-lg">
-      🟢 1,000 Pages – €5
-    </button>
-
-    <!-- 5,000 Pages Pack -->
-    <button data-pack="5000" 
-      class="token-pack-btn inline-block bg-blue-600 text-white px-8 py-4 rounded-md font-bold hover:bg-blue-700 transition-transform hover:scale-105 shadow-lg">
-      🔵 5,000 Pages – €25
-    </button>
-
-    <!-- 10,000 Pages Pack -->
-    <button data-pack="10000" 
-      class="token-pack-btn inline-block bg-purple-600 text-white px-8 py-4 rounded-md font-bold hover:bg-purple-700 transition-transform hover:scale-105 shadow-lg">
-      🟣 10,000 Pages – €50
-    </button>
-  </div>
-
-  <p id="token-purchase-result" class="mt-4 text-gray-300"></p>
-</section>
-
-
 
   <!-- Footer -->
    <footer class="bg-gray-800 border-t border-gray-700 mt-12">
@@ -812,53 +783,6 @@ fetch('/api/get-stripe-key')
   })
   .catch(error => console.error('Error fetching Stripe key:', error));
 
-
-document.querySelectorAll('.token-pack-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    const apiKey = document.getElementById('apiKey')?.value || localStorage.getItem('apiKey');
-    if (!apiKey) {
-      alert('Please provide your API key');
-      return;
-    }
-
-    const pack = btn.dataset.pack;
-    const resultEl = document.getElementById('token-purchase-result');
-    resultEl.textContent = 'Redirecting to payment...';
-
-    try {
-      const response = await fetch('/api/stripe/buy-tokens', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({ pack }),
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        console.error("Error creating token checkout session:", error);
-        resultEl.textContent = `❌ Error: ${error.error || "Failed to create checkout session"}`;
-        return;
-      }
-
-      const { url } = await response.json();
-      if (!url) {
-        resultEl.textContent = '❌ Error: No checkout URL returned from backend.';
-        console.log({ response: await response.json() });
-        return;
-      }
-
-   
-      window.location.href = url;
-
-    } catch (err) {
-      console.error("Unexpected error:", err);
-      resultEl.textContent = '❌ An unexpected error occurred. Please try again.';
-    }
-  });
-});
 
 
 
