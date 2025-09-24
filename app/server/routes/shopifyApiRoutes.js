@@ -605,6 +605,9 @@ router.get("/orders", authenticate, dualAuth, async (req, res) => {
   }
 });
 
+
+
+
 router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
   try {
     const { shopDomain, from, to } = req.body;
@@ -615,7 +618,6 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
 
     // Fetch all orders in the date range
     let shopifyOrdersUrl = `https://${shopDomain}/admin/api/2023-10/orders.json?limit=50&status=any&fields=id,name,created_at`;
-
     const params = [];
     if (from) params.push(`created_at_min=${encodeURIComponent(from + "T00:00:00Z")}`);
     if (to) params.push(`created_at_max=${encodeURIComponent(to + "T23:59:59Z")}`);
@@ -627,6 +629,7 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
     if (!orders.length) return res.status(404).json({ error: "No orders found in this range" });
 
     const zip = new JSZip();
+    const user = req.fullUser;
 
     // Process orders in batches of 20
     for (let i = 0; i < orders.length; i += 20) {
@@ -635,7 +638,7 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
       const pdfPromises = batch.map(async (order) => {
         let orderData = order;
         if (!orderData.line_items) {
-          // Fetch full order if line_items missing
+         
           const fullOrderResp = await axios.get(`https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`, {
             headers: { "X-Shopify-Access-Token": token },
           });
@@ -647,8 +650,11 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
         zip.file(`Invoice_${orderData.name}.pdf`, pdfBuffer);
       });
 
-      await Promise.all(pdfPromises); 
+      await Promise.all(pdfPromises);
     }
+
+    // Increment usage count by number of orders
+    await incrementUsage(user, orders.length, false);
 
     // Generate ZIP
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
@@ -658,12 +664,12 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
       "Content-Disposition": `attachment; filename=Invoices_${from || "start"}_to_${to || "end"}.zip`,
     });
     res.send(zipBuffer);
+
   } catch (err) {
     console.error("Failed to generate ZIP:", err);
     res.status(500).json({ error: "Failed to generate ZIP" });
   }
 });
-
 
 
 
