@@ -1063,25 +1063,26 @@ header {
       border-radius: 4px;
     }
 
-   
-    header.bg-white {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #374151;
-      box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-      z-index: 1000;
-    }
 
-    header .max-w-6xl {
-      max-width: 72rem;
-      margin: 0 auto;
-      padding: 1rem 1rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+    header nav {
+  display: flex;
+  gap: 2rem;      
+  align-items: center; 
+  flex-wrap: nowrap;   
+}
+
+header nav a {
+  display: inline-flex;
+  align-items: center; 
+  gap: 0.3rem;        
+  white-space: nowrap; 
+  text-decoration: none;
+  color: inherit;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+   
 
 
   img.zoomable {
