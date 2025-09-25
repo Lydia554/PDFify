@@ -15,10 +15,11 @@
 
 
   <!-- Header -->
-  <header class="bg-gray-700 shadow fixed top-0 left-0 right-0 z-50">
+
+    <header>
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
-      <nav class="space-x-4">
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
+          <nav class="space-x-4">
         <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
         <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
         <a href="/shopify" class="text-purple-400 font-semibold">📑Shopify</a>
@@ -26,6 +27,7 @@
       </nav>
     </div>
   </header>
+
 
 <main>
   <h1 class="text-3xl tracking-wider font-extrabold leading-relaxed text-center mb-12 mt-4 bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 bg-clip-text text-transparent opacity-0 animate-fade-in">
@@ -615,22 +617,20 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
 <style>
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  margin: 0;
-  padding-top: 6rem;
-  background-color: #1d222b;
-  color: #ddd;
-  line-height: 1.6;
+      max-width: 720px;
+      margin: 0 auto;
+      line-height: 1.6;
+      padding: 6rem 1rem 2rem; 
+      background-color: #374151;
+      color: #333;
 }
 
 main {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  width: 100%;
-  box-sizing: border-box;
-  max-width: 1200px;
-  margin: 0 auto;
+ background: #1d222b;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      margin-top: 3%;
 }
 
 header {
