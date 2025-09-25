@@ -1109,39 +1109,38 @@ header nav a {
     }
 
 
-
 @media (max-width: 420px) {
   header .max-w-6xl {
-    flex-direction: column;   
-    align-items: center;      
-    gap: 0.75rem;             
-    padding: 8px 10px;    
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 8px 10px;
   }
 
   header h1 {
     text-align: center;
-    font-size: 1.5rem;      
+    font-size: 1.5rem;
+    width: 100%;
   }
 
   header nav {
     display: flex;
-    flex-direction: column;   
-    gap: 0.5rem;            
-    width: 100%;    
-    align-items: center;    
-    margin-top: 0.5rem;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
   }
 
   header nav a,
   header nav button {
-    width: 90%;               
+    flex: 1;
     text-align: center;
-    padding: 0.5rem 0.75rem; 
-    font-size: 0.9rem;
+    padding: 0.6rem 0;
+    font-size: 1rem;
     border-radius: 6px;
-    box-shadow: none;       
+    width: 100%;
   }
 }
+
 
 
   </style>
