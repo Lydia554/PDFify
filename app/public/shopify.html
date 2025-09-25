@@ -615,41 +615,36 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
 
 
 <style>
-body {
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  margin: 0 auto;
-  padding-top: 6rem;
-  line-height: 1.6;
-   background-color: #374151;
-  color: #333;
-}
 
-main {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
-  padding: 2rem;
-  width: 100%;
-  box-sizing: border-box;
-  max-width: 1200px;
-  margin: 0 auto;
-  background: #1d222b;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-    border-radius: 8px;
-  
-}
+
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      line-height: 1.6;
+      padding: 6rem 1rem 2rem; 
+      background-color: #374151;
+      color: #333;
+    }
 
 header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  width: 100%;
-  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 1000;
 }
 
+
+    main {
+      background: #1d222b;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+     
+    }
 
 
 header nav {
