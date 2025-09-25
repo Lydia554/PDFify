@@ -617,20 +617,24 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
 <style>
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 720px;
-      margin: 0 auto;
-      line-height: 1.6;
-      padding: 6rem 1rem 2rem; 
-      background-color: #374151;
+  margin: 0;
+  padding-top: 6rem;
+  background-color: #374151;
       color: #333;
+  line-height: 1.6;
 }
 
 main {
- background: #1d222b;
-      padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-      margin-top: 3%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 1200px;
+  margin: 0 auto;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+       background: #1d222b;
 }
 
 header {
