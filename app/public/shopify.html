@@ -15,17 +15,18 @@
 
 
   <!-- Header -->
-  <header class="bg-gray-700 shadow fixed top-0 left-0 right-0 z-50">
+  <header>
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
       <nav class="space-x-4">
         <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
-        <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
-        <a href="/shopify" class="text-purple-400 font-semibold">📑Shopify</a>
+        <a href="/api-guide" class="text-purple-400 font-semibold">📑API Guide</a>
+        <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
         <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
       </nav>
     </div>
   </header>
+
 
 <main>
   <h1 class="text-3xl tracking-wider font-extrabold leading-relaxed text-center mb-12 mt-4 bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 bg-clip-text text-transparent opacity-0 animate-fade-in">
@@ -634,13 +635,12 @@ main {
 }
 
 header {
-  position: static;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  width: 100%;
-  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 1000;
 }
 
@@ -666,7 +666,7 @@ header nav a {
 h1 {
   width: 100%;
   text-align: center;
-  margin-top: 2rem;
+  margin-top: 5rem;
   font-size: 2rem;
 }
 
@@ -807,5 +807,10 @@ footer {
   header nav a {
     font-size: 0.85rem;   
   }
+
+  h1 {
+  margin-top: 1rem;
+}
+
 }
 </style>
