@@ -1148,19 +1148,52 @@ header nav a {
     font-size: 0.8rem;
   }
 
-  header nav,
-  header nav a,
-  header nav button {
-    width: 100%;
-    font-size: 0.7rem;
-    text-align: center;
-    padding: 0.5rem 0;
-  }
+
 
   img.zoomable {
     max-width: 100%;
     height: auto;
   }
+
+}
+
+@media (max-width: 420px) {
+  main {
+    padding: 1rem;
+  }
+
+
+    header .max-w-6xl {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 8px 10px;
+  }
+
+    header h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    width: 100%;
+  }
+
+    header nav {
+    flex-wrap: wrap;      
+    justify-content: center; 
+    gap: 1rem;            
+  }
+
+  header nav a {
+    font-size: 0.85rem;   
+  }
+
+
+  h1 text-3xl {
+  margin-top: 10%;
+  font-size: 8px;
+}
+
+
+
 }
 
 
