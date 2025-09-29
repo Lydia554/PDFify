@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML } = require("../server/Helpers/pdf-helpers");
+const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML } = require("../../Helpers/pdf-helpers");
 
 /**
  * Safely parse numbers

@@ -10,7 +10,7 @@ const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 
-const { createShopifyInvoiceZugferd } = require("./shopifyMerchantTemplate");
+const { createShopifyInvoiceZugferd } = require("../../../templates/shopifyMerchantTemplate");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 
 const JSZip = require("jszip");
