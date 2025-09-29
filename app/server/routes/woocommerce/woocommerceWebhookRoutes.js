@@ -5,7 +5,7 @@ const ShopConfig = require("../../models/ShopConfig");
 const axios = require("axios");
 const { incrementUsage } = require("../../utils/usageUtils");
 const sendEmail = require("../../sendEmail");
-const generateInvoice = require("../woocommerce/generateInvoice");
+const generateInvoice = require("../woocommerce/customerInvoice");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 
 router.post("/order-created", async (req, res) => {
