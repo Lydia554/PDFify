@@ -185,8 +185,32 @@
   </div>
 </footer>
 
+
 <script type="module">
 const api = axios.create({ baseURL: "/api", timeout: 10000 });
+
+// -------------------------
+// Load connected WooCommerce store
+// -------------------------
+async function loadConnectedStore() {
+  try {
+    const res = await api.get("/woocommerce/store");
+    if (res.data.storeUrl) {
+      document.getElementById("connectedStoreUrl").textContent = res.data.storeUrl;
+      document.getElementById("storeUrlInput").value = res.data.storeUrl;
+      document.getElementById("consumerKeyInput").value = res.data.consumerKey;
+      document.getElementById("consumerSecretInput").value = res.data.consumerSecret;
+      document.getElementById("allowCustomerPDFCheckbox").checked = res.data.allowCustomerPDF || false;
+      document.getElementById("customerPdfSection").classList.remove("hidden");
+      await fetchOrders(res.data.storeUrl);
+    }
+  } catch (err) {
+    console.error("Failed to load connected store:", err);
+  }
+}
+
+// Call on page load
+loadConnectedStore();
 
 // -------------------------
 // Image toggle
@@ -209,9 +233,7 @@ async function fetchOrders(storeUrl) {
   try {
     const fromDate = document.getElementById("fromDate").value;
     const toDate = document.getElementById("toDate").value;
-    const res = await api.get(`/woocommerce/orders`, {
-      params: { storeUrl, from: fromDate, to: toDate }
-    });
+    const res = await api.get(`/woocommerce/orders`, { params: { storeUrl, from: fromDate, to: toDate } });
     const orders = Array.isArray(res.data.orders) ? res.data.orders : [];
     if (!orders.length) {
       orderSelector.innerHTML = `<option>No orders found</option>`;
@@ -267,6 +289,9 @@ document.getElementById("disconnectWooButton").addEventListener("click", async (
   try {
     await api.post("/woocommerce/disconnect");
     document.getElementById("connectedStoreUrl").textContent = "No store connected";
+    document.getElementById("storeUrlInput").value = "";
+    document.getElementById("consumerKeyInput").value = "";
+    document.getElementById("consumerSecretInput").value = "";
     document.getElementById("customerPdfSection").classList.add("hidden");
     document.getElementById("orderDownloadContainer").classList.add("hidden");
     resultEl.textContent = "Store disconnected.";
