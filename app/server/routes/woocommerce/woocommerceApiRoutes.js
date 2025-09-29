@@ -4,7 +4,7 @@ const User = require("../../models/User");
 const ShopConfig = require("../../models/ShopConfig");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
-const generateInvoice = require("../../utils/generateInvoice");
+const generateInvoice = require("../woocommerce/customerInvoice");
 const JSZip = require("jszip");
 
 // WooCommerce REST API wrapper
