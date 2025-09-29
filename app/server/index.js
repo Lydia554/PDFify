@@ -56,6 +56,7 @@ app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
 app.use("/webhook", shopifyWebhookRoutes);
 
 
+
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
@@ -104,8 +105,10 @@ app.get("/user-creation", (req, res) => res.sendFile(path.join(__dirname, "../pu
 app.get("/pdf-generator-demo", (req, res) => res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html")));
 app.get("/api-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/api-guide.html")));
 app.get("/shopify", (req, res) => res.sendFile(path.join(__dirname, "../public/shopify.html")));
+app.get("/woocommerce", authenticate, (req, res) => res.sendFile(path.join(__dirname, "../public/woocommerce.html")));
 app.get("/success.html", (req, res) => res.sendFile(path.join(__dirname, "public", "success.html")));
 app.get("/cancel.html", (req, res) => res.sendFile(path.join(__dirname, "public", "cancel.html")));
+
 
 
 
