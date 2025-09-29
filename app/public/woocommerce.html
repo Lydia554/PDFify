@@ -187,7 +187,11 @@
 
 
 <script type="module">
-const api = axios.create({ baseURL: "/api", timeout: 10000 });
+const api = axios.create({
+  baseURL: "/api",
+  timeout: 10000,
+  withCredentials: true  
+});
 
 // -------------------------
 // Load connected WooCommerce store

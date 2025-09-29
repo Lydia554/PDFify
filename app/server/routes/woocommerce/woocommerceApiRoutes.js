@@ -13,33 +13,27 @@ const WooCommerceRestApi = require("@woocommerce/woocommerce-rest-api").default;
 // ----------------------------
 // Connect WooCommerce Store
 // ----------------------------
-router.post("/connect", async (req, res) => {
+router.post("/store", async (req, res) => {
   try {
     const { shopDomain, consumerKey, consumerSecret } = req.body;
     console.log("Connect request received:", { shopDomain, consumerKey, consumerSecret });
 
-    if (!shopDomain || !consumerKey || !consumerSecret) {
-      console.log("Missing WooCommerce credentials");
-      return res.status(400).json({ error: "Missing WooCommerce credentials" });
-    }
+    // Ensure the user is authenticated
+    const user = req.user || req.fullUser;
+    console.log("User found:", user?._id);
 
-    const user = await User.findById(req.user?.userId || req.fullUser?._id);
-    console.log("User found:", user?.email);
+    if (!user) return res.status(403).json({ error: "User not found" });
 
-    if (!user) {
-      console.log("User not found");
-      return res.status(404).json({ error: "User not found" });
-    }
-
+    // Save encrypted WooCommerce credentials
     user.connectedWooDomain = shopDomain.toLowerCase();
     user.wooConsumerKey = consumerKey;
     user.wooConsumerSecret = consumerSecret;
 
-    console.log("Saving user with WooCommerce data...");
     await user.save();
-    console.log("User saved successfully:", user.connectedWooDomain);
+    console.log("WooCommerce keys saved for user", user.email);
 
     res.json({ message: `WooCommerce store ${shopDomain} connected successfully.` });
+
   } catch (err) {
     console.error("Connect WooCommerce failed:", err);
     res.status(500).json({ error: "Failed to connect WooCommerce store" });
@@ -47,33 +41,35 @@ router.post("/connect", async (req, res) => {
 });
 
 
-
 // ----------------------------
 // Get connected WooCommerce store
 // ----------------------------
-router.get("/store", async (req, res) => {
+router.post("/store", async (req, res) => {
   try {
-    const user = await User.findById(req.user?.userId || req.fullUser?._id);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const { shopDomain, consumerKey, consumerSecret } = req.body;
+    console.log("Connect request received:", { shopDomain, consumerKey, consumerSecret });
 
-    if (!user.connectedWooDomain) {
-      return res.json({ storeUrl: null });
-    }
+    // Ensure the user is authenticated
+    const user = req.user || req.fullUser;
+    console.log("User found:", user?._id);
 
-    const wooKeys = user.getDecryptedWooKeys() || { key: "", secret: "" };
+    if (!user) return res.status(403).json({ error: "User not found" });
 
-    res.json({
-      storeUrl: user.connectedWooDomain,
-      consumerKey: wooKeys.key,
-      consumerSecret: wooKeys.secret,
-      allowCustomerPDF: user.allowCustomerPDF || false
-    });
+    // Save encrypted WooCommerce credentials
+    user.connectedWooDomain = shopDomain.toLowerCase();
+    user.wooConsumerKey = consumerKey;
+    user.wooConsumerSecret = consumerSecret;
+
+    await user.save();
+    console.log("WooCommerce keys saved for user", user.email);
+
+    res.json({ message: `WooCommerce store ${shopDomain} connected successfully.` });
+
   } catch (err) {
-    console.error("Fetch connected WooCommerce store failed:", err);
-    res.status(500).json({ error: "Failed to fetch connected store" });
+    console.error("Connect WooCommerce failed:", err);
+    res.status(500).json({ error: "Failed to connect WooCommerce store" });
   }
 });
-
 // ----------------------------
 // Disconnect WooCommerce Store
 // ----------------------------

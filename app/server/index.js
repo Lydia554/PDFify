@@ -58,18 +58,17 @@ app.use("/webhook", shopifyWebhookRoutes);
 
 
 
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ extended: true, limit: '20mb' }));
-
-
-
-
-
 app.use(cors({
   origin: "https://food-trek.com",
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+   credentials: true,
 }));
+
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ extended: true, limit: '20mb' }));
+
+
 
 mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
