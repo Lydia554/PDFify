@@ -103,7 +103,7 @@ app.use(express.static(path.join(__dirname, "../public")));
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "../public/landing.html")));
 app.get("/user-dashboard", authenticate, (req, res) => res.sendFile(path.join(__dirname, "../public/user-dashboard.html")));
 app.get("/user-creation", (req, res) => res.sendFile(path.join(__dirname, "../public/user-creation.html")));
-app.get("/pdf-generator-demo", (req, res) => res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html")));
+app.get("/pdf-generator-demo", dualAuth, (req, res) => res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html")));
 app.get("/api-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/api-guide.html")));
 app.get("/shopify", dualAuth, (req, res) => res.sendFile(path.join(__dirname, "../public/shopify.html")));
 app.get("/woocommerce", dualAuth, (req, res) => res.sendFile(path.join(__dirname, "../public/woocommerce.html")));

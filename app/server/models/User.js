@@ -11,6 +11,7 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
 
 const IV_LENGTH = 16;
 
+// Encryption / Decryption
 function encrypt(text) {
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
@@ -24,7 +25,6 @@ function decrypt(text) {
   if (textParts.length !== 2) {
     throw new Error("Invalid encrypted text format");
   }
-
   const iv = Buffer.from(textParts[0], "hex");
   const encryptedText = Buffer.from(textParts[1], "hex");
   const decipher = crypto.createDecipheriv("aes-256-cbc", Buffer.from(ENCRYPTION_KEY), iv);
@@ -33,78 +33,84 @@ function decrypt(text) {
   return decrypted.toString("utf8");
 }
 
-const userSchema = new mongoose.Schema(
-  {
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    apiKey: { type: String, required: true, unique: true },
+// ----------------------------
+// User Schema
+// ----------------------------
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  apiKey: { type: String, required: true, unique: true },
 
-    // Shopify fields
-    connectedShopDomain: { type: String, required: false },
-    shopifyAccessToken: { type: String, required: false },
+  // WooCommerce fields
+  connectedWooDomain: { type: String, required: false },
+  wooConsumerKey: { type: String, required: false },
+  wooConsumerSecret: { type: String, required: false },
+  allowCustomerPDF: { type: Boolean, default: false },
 
-    // Stripe fields
-    stripeCustomerId: { type: String },
-    stripeSubscriptionId: { type: String },
-    planType: { type: String, enum: ["free", "premium", "pro"], default: "free" },
+  // Shopify fields
+  connectedShopDomain: { type: String, required: false },
+  shopifyAccessToken: { type: String, required: false },
 
-    // Usage tracking
-    usageCount: { type: Number, default: 0 },
-    maxUsage: { type: Number, default: 30 },
-    usageLastReset: { type: Date, default: Date.now },
+  // Stripe fields
+  stripeCustomerId: { type: String },
+  stripeSubscriptionId: { type: String },
+  planType: { type: String, enum: ["free", "premium", "pro"], default: "free" },
 
-    // Preview tracking
-    previewCount: { type: Number, default: 0 },
-    previewLastReset: { type: Date, default: Date.now },
+  // Usage tracking
+  usageCount: { type: Number, default: 0 },
+  maxUsage: { type: Number, default: 30 },
+  usageLastReset: { type: Date, default: Date.now },
 
-    // Flags and roles
-    isPremium: { type: Boolean, default: false },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
-    isActive: { type: Boolean, default: true },
+  // Preview tracking
+  previewCount: { type: Number, default: 0 },
+  previewLastReset: { type: Date, default: Date.now },
 
-    // Account deletion
-    deleted: { type: Boolean, default: false },
-    deletedAt: { type: Date, default: null },
+  // Flags and roles
+  isPremium: { type: Boolean, default: false },
+  role: { type: String, enum: ["user", "admin"], default: "user" },
+  isActive: { type: Boolean, default: true },
 
-    cookieConsent: { type: Boolean, default: false },
-cookieConsentDate: { type: Date },
+  // Account deletion
+  deleted: { type: Boolean, default: false },
+  deletedAt: { type: Date, default: null },
 
-    // Password reset
-    resetToken: { type: String },
-    resetTokenExpiry: { type: Date },
+  cookieConsent: { type: Boolean, default: false },
+  cookieConsentDate: { type: Date },
 
-    extraPages: { type: Number, default: 0 },
+  // Password reset
+  resetToken: { type: String },
+  resetTokenExpiry: { type: Date },
 
-  },
+  extraPages: { type: Number, default: 0 },
+}, { timestamps: true });
 
+// ----------------------------
+// Middleware
+// ----------------------------
 
-
-  
-  { timestamps: true }
-);
-
-// Normalize shop domain
+// Normalize shop domains
 userSchema.pre("save", function (next) {
-  if (this.connectedShopDomain) {
-    this.connectedShopDomain = this.connectedShopDomain.trim().toLowerCase();
-  }
+  if (this.connectedShopDomain) this.connectedShopDomain = this.connectedShopDomain.trim().toLowerCase();
+  if (this.connectedWooDomain) this.connectedWooDomain = this.connectedWooDomain.trim().toLowerCase();
   next();
 });
 
 // Encrypt API key
 userSchema.pre("save", async function (next) {
-  if (this.isModified("apiKey")) {
-    this.apiKey = encrypt(this.apiKey);
-  }
+  if (this.isModified("apiKey")) this.apiKey = encrypt(this.apiKey);
+  next();
+});
+
+// Encrypt WooCommerce keys
+userSchema.pre("save", async function (next) {
+  if (this.isModified("wooConsumerKey") && this.wooConsumerKey) this.wooConsumerKey = encrypt(this.wooConsumerKey);
+  if (this.isModified("wooConsumerSecret") && this.wooConsumerSecret) this.wooConsumerSecret = encrypt(this.wooConsumerSecret);
   next();
 });
 
 // Hash password
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) {
-    return next();
-  }
-
+  if (!this.isModified("password")) return next();
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -114,12 +120,19 @@ userSchema.pre("save", async function (next) {
   }
 });
 
-// Decrypt API key method
+// ----------------------------
+// Instance Methods
+// ----------------------------
 userSchema.methods.getDecryptedApiKey = function () {
   return decrypt(this.apiKey);
 };
 
-
-
+userSchema.methods.getDecryptedWooKeys = function () {
+  if (!this.wooConsumerKey || !this.wooConsumerSecret) return null;
+  return {
+    key: decrypt(this.wooConsumerKey),
+    secret: decrypt(this.wooConsumerSecret),
+  };
+};
 
 module.exports = mongoose.model("User", userSchema);
