@@ -42,35 +42,6 @@ router.post("/store", async (req, res) => {
 
 
 // ----------------------------
-// Get connected WooCommerce store
-// ----------------------------
-router.post("/store", async (req, res) => {
-  try {
-    const { shopDomain, consumerKey, consumerSecret } = req.body;
-    console.log("Connect request received:", { shopDomain, consumerKey, consumerSecret });
-
-    // Ensure the user is authenticated
-    const user = req.user || req.fullUser;
-    console.log("User found:", user?._id);
-
-    if (!user) return res.status(403).json({ error: "User not found" });
-
-    // Save encrypted WooCommerce credentials
-    user.connectedWooDomain = shopDomain.toLowerCase();
-    user.wooConsumerKey = consumerKey;
-    user.wooConsumerSecret = consumerSecret;
-
-    await user.save();
-    console.log("WooCommerce keys saved for user", user.email);
-
-    res.json({ message: `WooCommerce store ${shopDomain} connected successfully.` });
-
-  } catch (err) {
-    console.error("Connect WooCommerce failed:", err);
-    res.status(500).json({ error: "Failed to connect WooCommerce store" });
-  }
-});
-// ----------------------------
 // Disconnect WooCommerce Store
 // ----------------------------
 router.post("/disconnect", async (req, res) => {

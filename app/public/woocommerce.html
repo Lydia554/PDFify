@@ -198,7 +198,8 @@ const api = axios.create({
 // -------------------------
 async function loadConnectedStore() {
   try {
-    const res = await api.get("/woocommerce/store");
+    const res = await api.post("/api/woocommerce/store", { shopDomain, consumerKey, consumerSecret }, { withCredentials: true });
+
     if (res.data.storeUrl) {
       document.getElementById("connectedStoreUrl").textContent = res.data.storeUrl;
       document.getElementById("storeUrlInput").value = res.data.storeUrl;
