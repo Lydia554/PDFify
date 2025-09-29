@@ -92,7 +92,7 @@ app.use("/api", foodTrekRoutes);
 app.use("/api/shopify", shopifyApiRoutes);
 app.use("/api/stripe", paymentRoutes);
 app.use("/api/woocommerce", woocommerceApiRoutes);
-app.use("/woocommerce", woocommerceWebhookRoutes);
+app.use("/woocommerce-webhook", woocommerceWebhookRoutes);
 
 
 
