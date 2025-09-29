@@ -12,6 +12,7 @@ dotenv.config();
 
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
+const dualAuth = require("./middleware/dualAuth");
 
 const recipeRoutes = require("./routes/recipeRoutes");
 const shopOrderRoutes = require("./routes/shopOrderRoutes");
@@ -104,9 +105,8 @@ app.get("/user-dashboard", authenticate, (req, res) => res.sendFile(path.join(__
 app.get("/user-creation", (req, res) => res.sendFile(path.join(__dirname, "../public/user-creation.html")));
 app.get("/pdf-generator-demo", (req, res) => res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html")));
 app.get("/api-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/api-guide.html")));
-app.get("/shopify", authenticate, (req, res) => es.sendFile(path.join(__dirname, "../public/shopify.html")));
-
-app.get("/woocommerce", authenticate, (req, res) => res.sendFile(path.join(__dirname, "../public/woocommerce.html")));
+app.get("/shopify", dualAuth, (req, res) => res.sendFile(path.join(__dirname, "../public/shopify.html")));
+app.get("/woocommerce", dualAuth, (req, res) => res.sendFile(path.join(__dirname, "../public/woocommerce.html")));
 app.get("/success.html", (req, res) => res.sendFile(path.join(__dirname, "public", "success.html")));
 app.get("/cancel.html", (req, res) => res.sendFile(path.join(__dirname, "public", "cancel.html")));
 
