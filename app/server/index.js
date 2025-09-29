@@ -26,7 +26,9 @@ const packingSlipRoutes = require("./routes/packing-slipRoutes");
 const friendlyMode = require("./routes/friendlyMode");
 const foodTrekRoutes = require("./routes/foodTrekRoutes");
 const shopifyWebhookRoutes = require('./routes/shopifyWebhookRoutes');
-const shopifyApiRoutes = require('./routes/shopifyApiRoutes');
+const shopifyApiRoutes = require('./routes/shopify/shopifyApiRoutes');
+const woocommerceApiRoutes = require("./routes/woocommerce/woocommerceApiRoutes");
+const woocommerceWebhookRoutes = require("./routes/woocommerce/woocommerceWebhookRoutes");
 
 
 
@@ -88,6 +90,8 @@ app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
 app.use("/api/shopify", shopifyApiRoutes);
 app.use("/api/stripe", paymentRoutes);
+app.use("/api/woocommerce", woocommerceApiRoutes);
+app.use("/woocommerce", woocommerceWebhookRoutes);
 
 
 

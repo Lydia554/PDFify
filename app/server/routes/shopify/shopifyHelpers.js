@@ -1,5 +1,5 @@
 const axios = require("axios");
-const User = require("../models/User"); 
+const User = require("../../models/User"); 
 
 async function resolveShopifyToken(req, shopDomain) {
   let token = req.body?.shopifyAccessToken || req.headers["x-shopify-access-token"];
