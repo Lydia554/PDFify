@@ -13,7 +13,32 @@ const WooCommerceRestApi = require("@woocommerce/woocommerce-rest-api").default;
 // ----------------------------
 // Connect WooCommerce Store
 // ----------------------------
-----------------------------
+router.post("/connect", async (req, res) => {
+  try {
+    const { shopDomain, consumerKey, consumerSecret } = req.body;
+    if (!shopDomain || !consumerKey || !consumerSecret) {
+      return res.status(400).json({ error: "Missing WooCommerce credentials" });
+    }
+
+    const user = await User.findById(req.user?.userId || req.fullUser?._id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    user.connectedWooDomain = shopDomain.toLowerCase();
+    user.wooConsumerKey = consumerKey;
+    user.wooConsumerSecret = consumerSecret;
+    await user.save();
+
+    res.json({ message: `WooCommerce store ${shopDomain} connected successfully.` });
+  } catch (err) {
+    console.error("Connect WooCommerce failed:", err);
+    res.status(500).json({ error: "Failed to connect WooCommerce store" });
+  }
+});
+
+
+// ----------------------------
+// Get connected WooCommerce store
+// ----------------------------
 router.get("/store", async (req, res) => {
   try {
     const user = await User.findById(req.user?.userId || req.fullUser?._id);
@@ -36,6 +61,7 @@ router.get("/store", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch connected store" });
   }
 });
+
 // ----------------------------
 // Disconnect WooCommerce Store
 // ----------------------------
