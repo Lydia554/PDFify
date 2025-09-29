@@ -186,14 +186,7 @@
 </footer>
 
 <script type="module">
-
 const api = axios.create({ baseURL: "/api", timeout: 10000 });
-api.interceptors.request.use(config => {
-  const apiKeyInput = document.getElementById("merchantApiKey");
-  const apiKey = apiKeyInput?.value || localStorage.getItem("apiKey");
-  if (apiKey) config.headers.Authorization = `Bearer ${apiKey}`;
-  return config;
-});
 
 // -------------------------
 // Image toggle
@@ -216,7 +209,9 @@ async function fetchOrders(storeUrl) {
   try {
     const fromDate = document.getElementById("fromDate").value;
     const toDate = document.getElementById("toDate").value;
-    const res = await api.get(`/woocommerce/orders?storeUrl=${encodeURIComponent(storeUrl)}&from=${fromDate}&to=${toDate}`);
+    const res = await api.get(`/woocommerce/orders`, {
+      params: { storeUrl, from: fromDate, to: toDate }
+    });
     const orders = Array.isArray(res.data.orders) ? res.data.orders : [];
     if (!orders.length) {
       orderSelector.innerHTML = `<option>No orders found</option>`;
@@ -251,7 +246,7 @@ document.getElementById("connectWooButton").addEventListener("click", async () =
 
   document.getElementById("connectWooButton").disabled = true;
   try {
-    await api.post("/woocommerce/connect", { storeUrl, consumerKey, consumerSecret });
+    await api.post("/woocommerce/connect", { shopDomain: storeUrl, consumerKey, consumerSecret });
     resultEl.textContent = "WooCommerce store connected!";
     document.getElementById("connectedStoreUrl").textContent = storeUrl;
     document.getElementById("customerPdfSection").classList.remove("hidden");
@@ -296,7 +291,7 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
 
   statusEl.textContent = "Generating PDF...";
   try {
-    const res = await api.post("/woocommerce/invoice", { storeUrl, orderId, merchant: true }, { responseType: "blob" });
+    const res = await api.post("/woocommerce/invoice", { shopDomain: storeUrl, orderId }, { responseType: "blob" });
     const blob = new Blob([res.data], { type: "application/pdf" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -325,26 +320,15 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
   }
 
   statusEl.textContent = "Generating ZIP... This may take a few seconds.";
-
   try {
-    const res = await api.post(
-      "/woocommerce/invoices/zip",
-      { storeUrl, from: fromDate, to: toDate },
-      { responseType: "blob" }
-    );
-
+    const res = await api.post("/woocommerce/invoices/zip", { shopDomain: storeUrl, from: fromDate, to: toDate }, { responseType: "blob" });
     const blob = new Blob([res.data], { type: "application/zip" });
     const url = window.URL.createObjectURL(blob);
     const filename = `Invoices_${fromDate || "start"}_to_${toDate || "end"}.zip`;
-
     const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
-
     statusEl.textContent = "ZIP file downloaded successfully!";
   } catch (err) {
     console.error("Failed to generate ZIP:", err);
@@ -366,10 +350,10 @@ document.getElementById("saveCustomerPDFSettingButton").addEventListener("click"
   }
 
   try {
-    await api.post("/woocommerce/settings", { storeUrl, allowCustomerPDF });
+    await api.post("/woocommerce/settings", { shopDomain: storeUrl, allowCustomerPDF });
     resultEl.textContent = "Settings saved successfully!";
   } catch (err) {
-    console.error("Failed to save settings:", err);
+    console.error(err);
     resultEl.textContent = "Failed to save settings.";
   }
 });
