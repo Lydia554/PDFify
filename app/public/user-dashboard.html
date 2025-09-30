@@ -168,7 +168,7 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// ✅ Fetch API key dynamically from localStorage or backend session
+
 async function fetchApiKey() {
   const storedKey = localStorage.getItem("apiKey");
   if (storedKey) return storedKey;
@@ -190,13 +190,13 @@ async function fetchApiKey() {
   }
 }
 
-// ✅ Mask API key for display
+
 function maskApiKey(key) {
   if (!key) return "";
   return key.slice(0, 4) + "..." + key.slice(-4);
 }
 
-// ✅ Display user info including masked API key
+
 function displayUserInfo(data) {
   document.getElementById("email").textContent = data.email || "";
   document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || localStorage.getItem("apiKey") || "");
@@ -205,7 +205,7 @@ function displayUserInfo(data) {
   document.getElementById("premiumStatus").textContent = data.planType || "Free";
 }
 
-// ✅ Axios interceptor to attach API key dynamically
+
 api.interceptors.request.use(
   async (config) => {
     const apiKey = await fetchApiKey();
@@ -227,7 +227,7 @@ api.interceptors.response.use(
   }
 );
 
-// ✅ Fetch and display API key immediately
+
 async function fetchAndDisplayApiKey() {
   try {
     const apiKey = await fetchApiKey();
@@ -237,13 +237,13 @@ async function fetchAndDisplayApiKey() {
   }
 }
 
-// ✅ Fetch user data
+
 async function fetchUserData() {
   try {
     const response = await api.get("/user/usage");
     displayUserInfo(response.data);
     document.getElementById("result").textContent = "";
-    await fetchAndDisplayApiKey(); // ensure API key UI is correct
+    await fetchAndDisplayApiKey(); 
   } catch (error) {
     console.error("Error fetching user data:", error);
     if (error.response && error.response.status === 404) {
@@ -256,10 +256,10 @@ async function fetchUserData() {
   }
 }
 
-// ✅ Load bank details
+
 async function loadBankDetails() {
   try {
-    const response = await api.get("/shop-config");
+    const response = await api.get("/user/shop-config");
     if (response.status === 200 && response.data) {
       document.getElementById("iban").value = response.data.iban || "";
       document.getElementById("bic").value = response.data.bic || "";
@@ -269,7 +269,7 @@ async function loadBankDetails() {
   }
 }
 
-// ✅ Bank form submission
+
 const bankForm = document.getElementById("updateBankForm");
 const bankResult = document.getElementById("bankResult");
 
@@ -285,7 +285,7 @@ bankForm.addEventListener("submit", async (event) => {
   }
 
   try {
-    const response = await api.put("/shop-config/update", { iban, bic });
+    const response = await api.put("/user/shop-config/update", { iban, bic });
     if (response.status === 200) bankResult.textContent = "Bank details updated successfully!";
     else bankResult.textContent = "Failed to update bank details. Please try again.";
   } catch (error) {
@@ -294,7 +294,7 @@ bankForm.addEventListener("submit", async (event) => {
   }
 });
 
-// ✅ Logout button
+
 document.getElementById("logoutButton").addEventListener("click", async () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   loadingOverlay.style.display = "flex";
@@ -310,7 +310,7 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   }
 });
 
-// ✅ Initialize everything
+
 fetchAndDisplayApiKey();
 fetchUserData();
 loadBankDetails();
