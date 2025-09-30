@@ -21,7 +21,7 @@
       PDFify
     </h1>
 
-    <!-- Hamburger button (mobile only) -->
+   
    <!-- Hamburger button (mobile only) -->
 <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
 
@@ -642,7 +642,6 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
 
 
 </script>
-
 <style>
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -690,6 +689,14 @@ header nav a {
   color: inherit;
   font-weight: 500;
   font-size: 1rem;
+  transition: color 0.2s;
+}
+
+header nav a:hover,
+.left-panel a:hover,
+.right-panel a:hover,
+section a:hover {
+  color: #c084fc; /* consistent hover purple */
 }
 
 h1 {
@@ -735,7 +742,7 @@ code {
   gap: 1rem;
 }
 
-/* Compact Timeline style for left panel */
+/* Left panel timeline */
 .left-panel {
   position: relative;
   padding-left: 2rem;
@@ -774,7 +781,7 @@ code {
   transition: background-color 0.3s;
 }
 
-/* Compact right panel cards */
+/* Right panel cards */
 .right-panel > div, .right-panel section {
   background-color: #2a2f3b;
   padding: 0.8rem 1rem;
@@ -782,7 +789,7 @@ code {
   box-shadow: 0 2px 6px rgba(0,0,0,0.3);
 }
 
-/* Shopify invoice*/
+/* Shopify invoice images */
 .image-toggle-container img {
   max-width: 80%;
   height: auto;
@@ -810,16 +817,45 @@ footer {
   font-size: 0.875rem;
 }
 
-/* ----------------------- */
-/* Mobile menu fixes start */
-/* ----------------------- */
+/* Buttons global style */
+button {
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
 
-/* hide hamburger by default */
+button:hover {
+  transform: scale(1.05);
+}
+
+/* Token pack buttons */
+.token-pack-btn {
+  font-weight: 600;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.token-pack-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Inputs focus style */
+input:focus, select:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: #c084fc;
+  box-shadow: 0 0 0 2px rgba(192, 132, 252, 0.5);
+}
+
+/* Mobile menu fixes */
 #mobileMenuBtn {
   display: none;
 }
 
-/* mobile nav dropdown */
 #mobileNav {
   display: none;
   flex-direction: column;
@@ -836,7 +872,7 @@ footer {
   font-size: 0.95rem;
   color: #ddd;
   border-radius: 6px;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
 #mobileNav a:hover {
@@ -844,28 +880,7 @@ footer {
   color: #c084fc;
 }
 
-/* Mobile only */
-@media (max-width: 768px) {
-  header nav {
-    display: none; /* hide desktop nav */
-  }
-  #mobileMenuBtn {
-    display: block; /* show hamburger */
-  }
-}
-
-/* Desktop only */
-@media (min-width: 769px) {
-  #mobileNav {
-    display: none !important; /* never show dropdown */
-  }
-}
-
-/* ----------------------- */
-/* Mobile menu fixes end   */
-/* ----------------------- */
-
-/* Responsive adjustments */
+/* Responsive */
 @media (max-width: 1024px) {
   main {
     flex-direction: column;
@@ -903,5 +918,11 @@ footer {
   header nav a {
     font-size: 0.85rem;   
   }
+}
+
+/* Animations */
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 </style>
