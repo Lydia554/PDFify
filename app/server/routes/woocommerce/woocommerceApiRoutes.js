@@ -18,13 +18,13 @@ router.post("/store", async (req, res) => {
     const { shopDomain, consumerKey, consumerSecret } = req.body;
     console.log("Connect request received:", { shopDomain, consumerKey, consumerSecret });
 
-    // Ensure the user is authenticated
+    
     const user = req.user || req.fullUser;
     console.log("User found:", user?._id);
 
     if (!user) return res.status(403).json({ error: "User not found" });
 
-    // Save encrypted WooCommerce credentials
+    
     user.connectedWooDomain = shopDomain.toLowerCase();
     user.wooConsumerKey = consumerKey;
     user.wooConsumerSecret = consumerSecret;
