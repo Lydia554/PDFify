@@ -52,6 +52,7 @@ if (!user || user.deleted) {
       maxUsage: user.maxUsage,
       isPremium: user.isPremium,
        planType: user.planType || "Free", 
+       shopDomain: user.shopDomain || user.email 
     };
 
    
