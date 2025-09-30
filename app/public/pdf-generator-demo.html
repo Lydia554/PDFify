@@ -1139,41 +1139,37 @@ button:disabled {
     font-size: 16px; 
   }
 
-  #mobileNav {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background-color: rgba(11, 26, 43, 0.95);
-    flex-direction: column;
-    align-items: center; 
-    gap: 0.5rem;
-    padding: 0;
-    border-radius: 0.5rem;
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
-    z-index: 999;
-  }
 
-  #mobileNav.show {
-    max-height: 500px; 
-    opacity: 1;
-    padding: 1rem;
-  }
+/* Mobile nav styling */
+#mobileNav {
+  display: none; 
+  flex-direction: column;
+  align-items: center; 
+  width: 100%;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: rgba(11, 26, 43, 0.95);
+  border-radius: 0.5rem;
 
-  #mobileNav a,
-  #mobileNav button {
-    width: 90%;
-    text-align: center;
-  }
+  
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, padding 0.4s ease;
+}
 
-  .max-w-6xl {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
+#mobileNav.show {
+  display: flex;
+  max-height: 500px; 
+  padding: 1rem;
+}
+
+#mobileNav .nav-link {
+  width: 100%;
+  text-align: center;
+  padding: 0.75rem 0;
+}
+  
 }
 
 
