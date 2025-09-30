@@ -879,6 +879,19 @@ curl -X POST "https://pdfify.pro/api/generate-pdf-from-html" \
     </footer>
 
   <script>
+
+    const menuBtn = document.getElementById("mobileMenuBtn");
+const mobileNav = document.getElementById("mobileNav");
+
+menuBtn.addEventListener("click", () => {
+  mobileNav.classList.toggle("hidden");
+
+  if (!mobileNav.classList.contains("hidden")) {
+    mobileNav.style.display = "flex";
+  } else {
+    mobileNav.style.display = "none";
+  }
+});
  
     const userModeBtn = document.getElementById('userModeBtn');
     const devModeBtn = document.getElementById('devModeBtn');
@@ -902,18 +915,7 @@ curl -X POST "https://pdfify.pro/api/generate-pdf-from-html" \
 });
 
 
-const menuBtn = document.getElementById("mobileMenuBtn");
-const mobileNav = document.getElementById("mobileNav");
 
-menuBtn.addEventListener("click", () => {
-  mobileNav.classList.toggle("hidden");
-
-  if (!mobileNav.classList.contains("hidden")) {
-    mobileNav.style.display = "flex";
-  } else {
-    mobileNav.style.display = "none";
-  }
-});
 
 devModeBtn.addEventListener('click', () => {
   userSection.classList.add('hidden');
@@ -1113,8 +1115,6 @@ header nav a {
   gap: 0.3rem;        
   white-space: nowrap; 
   text-decoration: none;
-  color: inherit;
-  font-weight: 500;
   font-size: 1rem;
 }
 
@@ -1133,16 +1133,6 @@ header nav a:hover,
   color: #c084fc; 
 }
 
-header nav a {
-  display: inline-flex;
-  align-items: center; 
-  gap: 0.3rem;        
-  white-space: nowrap; 
-  text-decoration: none;
-  color: inherit;
-  font-weight: 500;
-  font-size: 1rem;
-}
 
 
 /* ----------------------- */
@@ -1154,30 +1144,7 @@ header nav a {
   display: none;
 }
 
-/* mobile nav dropdown */
-#mobileNav {
-  display: none;
-  flex-direction: column;
-  gap: 0.5rem;
-  background-color: rgba(11, 26, 43, 0.95);
-  padding: 1rem;
-  border-radius: 0 0 0.5rem 0.5rem;
-}
 
-#mobileNav a {
-  display: block;
-  text-align: center;
-  padding: 0.75rem;
-  font-size: 0.95rem;
-  color: #ddd;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
-
-#mobileNav a:hover {
-  background: rgba(255,255,255,0.1);
-  color: #c084fc;
-}
    
 
 
@@ -1296,7 +1263,30 @@ header nav a {
   border-radius: 6px;
 }
    
-    
+    /* mobile nav dropdown */
+#mobileNav {
+  display: none;
+  flex-direction: column;
+  gap: 0.5rem;
+  background-color: rgba(11, 26, 43, 0.95);
+  padding: 1rem;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+#mobileNav a {
+  display: block;
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.95rem;
+  color: #ddd;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+#mobileNav a:hover {
+  background: rgba(255,255,255,0.1);
+  color: #c084fc;
+}
 
 
 
