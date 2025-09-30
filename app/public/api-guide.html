@@ -19,13 +19,13 @@
   </div>
 
 <header class="fixed top-0 left-0 right-0 z-50 shadow bg-[#0b1a2b]">
-  <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
 
-    <!-- Desktop navigation -->
-    <nav class="hidden md:flex space-x-6">
+    <!-- Desktop nav (visible on md+) -->
+    <nav class="hidden md:flex space-x-4">
       <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
       <a href="/api-guide" class="text-purple-400 font-semibold">📑 API Guide</a>
       <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
@@ -37,7 +37,7 @@
     <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
   </div>
 
-  <!-- Mobile navigation -->
+  <!-- Mobile nav (hidden by default) -->
   <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
     <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
     <a href="/api-guide" class="block text-purple-400 font-semibold">📑 API Guide</a>
@@ -924,6 +924,7 @@ const mobileNav = document.getElementById("mobileNav");
 menuBtn.addEventListener("click", () => {
   mobileNav.classList.toggle("hidden");
 });
+
 
 
 
