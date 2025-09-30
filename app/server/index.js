@@ -14,9 +14,6 @@ dotenv.config();
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
 const dualAuth = require("./middleware/dualAuth");
-const shopConfigRoutes = require("./routes/shop-config");
-
-
 
 const recipeRoutes = require("./routes/recipeRoutes");
 const shopOrderRoutes = require("./routes/shopOrderRoutes");
@@ -34,6 +31,7 @@ const shopifyWebhookRoutes = require('./routes/shopify/shopifyWebhookRoutes');
 const shopifyApiRoutes = require('./routes/shopify/shopifyApiRoutes');
 const woocommerceApiRoutes = require("./routes/woocommerce/woocommerceApiRoutes");
 const woocommerceWebhookRoutes = require("./routes/woocommerce/woocommerceWebhookRoutes");
+
 
 
 const app = express();
@@ -58,7 +56,6 @@ app.use(session({
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
 
 app.use("/webhook", shopifyWebhookRoutes);
-app.use("/api", shopConfigRoutes); 
 
 
 

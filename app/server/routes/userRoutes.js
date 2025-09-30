@@ -4,6 +4,8 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const sendEmail = require("../sendEmail");
+const ShopConfig = require("../models/ShopConfig"); 
+
 const router = express.Router();
 
 
@@ -151,6 +153,40 @@ router.get("/me", authenticate, dualAuth, async (req, res) => {
   } catch (error) {
     console.error("Error fetching user details:", error);
     res.status(500).json({ error: "Error fetching user details" });
+  }
+});
+
+
+// Get bank details for current shop
+router.get("/shop-config", authMiddleware, async (req, res) => {
+  try {
+    const shopDomain = req.user.shopDomain;
+    const config = await ShopConfig.findOne({ shopDomain });
+    if (!config) return res.status(404).json({ error: "Shop config not found" });
+
+    res.json({ iban: config.iban, bic: config.bic });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update bank details for current shop
+router.put("/shop-config/update", authMiddleware, async (req, res) => {
+  try {
+    const { iban, bic } = req.body;
+    const shopDomain = req.user.shopDomain;
+
+    const config = await ShopConfig.findOneAndUpdate(
+      { shopDomain },
+      { iban, bic },
+      { new: true, upsert: true }
+    );
+
+    res.json({ message: "Bank details updated successfully", config });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to update bank details" });
   }
 });
 
