@@ -19,19 +19,19 @@
     <div class="w-10 h-10 border-4 border-gray-600 border-l-indigo-500 rounded-full animate-spin"></div>
   </div>
 
-
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-50 shadow">
-  <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+  <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between relative">
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
 
     <!-- Hamburger button for mobile -->
-    <button id="mobileMenuBtn" class="sm:hidden text-white text-2xl">☰</button>
+    <button id="mobileMenuBtn" aria-expanded="false" class="sm:hidden text-white text-2xl">☰</button>
 
     <!-- Navigation -->
-    <nav id="mobileNav" class="hidden sm:flex flex-wrap gap-6">
+  
+    <nav id="mobileNav" class="flex-wrap gap-6 sm:flex">
       <a href="/api-guide" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
         📑 API Guide
       </a>
@@ -241,14 +241,6 @@ friendlyBtn.addEventListener('click', () => {
   
 });
 
-
- // Hamburger toggle
-const btn = document.getElementById('mobileMenuBtn');
-const nav = document.getElementById('mobileNav');
-
-btn.addEventListener('click', () => {
-  nav.classList.toggle('show');
-});
 
 
 
@@ -808,12 +800,61 @@ const endpoint = document.getElementById('endpoint');
   document.addEventListener('DOMContentLoaded', toggleCsvSection);
 
 
+ (function () {
+    const btn = document.getElementById('mobileMenuBtn');
+    const nav = document.getElementById('mobileNav');
+
+    if (!btn || !nav) {
+      console.warn('mobileMenuBtn or mobileNav not found');
+      return;
+    }
+
+    // When toggling, add/remove "show" and set aria-expanded
+    btn.addEventListener('click', () => {
+      const opened = nav.classList.toggle('show');
+      btn.setAttribute('aria-expanded', opened ? 'true' : 'false');
+
+      // Add small stagger by setting inline transitionDelay for each child
+      if (opened) {
+        Array.from(nav.children).forEach((el, i) => {
+          // small stagger 60ms per item
+          el.style.transitionDelay = `${i * 60}ms`;
+        });
+      } else {
+        Array.from(nav.children).forEach((el) => {
+          el.style.transitionDelay = '';
+        });
+      }
+    });
+
+    // Optional: close the menu if user clicks outside it (mobile)
+    document.addEventListener('click', (e) => {
+      if (!nav.classList.contains('show')) return;
+      const target = e.target;
+      // if click is inside nav or on the button, ignore
+      if (nav.contains(target) || btn.contains(target)) return;
+      // else close
+      nav.classList.remove('show');
+      btn.setAttribute('aria-expanded', 'false');
+      Array.from(nav.children).forEach((el) => el.style.transitionDelay = '');
+    });
+  })();
+
+
+
+
+
+
+
 
       window.addEventListener("pageshow", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   loadingOverlay.style.display = "none";
   console.log("Spinner hidden on page show (e.g., back navigation)");
 });
+
+
+
 
 
     </script>
@@ -1037,39 +1078,9 @@ button:disabled {
   }
 
 
-  /* Mobile nav hidden by default and animated */
-#mobileNav {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background-color: rgba(11, 26, 43, 0.95);
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0;
-  border-radius: 0.5rem;
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
-  z-index: 999;
+  #mobileNav {
+  display: none; 
 }
-
-#mobileNav.show {
-  max-height: 500px;
-  opacity: 1;
-  padding: 1rem;
-}
-
-#mobileNav a,
-#mobileNav button {
-  width: 90%;
-  text-align: center;
-}
-
-
-
 
 @media (max-width: 768px) {
   #mobileNav {
@@ -1110,102 +1121,99 @@ button:disabled {
 }
 
 
-/* On desktop, override to normal flex */
+@media (max-width: 639px) {
+  /* base mobile hidden state */
+  #mobileNav {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 6px;
+    right: 6px;
+    background-color: rgba(11, 26, 43, 0.95);
+    border-radius: 0.5rem;
+    padding: 0;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 400ms cubic-bezier(.2,.9,.2,1), opacity 320ms ease, padding 320ms ease;
+    z-index: 999;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  /* show state — toggled by JS */
+  #mobileNav.show {
+    display: flex;              /* make it participate in layout on mobile */
+    padding: 1rem;             /* visible padding */
+    max-height: 500px;         /* allow enough room for children (safe cap) */
+    opacity: 1;
+  }
+
+  /* per-item initial animation state */
+  #mobileNav > * {
+    width: 100%;
+    text-align: center;
+    transform: translateY(-8px);
+    opacity: 0;
+    transition: transform 320ms ease, opacity 320ms ease;
+  }
+
+  /* when shown, items go to final state; JS applies staggered delays */
+  #mobileNav.show > * {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  /* ensure header layout stacks nicely while menu is open */
+  .max-w-6xl {
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* Keep hamburger visible on mobile */
+  #mobileMenuBtn {
+    display: inline-flex;
+  }
+}
+
+/* desktop: ensure nav behaves as normal row (keeps all your desktop colors/styles) */
 @media (min-width: 640px) {
   #mobileNav {
+    display: flex;             /* normal desktop nav row */
     position: static;
     max-height: none;
     opacity: 1;
     padding: 0;
     flex-direction: row;
-    align-items: center;
     gap: 1.5rem;
+    align-items: center;
+    background: none;
+    box-shadow: none;
+  }
+
+  /* hide the mobile hamburger on desktop */
+  #mobileMenuBtn {
+    display: none;
+  }
+
+  /* ensure each nav child uses your original sizes on desktop */
+  #mobileNav > * {
+    width: auto;
+    opacity: 1;
+    transform: none;
+    transition: none;
   }
 }
 
-@media (max-width: 420px) {
-  body {
-    margin-top: 60%;
-    padding: 8px;
-    font-size: 15px;
+/* small cosmetic: make dropdown anchors keep their original button-like looks (desktop) but fit mobile */
+@media (max-width: 639px) {
+  #mobileNav a, #mobileNav button {
+    /* keep the original bg/colors you had on desktop; they will appear inside the dark mobile panel */
+    border-radius: 0.375rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
-
-  h1 {
-    font-size: 18px;
-    margin-bottom: 12px;
-  }
-
-  button {
-    font-size: 15px;
-    padding: 10px 14px;
-    width: 100%;
-    margin-top: 8px;
-  }
-
-  #logoutButton {
-    width: 50%;
-    font-size: 12px;
-    padding: 10px;
-    margin-top: 12px;
-  }
-
-  label {
-    font-size: 13px;
-  }
-
-  select, input, textarea {
-    font-size: 13px;
-    padding: 10px;
-  }
-
-  textarea {
-    min-height: 220px;
-  }
-
-  .toggle-container {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  #modeToggle button {
-    font-size: 14px;
-    padding: 10px;
-  }
-
-  .api-docs-button {
-    width: 100%;
-    font-size: 14px;
-    padding: 10px;
-    text-align: center;
-  }
-
-  .premium-only {
-    font-size: 16px;
-    padding: 6px;
-    margin: 8px 0;
-  }
-
-  .premium-only::after {
-    font-size: 10px;
-    padding: 2px 4px;
-  }
-
-  header {
-    font-size: 13px;
-    padding: 8px 10px;
-
-  }
-
-  #result,
-  #payment-result {
-    font-size: 14px;
-  }
-
-  
-  input, select, textarea {
-    font-size: 16px; 
-  }
-
 }
 
 
