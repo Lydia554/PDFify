@@ -174,9 +174,8 @@ const api = axios.create({
 
 const btn = document.getElementById('mobileMenuBtn');
 const nav = document.getElementById('mobileNav');
-
 btn.addEventListener('click', () => {
-  nav.classList.toggle('active');
+  nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';
 });
 
 async function fetchApiKey() {
@@ -349,9 +348,6 @@ main {
   margin-top: 30px;
 }
 
-
-
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -367,22 +363,13 @@ main {
   }
 
   #mobileNav {
-    max-height: 0; 
-    opacity: 0;
-    overflow: hidden;
+    display: none; 
     flex-direction: column;
     width: 100%;
     gap: 0.5rem;
     margin-top: 1rem;
-    padding: 0 1rem; 
+    padding: 1rem; 
     background-color: rgba(11, 26, 43, 0.95); 
-    transition: max-height 0.3s ease, opacity 0.3s ease;
-  }
-
-  #mobileNav.active {
-    max-height: 500px; 
-    opacity: 1;
-    padding: 1rem;
   }
 
   #mobileNav a,
@@ -392,6 +379,7 @@ main {
     padding: 0.75rem 0;
     font-size: 14px;
   }
+
   h1 {
     font-size: 1.5rem;
     text-align: center;

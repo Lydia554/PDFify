@@ -23,11 +23,16 @@
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-50 shadow">
   <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+    <!-- Logo -->
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
 
-    <nav class="flex flex-wrap justify-center gap-3">
+    <!-- Hamburger button for mobile -->
+    <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+
+    <!-- Navigation -->
+    <nav id="mobileNav" class="flex flex-wrap justify-center gap-3 md:flex-row hidden md:flex">
       <a href="/api-guide"
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          📑 API Guide
@@ -36,18 +41,15 @@
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          📑 Shopify
       </a>
-
       <a href="/woocommerce"
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          📑 WooCommerce
       </a>
-
       <a href="#"
          id="userDashboardLink"
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          👤 User Dashboard
       </a>
-
       <button id="logoutButton"
               class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
         🚪 Logout
@@ -1137,37 +1139,41 @@ button:disabled {
     font-size: 16px; 
   }
 
+  #mobileNav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: rgba(11, 26, 43, 0.95);
+    flex-direction: column;
+    align-items: center; 
+    gap: 0.5rem;
+    padding: 0;
+    border-radius: 0.5rem;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
+    z-index: 999;
+  }
 
-/* Mobile nav styling */
-#mobileNav {
-  display: none; 
-  flex-direction: column;
-  align-items: center; 
-  width: 100%;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 1rem;
-  background-color: rgba(11, 26, 43, 0.95);
-  border-radius: 0.5rem;
+  #mobileNav.show {
+    max-height: 500px; 
+    opacity: 1;
+    padding: 1rem;
+  }
 
-  
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.4s ease, padding 0.4s ease;
-}
+  #mobileNav a,
+  #mobileNav button {
+    width: 90%;
+    text-align: center;
+  }
 
-#mobileNav.show {
-  display: flex;
-  max-height: 500px; 
-  padding: 1rem;
-}
-
-#mobileNav .nav-link {
-  width: 100%;
-  text-align: center;
-  padding: 0.75rem 0;
-}
-  
+  .max-w-6xl {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
 }
 
 
