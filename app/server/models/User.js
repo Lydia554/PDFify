@@ -9,6 +9,9 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
   throw new Error("ENCRYPTION_KEY must be set in the .env file and must be 32 characters long.");
 }
 
+console.log("ENCRYPTION_KEY length:", ENCRYPTION_KEY?.length);
+
+
 const IV_LENGTH = 16;
 
 // Encryption / Decryption
