@@ -161,48 +161,33 @@
 <script type="module">
 import { initBuyTokens } from '/js/buy-tokens.js';
 
+// Axios instance
 const api = axios.create({
   baseURL: "/api",
   timeout: 10000,
 });
 
-// ✅ Fetch API key dynamically from localStorage or backend session
-async function fetchApiKey() {
-  const storedKey = localStorage.getItem("apiKey");
-  if (storedKey) return storedKey;
-
-  try {
-    const res = await fetch("/api/user/me", { credentials: "include" });
-    if (!res.ok) throw new Error("Failed to fetch API key from session");
-    const data = await res.json();
-    if (!data.apiKey) throw new Error("No API key returned from backend");
-    
-    localStorage.setItem("apiKey", data.apiKey);
-    return data.apiKey;
-  } catch (err) {
-    console.error(err);
-    alert("Unable to get API key. Please log in again.");
-    localStorage.removeItem("apiKey");
-    window.location.href = "/login.html";
-    throw err;
-  }
+// Get the API key from URL or localStorage
+function getApiKey() {
+  return new URLSearchParams(window.location.search).get("apiKey") || localStorage.getItem("apiKey");
 }
 
-// ✅ Axios interceptor to attach API key dynamically
+// Axios request interceptor to add Authorization header
 api.interceptors.request.use(
-  async (config) => {
-    const apiKey = await fetchApiKey();
-    config.headers.Authorization = `Bearer ${apiKey}`;
+  (config) => {
+    const apiKey = getApiKey();
+    if (apiKey) config.headers.Authorization = `Bearer ${apiKey}`;
     return config;
   },
   (error) => Promise.reject(error)
 );
 
+// Axios response interceptor for 401 errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      alert("Session expired. Please log in.");
+    if (error.response && error.response.status === 401) {
+      alert("Session expired or unauthorized. Please log in again.");
       localStorage.removeItem("apiKey");
       window.location.href = "/login.html";
     }
@@ -210,18 +195,33 @@ api.interceptors.response.use(
   }
 );
 
+// Mask API key for display
 function maskApiKey(key) {
-  if (!key) return "";
-  return key.slice(0, 4) + "..." + key.slice(-4);
+  return key ? key.slice(0, 4) + "..." + key.slice(-4) : "";
 }
 
+
+// Display user info in the UI
+function displayUserInfo(data) {
+  document.getElementById("email").textContent = data.email || "";
+  document.getElementById("usageCount").textContent = data.usageCount || 0;
+  document.getElementById("maxUsage").textContent = data.maxUsage || 0;
+  document.getElementById("premiumStatus").textContent = data.planType || "Free";
+
+ 
 function displayUserInfo(data) {
   document.getElementById("email").textContent = data.email || "";
   document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || "");
   document.getElementById("usageCount").textContent = data.usageCount || 0;
   document.getElementById("maxUsage").textContent = data.maxUsage || 0;
   document.getElementById("premiumStatus").textContent = data.planType || "Free";
+} 
+
+// Always update the API key UI
+  updateApiKeyUI();
 }
+
+
 
 // ✅ Fetch user data using dynamic API key
 async function fetchUserData() {
