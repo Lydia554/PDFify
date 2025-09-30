@@ -59,11 +59,15 @@ app.use("/webhook", shopifyWebhookRoutes);
 
 
 app.use(cors({
-  origin: "https://food-trek.com",
+  origin: [
+    "https://food-trek.com",
+    "https://woocommerce.portfolio.lidija-jokic.com"  
+  ],
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-   credentials: true,
+  credentials: true,
 }));
+
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
