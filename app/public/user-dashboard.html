@@ -19,24 +19,28 @@
     <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 
-  <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 shadow">
+<!-- Header -->
+<header class="fixed top-0 left-0 right-0 z-50 shadow bg-gray-900">
   <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
+    <!-- Logo -->
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
-    <nav class="flex flex-wrap gap-6">
+
+    <!-- Hamburger button for mobile -->
+    <button id="mobileMenuBtn" class="sm:hidden text-white text-2xl">☰</button>
+
+    <!-- Navigation -->
+    <nav id="mobileNav" class="hidden sm:flex flex-wrap gap-6">
       <a href="/api-guide" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
         📑 API Guide
       </a>
       <a href="/shopify" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
         📑 Shopify
       </a>
-
       <a href="/woocommerce" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
         📑 WooCommerce
       </a>
-
       <a href="/pdf-generator-demo" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
         📄 PDF Generator
       </a>
@@ -168,6 +172,13 @@ const api = axios.create({
   timeout: 10000,
 });
 
+
+  
+  const btn = document.getElementById('mobileMenuBtn');
+  const nav = document.getElementById('mobileNav');
+  btn.addEventListener('click', () => {
+    nav.classList.toggle('hidden');
+  });
 
 async function fetchApiKey() {
   const storedKey = localStorage.getItem("apiKey");
@@ -377,6 +388,21 @@ main {
     text-align: center;
     width: 100%;
   }
+
+      #mobileNav {
+      flex-direction: column;
+      width: 100%;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    #mobileNav a,
+    #mobileNav button {
+      width: 100%;
+      text-align: center;
+      padding-left: 0;
+      padding-right: 0;
+    }
 }
 
 /* Extra small screens */
