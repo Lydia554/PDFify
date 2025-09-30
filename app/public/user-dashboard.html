@@ -333,6 +333,7 @@ initBuyTokens();
 </body>
 </html>
 
+
 <style>
 header {
   position: fixed;
@@ -348,36 +349,53 @@ main {
   margin-top: 30px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Mobile Nav Animation */
+#mobileNav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  background-color: rgba(11, 26, 43, 0.95);
+  border-radius: 0.5rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
 }
 
+#mobileNav.show {
+  max-height: 500px; 
+  opacity: 1;
+  padding: 1rem;
+}
 
+/* Animate links individually */
+#mobileNav a,
+#mobileNav button {
+  width: 100%;
+  text-align: center;
+  transform: translateY(-10px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+#mobileNav.show a,
+#mobileNav.show button {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Mobile Header layout */
 @media (max-width: 640px) {
   header .max-w-6xl {
     flex-direction: column;
-    align-items: center; 
+    align-items: center;
     gap: 0.5rem;
-  }
-
-  #mobileNav {
-    display: none; 
-    flex-direction: column;
-    width: 100%;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 1rem; 
-    background-color: rgba(11, 26, 43, 0.95); 
-  }
-
-  #mobileNav a,
-  #mobileNav button {
-    width: 100%;
-    text-align: center;
-    padding: 0.75rem 0;
-    font-size: 14px;
   }
 
   h1 {
