@@ -363,6 +363,17 @@ document.getElementById("deleteAccountButton").addEventListener("click", async (
 const bankForm = document.getElementById("updateBankForm");
 const bankResult = document.getElementById("bankResult");
 
+async function getBankHeaders() {
+  const apiKey = localStorage.getItem("apiKey");
+  if (!apiKey) {
+    alert("No API key found. Please log in.");
+    window.location.href = "/login.html";
+    return null;
+  }
+  return { Authorization: `Bearer ${apiKey}` };
+}
+
+// Save bank details
 bankForm.addEventListener("submit", async event => {
   event.preventDefault();
   bankResult.textContent = "";
@@ -376,17 +387,26 @@ bankForm.addEventListener("submit", async event => {
   }
 
   try {
-    const response = await api.put("/shop-config/update", { iban, bic });
-    bankResult.textContent = response.status === 200 ? "Bank details updated successfully!" : "Failed to update bank details. Please try again.";
+    const headers = await getBankHeaders();
+    if (!headers) return;
+
+    const response = await axios.put("/api/shop-config/update", { iban, bic }, { headers });
+    bankResult.textContent = response.status === 200
+      ? "Bank details updated successfully!"
+      : "Failed to update bank details. Please try again.";
   } catch (error) {
     console.error("Error updating bank details:", error);
     bankResult.textContent = "Error saving bank details. Check console for details.";
   }
 });
 
+// Load bank details
 async function loadBankDetails() {
   try {
-    const response = await api.get("/shop-config");
+    const headers = await getBankHeaders();
+    if (!headers) return;
+
+    const response = await axios.get("/api/shop-config", { headers });
     if (response.status === 200 && response.data) {
       document.getElementById("iban").value = response.data.iban || "";
       document.getElementById("bic").value = response.data.bic || "";
@@ -395,6 +415,8 @@ async function loadBankDetails() {
     console.error("Failed to load bank details:", error);
   }
 }
+
+
 
 // ----------------------------
 // Initialize
