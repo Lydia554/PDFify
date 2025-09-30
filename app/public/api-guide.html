@@ -19,13 +19,13 @@
   </div>
 
 <header class="fixed top-0 left-0 right-0 z-50 shadow bg-[#0b1a2b]">
-  <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
 
-    <!-- Desktop navigation -->
-    <nav class="hidden md:flex space-x-6">
+    <!-- Desktop nav (visible on md+) -->
+    <nav class="hidden md:flex space-x-4">
       <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
       <a href="/api-guide" class="text-purple-400 font-semibold">📑 API Guide</a>
       <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
@@ -37,7 +37,7 @@
     <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
   </div>
 
-  <!-- Mobile navigation -->
+  <!-- Mobile nav (hidden by default) -->
   <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
     <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
     <a href="/api-guide" class="block text-purple-400 font-semibold">📑 API Guide</a>
@@ -927,6 +927,7 @@ menuBtn.addEventListener("click", () => {
 
 
 
+
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
       toggleGroup.addEventListener('click', (event) => {
         const clickedBtn = event.target;
@@ -1010,7 +1011,9 @@ function toggleImage(container) {
 
 
 
+
   <style>
+
     body {
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       max-width: 720px;
@@ -1021,15 +1024,16 @@ function toggleImage(container) {
       color: #333;
     }
 
-    header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      z-index: 1000;
-    }
+header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
 
     main {
       background: #1d222b;
@@ -1085,39 +1089,44 @@ function toggleImage(container) {
       border-radius: 4px;
     }
 
+
     header nav {
-      display: flex;
-      gap: 2rem;      
-      align-items: center; 
-      flex-wrap: nowrap;   
-    }
+  display: flex;
+  gap: 2rem;      
+  align-items: center; 
+  flex-wrap: nowrap;   
+}
 
-    header nav a {
-      display: inline-flex;
-      align-items: center; 
-      gap: 0.3rem;        
-      white-space: nowrap; 
-      text-decoration: none;
-      color: inherit;
-      font-weight: 500;
-      font-size: 1rem;
-    }
+header nav a {
+  display: inline-flex;
+  align-items: center; 
+  gap: 0.3rem;        
+  white-space: nowrap; 
+  text-decoration: none;
+  color: inherit;
+  font-weight: 500;
+  font-size: 1rem;
+}
 
-    .hidden {
-      display: none;
-    }
+   
 
-    img.zoomable {
-      transition: transform 0.3s ease;
-      cursor: pointer;
-    }
-    img.zoomable:hover {
-      transform: scale(1.30);
-    }
-    .image-toggle-container img {
-      width: 100%;
-      height: auto;
-    }
+
+  img.zoomable {
+    transition: transform 0.3s ease;
+    cursor: pointer;
+  }
+  img.zoomable:hover {
+    transform: scale(1.30);
+  }
+  .hidden {
+    display: none;
+  }
+  
+  .image-toggle-container img {
+    width: 100%;
+    height: auto;
+  }
+
 
     @keyframes spin {
       to {
@@ -1125,66 +1134,96 @@ function toggleImage(container) {
       }
     }
 
-    @media (max-width: 640px) {
-      header .flex-container {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-      }
 
-      #mobileNav {
-        display: none;
-        flex-direction: column;
-        width: 100%;
-        gap: 0.5rem;
-        margin-top: 1rem;
-        padding: 1rem;
-        background-color: rgba(11, 26, 43, 0.95);
-      }
-
-      #mobileNav a {
-        width: 100%;
-        text-align: center;
-        padding: 0.75rem 0;
-        font-size: 14px;
-      }
-
-      header h1 {
-        font-size: 1.5rem;
-        text-align: center;
-        width: 100%;
-      }
-    }
 
     @media (max-width: 420px) {
-      body {
-        padding: 7.5rem 1rem 2rem;
-        font-size: 0.95rem;  
-        margin-top: 3%;
-      }
+  body {
+    padding: 7.5rem 1rem 2rem;
+    font-size: 0.95rem;  
+    margin-top: 3%;
+  }
 
-      main {
-        padding: 1rem;
-        border-radius: 6px;
-        margin-top: 15%;
-      }
+  main {
+    padding: 1.5rem;
+    border-radius: 6px;
+  
+  }
 
-      header h1 {
-        font-size: 1.5rem;
-        text-align: center;
-        width: 100%;
-      }
+  header h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    width: 100%;
+  }
 
-      header nav {
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 1rem;
-      }
+  h2 {
+    font-size: 1.2rem;
+  }
 
-      header nav a {
-        font-size: 0.85rem;   
-      }
+  header .max-w-6xl {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+
+
+  #developerBtn {
+ font-size: 0.8rem;
+  }
+
+  #friendlyBtn {
+    font-size: 0.8rem;
+  }
+
+
+
+  img.zoomable {
+    max-width: 100%;
+    height: auto;
+  }
+
+}
+
+@media (max-width: 420px) {
+  main {
+    padding: 1rem;
+  }
+
+
+    header .max-w-6xl {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 8px 10px;
+  }
+
+    header h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    width: 100%;
+  }
+
+    header nav {
+    flex-wrap: wrap;      
+    justify-content: center; 
+    gap: 1rem;            
+  }
+
+  header nav a {
+    font-size: 0.85rem;   
+  }
+
+
+    main  {
+      margin-top: 15%;
     }
+
+
+
+}
+
+
+
+
   </style>
 </body>
 </html>
