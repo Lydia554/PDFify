@@ -39,46 +39,38 @@ function decrypt(text) {
 // ----------------------------
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
+  password: { type: String, required: true }, // bcrypt only
   apiKey: { type: String, required: true, unique: true },
 
-  // WooCommerce fields
   connectedWooDomain: { type: String, required: false },
   wooConsumerKey: { type: String, required: false },
   wooConsumerSecret: { type: String, required: false },
   allowCustomerPDF: { type: Boolean, default: false },
 
-  // Shopify fields
   connectedShopDomain: { type: String, required: false },
   shopifyAccessToken: { type: String, required: false },
 
-  // Stripe fields
   stripeCustomerId: { type: String },
   stripeSubscriptionId: { type: String },
   planType: { type: String, enum: ["free", "premium", "pro"], default: "free" },
 
-  // Usage tracking
   usageCount: { type: Number, default: 0 },
   maxUsage: { type: Number, default: 30 },
   usageLastReset: { type: Date, default: Date.now },
 
-  // Preview tracking
   previewCount: { type: Number, default: 0 },
   previewLastReset: { type: Date, default: Date.now },
 
-  // Flags and roles
   isPremium: { type: Boolean, default: false },
   role: { type: String, enum: ["user", "admin"], default: "user" },
   isActive: { type: Boolean, default: true },
 
-  // Account deletion
   deleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
 
   cookieConsent: { type: Boolean, default: false },
   cookieConsentDate: { type: Date },
 
-  // Password reset
   resetToken: { type: String },
   resetTokenExpiry: { type: Date },
 
@@ -88,28 +80,26 @@ const userSchema = new mongoose.Schema({
 // ----------------------------
 // Middleware
 // ----------------------------
-
-// Normalize shop domains
 userSchema.pre("save", function (next) {
   if (this.connectedShopDomain) this.connectedShopDomain = this.connectedShopDomain.trim().toLowerCase();
   if (this.connectedWooDomain) this.connectedWooDomain = this.connectedWooDomain.trim().toLowerCase();
   next();
 });
 
-// Encrypt API key
+// Encrypt API key only
 userSchema.pre("save", async function (next) {
   if (this.isModified("apiKey")) this.apiKey = encrypt(this.apiKey);
   next();
 });
 
-// Encrypt WooCommerce keys
+// Encrypt WooCommerce keys only
 userSchema.pre("save", async function (next) {
   if (this.isModified("wooConsumerKey") && this.wooConsumerKey) this.wooConsumerKey = encrypt(this.wooConsumerKey);
   if (this.isModified("wooConsumerSecret") && this.wooConsumerSecret) this.wooConsumerSecret = encrypt(this.wooConsumerSecret);
   next();
 });
 
-// Hash password
+// Hash password (bcrypt only)
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   try {
