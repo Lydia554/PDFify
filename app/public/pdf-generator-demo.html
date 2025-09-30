@@ -19,14 +19,19 @@
     <div class="w-10 h-10 border-4 border-gray-600 border-l-indigo-500 rounded-full animate-spin"></div>
   </div>
 
-<!-- Header -->
+  <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-50 shadow">
   <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+    <!-- Logo -->
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
 
-    <nav class="flex flex-wrap justify-center gap-3">
+    <!-- Hamburger button for mobile -->
+    <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+
+    <!-- Navigation -->
+    <nav id="mobileNav" class="hidden md:flex flex-wrap justify-center gap-3">
       <a href="/api-guide"
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          📑 API Guide
@@ -35,18 +40,15 @@
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          📑 Shopify
       </a>
-
       <a href="/woocommerce"
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          📑 WooCommerce
       </a>
-
       <a href="#"
          id="userDashboardLink"
          class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
          👤 User Dashboard
       </a>
-
       <button id="logoutButton"
               class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
         🚪 Logout
@@ -246,7 +248,12 @@ friendlyBtn.addEventListener('click', () => {
 });
 
 
-
+ // Hamburger toggle
+  const btn = document.getElementById('mobileMenuBtn');
+  const nav = document.getElementById('mobileNav');
+  btn.addEventListener('click', () => {
+    nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';
+  });
 
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
@@ -1032,6 +1039,33 @@ button:disabled {
     }
   }
 
+@media (max-width: 768px) {
+  #mobileNav {
+    display: none; 
+    flex-direction: column;
+    width: 100%;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: rgba(11, 26, 43, 0.95); 
+    border-radius: 0.5rem;
+  }
+
+  #mobileNav a,
+  #mobileNav button {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem 0;
+  }
+
+  .max-w-6xl {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+
 @media (max-width: 420px) {
   body {
     margin-top: 60%;
@@ -1114,7 +1148,15 @@ button:disabled {
   input, select, textarea {
     font-size: 16px; 
   }
+
+
+
+  
 }
+
+
+
+
 
 </style>
 
