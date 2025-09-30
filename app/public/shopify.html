@@ -22,7 +22,9 @@
     </h1>
 
     <!-- Hamburger button (mobile only) -->
-    <button id="menuToggle" class="md:hidden text-white text-2xl">☰</button>
+   <!-- Hamburger button (mobile only) -->
+<button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+
 
     <!-- Navigation -->
     <nav id="mainNav" class="hidden md:flex space-x-4">
@@ -308,13 +310,18 @@
     images.forEach(img => img.classList.toggle('hidden'));
   }
 
+const menuBtn = document.getElementById("mobileMenuBtn");
+const mobileNav = document.getElementById("mobileNav");
 
-  const menuBtn = document.getElementById("menuToggle");
-  const mobileNav = document.getElementById("mobileNav");
+menuBtn.addEventListener("click", () => {
+  mobileNav.classList.toggle("hidden");
 
-  menuBtn.addEventListener("click", () => {
-    mobileNav.classList.toggle("hidden");
-  });
+  if (!mobileNav.classList.contains("hidden")) {
+    mobileNav.style.display = "flex";
+  } else {
+    mobileNav.style.display = "none";
+  }
+});
 
   // ------------------------------
   // Axios API setup
