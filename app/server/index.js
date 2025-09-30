@@ -8,7 +8,9 @@ const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
 
+const dotenv = require("dotenv");
 dotenv.config();
+
 
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
