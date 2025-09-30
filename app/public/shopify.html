@@ -14,21 +14,25 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 
-  <!-- Header -->
+<!-- Header -->
+<header>
+  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center relative">
+    <!-- Logo -->
+    <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
 
-    <header>
-    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-         <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
-      <nav class="space-x-4">
-        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
-       <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
-         <a href="/shopify" class="text-purple-400 font-semibold">📑Shopify</a>
-           <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
-        <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
-        
-      </nav>
-    </div>
-  </header>
+    <!-- Hamburger button for mobile -->
+    <button id="mobileMenuBtn" class="sm:hidden text-white text-2xl absolute right-4 top-4">☰</button>
+
+    <!-- Navigation -->
+    <nav id="mobileNav" class="hidden sm:flex space-x-4">
+      <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
+      <a href="/shopify" class="text-purple-400 font-semibold">📑Shopify</a>
+      <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
+      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
+    </nav>
+  </div>
+</header>
 
 <main>
   <h1 class="text-3xl tracking-wider font-extrabold leading-relaxed text-center mb-12 mt-4 bg-gradient-to-r from-green-600 via-teal-500 to-purple-600 bg-clip-text text-transparent opacity-0 animate-fade-in">
@@ -284,6 +288,14 @@
       }
     });
   });
+
+
+  const mobileBtn = document.getElementById('mobileMenuBtn');
+const mobileNav = document.getElementById('mobileNav');
+
+mobileBtn.addEventListener('click', () => {
+  mobileNav.classList.toggle('show');
+});
 
   // ------------------------------
   // Image toggle
@@ -646,6 +658,47 @@ header {
   z-index: 1000;
 }
 
+/* Mobile nav animation */
+#mobileNav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: rgba(11, 26, 43, 0.95);
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  border-radius: 0.5rem;
+  transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
+  z-index: 999;
+}
+
+#mobileNav.show {
+  max-height: 500px; 
+  opacity: 1;
+  padding: 1rem;
+}
+
+
+#mobileNav a {
+  width: 100%;
+  text-align: center;
+  transform: translateY(-10px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+#mobileNav.show a {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+
 
 header nav {
   display: flex;
@@ -808,6 +861,44 @@ footer {
     padding: 1rem;
     margin-top: 15%;
   }
+
+
+  
+/* Desktop nav stays unchanged */
+@media (min-width: 640px) {
+  #mobileNav {
+    position: static;
+    max-height: none;
+    opacity: 1;
+    flex-direction: row;
+    padding: 0;
+    display: flex !important;
+  }
+
+  #mobileMenuBtn {
+    display: none;
+  }
+}
+
+/* Adjust mobile layout */
+@media (max-width: 639px) {
+  header .max-w-6xl {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  header h1 {
+    font-size: 1.5rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  header nav a {
+    font-size: 0.9rem;
+    padding: 0.75rem 0;
+  }
+}
 
 
     header .max-w-6xl {

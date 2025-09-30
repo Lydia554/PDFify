@@ -349,6 +349,39 @@ main {
   margin-top: 30px;
 }
 
+
+
+/* Mobile Header layout */
+@media (max-width: 640px) {
+  header .max-w-6xl {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    text-align: center;
+    width: 100%;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 420px) {
+  main {
+    margin-top: 140px;
+    padding: 0 1rem;
+  }
+
+  header h1 {
+    font-size: 1.25rem;
+  }
+
+  header nav a,
+  header nav button {
+    font-size: 13px;
+    padding: 6px 0;
+  }
 /* Mobile Nav Animation */
 #mobileNav {
   position: absolute;
@@ -390,36 +423,7 @@ main {
   opacity: 1;
 }
 
-/* Mobile Header layout */
-@media (max-width: 640px) {
-  header .max-w-6xl {
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
 
-  h1 {
-    font-size: 1.5rem;
-    text-align: center;
-    width: 100%;
-  }
-}
 
-/* Extra small screens */
-@media (max-width: 420px) {
-  main {
-    margin-top: 140px;
-    padding: 0 1rem;
-  }
-
-  header h1 {
-    font-size: 1.25rem;
-  }
-
-  header nav a,
-  header nav button {
-    font-size: 13px;
-    padding: 6px 0;
-  }
 }
 </style>
