@@ -157,13 +157,16 @@ router.get("/me", authenticate, dualAuth, async (req, res) => {
 });
 
 
-
 router.get("/shop-config", authenticate, async (req, res) => {
-  try {
-    const shopDomain = req.user.shopDomain;
-    const config = await ShopConfig.findOne({ shopDomain });
-    if (!config) return res.status(404).json({ error: "Shop config not found" });
+  const shopDomain = req.user.shopDomain;
+  console.log("GET /shop-config for shopDomain:", shopDomain);
 
+  try {
+    const config = await ShopConfig.findOne({ shopDomain });
+    if (!config) {
+      console.log("No ShopConfig found for", shopDomain);
+      return res.status(404).json({ error: "Shop config not found" });
+    }
     res.json({ iban: config.iban, bic: config.bic });
   } catch (err) {
     console.error(err);
@@ -171,24 +174,30 @@ router.get("/shop-config", authenticate, async (req, res) => {
   }
 });
 
-
 router.put("/shop-config/update", authenticate, async (req, res) => {
-  try {
-    const { iban, bic } = req.body;
-    const shopDomain = req.user.shopDomain;
+  const { iban, bic } = req.body;
+  const shopDomain = req.user.shopDomain;
+  console.log("PUT /shop-config/update called with:", { shopDomain, iban, bic });
 
+  if (!shopDomain) {
+    return res.status(400).json({ error: "shopDomain is missing in request" });
+  }
+
+  try {
     const config = await ShopConfig.findOneAndUpdate(
       { shopDomain },
       { iban, bic },
-      { new: true, upsert: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
+    console.log("Updated/created ShopConfig:", config);
     res.json({ message: "Bank details updated successfully", config });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to update bank details" });
   }
 });
+
 
 
 
