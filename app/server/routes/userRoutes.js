@@ -158,7 +158,7 @@ router.get("/me", authenticate, dualAuth, async (req, res) => {
 
 
 // Get bank details for current shop
-router.get("/shop-config", authMiddleware, async (req, res) => {
+router.get("/shop-config", authenticate, async (req, res) => {
   try {
     const shopDomain = req.user.shopDomain;
     const config = await ShopConfig.findOne({ shopDomain });
@@ -172,7 +172,7 @@ router.get("/shop-config", authMiddleware, async (req, res) => {
 });
 
 // Update bank details for current shop
-router.put("/shop-config/update", authMiddleware, async (req, res) => {
+router.put("/shop-config/update", authenticate, async (req, res) => {
   try {
     const { iban, bic } = req.body;
     const shopDomain = req.user.shopDomain;
