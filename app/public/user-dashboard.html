@@ -167,27 +167,43 @@ const api = axios.create({
   timeout: 10000,
 });
 
-// Get the API key from URL or localStorage
-function getApiKey() {
-  return new URLSearchParams(window.location.search).get("apiKey") || localStorage.getItem("apiKey");
+// ✅ Fetch API key dynamically from localStorage or backend session
+async function fetchApiKey() {
+  const storedKey = localStorage.getItem("apiKey");
+  if (storedKey) return storedKey;
+
+  try {
+    const res = await fetch("/api/user/me", { credentials: "include" });
+    if (!res.ok) throw new Error("Failed to fetch API key from session");
+    const data = await res.json();
+    if (!data.apiKey) throw new Error("No API key returned from backend");
+
+    localStorage.setItem("apiKey", data.apiKey);
+    return data.apiKey;
+  } catch (err) {
+    console.error(err);
+    alert("Unable to get API key. Please log in again.");
+    localStorage.removeItem("apiKey");
+    window.location.href = "/login.html";
+    throw err;
+  }
 }
 
-// Axios request interceptor to add Authorization header
+// ✅ Axios interceptor to attach API key dynamically
 api.interceptors.request.use(
-  (config) => {
-    const apiKey = getApiKey();
-    if (apiKey) config.headers.Authorization = `Bearer ${apiKey}`;
+  async (config) => {
+    const apiKey = await fetchApiKey();
+    config.headers.Authorization = `Bearer ${apiKey}`;
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Axios response interceptor for 401 errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      alert("Session expired or unauthorized. Please log in again.");
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      alert("Session expired. Please log in.");
       localStorage.removeItem("apiKey");
       window.location.href = "/login.html";
     }
@@ -195,33 +211,19 @@ api.interceptors.response.use(
   }
 );
 
-// Mask API key for display
+// Mask API key for UI display
 function maskApiKey(key) {
   return key ? key.slice(0, 4) + "..." + key.slice(-4) : "";
 }
 
-
-// Display user info in the UI
+// Display user info
 function displayUserInfo(data) {
   document.getElementById("email").textContent = data.email || "";
+  document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || localStorage.getItem("apiKey"));
   document.getElementById("usageCount").textContent = data.usageCount || 0;
   document.getElementById("maxUsage").textContent = data.maxUsage || 0;
   document.getElementById("premiumStatus").textContent = data.planType || "Free";
-
- 
-function displayUserInfo(data) {
-  document.getElementById("email").textContent = data.email || "";
-  document.getElementById("apiKey").textContent = maskApiKey(data.apiKey || "");
-  document.getElementById("usageCount").textContent = data.usageCount || 0;
-  document.getElementById("maxUsage").textContent = data.maxUsage || 0;
-  document.getElementById("premiumStatus").textContent = data.planType || "Free";
-} 
-
-// Always update the API key UI
-  updateApiKeyUI();
 }
-
-
 
 // ✅ Fetch user data using dynamic API key
 async function fetchUserData() {
@@ -254,6 +256,7 @@ async function loadBankDetails() {
   }
 }
 
+// Update bank details
 const bankForm = document.getElementById("updateBankForm");
 const bankResult = document.getElementById("bankResult");
 
@@ -270,8 +273,7 @@ bankForm.addEventListener("submit", async (event) => {
 
   try {
     const response = await api.put("/shop-config/update", { iban, bic });
-    if (response.status === 200) bankResult.textContent = "Bank details updated successfully!";
-    else bankResult.textContent = "Failed to update bank details. Please try again.";
+    bankResult.textContent = response.status === 200 ? "Bank details updated successfully!" : "Failed to update bank details.";
   } catch (error) {
     console.error("Error updating bank details:", error);
     bankResult.textContent = "Error saving bank details. Check console for details.";
@@ -284,7 +286,7 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   loadingOverlay.style.display = "flex";
 
   try {
-    const res = await fetch("/api/logout", { method: "POST", credentials: "include" });
+    await fetch("/api/logout", { method: "POST", credentials: "include" });
     localStorage.removeItem("apiKey");
     window.location.href = "/login.html";
   } catch (error) {
@@ -294,10 +296,46 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   }
 });
 
+// ✅ Subscription management (Stripe checkout)
+async function handleSubscription(plan) {
+  const stripeKeyResp = await api.get("/get-stripe-key");
+  const stripe = Stripe(stripeKeyResp.data.stripePublishableKey);
+  const email = document.getElementById("email").textContent;
+
+  try {
+    const sessionResp = await api.post("/stripe/create-checkout-session", { email, plan });
+    if (!sessionResp.data.id) throw new Error("No session ID returned");
+    const { error } = await stripe.redirectToCheckout({ sessionId: sessionResp.data.id });
+    if (error) console.error(error);
+  } catch (err) {
+    console.error("Stripe checkout error:", err);
+    alert("Failed to start subscription checkout. Please try again.");
+  }
+}
+
+document.getElementById("upgradeSubscriptionButton").addEventListener("click", () => handleSubscription("premium"));
+document.getElementById("downgradeSubscriptionButton").addEventListener("click", () => handleSubscription("free"));
+
+// ✅ Delete account
+document.getElementById("deleteAccountButton").addEventListener("click", async () => {
+  if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
+
+  try {
+    const response = await api.delete("/user/delete");
+    localStorage.removeItem("apiKey");
+    document.getElementById("result").textContent = response.data.message || "Account deleted.";
+    setTimeout(() => window.location.href = "/user-creation.html", 2000);
+  } catch (error) {
+    console.error("Error deleting account:", error);
+    document.getElementById("result").textContent = "Failed to delete account. Please try again.";
+  }
+});
+
 // ✅ Initialize everything
 fetchUserData();
 loadBankDetails();
 initBuyTokens();
+
 </script>
 
 
