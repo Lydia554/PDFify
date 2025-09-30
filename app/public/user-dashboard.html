@@ -349,47 +349,35 @@ main {
 }
 
 
-/* Mobile Nav Animation */
 #mobileNav {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
+  background-color: rgba(11, 26, 43, 0.95);
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.5rem;
   padding: 0;
-  background-color: rgba(11, 26, 43, 0.95);
   border-radius: 0.5rem;
   max-height: 0;
   opacity: 0;
   overflow: hidden;
   transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
+  z-index: 999;
 }
 
 #mobileNav.show {
-  max-height: 500px; 
+  max-height: 500px;
   opacity: 1;
   padding: 1rem;
 }
 
-
 #mobileNav a,
 #mobileNav button {
-  width: 100%;
+  width: 90%;
   text-align: center;
-  transform: translateY(-10px);
-  opacity: 0;
-  transition: transform 0.3s ease, opacity 0.3s ease;
 }
-
-#mobileNav.show a,
-#mobileNav.show button {
-  transform: translateY(0);
-  opacity: 1;
-}
-
 
 @keyframes spin {
   to {
