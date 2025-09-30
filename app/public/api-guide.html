@@ -22,26 +22,26 @@
   <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
 
-    <!-- Desktop nav (hidden on mobile) -->
-    <nav id="desktopNav" class="hidden md:flex space-x-4">
-      <a href="/" class="text-gray-400 hover:text-purple-400 transition">🏠 Home</a>
-      <a href="/api-guide" class="text-purple-400 font-semibold transition">📑 API Guide</a>
-      <a href="/shopify" class="text-gray-400 hover:text-purple-400 transition">📑 Shopify</a>
-      <a href="/woocommerce" class="text-purple-400 font-semibold transition">📑 WooCommerce</a>
-      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400 transition">📄 PDF Generator</a>
+    <!-- Desktop nav -->
+    <nav id="mainNav" class="hidden md:flex space-x-4">
+      <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="text-purple-400 font-semibold">📑 API Guide</a>
+      <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
+      <a href="/woocommerce" class="text-purple-400 font-semibold">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
     </nav>
 
-    <!-- Hamburger (mobile only) -->
+    <!-- Hamburger (mobile) -->
     <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
   </div>
 
-  <!-- Mobile dropdown (hidden on desktop) -->
+  <!-- Mobile dropdown -->
   <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden rounded-b-lg">
-    <a href="/" class="block text-gray-300 hover:text-purple-400 transition">🏠 Home</a>
-    <a href="/api-guide" class="block text-purple-400 font-semibold transition">📑 API Guide</a>
-    <a href="/shopify" class="block text-gray-300 hover:text-purple-400 transition">📑 Shopify</a>
-    <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400 transition">📑 WooCommerce</a>
-    <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400 transition">📄 PDF Generator</a>
+    <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
+    <a href="/api-guide" class="block text-purple-400 font-semibold">📑 API Guide</a>
+    <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
+    <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
+    <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
   </nav>
 </header>
 
@@ -920,7 +920,6 @@ menuBtn.addEventListener("click", () => {
 });
 
 
-
      window.addEventListener("pageshow", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   loadingOverlay.style.display = "none";
@@ -1010,7 +1009,6 @@ function toggleImage(container) {
 </html>
 
 
-
 <style>
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -1043,6 +1041,7 @@ header h1 {
   font-size: 2.5rem;
   font-weight: bold;
   background: linear-gradient(to right, #4f46e5, #6366f1, #f472b6);
+  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -1100,26 +1099,20 @@ ul ul {
   border-radius: 4px;
 }
 
-header nav {
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-}
-
 header nav a {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
   white-space: nowrap;
   text-decoration: none;
-  color: #e5e7eb; /* light gray links */
+  color: #e5e7eb;
   font-weight: 500;
   font-size: 1rem;
   transition: color 0.3s;
 }
 
 header nav a:hover {
-  color: #facc15; /* yellow hover */
+  color: #facc15;
 }
 
 #mobileMenuBtn {
@@ -1183,12 +1176,6 @@ img.zoomable:hover {
   #mainNav {
     display: none;
   }
-
-  header .max-w-6xl {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
 }
 
 @media (max-width: 420px) {
@@ -1200,15 +1187,12 @@ img.zoomable:hover {
   main {
     padding: 1.5rem;
     border-radius: 6px;
+    margin-top: 15%;
   }
 
   header h1 {
     font-size: 1.5rem;
     text-align: center;
-  }
-
-  main {
-    margin-top: 15%;
   }
 
   header nav a {
@@ -1221,7 +1205,6 @@ img.zoomable:hover {
   }
 }
 </style>
-
 
 </body>
 </html>
