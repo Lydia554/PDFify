@@ -35,7 +35,6 @@ const shopifyApiRoutes = require('./routes/shopify/shopifyApiRoutes');
 const woocommerceApiRoutes = require("./routes/woocommerce/woocommerceApiRoutes");
 const woocommerceWebhookRoutes = require("./routes/woocommerce/woocommerceWebhookRoutes");
 
-const shopConfigRoutes = require("./routes/shop-config");
 
 const app = express();
 
