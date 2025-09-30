@@ -22,36 +22,29 @@
 
 <!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-50 shadow">
-  <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
-    <!-- Logo -->
+  <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
 
     <!-- Hamburger button for mobile -->
-    <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+    <button id="mobileMenuBtn" class="sm:hidden text-white text-2xl">☰</button>
 
     <!-- Navigation -->
-    <nav id="mobileNav" class="flex flex-wrap justify-center gap-3 md:flex-row hidden">
-      <a href="/api-guide"
-         class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
-         📑 API Guide
+    <nav id="mobileNav" class="hidden sm:flex flex-wrap gap-6">
+      <a href="/api-guide" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+        📑 API Guide
       </a>
-      <a href="/shopify"
-         class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
-         📑 Shopify
+      <a href="/shopify" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+        📑 Shopify
       </a>
-      <a href="/woocommerce"
-         class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
-         📑 WooCommerce
+      <a href="/woocommerce" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+        📑 WooCommerce
       </a>
-      <a href="#"
-         id="userDashboardLink"
-         class="flex items-center gap-1 px-3 py-2 text-indigo-300 hover:text-white hover:bg-indigo-800 rounded-md font-semibold tracking-tight transition-all duration-200 hover:scale-105 shadow-sm">
-         👤 User Dashboard
+      <a href="/pdf-generator-demo" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+        📄 PDF Generator
       </a>
-      <button id="logoutButton"
-              class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
+      <button id="logoutButton" class="text-base font-semibold px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded text-white transition duration-200">
         🚪 Logout
       </button>
     </nav>
