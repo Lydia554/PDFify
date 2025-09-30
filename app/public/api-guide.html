@@ -18,47 +18,38 @@
     <div class="border-4 border-blue-200 border-l-blue-600 rounded-full w-10 h-10 animate-spin"></div>
   </div>
 
-<header>
-  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center"></div>
-    <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
 
-    <!-- Hamburger (mobile) -->
-    <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+  <!-- Header -->
+<header class="fixed top-0 left-0 right-0 z-50 shadow">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+    <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
+      PDFify
+    </h1>
 
-    <!-- Desktop nav -->
+   
+   <!-- Hamburger button (mobile only) -->
+<button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+
+
+    <!-- Navigation -->
     <nav id="mainNav" class="hidden md:flex space-x-4">
-      <a href="/" class="text-gray-400 hover:text-purple-400 transition">🏠 Home</a>
-      <a href="/api-guide" class="text-purple-400 font-semibold transition">📑 API Guide</a>
-      <a href="/shopify" class="text-gray-400 hover:text-purple-400 transition">📑 Shopify</a>
-      <a href="/woocommerce" class="text-gray-400 hover:text-purple-400 transition">📑 WooCommerce</a>
-      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400 transition">📄 PDF Generator</a>
+      <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="text-purple-400 font-semibold">📑 API Guide</a>
+      <a href="/shopify" class="text-gray-400 hover:text-purple-400"">📑 Shopify</a>
+      <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
     </nav>
   </div>
 
   <!-- Mobile dropdown -->
-  <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden rounded-b-lg">
-    <a href="/" class="block text-gray-300 hover:text-purple-400 transition">🏠 Home</a>
-    <a href="/api-guide" class="block text-purple-400 font-semibold transition">📑 API Guide</a>
-    <a href="/shopify" class="block text-gray-300 hover:text-purple-400 transition">📑 Shopify</a>
-    <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400 transition">📑 WooCommerce</a>
-    <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400 transition">📄 PDF Generator</a>
+  <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+    <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
+    <a href="/api-guide" class="block text-purple-400 font-semibold">📑 API Guide</a>
+    <a href="/shopify" class="block text-gray-400 hover:text-purple-400">📑 Shopify</a>
+    <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
+    <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
   </nav>
 </header>
-
-
-  <header>
-    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
-      <nav class="space-x-4">
-        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
-        <a href="/api-guide" class="text-purple-400 font-semibold">📑API Guide</a>
-        <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
-          <a href="/woocommerce" class="text-purple-400 font-semibold">📑WooCommerce</a>
-        <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
-      </nav>
-    </div>
-  </header>
-
 
   <main class="max-w-6xl mx-auto px-6 py-12">
     <div class="flex justify-center mb-8">
@@ -924,16 +915,6 @@ devModeBtn.addEventListener('click', () => {
   userModeBtn.classList.add('bg-gray-200', 'text-gray-800');
 });
 
-const menuBtn = document.getElementById("mobileMenuBtn");
-const mobileNav = document.getElementById("mobileNav");
-
-menuBtn.addEventListener("click", () => {
-  mobileNav.classList.toggle("hidden");
-});
-
-
-
-
      window.addEventListener("pageshow", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   loadingOverlay.style.display = "none";
@@ -941,6 +922,21 @@ menuBtn.addEventListener("click", () => {
 });
 
   
+const menuBtn = document.getElementById("mobileMenuBtn");
+const mobileNav = document.getElementById("mobileNav");
+
+menuBtn.addEventListener("click", () => {
+  mobileNav.classList.toggle("hidden");
+
+  if (!mobileNav.classList.contains("hidden")) {
+    mobileNav.style.display = "flex";
+  } else {
+    mobileNav.style.display = "none";
+  }
+});
+
+
+
 
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
       toggleGroup.addEventListener('click', (event) => {
