@@ -20,9 +20,8 @@
   </div>
 
 <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 shadow bg-gray-900">
+<header class="fixed top-0 left-0 right-0 z-50 shadow">
   <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
-    <!-- Logo -->
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
@@ -173,12 +172,11 @@ const api = axios.create({
 });
 
 
-  
-  const btn = document.getElementById('mobileMenuBtn');
-  const nav = document.getElementById('mobileNav');
-  btn.addEventListener('click', () => {
-    nav.classList.toggle('hidden');
-  });
+const btn = document.getElementById('mobileMenuBtn');
+const nav = document.getElementById('mobileNav');
+btn.addEventListener('click', () => {
+  nav.style.display = nav.style.display === 'flex' ? 'none' : 'flex';
+});
 
 async function fetchApiKey() {
   const storedKey = localStorage.getItem("apiKey");
@@ -335,10 +333,8 @@ initBuyTokens();
 </body>
 </html>
 
-
-  <style>
-
-    header {
+<style>
+header {
   position: fixed;
   top: 0;
   left: 0;
@@ -349,38 +345,39 @@ initBuyTokens();
 }
 
 main {
-  margin-top: 120px;
+  margin-top: 30px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 
-
-    @keyframes spin {
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
- 
-/* Mobile: Header tweaks */
 @media (max-width: 640px) {
   header .max-w-6xl {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center; 
     gap: 0.5rem;
   }
 
-  header nav {
+  #mobileNav {
+    display: none; 
     flex-direction: column;
-    gap: 0.5rem;
     width: 100%;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding: 1rem; 
+    background-color: rgba(11, 26, 43, 0.95); 
   }
 
-  header nav a,
-  header nav button {
+  #mobileNav a,
+  #mobileNav button {
     width: 100%;
     text-align: center;
+    padding: 0.75rem 0;
     font-size: 14px;
-    padding: 8px 0;
   }
 
   h1 {
@@ -388,21 +385,6 @@ main {
     text-align: center;
     width: 100%;
   }
-
-      #mobileNav {
-      flex-direction: column;
-      width: 100%;
-      gap: 0.5rem;
-      margin-top: 0.5rem;
-    }
-
-    #mobileNav a,
-    #mobileNav button {
-      width: 100%;
-      text-align: center;
-      padding-left: 0;
-      padding-right: 0;
-    }
 }
 
 /* Extra small screens */
@@ -422,6 +404,4 @@ main {
     padding: 6px 0;
   }
 }
-
-
 </style>
