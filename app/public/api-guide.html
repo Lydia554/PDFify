@@ -18,25 +18,33 @@
     <div class="border-4 border-blue-200 border-l-blue-600 rounded-full w-10 h-10 animate-spin"></div>
   </div>
 
-<!-- Header -->
 <header class="fixed top-0 left-0 right-0 z-50 shadow bg-[#0b1a2b]">
-  <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
       PDFify
     </h1>
 
-    <!-- Hamburger button for mobile -->
-    <button id="mobileMenuBtn" class="sm:hidden text-white text-2xl">☰</button>
-
-    <!-- Navigation (desktop + mobile) -->
-    <nav id="navMenu" class="hidden sm:flex flex-wrap gap-4">
-      <a href="/" class="text-gray-400 hover:text-purple-400 px-3 py-2">🏠 Home</a>
-      <a href="/api-guide" class="text-purple-400 font-semibold px-3 py-2">📑 API Guide</a>
-      <a href="/shopify" class="text-gray-400 hover:text-purple-400 px-3 py-2">📑 Shopify</a>
-      <a href="/woocommerce" class="text-gray-400 hover:text-purple-400 px-3 py-2">📑 WooCommerce</a>
-      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400 px-3 py-2">📄 PDF Generator</a>
+    <!-- Desktop nav (visible on md+) -->
+    <nav class="hidden md:flex space-x-4">
+      <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="text-purple-400 font-semibold">📑 API Guide</a>
+      <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
+      <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
     </nav>
+
+    <!-- Hamburger button (mobile only) -->
+    <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
   </div>
+
+  <!-- Mobile nav (hidden by default) -->
+  <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+    <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
+    <a href="/api-guide" class="block text-purple-400 font-semibold">📑 API Guide</a>
+    <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
+    <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
+    <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
+  </nav>
 </header>
 
   <main class="max-w-6xl mx-auto px-6 py-12">
@@ -910,12 +918,13 @@ devModeBtn.addEventListener('click', () => {
 });
 
   
-const btn = document.getElementById("mobileMenuBtn");
-const nav = document.getElementById("navMenu");
+const menuBtn = document.getElementById("mobileMenuBtn");
+const mobileNav = document.getElementById("mobileNav");
 
-btn.addEventListener("click", () => {
-  nav.style.display = nav.style.display === "flex" ? "none" : "flex";
+menuBtn.addEventListener("click", () => {
+  mobileNav.classList.toggle("hidden");
 });
+
 
 
 
