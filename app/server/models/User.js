@@ -4,15 +4,13 @@ const crypto = require("crypto");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// Remove ALL non-hex characters just for safety
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY?.replace(/[^a-fA-F0-9]/g, "");
-
-console.log("ENCRYPTION_KEY sanitized value:", ENCRYPTION_KEY);
-console.log("ENCRYPTION_KEY length:", ENCRYPTION_KEY?.length);
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY?.trim();
 
 if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
-  throw new Error(`ENCRYPTION_KEY must be set in the .env file and must be 32 characters long. Current length: ${ENCRYPTION_KEY?.length}`);
+  throw new Error("ENCRYPTION_KEY must be set in the .env file and must be 32 characters long.");
 }
+
+
 
 
 const IV_LENGTH = 16;
