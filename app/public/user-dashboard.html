@@ -1,163 +1,118 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>User Dashboard | PDFify </title>
-   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://js.stripe.com/v3/"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-   <script src="js/cookie-consent.js"></script>
-     <link rel="icon" href="images/Icon.png" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="Icon.png">
-
-
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Dashboard | PDFify</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/cookie-consent.js"></script>
+  <link rel="icon" href="images/Icon.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="Icon.png">
+</head>
 <body class="bg-gray-900 text-gray-200 font-mono">
 
-  <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-    <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-  </div>
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
+  <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+</div>
 
-  <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 shadow">
-  <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
-    <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
-      PDFify
-    </h1>
-    <nav class="flex flex-wrap gap-6">
-      <a href="/api-guide" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
-        📑 API Guide
-      </a>
-      <a href="/shopify" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
-        📑 Shopify
-      </a>
+<!-- Header -->
+<header class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <h1 class="text-3xl font-bold text-white">PDFify</h1>
 
-      <a href="/woocommerce" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
-        📑 WooCommerce
-      </a>
+    <!-- Hamburger for mobile -->
+    <button id="mobileMenuBtn" class="sm:hidden text-white text-2xl">☰</button>
 
-      <a href="/pdf-generator-demo" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
-        📄 PDF Generator
-      </a>
-      <button id="logoutButton" class="text-base font-semibold px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded text-white transition duration-200">
-        🚪 Logout
-      </button>
+    <!-- Navigation -->
+    <nav id="mobileNav" class="hidden sm:flex flex-wrap gap-4 w-full sm:w-auto mt-4 sm:mt-0">
+      <a href="/api-guide" class="text-white px-4 py-2 rounded bg-indigo-700 hover:bg-indigo-800 text-center w-full sm:w-auto">API Guide</a>
+      <a href="/shopify" class="text-white px-4 py-2 rounded bg-indigo-700 hover:bg-indigo-800 text-center w-full sm:w-auto">Shopify</a>
+      <a href="/woocommerce" class="text-white px-4 py-2 rounded bg-indigo-700 hover:bg-indigo-800 text-center w-full sm:w-auto">WooCommerce</a>
+      <a href="/pdf-generator-demo" class="text-white px-4 py-2 rounded bg-indigo-700 hover:bg-indigo-800 text-center w-full sm:w-auto">PDF Generator</a>
+      <button id="logoutButton" class="text-white px-4 py-2 rounded bg-pink-600 hover:bg-pink-700 w-full sm:w-auto">Logout</button>
     </nav>
   </div>
 </header>
 
-    <main class="max-w-3xl mx-auto px-4 pt-24">
-      <h1 class="text-3xl font-bold mb-6 text-center">👋 Welcome!</h1>
+<!-- Main Content -->
+<main class="max-w-3xl mx-auto px-4 pt-36 sm:pt-24">
+  <h1 class="text-3xl font-bold mb-6 text-center">👋 Welcome!</h1>
 
-   <section class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white">
-  <h2 class="text-xl font-semibold mb-4">🔐 Your Account Details</h2>
-  <ul class="space-y-2 text-sm">
-    <li><strong>Email:</strong> <span id="email">Loading your email...</span></li>
-    <li><strong>API Key:</strong> <span id="apiKey">Loading your API key...</span></li>
-    <li><strong>Requests Made:</strong> <span id="usageCount">Loading usage count...</span></li>
-    <li><strong>Request Limit:</strong> <span id="maxUsage">Loading limit...</span></li>
-    <li><strong>Subscription Status:</strong> <span id="premiumStatus">Loading status...</span></li>
-  </ul>
-</section>
+  <!-- Account Details -->
+  <section class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white">
+    <h2 class="text-xl font-semibold mb-4">🔐 Your Account Details</h2>
+    <ul class="space-y-2 text-sm">
+      <li><strong>Email:</strong> <span id="email">Loading your email...</span></li>
+      <li><strong>API Key:</strong> <span id="apiKey">Loading your API key...</span></li>
+      <li><strong>Requests Made:</strong> <span id="usageCount">Loading usage count...</span></li>
+      <li><strong>Request Limit:</strong> <span id="maxUsage">Loading limit...</span></li>
+      <li><strong>Subscription Status:</strong> <span id="premiumStatus">Loading status...</span></li>
+    </ul>
+  </section>
 
-
-      <section class="bg-gray-700 shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">💳 Subscription Management</h2>
-        <div class="flex flex-col gap-3 sm:flex-row">
-          <button id="upgradeSubscriptionButton" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">Upgrade to Premium</button>
-          <button id="downgradeSubscriptionButton" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full">Switch to Free Plan</button>
-        </div>
-      </section>
-
-      
-
-      <section class="bg-gray-700 shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">🛠 Update Account Information</h2>
-        <form id="updateUserForm">
-          <label class="text-sm font-semibold">New Email</label>
-          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new email address" />
-
-          <label class="text-sm font-semibold">New Password</label>
-          <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new password" />
-
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Changes</button>
-        </form>
-      </section>
-
-      <section class="bg-gray-700 shadow rounded p-6 mb-6">
-  <h2 class="text-xl font-semibold mb-4">🏦 Bank Details for Invoices</h2>
-  <form id="updateBankForm">
-    <label class="text-sm font-semibold">IBAN</label>
-    <input type="text" id="iban" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="DE89 3704 0044 0532 0130 00" />
-
-    <label class="text-sm font-semibold">BIC / SWIFT</label>
-    <input type="text" id="bic" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="COBADEFFXXX" />
-
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Bank Details</button>
-    <p id="bankResult" class="text-sm mt-2 font-bold"></p>
-  </form>
-</section>
-
-
-<section class="mt-16 text-center border-t border-gray-700 pt-12 pb-16 bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-lg shadow-xl mx-auto max-w-4xl">
-  <h3 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 mb-4">
-    🪙 Buy Token Packs
-  </h3>
-  <p class="text-gray-400 mb-10 text-lg">Get extra PDF pages to go beyond your monthly limit.</p>
-
-  <div class="grid gap-6 sm:grid-cols-3 px-4">
-    <!-- 1,000 Pages Pack -->
-    <div class="bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-2xl transition transform hover:-translate-y-1 border border-gray-700">
-      <h4 class="text-emerald-400 font-bold text-xl mb-3">1,000 Pages</h4>
-      <p class="text-2xl font-extrabold text-white mb-4">€5</p>
-      <button data-pack="1000" 
-        class="token-pack-btn w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition duration-200 hover:scale-105">
-        Buy Now
-      </button>
+  <!-- Subscription Management -->
+  <section class="bg-gray-700 shadow rounded p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">💳 Subscription Management</h2>
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <button id="upgradeSubscriptionButton" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">Upgrade to Premium</button>
+      <button id="downgradeSubscriptionButton" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full">Switch to Free Plan</button>
     </div>
+  </section>
 
-    <!-- 5,000 Pages Pack -->
-    <div class="bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-2xl transition transform hover:-translate-y-1 border border-gray-700">
-      <h4 class="text-blue-400 font-bold text-xl mb-3">5,000 Pages</h4>
-      <p class="text-2xl font-extrabold text-white mb-4">€25</p>
-      <button data-pack="5000" 
-        class="token-pack-btn w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition duration-200 hover:scale-105">
-        Buy Now
-      </button>
-    </div>
+  <!-- Update Account -->
+  <section class="bg-gray-700 shadow rounded p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">🛠 Update Account Information</h2>
+    <form id="updateUserForm">
+      <label class="text-sm font-semibold">New Email</label>
+      <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new email address" />
+      <label class="text-sm font-semibold">New Password</label>
+      <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new password" />
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Changes</button>
+    </form>
+  </section>
 
-    <!-- 10,000 Pages Pack -->
-    <div class="bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-2xl transition transform hover:-translate-y-1 border border-gray-700">
-      <h4 class="text-purple-400 font-bold text-xl mb-3">10,000 Pages</h4>
-      <p class="text-2xl font-extrabold text-white mb-4">€50</p>
-      <button data-pack="10000" 
-        class="token-pack-btn w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition duration-200 hover:scale-105">
-        Buy Now
-      </button>
+  <!-- Bank Details -->
+  <section class="bg-gray-700 shadow rounded p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">🏦 Bank Details for Invoices</h2>
+    <form id="updateBankForm">
+      <label class="text-sm font-semibold">IBAN</label>
+      <input type="text" id="iban" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="DE89 3704 0044 0532 0130 00" />
+      <label class="text-sm font-semibold">BIC / SWIFT</label>
+      <input type="text" id="bic" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="COBADEFFXXX" />
+      <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Bank Details</button>
+      <p id="bankResult" class="text-sm mt-2 font-bold"></p>
+    </form>
+  </section>
+
+  <!-- Token Packs -->
+  <section class="mt-16 text-center border-t border-gray-700 pt-12 pb-16 bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-lg shadow-xl mx-auto max-w-4xl">
+    <h3 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 mb-4">
+      🪙 Buy Token Packs
+    </h3>
+    <p class="text-gray-400 mb-10 text-lg">Get extra PDF pages to go beyond your monthly limit.</p>
+    <div class="grid gap-6 sm:grid-cols-3 px-4">
+      <!-- Token Packs here as before -->
     </div>
+    <p id="token-purchase-result" class="mt-6 text-gray-300"></p>
+  </section>
+
+  <!-- Delete Account -->
+  <section class="bg-gray-700 shadow rounded p-6 mb-10">
+    <h2 class="text-xl font-semibold mb-4">🗑 Delete Your Account</h2>
+    <button id="deleteAccountButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Delete Account</button>
+    <p id="result" class="text-sm mt-4 font-bold"></p>
+  </section>
+</main>
+
+<!-- Footer -->
+<footer class="bg-gray-800 border-t border-gray-700 mt-12">
+  <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
+    &copy; 2025 PDFify. Built with ❤️ for creators and developers.
   </div>
-
-  <p id="token-purchase-result" class="mt-6 text-gray-300"></p>
-</section>
-
-
-
-
-      <section class="bg-gray-700 shadow rounded p-6 mb-10">
-        <h2 class="text-xl font-semibold mb-4">🗑 Delete Your Account</h2>
-        <button id="deleteAccountButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Delete Account</button>
-        <p id="result" class="text-sm mt-4 font-bold"></p>
-      </section>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 border-t border-gray-700 mt-12">
-      <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-        &copy; 2025 PDFify. Built with ❤️ for creators and developers.
-      </div>
-    </footer>
-
+</footer>
 
 
     <script type="module">
@@ -338,7 +293,7 @@ initBuyTokens();
 }
 
 main {
-  margin-top: 30px;
+  margin-top: 120px;
 }
 
 
@@ -349,103 +304,53 @@ main {
     }
   }
 
-    @media (max-width: 600px) {
-      body {
-        padding: 10px;
-      }
-
-      h1 {
-        font-size: 20px;
-      }
-
-      button {
-        font-size: 14px;
-        padding: 10px;
-      }
-
-      label, input {
-        font-size: 14px;
-      }
-    }
-
-
-
-
-   
-@media (max-width: 420px) {
-
-  main {
-    margin-top: 160px; 
-  }
-
-  header h1 {
-    font-size: 20px;
+ 
+/* Mobile: Header tweaks */
+@media (max-width: 640px) {
+  header .max-w-6xl {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   header nav {
     flex-direction: column;
     gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  header a,
-  header button {
     width: 100%;
-    padding: 10px;
+  }
+
+  header nav a,
+  header nav button {
+    width: 100%;
     text-align: center;
-    font-size: 15px;
-  }
-
-
-
-  h1, h2 {
-    font-size: 18px;
-  }
-
-  input, button, label, p, span {
-    font-size: 15px;
-  }
-
-  nav a, #logoutButton {
-    padding: 10px 14px;
     font-size: 14px;
-    margin-top: 4px;
+    padding: 8px 0;
   }
 
-  .text-3xl {
-    font-size: 1.5rem 
+  h1 {
+    font-size: 1.5rem;
+    text-align: center;
+    width: 100%;
   }
+}
 
-  .text-xl {
-    font-size: 1.125rem
-  }
-
-  .px-6 {
-    padding-left: 1rem;
-    padding-right: 1rem;
-  }
-
-  .py-6 {
-    padding-top: 1rem;
-    padding-bottom: 1rem;
-  }
-
+/* Extra small screens */
+@media (max-width: 420px) {
   main {
-    padding-top: 6rem; 
+    margin-top: 140px;
+    padding: 0 1rem;
   }
 
-  input, button {
-    padding: 10px;
+  header h1 {
+    font-size: 1.25rem;
   }
 
-  footer {
+  header nav a,
+  header nav button {
     font-size: 13px;
-    padding: 1rem;
+    padding: 6px 0;
   }
 }
 
 
-
-
-  </style>
-
+</style>
