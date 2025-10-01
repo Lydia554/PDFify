@@ -1011,9 +1011,7 @@ function toggleImage(container) {
 
 
 
-
 <style>
-
   body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     max-width: 720px;
@@ -1033,7 +1031,6 @@ function toggleImage(container) {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     z-index: 1000;
   }
-
 
   main {
     background: #1d222b;
@@ -1090,7 +1087,6 @@ function toggleImage(container) {
     border-radius: 4px;
   }
 
-
   header nav {
     display: flex;
     gap: 2rem;
@@ -1109,9 +1105,6 @@ function toggleImage(container) {
     font-size: 1rem;
   }
 
-
-
-
   img.zoomable {
     transition: transform 0.3s ease;
     cursor: pointer;
@@ -1129,7 +1122,6 @@ function toggleImage(container) {
     width: 100%;
     height: auto;
   }
-
 
   @keyframes spin {
     to {
@@ -1158,7 +1150,8 @@ function toggleImage(container) {
     top: 100%;
     left: 0;
     width: 100%;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
 
   #mobileNav a {
@@ -1179,11 +1172,11 @@ function toggleImage(container) {
   /* Mobile only */
   @media (max-width: 768px) {
     header nav {
-      display: none;
+      display: none; /* Hide desktop nav on mobile */
     }
 
     #mobileMenuBtn {
-      display: block;
+      display: block; /* Show hamburger button on mobile */
     }
 
     #mobileNav a:hover {
@@ -1195,7 +1188,11 @@ function toggleImage(container) {
   /* Desktop only */
   @media (min-width: 769px) {
     #mobileNav {
-      display: none !important;
+      display: none !important; /* Never show dropdown on desktop */
+    }
+
+    header nav {
+      display: flex; /* Ensure desktop nav is visible on desktop */
     }
   }
 
@@ -1213,7 +1210,6 @@ function toggleImage(container) {
     main {
       padding: 1.5rem;
       border-radius: 6px;
-
     }
 
     header h1 {
@@ -1231,8 +1227,6 @@ function toggleImage(container) {
       align-items: flex-start;
     }
 
-
-
     #developerBtn {
       font-size: 0.8rem;
     }
@@ -1241,20 +1235,16 @@ function toggleImage(container) {
       font-size: 0.8rem;
     }
 
-
-
     img.zoomable {
       max-width: 100%;
       height: auto;
     }
-
   }
 
   @media (max-width: 420px) {
     main {
       padding: 1rem;
     }
-
 
     header .max-w-6xl {
       flex-direction: column;
@@ -1279,13 +1269,9 @@ function toggleImage(container) {
       font-size: 0.85rem;
     }
 
-
     main {
       margin-top: 15%;
     }
-
-
-
   }
 </style>
 </body>
