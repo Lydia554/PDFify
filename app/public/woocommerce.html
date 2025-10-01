@@ -429,151 +429,136 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
 </html>
 
 <style>
-
-  body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    max-width: 720px;
-    margin: 0 auto;
-    line-height: 1.6;
-    padding: 6rem 1rem 2rem;
-  }
-
-
-  header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    padding-bottom: 22px; 
-    padding-top: 22px;
-  }
-
-  header .max-w-6xl {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  header nav {
-    display: flex;
-    gap: 2rem;
-    align-items: center;
-    flex-wrap: nowrap;
-  }
-
-  header nav a,
-  #mobileNav a {
-    color: #ddd;
-    font-weight: 500;
-    transition: color 0.3s ease, background 0.3s ease;
-  }
-
-  header nav a:hover,
-  #mobileNav a:hover {
-    color: #c084fc;
-  }
-
-  header nav a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.3rem;
-    white-space: nowrap;
-    text-decoration: none;
-    color: inherit;
-    font-weight: 500;
-    font-size: 1rem;
-  }
-
-.py-8 {
-    padding-top: 9rem;
-    padding-bottom: 2rem;
-}
-
-
-h1 text-4xl {
-
-    padding-top: 1.5rem;
-}
-
-
-  /* ----------------------- */
-  /* Mobile menu fixes start */
-  /* ----------------------- */
-
-  /* hide hamburger by default */
-  #mobileMenuBtn {
-    display: none;
-  }
-
-  /* mobile nav dropdown */
-  #mobileNav {
-    display: none;
-    flex-direction: column;
-    gap: 0.5rem;
-    background-color: rgba(11, 26, 43, 0.95);
-    padding: 1rem;
-    border-radius: 0 0 0.5rem 0.5rem;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-      0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  }
-
-  #mobileNav a {
-    display: block;
-    text-align: center;
-    padding: 0.75rem;
-    font-size: 0.95rem;
-    color: #ddd;
-    border-radius: 6px;
-    transition: background 0.2s;
-  }
-
-  #mobileNav a:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #c084fc;
-  }
-
-  /* Mobile only */
-  @media (max-width: 768px) {
-    header nav {
-      display: none; /* Hide desktop nav on mobile */
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 720px;
+      margin: 0 auto;
+      line-height: 1.6;
+      padding: 6rem 1rem 2rem;
     }
 
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      padding-bottom: 22px;
+      padding-top: 22px;
+    }
+
+    header .max-w-6xl {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header nav {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+
+    header nav a,
+    #mobileNav a {
+      color: #ddd;
+      font-weight: 500;
+      transition: color 0.3s ease, background 0.3s ease;
+    }
+
+    header nav a:hover,
+    #mobileNav a:hover {
+      color: #c084fc;
+    }
+
+    header nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      white-space: nowrap;
+      text-decoration: none;
+      color: inherit;
+      font-weight: 500;
+      font-size: 1rem;
+    }
+
+    .py-8 {
+      padding-top: 9rem;
+      padding-bottom: 2rem;
+    }
+
+    h1.text-4xl {
+      padding-top: 1rem;
+    }
+
+    /* Mobile menu fixes start */
     #mobileMenuBtn {
-      display: block; /* Show hamburger button on mobile */
+      display: none;
+    }
+
+    #mobileNav {
+      display: none;
+      flex-direction: column;
+      gap: 0.5rem;
+      background-color: rgba(11, 26, 43, 0.95);
+      padding: 1rem;
+      border-radius: 0 0 0.5rem 0.5rem;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    #mobileNav a {
+      display: block;
+      text-align: center;
+      padding: 0.75rem;
+      font-size: 0.95rem;
+      color: #ddd;
+      border-radius: 6px;
+      transition: background 0.2s;
     }
 
     #mobileNav a:hover {
-      background-color: rgba(192, 132, 252, 0.1);
-      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #c084fc;
     }
 
-    
+    /* Mobile only */
+    @media (max-width: 768px) {
+      header nav {
+        display: none;
+      }
 
-  .py-8 {
-    padding-top: 9rem;
-    padding-bottom: 2rem;
-}
+      #mobileMenuBtn {
+        display: block;
+      }
 
-   
-  }
+      #mobileNav a:hover {
+        background-color: rgba(192, 132, 252, 0.1);
+        border-radius: 6px;
+      }
 
-  /* Desktop only */
-  @media (min-width: 769px) {
-    #mobileNav {
-      display: none !important; /* Never show dropdown on desktop */
+      .py-8 {
+        padding-top: 9rem;
+        padding-bottom: 2rem;
+      }
     }
 
-    header nav {
-      display: flex; /* Ensure desktop nav is visible on desktop */
+    /* Desktop only */
+    @media (min-width: 769px) {
+      #mobileNav {
+        display: none !important;
+      }
+
+      header nav {
+        display: flex;
+      }
     }
-  }
-
-
-</style>
+    /* Mobile menu fixes end */
+  </style>
