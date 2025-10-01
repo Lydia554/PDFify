@@ -428,7 +428,6 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
 </body>
 </html>
 
-
 <style>
   header {
     position: fixed;
@@ -438,6 +437,7 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
     background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     z-index: 1000;
+    padding-bottom: 10px; 
   }
 
   header .max-w-6xl {
@@ -474,6 +474,12 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
     color: inherit;
     font-weight: 500;
     font-size: 1rem;
+  }
+
+  .main {
+    margin-top: 100px; 
+    padding-bottom: 4rem;
+    min-height: calc(100vh - 180px); /* Ensure main takes up at least the remaining screen height */
   }
 
   /* ----------------------- */
@@ -530,6 +536,10 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
       background-color: rgba(192, 132, 252, 0.1);
       border-radius: 6px;
     }
+
+    .main {
+      margin-top: 30px;
+    }
   }
 
   /* Desktop only */
@@ -546,4 +556,12 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
   /* ----------------------- */
   /* Mobile menu fixes end   */
   /* ----------------------- */
+
+  footer {
+    position: relative; 
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
 </style>
