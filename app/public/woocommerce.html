@@ -14,17 +14,31 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 <!-- Header -->
-<header class="bg-gray-800 border-b border-gray-700">
-  <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-    <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-600 via-purple-700 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
-    <nav class="space-x-4">
-      <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
-      <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
-      <a href="/woocommerce" class="text-purple-400 font-semibold">📑WooCommerce</a>
-      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
+<header class="fixed top-0 left-0 right-0 z-50 shadow">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
+
+      <!-- Hamburger button (mobile only) -->
+      <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+
+      <nav id="mainNav" class="md:flex space-x-4">
+        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+        <a href="/api-guide" class="text-purple-400 font-semibold">📑API Guide</a>
+        <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
+        <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
+        <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
+      </nav>
+    </div>
+
+    <!-- Mobile dropdown -->
+    <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+      <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="block text-purple-400 font-semibold">📑 API Guide</a>
+      <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
+      <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
     </nav>
-  </div>
-</header>
+  </header>
 
 <main class="max-w-6xl mx-auto px-4 py-8">
 
@@ -225,6 +239,19 @@ function toggleImage(container) {
   images.forEach(img => img.classList.toggle('hidden'));
 }
 
+
+  const menuBtn = document.getElementById("mobileMenuBtn");
+  const mobileNav = document.getElementById("mobileNav");
+
+  menuBtn.addEventListener("click", () => {
+    mobileNav.classList.toggle("hidden");
+
+    if (!mobileNav.classList.contains("hidden")) {
+      mobileNav.style.display = "flex";
+    } else {
+      mobileNav.style.display = "none";
+    }
+  });
 // -------------------------
 // Fetch orders
 // -------------------------
@@ -400,3 +427,123 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
 
 </body>
 </html>
+
+
+<style>
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+  }
+
+  header .max-w-6xl {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  header nav {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  header nav a,
+  #mobileNav a {
+    color: #ddd;
+    font-weight: 500;
+    transition: color 0.3s ease, background 0.3s ease;
+  }
+
+  header nav a:hover,
+  #mobileNav a:hover {
+    color: #c084fc;
+  }
+
+  header nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+    text-decoration: none;
+    color: inherit;
+    font-weight: 500;
+    font-size: 1rem;
+  }
+
+  /* ----------------------- */
+  /* Mobile menu fixes start */
+  /* ----------------------- */
+
+  /* hide hamburger by default */
+  #mobileMenuBtn {
+    display: none;
+  }
+
+  /* mobile nav dropdown */
+  #mobileNav {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    background-color: rgba(11, 26, 43, 0.95);
+    padding: 1rem;
+    border-radius: 0 0 0.5rem 0.5rem;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  #mobileNav a {
+    display: block;
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    color: #ddd;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  #mobileNav a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #c084fc;
+  }
+
+  /* Mobile only */
+  @media (max-width: 768px) {
+    header nav {
+      display: none; /* Hide desktop nav on mobile */
+    }
+
+    #mobileMenuBtn {
+      display: block; /* Show hamburger button on mobile */
+    }
+
+    #mobileNav a:hover {
+      background-color: rgba(192, 132, 252, 0.1);
+      border-radius: 6px;
+    }
+  }
+
+  /* Desktop only */
+  @media (min-width: 769px) {
+    #mobileNav {
+      display: none !important; /* Never show dropdown on desktop */
+    }
+
+    header nav {
+      display: flex; /* Ensure desktop nav is visible on desktop */
+    }
+  }
+
+  /* ----------------------- */
+  /* Mobile menu fixes end   */
+  /* ----------------------- */
+</style>
