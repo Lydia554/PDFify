@@ -17,19 +17,32 @@
   <div id="loadingOverlay" class="fixed top-0 left-0 w-full h-full bg-white bg-opacity-80 z-50 hidden flex justify-center items-center">
     <div class="border-4 border-blue-200 border-l-blue-600 rounded-full w-10 h-10 animate-spin"></div>
   </div>
-  <header>
+
+    <header class="fixed top-0 left-0 right-0 z-50 shadow">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
       <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">PDFify</h1>
-      <nav class="space-x-4">
+
+      <!-- Hamburger button (mobile only) -->
+      <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+
+      <nav id="mainNav" class="hidden md:flex space-x-4">
         <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
         <a href="/api-guide" class="text-purple-400 font-semibold">📑API Guide</a>
         <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
-          <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
+        <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
         <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
       </nav>
     </div>
-  </header>
 
+    <!-- Mobile dropdown -->
+    <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+      <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="block text-purple-400 font-semibold">📑 API Guide</a>
+      <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
+      <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
+    </nav>
+  </header>
 
   <main class="max-w-6xl mx-auto px-6 py-12">
     <div class="flex justify-center mb-8">
@@ -901,6 +914,19 @@ devModeBtn.addEventListener('click', () => {
   console.log("Spinner hidden on page show (e.g., back navigation)");
 });
 
+
+ const menuBtn = document.getElementById("mobileMenuBtn");
+    const mobileNav = document.getElementById("mobileNav");
+
+    menuBtn.addEventListener("click", () => {
+      mobileNav.classList.toggle("hidden");
+
+      if (!mobileNav.classList.contains("hidden")) {
+        mobileNav.style.display = "flex";
+      } else {
+        mobileNav.style.display = "none";
+      }
+    });
   
 
     document.querySelectorAll('.toggle-buttons').forEach(toggleGroup => {
@@ -986,220 +1012,282 @@ function toggleImage(container) {
 
 
 
+<style>
 
-  <style>
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 720px;
+    margin: 0 auto;
+    line-height: 1.6;
+    padding: 6rem 1rem 2rem;
+    background-color: #374151;
+    color: #333;
+  }
 
-    body {
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 720px;
-      margin: 0 auto;
-      line-height: 1.6;
-      padding: 6rem 1rem 2rem; 
-      background-color: #374151;
-      color: #333;
-    }
-
-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-}
-
-
-    main {
-      background: #1d222b;
-      padding: 2rem;
-      border-radius: 8px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-      margin-top: 3%;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-weight: 700;
-      color: #0a74da;
-    }
-
-    h2 {
-      color: #0a74da;
-      margin-top: 2rem;
-      margin-bottom: 0.5rem;
-      user-select: none;
-      cursor: default;
-    }
-
-    p {
-      margin-bottom: 1rem;
-    }
-
-    ol, ul {
-      margin-left: 1.5rem;
-      margin-bottom: 1rem;
-    }
-
-    code {
-      background-color: #eef3fc;
-      padding: 0.2em 0.4em;
-      border-radius: 4px;
-      font-family: Consolas, monospace;
-      font-size: 0.95em;
-      color: #0a74da;
-    }
-
-    ul ul {
-      margin-left: 1rem;
-      list-style-type: disc;
-    }
-
-    .result {
-      background-color: #e6f4ea;
-      border-left: 6px solid #34a853;
-      padding: 1rem 1.5rem;
-      margin-top: 2rem;
-      border-radius: 4px;
-    }
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+  }
 
 
-    header nav {
-  display: flex;
-  gap: 2rem;      
-  align-items: center; 
-  flex-wrap: nowrap;   
-}
+  main {
+    background: #1d222b;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 3%;
+  }
 
-header nav a {
-  display: inline-flex;
-  align-items: center; 
-  gap: 0.3rem;        
-  white-space: nowrap; 
-  text-decoration: none;
-  color: inherit;
-  font-weight: 500;
-  font-size: 1rem;
-}
+  h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    color: #0a74da;
+  }
 
-   
+  h2 {
+    color: #0a74da;
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    user-select: none;
+    cursor: default;
+  }
+
+  p {
+    margin-bottom: 1rem;
+  }
+
+  ol,
+  ul {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  code {
+    background-color: #eef3fc;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: Consolas, monospace;
+    font-size: 0.95em;
+    color: #0a74da;
+  }
+
+  ul ul {
+    margin-left: 1rem;
+    list-style-type: disc;
+  }
+
+  .result {
+    background-color: #e6f4ea;
+    border-left: 6px solid #34a853;
+    padding: 1rem 1.5rem;
+    margin-top: 2rem;
+    border-radius: 4px;
+  }
+
+
+  header nav {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  header nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+    text-decoration: none;
+    color: inherit;
+    font-weight: 500;
+    font-size: 1rem;
+  }
+
+
 
 
   img.zoomable {
     transition: transform 0.3s ease;
     cursor: pointer;
   }
+
   img.zoomable:hover {
     transform: scale(1.30);
   }
+
   .hidden {
     display: none;
   }
-  
+
   .image-toggle-container img {
     width: 100%;
     height: auto;
   }
 
 
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* ----------------------- */
+  /* Mobile menu fixes start */
+  /* ----------------------- */
+
+  /* hide hamburger by default */
+  #mobileMenuBtn {
+    display: none;
+  }
+
+  /* mobile nav dropdown */
+  #mobileNav {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    background-color: rgba(11, 26, 43, 0.95);
+    padding: 1rem;
+    border-radius: 0 0 0.5rem 0.5rem;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  #mobileNav a {
+    display: block;
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    color: #ddd;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  #mobileNav a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #c084fc;
+  }
+
+  /* Mobile only */
+  @media (max-width: 768px) {
+    header nav {
+      display: none;
+    }
+
+    #mobileMenuBtn {
+      display: block;
+    }
+
+    #mobileNav a:hover {
+      background-color: rgba(192, 132, 252, 0.1);
+      border-radius: 6px;
+    }
+  }
+
+  /* Desktop only */
+  @media (min-width: 769px) {
+    #mobileNav {
+      display: none !important;
+    }
+  }
+
+  /* ----------------------- */
+  /* Mobile menu fixes end   */
+  /* ----------------------- */
+
+  @media (max-width: 420px) {
+    body {
+      padding: 7.5rem 1rem 2rem;
+      font-size: 0.95rem;
+      margin-top: 3%;
+    }
+
+    main {
+      padding: 1.5rem;
+      border-radius: 6px;
+
+    }
+
+    header h1 {
+      text-align: center;
+      font-size: 1.5rem;
+      width: 100%;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+    }
+
+    header .max-w-6xl {
+      flex-direction: column;
+      align-items: flex-start;
     }
 
 
 
-    @media (max-width: 420px) {
-  body {
-    padding: 7.5rem 1rem 2rem;
-    font-size: 0.95rem;  
-    margin-top: 3%;
+    #developerBtn {
+      font-size: 0.8rem;
+    }
+
+    #friendlyBtn {
+      font-size: 0.8rem;
+    }
+
+
+
+    img.zoomable {
+      max-width: 100%;
+      height: auto;
+    }
+
   }
 
-  main {
-    padding: 1.5rem;
-    border-radius: 6px;
-  
-  }
-
-  header h1 {
-    text-align: center;
-    font-size: 1.5rem;
-    width: 100%;
-  }
-
-  h2 {
-    font-size: 1.2rem;
-  }
-
-  header .max-w-6xl {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-
-
-  #developerBtn {
- font-size: 0.8rem;
-  }
-
-  #friendlyBtn {
-    font-size: 0.8rem;
-  }
-
-
-
-  img.zoomable {
-    max-width: 100%;
-    height: auto;
-  }
-
-}
-
-@media (max-width: 420px) {
-  main {
-    padding: 1rem;
-  }
+  @media (max-width: 420px) {
+    main {
+      padding: 1rem;
+    }
 
 
     header .max-w-6xl {
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    padding: 8px 10px;
-  }
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 8px 10px;
+    }
 
     header h1 {
-    text-align: center;
-    font-size: 1.5rem;
-    width: 100%;
-  }
+      text-align: center;
+      font-size: 1.5rem;
+      width: 100%;
+    }
 
     header nav {
-    flex-wrap: wrap;      
-    justify-content: center; 
-    gap: 1rem;            
-  }
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+    }
 
-  header nav a {
-    font-size: 0.85rem;   
-  }
+    header nav a {
+      font-size: 0.85rem;
+    }
 
 
-    main  {
+    main {
       margin-top: 15%;
     }
 
 
 
-}
-
-
-
-
-  </style>
+  }
+</style>
 </body>
 </html>
 
