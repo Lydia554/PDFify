@@ -249,13 +249,20 @@ friendlyBtn.addEventListener('click', () => {
 });
 
 
-  // Hamburger toggle
-    const btn = document.getElementById('mobileMenuBtn');
-    const nav = document.getElementById('mainNav'); 
 
-    btn.addEventListener('click', () => {
-      nav.classList.toggle('hidden'); 
-    });
+const menuBtn = document.getElementById("mobileMenuBtn");
+const mobileNav = document.getElementById("mobileNav");
+
+menuBtn.addEventListener("click", () => {
+  mobileNav.classList.toggle("hidden");
+
+  if (!mobileNav.classList.contains("hidden")) {
+    mobileNav.style.display = "flex";
+  } else {
+    mobileNav.style.display = "none";
+  }
+});
+
 
     document.querySelectorAll("nav a").forEach((link) => {
       link.addEventListener("click", (event) => {
