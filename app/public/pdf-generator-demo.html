@@ -17,7 +17,6 @@
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="fixed inset-0 bg-gray-800 bg-opacity-90 flex justify-center items-center z-50 hidden">
     <div class="w-10 h-10 border-4 border-gray-600 border-l-indigo-500 rounded-full animate-spin"></div>
-  </div>
 
    <!-- Header -->
    <header class="fixed top-0 left-0 right-0 z-50 shadow">
@@ -251,17 +250,12 @@ friendlyBtn.addEventListener('click', () => {
 
 
 const menuBtn = document.getElementById("mobileMenuBtn");
-const mobileNav = document.getElementById("mobileNav");
+const nav = document.getElementById('mainNav');
 
-menuBtn.addEventListener("click", () => {
-  mobileNav.classList.toggle("hidden");
-
-  if (!mobileNav.classList.contains("hidden")) {
-    mobileNav.style.display = "flex";
-  } else {
-    mobileNav.style.display = "none";
-  }
+menuBtn.addEventListener('click', () => {
+  nav.classList.toggle('hidden');
 });
+
 
 
     document.querySelectorAll("nav a").forEach((link) => {
