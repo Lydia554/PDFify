@@ -4,7 +4,8 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const archiver = require("archiver");
-const csvParse = require("csv-parse/lib/sync");
+const { parse: csvParse } = require("csv-parse/sync");
+
 const router = express.Router();
 
 const User = require("../models/User");
@@ -33,6 +34,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // --- CSV support ---
     if (req.body.csv) {
       const rows = csvParse(req.body.csv, { columns: true, skip_empty_lines: true, trim: true });
+
       requests = rows.map(row => ({ data: row, isPreview: false }));
     } else {
       requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
