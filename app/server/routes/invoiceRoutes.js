@@ -22,57 +22,28 @@ const locales = {
 
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
-async function generatePdf(invoiceData, user) {
+// Clean generatePdf function
+async function generatePdf(invoiceData, user, browser) {
   const PDFLib = require("pdf-lib");
-  const puppeteer = require("puppeteer");
+  const page = await browser.newPage();
+  await page.emulateMediaType('print');
 
-  // Launch safe Puppeteer browser
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-      "--font-render-hinting=none"
-    ]
+  invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
+  if (user.plan === "free" && !invoiceData.customLogoUrl) {
+    invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
+  }
+
+  const html = await generateInvoiceHTML(invoiceData);
+  await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
+
+  let pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    displayHeaderFooter: false
   });
 
-  try {
-    const page = await browser.newPage();
-    await page.emulateMediaType('print');
-
-    invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
-    if (user.plan === "free" && !invoiceData.customLogoUrl) {
-      invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-    }
-
-    const html = await generateInvoiceHTML(invoiceData);
-
-    // Wait until page mostly loaded
-    await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
-
-    const pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      displayHeaderFooter: false
-    });
-
-    await page.close();
-    await browser.close();
-
-    const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
-    const pageCount = pdfDoc.getPageCount();
-
-    return { pdfBuffer, pageCount };
-
-  } catch (err) {
-    if (browser) await browser.close();
-    throw err;
-  }
-}
-
+  await page.close();
 
   // Count pages and increment usage
   const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
@@ -94,19 +65,20 @@ async function generatePdf(invoiceData, user) {
   return { pdfBuffer, pageCount };
 }
 
+// Route
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
   let browser;
   try {
-    let requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
+    const requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
     if (!requests.length) return res.status(400).json({ error: "No requests provided." });
 
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox"] });
+    browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const results = [];
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
@@ -131,7 +103,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
     await browser.close();
 
-    // Handle single invoice
+    // Single invoice
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
@@ -147,7 +119,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.send(pdfBuffer);
     }
 
-    // Multiple PDFs => ZIP (previews not supported)
+    // Multiple PDFs => ZIP
     const archive = archiver("zip", { zlib: { level: 9 } });
     res.set({
       "Content-Type": "application/zip",
