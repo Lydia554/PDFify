@@ -4,7 +4,6 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const archiver = require("archiver");
-const { parse: csvParse } = require("csv-parse/sync");
 
 const router = express.Router();
 
@@ -23,22 +22,56 @@ const locales = {
 
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
+async function generatePdf(invoiceData, user, browser) {
+  const PDFLib = require("pdf-lib");
+  const page = await browser.newPage();
+  await page.emulateMediaType('print');
+
+  invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
+  if (user.plan === "free" && !invoiceData.customLogoUrl) {
+    invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
+  }
+
+  const html = await generateInvoiceHTML(invoiceData);
+  await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
+
+  let pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    displayHeaderFooter: false,
+    tagged: true
+  });
+
+  await page.close();
+
+  // Count pages and increment usage
+  const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
+  const pageCount = pdfDoc.getPageCount();
+
+  const usageAllowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
+  if (!usageAllowed) throw new Error('Monthly limit reached.');
+
+  // Pro embedding
+  if (user.plan === "pro") {
+    const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
+    const zugferdXml = generateZugferdXML(invoiceData);
+    await embedIccProfile(pdfDocPro);
+    await embedXmp(pdfDocPro);
+    embedXmlIntoPdf(pdfDocPro, zugferdXml);
+    pdfBuffer = await pdfDocPro.save();
+  }
+
+  return { pdfBuffer, pageCount };
+}
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
   let browser;
   try {
-    let requests = [];
-
-    // --- CSV support ---
-    if (req.body.csv) {
-      const rows = csvParse(req.body.csv, { columns: true, skip_empty_lines: true, trim: true });
-      requests = rows.map(row => ({ data: row, isPreview: false }));
-    } else {
-      requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
-    }
-
+    let requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
     if (!requests.length) return res.status(400).json({ error: "No requests provided." });
 
     const user = await User.findById(req.user.userId);
@@ -48,92 +81,28 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const results = [];
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
-      const invoiceData = { ...invoiceDataRaw };
-      const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      const invoiceData = { ...invoiceDataRaw, isPreview };
+
+      // Add IBAN/BIC support
+      invoiceData.iban = invoiceData.iban || "";
+      invoiceData.bic = invoiceData.bic || "";
+
+      // Ensure country/lang logic
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
-      invoiceData.country = country || "default";
       invoiceData.locale = locales[lang] || locales["en"];
 
-      // Germany VAT logic
-      if (country === "germany" && Array.isArray(invoiceData.items)) {
-        invoiceData.items = invoiceData.items.map(item => {
-          const totalNum = parseFloat(item.total || 0);
-          const net = totalNum / 1.19;
-          const tax = totalNum - net;
-          return { ...item, net: net.toFixed(2), tax: tax.toFixed(2) };
-        });
-      }
+      const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      invoiceData.taxRate = typeof invoiceData.taxRate === "number"
-        ? `${(invoiceData.taxRate * 100).toFixed(0)}%`
-        : invoiceData.taxRate || '21%';
-
-      const page = await browser.newPage();
-      await page.emulateMediaType('print');
-
-      // User class / logo
-      invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
-      if (user.plan === "free") invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-
-      const html = await generateInvoiceHTML({ ...invoiceData, isPreview });
-      await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
-
-      const pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-        displayHeaderFooter: false,
-        tagged: true
-      });
-      await page.close();
-
-      // Count pages
-      const PDFLib = require("pdf-lib");
-      const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
-      const pageCount = pdfDoc.getPageCount();
-
-      // Increment usage
-      const usageAllowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
-      if (!usageAllowed) {
-        await browser.close();
-        fs.rmSync(tmpDir, { recursive: true, force: true });
-        return res.status(403).json({ error: 'Monthly limit reached.' });
-      }
-
-      let finalPdf = pdfBuffer;
-
-      // Pro users: embed ICC, XMP, and ZUGFeRD safely
-      if (user.plan === "pro") {
-        try {
-          const zugferdXml = generateZugferdXML(invoiceData);
-          const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
-
-          await embedIccProfile(pdfDocPro);
-          await embedXmp(pdfDocPro);
-          embedXmlIntoPdf(pdfDocPro, zugferdXml);
-
-          finalPdf = await pdfDocPro.save();
-        } catch (err) {
-          console.error(`❌ PDF embedding failed for ${orderId}:`, err);
-          finalPdf = pdfBuffer; // fallback
-        }
-      }
-
-      // Ensure it's a valid Buffer
-      if (!finalPdf || !Buffer.isBuffer(finalPdf)) {
-        console.warn(`⚠️ Skipping invalid PDF for ${orderId}`);
-        continue;
-      }
-
-      results.push({ pdfBuffer: finalPdf, orderId });
+      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser);
+      results.push({ pdfBuffer, orderId });
       console.log(`📄 Invoice ${orderId} generated with ${pageCount} page(s).`);
     }
 
     await user.save();
     await browser.close();
 
-    // Send PDF(s)
+    // Single PDF
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       res.set({
@@ -144,8 +113,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.send(pdfBuffer);
     }
 
-    if (!results.length) return res.status(500).json({ error: "No valid PDFs generated." });
-
     // Multiple PDFs => ZIP
     const archive = archiver("zip", { zlib: { level: 9 } });
     res.set({
@@ -154,10 +121,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
     archive.pipe(res);
 
-    results.forEach(({ pdfBuffer, orderId }) => {
-      archive.append(pdfBuffer, { name: `${orderId}.pdf` });
-    });
-
+    results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
     await archive.finalize();
 
   } catch (err) {

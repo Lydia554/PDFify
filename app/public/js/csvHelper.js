@@ -1,25 +1,30 @@
+// --- CSV Parsing ---
 function parseCSV(text) {
   const lines = text.trim().split("\n");
-  const headers = lines.shift().split(",");
+  if (!lines.length) return [];
+  const headers = lines.shift().split(",").map(h => h.trim());
   return lines.map(line => {
     const values = line.split(",");
-    return headers.reduce((obj, header, i) => {
-      obj[header.trim()] = values[i]?.trim();
-      return obj;
-    }, {});
+    const obj = {};
+    headers.forEach((header, i) => {
+      obj[header] = values[i]?.trim() || "";
+    });
+    return obj;
   });
 }
 
+// --- Group by orderId ---
 function groupRowsByOrderId(rows) {
   const grouped = {};
   rows.forEach(row => {
-    const orderId = row.orderId;
+    const orderId = row.orderId || `order-${Date.now()}`;
     if (!grouped[orderId]) grouped[orderId] = [];
     grouped[orderId].push(row);
   });
   return Object.values(grouped);
 }
 
+// --- Convert grouped rows to invoice JSON ---
 function rowsToInvoiceJson(rows) {
   if (!rows.length) return null;
   const first = rows[0];
@@ -29,24 +34,26 @@ function rowsToInvoiceJson(rows) {
     orderId: first.orderId,
     country: first.country,
     date: first.date,
+    iban: first.iban || "",
+    bic: first.bic || "",
     items: rows.map(r => ({
       name: r.itemName,
-      quantity: Number(r.quantity),
-      price: r.price,
-      total: r.itemTotal,
-      tax: r.itemTax,
-      position: r.position,
+      quantity: Number(r.quantity || 0),
+      price: parseFloat(r.price || 0),
+      total: parseFloat(r.itemTotal || 0),
+      tax: parseFloat(r.itemTax || 0),
+      position: r.position || ""
     })),
-    subtotal: first.subtotal,
-    tax: first.totalTax,
-    total: first.total,
-    customLogoUrl: first.customLogoUrl,
-    showChart: (first.showChart || '').toLowerCase() === "true",
-    isPremium: (first.isPremium || '').toLowerCase() === "true",
+    subtotal: parseFloat(first.subtotal || 0),
+    tax: parseFloat(first.totalTax || 0),
+    total: parseFloat(first.total || 0),
+    customLogoUrl: first.customLogoUrl || "",
+    showChart: (first.showChart || "").toLowerCase() === "true",
+    isPremium: (first.isPremium || "").toLowerCase() === "true",
   };
 }
 
-
+// --- Frontend CSV generation ---
 document.getElementById('csvGenerateBtn').addEventListener('click', async () => {
   const file = document.getElementById('csvUpload').files[0];
   if (!file) return alert('Please upload a CSV file first.');
@@ -64,14 +71,11 @@ document.getElementById('csvGenerateBtn').addEventListener('click', async () => 
   if (!apiKey) return alert('Please enter your API key.');
 
   const text = await file.text();
-  let data;
-  try { data = parseCSV(text); } catch { return alert('Invalid CSV format.'); }
+  let rows;
+  try { rows = parseCSV(text); } catch { return alert('Invalid CSV format.'); }
 
-  const groupedInvoices = groupRowsByOrderId(data);
-  const requests = groupedInvoices.map(rows => ({
-    data: rowsToInvoiceJson(rows),
-    isPreview: false
-  }));
+  const groupedInvoices = groupRowsByOrderId(rows);
+  const requests = groupedInvoices.map(rowsToInvoiceJson).map(data => ({ data, isPreview: false }));
 
   const total = requests.length;
   let completed = 0;
