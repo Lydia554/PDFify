@@ -220,6 +220,8 @@ John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.
 </html>
 
 <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.11.0/jszip.min.js"></script>
+
 <script src="js/previewFriendlyMode.js"></script>
 <script type="module" src="js/csvHelper.js"></script>
 
@@ -282,18 +284,6 @@ window.addEventListener("load", () => {
   document.getElementById("loadingOverlay").style.display = "none";
 });
 
-/* ------------------ Progress Bar / Dummy Request ------------------ */
-async function sendRequest(isPreview = false) {
-  showProgressBar();
-  try {
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    if (!isPreview) alert("Request completed!");
-  } catch (error) {
-    console.error("Error:", error);
-  } finally {
-    setTimeout(hideProgressBar, 500);
-  }
-}
 
 /* ------------------ Fetch User Usage ------------------ */
 async function fetchUserUsage() {
@@ -454,12 +444,6 @@ async function sendRequest() {
 
 
 
-
-
-
-
-
-
 /* ------------------ API Key Storage / Dashboard ------------------ */
 const storedApiKey = localStorage.getItem('apiKey');
 if (storedApiKey) document.getElementById('apiKey').value = storedApiKey;
@@ -504,46 +488,75 @@ async function connectShopify(domain, token) {
 }
 
 /* ------------------ PDF Request / Preview ------------------ */
-async function sendPdfRequest(isPreview=false) {
+async function sendPdfRequest(isPreview = false) {
   const endpoint = document.getElementById("endpoint").value.trim();
   const apiKey = document.getElementById("apiKey").value.trim();
   const jsonInput = document.getElementById("json").value;
   const result = document.getElementById("result");
-  if (!endpoint) return result.innerText="Please select an endpoint.";
-  if (!apiKey) return result.innerText="API key is required.";
+
+  if (!endpoint) return result.innerText = "Please select an endpoint.";
+  if (!apiKey) return result.innerText = "API key is required.";
 
   result.innerText = isPreview ? "Generating preview..." : "Generating PDF...";
-  let parsedData; try { parsedData = JSON.parse(jsonInput); } catch(e){ result.innerText="Invalid JSON: "+e.message; return; }
 
-  let payload = {}; 
-  if ('html' in parsedData) payload={html:parsedData.html,isPreview};
-  else if ('data' in parsedData) payload={...parsedData,isPreview};
-  else payload={data:parsedData,isPreview};
+  let parsedData;
+  try { 
+    parsedData = JSON.parse(jsonInput); 
+  } catch(e){ 
+    result.innerText = "Invalid JSON: " + e.message; 
+    return; 
+  }
+
+  let payload = {};
+  if ('html' in parsedData) payload = { html: parsedData.html, isPreview };
+  else if ('data' in parsedData) payload = { ...parsedData, isPreview };
+  else payload = { data: parsedData, isPreview };
 
   try {
     const response = await fetch(`/api/${endpoint}`, {
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":`Bearer ${apiKey}`},
-      body:JSON.stringify(payload), credentials:"include"
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload),
+      credentials: "include"
     });
+
     if(!response.ok){
-      let msg="PDF request failed.";
-      try{ msg=(await response.json()).error || msg } catch{ msg=await response.text() || msg }
+      let msg = "PDF request failed.";
+      try { msg = (await response.json()).error || msg } catch { msg = await response.text() || msg }
       throw new Error(msg);
     }
+
     const blob = await response.blob();
     const blobUrl = window.URL.createObjectURL(blob);
-    let filename="Generated.pdf";
+    let filename = "Generated.pdf";
+
     const contentDisposition = response.headers.get("Content-Disposition");
     if(contentDisposition){
       const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
-      if(match) filename=decodeURIComponent(match[1]);
+      if(match) filename = decodeURIComponent(match[1]);
     }
-    if(isPreview) window.open(blobUrl,"_blank");
-    else { const a=document.createElement("a"); a.href=blobUrl; a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
-    result.innerText="";
-  } catch(err){ console.error(err); result.innerText=`PDF ${isPreview?"preview":"download"} failed: ${err.message}`; }
+
+if(isPreview){
+  window.open(blobUrl, "_blank"); 
+} else {
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
 }
+
+    result.innerText = "";
+  } catch(err){ 
+    console.error(err); 
+    result.innerText = `PDF ${isPreview ? "preview" : "download"} failed: ${err.message}`; 
+  }
+}
+
 
 /* ------------------ Fetch User Data / Stripe ------------------ */
 async function fetchUserData(){
@@ -600,36 +613,83 @@ if (userData.planType === 'premium') {
   proBtn.addEventListener('click',()=>subscribeHandler('pro'));
 }).catch(err=>console.error(err));
 
-/* ------------------ CSV Section Toggle ------------------ */
-const endpointElem=document.getElementById('endpoint');
-const csvSection=document.getElementById('bulkCsvSection');
-function toggleCsvSection(){ csvSection.classList.toggle('hidden', endpointElem.value!=='generate-invoice'); }
-endpointElem.addEventListener('change',toggleCsvSection);
-document.addEventListener('DOMContentLoaded',toggleCsvSection);
 
+/* ------------------ CSV Processing ------------------ */
+function showCsvProgress(total = 100) {
+  const csvProgress = document.getElementById("csvProgress");
+  const progressBar = document.getElementById("progressBar");
+  const progressCount = document.getElementById("progressCount");
+  const progressTotal = document.getElementById("progressTotal");
 
-async function processCsv(csvRows) {
+  if(csvProgress && progressBar && progressCount && progressTotal){
+    csvProgress.classList.remove("hidden");
+    progressBar.style.width = "0%";
+    progressCount.innerText = "0";
+    progressTotal.innerText = total;
+  }
+}
+
+function updateCsvProgress(current){
+  const progressBar = document.getElementById("progressBar");
+  const progressCount = document.getElementById("progressCount");
+  const progressTotal = document.getElementById("progressTotal");
+
+  if(progressBar && progressCount && progressTotal){
+    const total = parseInt(progressTotal.innerText, 10);
+    const percent = Math.min((current / total) * 100, 100);
+    progressBar.style.width = `${percent}%`;
+    progressCount.innerText = current;
+  }
+}
+
+function hideCsvProgress(){
+  const csvProgress = document.getElementById("csvProgress");
+  if(csvProgress) csvProgress.classList.add("hidden");
+}
+
+async function processCsv(csvRows){
+  const apiKey = document.getElementById("apiKey").value;
   const total = csvRows.length;
-  showProgressBar(total);
 
-  for (let i = 0; i < total; i++) {
-    try {
-      
-      await fetch("/api/generate-invoice", {
+  if(!apiKey){ alert("API key missing."); return; }
+  
+  showCsvProgress(total);
+
+  const zip = new JSZip();
+
+  for(let i=0; i<total; i++){
+    try{
+      const res = await fetch("/api/generate-invoice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(csvRows[i]),
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({ data: csvRows[i] }),
+        credentials: "include"
       });
 
-      updateProgress(i + 1); 
-    } catch (err) {
-      console.error(`Error processing row ${i + 1}:`, err);
+      const blob = await res.blob();
+      zip.file(`invoice_${i+1}.pdf`, blob);
+      updateCsvProgress(i+1);
+    } catch(err){
+      console.error(`Error processing row ${i+1}:`, err);
     }
   }
 
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(zipBlob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "invoices.zip";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  
   alert("CSV processing completed!");
-  hideProgressBar();
+  hideCsvProgress();
 }
+
 
 
 /* ------------------ Page Show Overlay Fix ------------------ */
