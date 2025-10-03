@@ -502,11 +502,23 @@ fetch('/api/get-stripe-key').then(res=>res.json()).then(async data=>{
   let userData;
   try { userData = await fetchUserData(); } catch(err){ console.error(err); alert(err.message); return; }
 
-  const premiumBtn=document.getElementById('payment-button');
-  const proBtn=document.getElementById('pro-payment-button');
+const premiumBtn = document.getElementById('payment-button');
+const proBtn = document.getElementById('pro-payment-button');
 
-  if(userData.planType==='premium'){ premiumBtn.disabled=true; premiumBtn.textContent+=' (Current Plan)'; }
-  else if(userData.planType==='pro'){ premiumBtn.disabled=true; proBtn.disabled=true; proBtn.textContent+=' (Current Plan)'; }
+if (userData.planType === 'premium') {
+  premiumBtn.disabled = true;
+  premiumBtn.textContent += ' (Current Plan)';
+  proBtn.disabled = false; 
+} else if (userData.planType === 'pro') {
+  premiumBtn.disabled = true; 
+  proBtn.disabled = true; 
+  proBtn.textContent += ' (Current Plan)';
+} else {
+  
+  premiumBtn.disabled = false;
+  proBtn.disabled = false;
+}
+
 
   const subscribeHandler = async plan=>{
     const apiKey=document.getElementById('apiKey').value || localStorage.getItem('apiKey');
