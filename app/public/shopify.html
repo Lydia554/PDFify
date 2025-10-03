@@ -338,17 +338,20 @@ menuBtn.addEventListener("click", () => {
     return config;
   });
 
-  api.interceptors.response.use(
-    response => response,
-    error => {
-      if (error.response && error.response.status === 401) {
-        alert("Session expired or unauthorized. Please log in again.");
-        localStorage.removeItem("apiKey");
-        window.location.href = "/login.html";
-      }
-      return Promise.reject(error);
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response && error.response.status === 401) {
+     
+      console.warn("Session expired, redirecting...");
+      localStorage.removeItem("apiKey");
+      window.location.href = "/login.html";
+      return; 
     }
-  );
+    return Promise.reject(error);
+  }
+);
+
 
   // ------------------------------
   // Show/hide Customer PDF section
