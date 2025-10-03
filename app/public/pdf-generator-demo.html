@@ -228,13 +228,13 @@ Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00
   <script type="module" src="scripts-friendly-mode/frontend-friendly-mode.js"></script>
 
   <script src="js/previewFriendlyMode.js"></script>
-  <script type="module" src="js/csvHelper.js"></script>
+ 
 
 
 
 
-  <script >
-    
+ <script type="module">
+  import { parseCSV, groupRowsByOrderId, rowsToInvoiceJson } from './js/csvHelper.js';
     
 const devBtn = document.getElementById('developerModeBtn');
 const friendlyBtn = document.getElementById('friendlyModeBtn');
@@ -625,7 +625,7 @@ async function connectShopify(domain, token) {
   }
 }
 
-async function sendRequest(isPreview = false) {
+async function sendRequest(data, isPreview = false) {
   const apiKey = document.getElementById("apiKey").value.trim();
   if (!apiKey) return alert("API key is required.");
 
@@ -633,7 +633,7 @@ async function sendRequest(isPreview = false) {
   if (isPreview) newWindow = window.open("", "_blank"); 
 
   try {
-    const response = await fetch(`/api/${endpoint}`, {
+    const response = await fetch(`/api/${endpoint.value}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
       body: JSON.stringify({ data, isPreview })
@@ -847,14 +847,14 @@ csvGenerateBtn.addEventListener('click', async () => {
   const file = csvUpload.files[0];
 
   try {
-    // Use the CSV helper you already have
+   
     const text = await file.text();
-    const rows = parseCSV(text);  // parseCSV comes from your helper file
+    const rows = parseCSV(text);  
     if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
     // Prepare requests for backend
-    const groupedInvoices = groupRowsByOrderId(rows);      // helper
-    const requests = groupedInvoices.map(rowsToInvoiceJson).map(data => ({ data, isPreview: false })); // helper
+    const groupedInvoices = groupRowsByOrderId(rows);      
+    const requests = groupedInvoices.map(rowsToInvoiceJson).map(data => ({ data, isPreview: false })); 
 
     const total = requests.length;
     let completed = 0;
