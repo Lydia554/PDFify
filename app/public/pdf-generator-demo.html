@@ -715,18 +715,31 @@ fetch('/api/get-stripe-key')
       return;
     }
 
-    const premiumBtn = document.getElementById('payment-button');
-    const proBtn = document.getElementById('pro-payment-button');
+const premiumBtn = document.getElementById('payment-button');
+const proBtn = document.getElementById('pro-payment-button');
 
-    
-    if (userData.planType === 'premium') {
-      premiumBtn.disabled = true;
-      premiumBtn.textContent += ' (Current Plan)';
-    } else if (userData.planType === 'pro') {
-      premiumBtn.disabled = true;
-      proBtn.disabled = true;
-      proBtn.textContent += ' (Current Plan)';
-    }
+// Helper function to disable & style a button
+function disableButton(btn, text) {
+  btn.disabled = true;
+  btn.textContent = text;
+  btn.classList.add('opacity-50', 'cursor-not-allowed'); 
+}
+
+// Reset buttons visually in case of reload
+[premiumBtn, proBtn].forEach(btn => {
+  btn.disabled = false;
+  btn.classList.remove('opacity-50', 'cursor-not-allowed');
+});
+
+// Apply based on current plan
+if (userData.planType === 'premium') {
+  disableButton(premiumBtn, 'Premium (Current Plan)');
+  // Pro remains enabled
+} else if (userData.planType === 'pro') {
+  disableButton(proBtn, 'Pro (Current Plan)');
+  disableButton(premiumBtn, 'Premium'); 
+}
+
 
     premiumBtn.addEventListener('click', async () => {
       const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
@@ -817,17 +830,123 @@ fetch('/api/get-stripe-key')
 
 
 
-const endpoint = document.getElementById('endpoint');
-  const csvSection = document.getElementById('bulkCsvSection');
+const csvUpload = document.getElementById("csvUpload");
+const csvGenerateBtn = document.getElementById("csvGenerateBtn");
+const csvProgress = document.getElementById("csvProgress");
+const progressCount = document.getElementById("progressCount");
+const progressTotal = document.getElementById("progressTotal");
+const progressBar = document.getElementById("progressBar");
+const csvResult = document.getElementById("csvResult");
 
-  function toggleCsvSection() {
-    const isInvoice = endpoint.value === 'generate-invoice';
-    csvSection.classList.toggle('hidden', !isInvoice);
+// CSV parser
+function parseCsv(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const lines = e.target.result.split(/\r?\n/).filter(Boolean);
+      if (lines.length < 2) return resolve([]);
+      const headers = lines[0].split(",").map(h => h.trim());
+      const rows = lines.slice(1).map(line => {
+        const values = line.split(",");
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = values[i]?.trim());
+        return obj;
+      });
+      resolve(rows);
+    };
+    reader.onerror = err => reject(err);
+    reader.readAsText(file);
+  });
+}
+
+// Update progress bar
+function updateProgress(current, total) {
+  progressCount.textContent = current;
+  progressTotal.textContent = total;
+  progressBar.style.width = `${(current / total) * 100}%`;
+}
+
+// Convert CSV row to invoice data
+function rowToInvoiceData(row) {
+  // Map CSV fields to invoiceData structure expected by backend
+  return {
+    customerName: row.customerName || "Unknown",
+    customerEmail: row.customerEmail || "",
+    orderId: row.orderId || `order-${Date.now()}`,
+    country: row.country || "default",
+    date: row.date || new Date().toISOString().split("T")[0],
+    items: [
+      {
+        name: row.itemName || "Item",
+        quantity: parseFloat(row.quantity) || 1,
+        price: parseFloat(row.price?.replace("€","")) || 0,
+        total: parseFloat(row.itemTotal?.replace("€","")) || 0,
+        tax: parseFloat(row.itemTax?.replace("%","")) || 0,
+        position: row.position || 1
+      }
+    ],
+    subtotal: row.subtotal?.replace("€","") || 0,
+    taxRate: row.totalTax?.replace("€","") || "0%",
+    tax: row.totalTax?.replace("€","") || 0,
+    total: row.total?.replace("€","") || 0,
+    customLogoUrl: row.customLogoUrl || "",
+    showChart: row.showChart?.toLowerCase() === "true",
+    isPremium: row.isPremium?.toLowerCase() === "true"
+  };
+}
+
+// Main CSV → PDF function
+csvGenerateBtn.addEventListener("click", async () => {
+  if (!csvUpload.files.length) return alert("Please upload a CSV file.");
+  csvProgress.classList.remove("hidden");
+  csvResult.textContent = "";
+
+  try {
+    const rows = await parseCsv(csvUpload.files[0]);
+    if (!rows.length) throw new Error("CSV file is empty or invalid.");
+
+    const apiKey = document.getElementById("apiKey").value.trim();
+    if (!apiKey) throw new Error("API key is required.");
+
+    updateProgress(0, rows.length);
+
+    const requests = rows.map(row => ({ data: rowToInvoiceData(row), isPreview: false }));
+
+    // Send all rows at once to /generate-invoice
+    const response = await fetch("/api/generate-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({ requests }),
+      credentials: "include"
+    });
+
+    if (!response.ok) throw new Error("CSV PDF generation failed.");
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+
+    // Determine filename from Content-Disposition header
+    let filename = "invoices.zip";
+    const disposition = response.headers.get("Content-Disposition");
+    if (disposition) {
+      const match = disposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
+      if (match) filename = decodeURIComponent(match[1]);
+    }
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    updateProgress(rows.length, rows.length);
+    csvResult.textContent = `✅ Successfully generated ${rows.length} invoice(s).`;
+  } catch (err) {
+    console.error(err);
+    csvResult.textContent = `❌ Error: ${err.message}`;
   }
-
-  endpoint.addEventListener('change', toggleCsvSection);
-  document.addEventListener('DOMContentLoaded', toggleCsvSection);
-
+});
 
 
       window.addEventListener("pageshow", () => {
