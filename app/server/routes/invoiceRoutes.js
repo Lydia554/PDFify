@@ -22,28 +22,57 @@ const locales = {
 
 const FORCE_PLAN = process.env.FORCE_PLAN;
 
-async function generatePdf(invoiceData, user, browser) {
+async function generatePdf(invoiceData, user) {
   const PDFLib = require("pdf-lib");
-  const page = await browser.newPage();
-  await page.emulateMediaType('print');
+  const puppeteer = require("puppeteer");
 
-  invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
-  if (user.plan === "free" && !invoiceData.customLogoUrl) {
-    invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-  }
-
-  const html = await generateInvoiceHTML(invoiceData);
-  await page.setContent(html, { waitUntil: "networkidle0", timeout: 0 });
-
-  let pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    displayHeaderFooter: false,
-    tagged: true
+  // Launch safe Puppeteer browser
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--font-render-hinting=none"
+    ]
   });
 
-  await page.close();
+  try {
+    const page = await browser.newPage();
+    await page.emulateMediaType('print');
+
+    invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
+    if (user.plan === "free" && !invoiceData.customLogoUrl) {
+      invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
+    }
+
+    const html = await generateInvoiceHTML(invoiceData);
+
+    // Wait until page mostly loaded
+    await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+      displayHeaderFooter: false
+    });
+
+    await page.close();
+    await browser.close();
+
+    const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
+
+    return { pdfBuffer, pageCount };
+
+  } catch (err) {
+    if (browser) await browser.close();
+    throw err;
+  }
+}
+
 
   // Count pages and increment usage
   const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
