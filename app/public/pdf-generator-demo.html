@@ -525,6 +525,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const apiInput = document.getElementById('apiKey');
   const endpointSelect = document.getElementById('endpoint');
   const userDashboardLink = document.getElementById('userDashboardLink');
+  const jsonInput = document.getElementById('json');
 
   if (storedApiKey) {
     apiInput.value = storedApiKey;
@@ -536,7 +537,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize JSON for selected endpoint
   updateJsonForEndpoint(endpointSelect.value);
+
+  // Update JSON when endpoint changes
   endpointSelect.addEventListener('change', () => updateJsonForEndpoint(endpointSelect.value));
+
+  // ← NEW: Update window.data whenever textarea changes
+  if (jsonInput) {
+    jsonInput.addEventListener('input', () => {
+      try {
+        window.data = JSON.parse(jsonInput.value);
+      } catch {
+        window.data = null;
+      }
+    });
+  }
 });
 
 // -----------------------------
