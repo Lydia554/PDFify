@@ -403,6 +403,62 @@ function updateJsonForEndpoint(endpoint) {
 document.getElementById('endpoint').addEventListener('change', e => updateJsonForEndpoint(e.target.value));
 updateJsonForEndpoint(document.getElementById('endpoint').value);
 
+
+
+function showProgressBar(total = 100) {
+  const csvProgress = document.getElementById("csvProgress");
+  const progressBar = document.getElementById("progressBar");
+  const progressCount = document.getElementById("progressCount");
+  const progressTotal = document.getElementById("progressTotal");
+
+  if (csvProgress && progressBar && progressCount && progressTotal) {
+    csvProgress.classList.remove("hidden");
+    progressBar.style.width = "0%";
+    progressCount.innerText = "0";
+    progressTotal.innerText = total;
+  }
+}
+
+function updateProgress(current) {
+  const progressBar = document.getElementById("progressBar");
+  const progressCount = document.getElementById("progressCount");
+  const progressTotal = document.getElementById("progressTotal");
+
+  if (progressBar && progressCount && progressTotal) {
+    const total = parseInt(progressTotal.innerText, 10);
+    const percent = Math.min((current / total) * 100, 100);
+    progressBar.style.width = `${percent}%`;
+    progressCount.innerText = current;
+  }
+}
+
+function hideProgressBar() {
+  const csvProgress = document.getElementById("csvProgress");
+  if (csvProgress) csvProgress.classList.add("hidden");
+}
+
+
+async function sendRequest() {
+  showProgressBar(10); 
+
+  for (let i = 1; i <= 10; i++) {
+    await new Promise(resolve => setTimeout(resolve, 200)); 
+    updateProgress(i);
+  }
+
+  alert("Request completed!");
+  hideProgressBar();
+}
+
+
+
+
+
+
+
+
+
+
 /* ------------------ API Key Storage / Dashboard ------------------ */
 const storedApiKey = localStorage.getItem('apiKey');
 if (storedApiKey) document.getElementById('apiKey').value = storedApiKey;
@@ -505,18 +561,24 @@ fetch('/api/get-stripe-key').then(res=>res.json()).then(async data=>{
 const premiumBtn = document.getElementById('payment-button');
 const proBtn = document.getElementById('pro-payment-button');
 
+function setButtonVisualState(button, isCurrent) {
+  if (isCurrent) {
+    button.classList.add('current-plan'); 
+  } else {
+    button.classList.remove('current-plan');
+  }
+}
+
+// Apply visual state
 if (userData.planType === 'premium') {
-  premiumBtn.disabled = true;
-  premiumBtn.textContent += ' (Current Plan)';
-  proBtn.disabled = false; 
+  setButtonVisualState(premiumBtn, true);
+  setButtonVisualState(proBtn, false);
 } else if (userData.planType === 'pro') {
-  premiumBtn.disabled = true; 
-  proBtn.disabled = true; 
-  proBtn.textContent += ' (Current Plan)';
+  setButtonVisualState(premiumBtn, true);
+  setButtonVisualState(proBtn, true);
 } else {
-  
-  premiumBtn.disabled = false;
-  proBtn.disabled = false;
+  setButtonVisualState(premiumBtn, false);
+  setButtonVisualState(proBtn, false);
 }
 
 
@@ -543,6 +605,31 @@ const csvSection=document.getElementById('bulkCsvSection');
 function toggleCsvSection(){ csvSection.classList.toggle('hidden', endpointElem.value!=='generate-invoice'); }
 endpointElem.addEventListener('change',toggleCsvSection);
 document.addEventListener('DOMContentLoaded',toggleCsvSection);
+
+
+async function processCsv(csvRows) {
+  const total = csvRows.length;
+  showProgressBar(total);
+
+  for (let i = 0; i < total; i++) {
+    try {
+      
+      await fetch("/api/generate-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(csvRows[i]),
+      });
+
+      updateProgress(i + 1); 
+    } catch (err) {
+      console.error(`Error processing row ${i + 1}:`, err);
+    }
+  }
+
+  alert("CSV processing completed!");
+  hideProgressBar();
+}
+
 
 /* ------------------ Page Show Overlay Fix ------------------ */
 window.addEventListener("pageshow",()=>document.getElementById("loadingOverlay").style.display="none");
@@ -769,6 +856,14 @@ window.addEventListener("pageshow",()=>document.getElementById("loadingOverlay")
     background: rgba(255, 255, 255, 0.1);
     color: #c084fc;
   }
+
+
+  .current-plan {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none; 
+}
+
 
   /* Mobile only */
   @media (max-width: 768px) {
