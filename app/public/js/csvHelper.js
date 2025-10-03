@@ -1,17 +1,16 @@
-// csvHelper.js
-export function parseCSV(text) {
+function parseCSV(text) {
   const lines = text.trim().split("\n");
   if (!lines.length) return [];
   const headers = lines.shift().split(",").map(h => h.trim());
   return lines.map(line => {
     const values = line.split(",");
     const obj = {};
-    headers.forEach((header, i) => { obj[header] = values[i]?.trim() || ""; });
+    headers.forEach((header, i) => obj[header] = values[i]?.trim() || "");
     return obj;
   });
 }
 
-export function groupRowsByOrderId(rows) {
+function groupRowsByOrderId(rows) {
   const grouped = {};
   rows.forEach(row => {
     const orderId = row.orderId || `order-${Date.now()}`;
@@ -21,7 +20,7 @@ export function groupRowsByOrderId(rows) {
   return Object.values(grouped);
 }
 
-export function rowsToInvoiceJson(rows) {
+function rowsToInvoiceJson(rows) {
   if (!rows.length) return null;
   const first = rows[0];
   return {
@@ -30,8 +29,6 @@ export function rowsToInvoiceJson(rows) {
     orderId: first.orderId,
     country: first.country,
     date: first.date,
-    iban: first.iban || "",
-    bic: first.bic || "",
     items: rows.map(r => ({
       name: r.itemName,
       quantity: Number(r.quantity || 0),

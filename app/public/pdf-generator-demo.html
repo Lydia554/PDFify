@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PDFify Generator | PDFify </title>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/cookie-consent.js"></script>
@@ -629,6 +631,7 @@ async function connectShopify(domain, token) {
   }
 }
 
+
 async function sendRequest(data, isPreview = false) {
   const apiKey = document.getElementById("apiKey").value.trim();
   if (!apiKey) return alert("API key is required.");
@@ -639,15 +642,31 @@ async function sendRequest(data, isPreview = false) {
   try {
     const response = await fetch(`/api/${endpoint.value}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      headers: { 
+        "Content-Type": "application/json", 
+        "Authorization": `Bearer ${apiKey}` 
+      },
       body: JSON.stringify({ data, isPreview })
     });
 
+    if (!response.ok) throw new Error(await response.text());
+
+    const contentType = response.headers.get("Content-Type");
     const blob = await response.blob();
     const blobUrl = URL.createObjectURL(blob);
 
-    if (isPreview && newWindow) newWindow.location.href = blobUrl; 
-    else {
+    if (isPreview) {
+   
+      if (contentType === "application/pdf" && newWindow) {
+        newWindow.location.href = blobUrl;
+      } else {
+        alert("Preview not available for this request. It will be downloaded instead.");
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = "Generated.pdf";
+        a.click();
+      }
+    } else {
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = "Generated.pdf";
