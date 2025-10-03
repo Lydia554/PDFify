@@ -49,7 +49,7 @@ async function generatePdf(invoiceData, user, browser) {
   const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = pdfDoc.getPageCount();
 
-  const usageAllowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
+  const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
   if (!usageAllowed) throw new Error('Monthly limit reached.');
 
   // Pro embedding
@@ -102,25 +102,29 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
     await browser.close();
 
-    // Single PDF
+    // Handle single invoice
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
+      const isPreview = requests[0].isPreview;
+
       res.set({
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${orderId}.pdf"`,
+        "Content-Disposition": isPreview
+          ? `inline; filename="${orderId}.pdf"`   
+          : `attachment; filename="${orderId}.pdf"`, 
         "Content-Length": pdfBuffer.length
       });
+
       return res.send(pdfBuffer);
     }
 
-    // Multiple PDFs => ZIP
+    // Multiple PDFs => ZIP (previews not supported)
     const archive = archiver("zip", { zlib: { level: 9 } });
     res.set({
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="invoices.zip"`
     });
     archive.pipe(res);
-
     results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
     await archive.finalize();
 
