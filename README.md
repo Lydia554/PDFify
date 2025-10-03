@@ -1,115 +1,141 @@
-# 🧾 PDFify – Real-Time Branded PDF Generation for Modern E-Commerce & APIs
+PDFify
 
-![PDFify](./assets/pdfify.png)
+PDFify is a modern PDF generation service and backend engine that transforms structured data (JSON or HTML) into beautifully branded, standards-compliant PDF documents — including receipts, invoices, packing slips, confirmations, reports, and more.
 
-**PDFify** is a modern PDF generation service and backend engine that transforms structured data (JSON or HTML) into beautifully branded, standards-compliant PDF documents — including receipts, invoices, packing slips, confirmations, reports, and more.
+It supports both developers and non-technical users with flexible API access, Shopify and WooCommerce integrations, and premium pre-built templates. Built for performance, compliance, and modern e-commerce use cases — PDFify powers customer-facing invoices and merchant-facing tax-compliant documents.
 
-It’s designed to support both developers and non-technical users with flexible API access, Shopify webhook integration, and premium pre-built templates. Built for performance, compliance, and modern business use cases — PDFify powers document automation across e-commerce and SaaS environments.
+🚀 What It Does
 
----
+📎 Accepts JSON, HTML, or CSV input via REST API
 
-## 🚀 What It Does
+🖨️ Returns styled, production-ready PDFs on the fly
 
-- 📎 Accepts **JSON or HTML input** via REST API
-- 🖨️ Returns **styled, production-ready PDFs** on the fly
-- 🛒 Integrated with **Shopify** (via webhooks, no app install required)
-- 🎨 Offers **branded templates** with product images, logos, and tax info
-- 🔐 Compliant with **PDF/A-3b** and **ZUGFeRD** for German B2B workflows
-- 🧑‍💻 Built for devs, but includes **Friendly Mode** UI for non-coders
+🛒 Integrated with Shopify & WooCommerce (via webhooks and APIs, no plugin/app install required)
 
----
+🎨 Offers styled customer invoices with branding, product images, and multilingual formatting
+
+🔐 Generates compliant merchant PDFs (PDF/A-3b + ZUGFeRD XML) for B2B and tax authority workflows
+
+🧑‍💻 Built for devs, but includes Friendly Mode UI for non-coders
 
 🔍 Key Features
+🧾 Customer-Facing Documents
 
-📦 Shopify Integration
+Branded, styled invoices and receipts (logos, product images, custom colors, fonts)
 
-Handles Shopify webhooks and order data
+Multilingual formatting and localized currency display
 
-Converts real-time order info into branded PDF documents
+Per-item tax numbers, VAT breakdowns, discounts, totals
 
-Custom mapping between Shopify products and PDF content
+Responsive layouts optimized for A4 and mobile viewing
 
-🧾 Modular PDF Templates with Dual Rendering Modes
+📁 Merchant-Facing Compliance
 
-Two rendering modes: Developer Mode (advanced raw control) and Friendly Mode (user-friendly with default layouts)
+PDF/A-3b archival compliance with Ghostscript validation
 
-Document types supported: Invoice, Receipt, Packing Slip, Shop Order, Therapy Report, and Raw HTML
+ZUGFeRD 2.1.1 XML embedding handled natively via Node.js (pdf-lib + XML builders)
 
-Each template is dynamically rendered with real-time data input
+ICC output intent profiles for color compliance
 
-Features:
+XMP metadata embedding + sanitization pipeline
 
-Per-item tax rates, discounts, totals, VAT breakdowns
+VeraPDF-ready local copies for long-term archival and tax authority compatibility
 
-Multilingual formatting and customizable currency labels
+📦 Shopify & WooCommerce Integration
 
-Injected metadata, dynamic product/customer info, and branding
+Processes real-time order data from Shopify (webhooks) and WooCommerce (REST API)
 
-ZUGFeRD 2.1.1 XML embedding for German B2B and tax authority compliance
+Converts live store events into both customer-facing invoices and merchant-facing compliant PDFs
 
-🎨 Dynamic HTML → PDF Conversion
+Bulk ZIP export of invoices/receipts for batch order processing
 
-Uses Puppeteer to render modular HTML templates into PDF
+Date range selection to generate PDFs for a specific sales period
 
-Templates are clean, responsive, and optimized for A4
+Flexible product-to-PDF content mapping
 
-Custom layouts per document type (invoices, receipts, tax forms, etc.)
+Multi-shop support with per-store usage tracking
+
+🧑‍💻 Developer Mode Enhancements
+
+Accepts CSV input for structured bulk document generation
+
+Raw HTML injection for complete template control
+
+Logs and metadata inspection tools for debugging
+
+Ideal for SaaS integrations, testing, and automation pipelines
+
+🎨 Modular Templates & Dual Rendering Modes
+
+Developer Mode: granular control over layouts and raw HTML/CSV input
+
+Friendly Mode: pre-built templates for invoices, receipts, packing slips, shop orders, therapy reports, or custom docs
+
+Modular HTML template engine, rendered to PDF via Puppeteer
 
 📊 Usage Tracking & Access Control
 
-Premium/pro-only features via usage metering
+Premium/pro-only features with per-user and per-store metering
 
-Enforced per-user limits for document generation
+Document logs with metadata storage
 
-Logs for each document created, with metadata stored
+Access control for multi-tenant e-commerce setups
 
-📁 PDF/A Compliance & Metadata
+🧰 Tech Stack
 
-ICC Profile embedding
+Backend & Frameworks
 
-XMP metadata for archival (including sanitization pipeline)
+Node.js + Express — Core backend
 
-Validated using Ghostscript and VeraPDF
+Mongoose (MongoDB ODM)
 
-Standards-compliant output for long-term archiving and tax authority compatibility
----
+express-session + connect-mongo — Session handling
 
-## 🧰 Tech Stack
+PDF Generation & Compliance
 
-#### Backend & Frameworks
-- **Node.js** + **Express** – Core backend service
-- **Mongoose** – MongoDB ODM for managing document schemas
-- **express-session** + **connect-mongo** – Session handling and storage
+Puppeteer — HTML → PDF rendering
 
-#### PDF Generation & Compliance
-- **pdf-lib** – Low-level PDF editing and embedding (used for metadata, ZUGFeRD, ICC, etc.)
-- **Puppeteer** – Headless Chrome for rendering HTML invoices into PDFs
-- **Ghostscript** (external) – PDF/A-3b compliance validation
-- **Java CLI for ZUGFeRD** – Java-based ZUGFeRD XML embedder (`ZUGFeRDEmbedder`)
+pdf-lib — Low-level PDF editing (metadata, ICC, ZUGFeRD XML embedding)
 
-#### Email & Payment
-- **nodemailer** – Email service (e.g., delivery confirmations)
-- **stripe** – Payment processing and pro/premium feature gating
+Ghostscript — PDF/A-3b compliance validation
 
-#### Data Handling
-- **dotenv** – Environment config
-- **body-parser**, **cors** – API input handling
-- **axios** – HTTP requests (Shopify or external API calls)
-- **date-fns** – Date formatting utilities
+VeraPDF — Standards verification
 
-#### Security & Auth
-- **jsonwebtoken** – Token-based authentication
-- **bcrypt**, **bcryptjs** – Password hashing
+E-commerce Integrations
 
-#### Other Utilities
-- **archiver** – ZIP archive creation for multi-doc exports
-- **node-cron** – Background tasks (e.g., cleanup, scheduled validations)
-- **diff** – Used in metadata comparison or version control
-- **xmlbuilder2**, **xmldom** – XML generation and parsing (ZUGFeRD)
-- **web-streams-polyfill** – PDF stream compatibility
+Shopify Webhooks API
 
-#### Dev Tools
-- **nodemon** – Live dev server reloads
+WooCommerce REST API
+
+Bulk & Export Tools
+
+CSV parsing for Developer Mode
+
+archiver — Multi-document ZIP exports
+
+Date-range filtering for batch generation
+
+Payments & Email
+
+Stripe — Payments & feature gating
+
+nodemailer — Email delivery
+
+Security
+
+JWT — Token-based authentication
+
+bcrypt/bcryptjs — Password hashing
+
+Other Utilities
+
+node-cron — Background cleanup/validations
+
+xmlbuilder2, xmldom — XML generation/parsing
+
+diff — Metadata comparison
+
+web-streams-polyfill — PDF stream compatibility
 
 ---
 
