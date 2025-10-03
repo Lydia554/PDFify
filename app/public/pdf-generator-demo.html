@@ -509,12 +509,17 @@ function updateJsonForEndpoint(endpoint) {
   try {
     const parsed = JSON.parse(jsonData);
     window.data = parsed.data || parsed;
-  } catch {
+    console.log(`[updateJsonForEndpoint] Parsed JSON for "${endpoint}":`, window.data);
+  } catch (err) {
     window.data = null;
+    console.error(`[updateJsonForEndpoint] Failed to parse JSON for "${endpoint}":`, err);
   }
 
   const jsonInput = document.getElementById('json');
-  if (jsonInput) jsonInput.value = JSON.stringify(window.data, null, 2);
+  if (jsonInput) {
+    jsonInput.value = JSON.stringify(window.data, null, 2);
+    console.log(`[updateJsonForEndpoint] Textarea updated for "${endpoint}"`);
+  }
 }
 
 // -----------------------------
@@ -535,13 +540,13 @@ document.addEventListener("DOMContentLoaded", () => {
     window.location.href = 'login.html';
   }
 
-  // Initialize JSON for selected endpoint
+  
   updateJsonForEndpoint(endpointSelect.value);
 
-  // Update JSON when endpoint changes
+  
   endpointSelect.addEventListener('change', () => updateJsonForEndpoint(endpointSelect.value));
 
-  // ← NEW: Update window.data whenever textarea changes
+  
   if (jsonInput) {
     jsonInput.addEventListener('input', () => {
       try {
@@ -571,30 +576,10 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   }
 });
 
-// -----------------------------
-// Connect Shopify
-// -----------------------------
-async function connectShopify(domain, token) {
-  const apiKey = localStorage.getItem('apiKey');
-  if (!apiKey) return alert('You must login first.');
 
-  try {
-    const res = await fetch('/api/auth/connect-shopify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
-      body: JSON.stringify({ connectedShopDomain: domain, shopifyAccessToken: token }),
-      credentials: "include"
-    });
-
-    const data = await res.json();
-    alert(res.ok ? 'Shopify connected!' : data.error || 'Failed to connect Shopify');
-  } catch (err) {
-    alert('Error connecting Shopify');
-  }
-}
 
 // -----------------------------
-// Send Request (Generic for any Endpoint)
+// Send Request
 // -----------------------------
 async function sendRequest(isPreview = false) {
   const data = window.data;
@@ -611,9 +596,9 @@ async function sendRequest(isPreview = false) {
     if (!newWindow) return alert("Popup blocked! Please allow popups for preview.");
   }
 
-  try {
-    console.log("Sending request...", { endpoint, data, isPreview });
+  console.log(`[sendRequest] Sending request for endpoint "${endpoint}"`, { data, isPreview });
 
+  try {
     const response = await fetch(`/api/${endpoint}`, {
       method: "POST",
       headers: { 
@@ -623,20 +608,26 @@ async function sendRequest(isPreview = false) {
       body: JSON.stringify({ requests: [{ data, isPreview }] })
     });
 
+    console.log(`[sendRequest] Response status: ${response.status}`);
+
     if (!response.ok) throw new Error(await response.text());
 
     const blob = await response.blob();
+    console.log(`[sendRequest] Received blob of size: ${blob.size}`);
+
     if (blob.size === 0) throw new Error("Received empty PDF from backend.");
 
     const blobUrl = URL.createObjectURL(blob);
 
     if (isPreview && newWindow) {
+      console.log("[sendRequest] Opening preview window");
       newWindow.document.write(`
         <html><body style="margin:0">
           <iframe src="${blobUrl}" style="width:100%;height:100vh;" frameborder="0"></iframe>
         </body></html>
       `);
     } else {
+      console.log("[sendRequest] Triggering download");
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = `${data.orderId || "document"}.pdf`;
@@ -644,12 +635,11 @@ async function sendRequest(isPreview = false) {
     }
 
   } catch (err) {
-    console.error("PDF generation failed:", err);
+    console.error(`[sendRequest] PDF generation failed for "${endpoint}":`, err);
     alert(`Error generating PDF: ${err.message}`);
     if (newWindow) newWindow.close();
   }
 }
-
 
     async function fetchUserData() {
   const apiKey = document.getElementById('apiKey').value || localStorage.getItem('apiKey');
@@ -829,7 +819,9 @@ function toggleCsvSection() {
 endpoint.addEventListener('change', toggleCsvSection);
 document.addEventListener('DOMContentLoaded', toggleCsvSection);
 
-// Handle CSV "Generate" button
+// -----------------------------
+// CSV Handling
+// -----------------------------
 csvGenerateBtn.addEventListener('click', async () => {
   if (!csvUpload.files.length) return alert("Please upload a CSV file.");
   csvProgress.classList.remove("hidden");
@@ -840,15 +832,21 @@ csvGenerateBtn.addEventListener('click', async () => {
 
   const file = csvUpload.files[0];
 
+  console.log("[CSV] Uploading file:", file.name);
+
   try {
-   
     const text = await file.text();
+    console.log("[CSV] File read successfully, length:", text.length);
+
     const rows = parseCSV(text);  
+    console.log("[CSV] Parsed rows:", rows.length);
+
     if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
-    // Prepare requests for backend
     const groupedInvoices = groupRowsByOrderId(rows);      
     const requests = groupedInvoices.map(rowsToInvoiceJson).map(data => ({ data, isPreview: false })); 
+
+    console.log(`[CSV] Prepared ${requests.length} invoice requests`);
 
     const total = requests.length;
     let completed = 0;
@@ -863,19 +861,24 @@ csvGenerateBtn.addEventListener('click', async () => {
       const percent = Math.round((completed / total) * 100);
       progressBar.style.width = `${percent}%`;
       progressCount.textContent = completed;
+      console.log(`[CSV] Progress: ${completed}/${total}`);
     };
 
-    // Send each invoice to backend individually
     for (const req of requests) {
+      console.log("[CSV] Sending invoice request:", req.data.orderId);
       const res = await fetch('/api/generate-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify({ requests: [req] })
       });
 
+      console.log(`[CSV] Response status for ${req.data.orderId}: ${res.status}`);
+
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
+      console.log(`[CSV] Blob received for ${req.data.orderId}, size: ${blob.size}`);
+
       const contentDisposition = res.headers.get('Content-Disposition');
       let filename = 'invoice.pdf';
       if (contentDisposition) {
@@ -889,6 +892,8 @@ csvGenerateBtn.addEventListener('click', async () => {
 
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
+    console.log("[CSV] ZIP file generated:", url);
+
     const a = document.createElement('a');
     a.href = url;
     a.download = "invoices.zip";
@@ -897,10 +902,34 @@ csvGenerateBtn.addEventListener('click', async () => {
 
     csvResult.innerHTML = `<span class="text-green-600">✅ ${total} invoices downloaded.</span>`;
   } catch (err) {
-    console.error(err);
+    console.error("[CSV] Error processing CSV:", err);
     csvResult.innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
   }
 });
+
+
+
+// -----------------------------
+// Connect Shopify
+// -----------------------------
+async function connectShopify(domain, token) {
+  const apiKey = localStorage.getItem('apiKey');
+  if (!apiKey) return alert('You must login first.');
+
+  try {
+    const res = await fetch('/api/auth/connect-shopify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+      body: JSON.stringify({ connectedShopDomain: domain, shopifyAccessToken: token }),
+      credentials: "include"
+    });
+
+    const data = await res.json();
+    alert(res.ok ? 'Shopify connected!' : data.error || 'Failed to connect Shopify');
+  } catch (err) {
+    alert('Error connecting Shopify');
+  }
+}
 
 
       window.addEventListener("pageshow", () => {
