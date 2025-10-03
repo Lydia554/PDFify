@@ -715,6 +715,8 @@ fetch('/api/get-stripe-key')
       return;
     }
 
+ 
+    
 const premiumBtn = document.getElementById('payment-button');
 const proBtn = document.getElementById('pro-payment-button');
 
@@ -830,7 +832,19 @@ if (userData.planType === 'premium') {
 
 
 
-const csvUpload = document.getElementById("csvUpload");
+const endpoint = document.getElementById('endpoint');
+  const csvSection = document.getElementById('bulkCsvSection');
+
+  function toggleCsvSection() {
+    const isInvoice = endpoint.value === 'generate-invoice';
+    csvSection.classList.toggle('hidden', !isInvoice);
+  }
+
+  endpoint.addEventListener('change', toggleCsvSection);
+  document.addEventListener('DOMContentLoaded', toggleCsvSection);
+
+
+  const csvUpload = document.getElementById("csvUpload");
 const csvGenerateBtn = document.getElementById("csvGenerateBtn");
 const csvProgress = document.getElementById("csvProgress");
 const progressCount = document.getElementById("progressCount");
@@ -947,6 +961,7 @@ csvGenerateBtn.addEventListener("click", async () => {
     csvResult.textContent = `❌ Error: ${err.message}`;
   }
 });
+
 
 
       window.addEventListener("pageshow", () => {
