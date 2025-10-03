@@ -34,7 +34,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // --- CSV support ---
     if (req.body.csv) {
       const rows = csvParse(req.body.csv, { columns: true, skip_empty_lines: true, trim: true });
-
       requests = rows.map(row => ({ data: row, isPreview: false }));
     } else {
       requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
@@ -50,7 +49,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw };
-      const orderId = invoiceData.orderId || `order-${Date.now()}`;
+      const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.country = country || "default";
@@ -104,16 +103,27 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       let finalPdf = pdfBuffer;
 
-      // Pro users: embed ICC, XMP, and ZUGFeRD
+      // Pro users: embed ICC, XMP, and ZUGFeRD safely
       if (user.plan === "pro") {
-        const zugferdXml = generateZugferdXML(invoiceData);
-        const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
+        try {
+          const zugferdXml = generateZugferdXML(invoiceData);
+          const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
 
-        await embedIccProfile(pdfDocPro);
-        await embedXmp(pdfDocPro);
-        embedXmlIntoPdf(pdfDocPro, zugferdXml);
+          await embedIccProfile(pdfDocPro);
+          await embedXmp(pdfDocPro);
+          embedXmlIntoPdf(pdfDocPro, zugferdXml);
 
-        finalPdf = await pdfDocPro.save();
+          finalPdf = await pdfDocPro.save();
+        } catch (err) {
+          console.error(`❌ PDF embedding failed for ${orderId}:`, err);
+          finalPdf = pdfBuffer; // fallback
+        }
+      }
+
+      // Ensure it's a valid Buffer
+      if (!finalPdf || !Buffer.isBuffer(finalPdf)) {
+        console.warn(`⚠️ Skipping invalid PDF for ${orderId}`);
+        continue;
       }
 
       results.push({ pdfBuffer: finalPdf, orderId });
@@ -134,6 +144,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.send(pdfBuffer);
     }
 
+    if (!results.length) return res.status(500).json({ error: "No valid PDFs generated." });
+
     // Multiple PDFs => ZIP
     const archive = archiver("zip", { zlib: { level: 9 } });
     res.set({
@@ -141,7 +153,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       "Content-Disposition": `attachment; filename="invoices.zip"`
     });
     archive.pipe(res);
-    results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
+
+    results.forEach(({ pdfBuffer, orderId }) => {
+      archive.append(pdfBuffer, { name: `${orderId}.pdf` });
+    });
+
     await archive.finalize();
 
   } catch (err) {
