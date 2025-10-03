@@ -1,20 +1,17 @@
-// --- CSV Parsing ---
-function parseCSV(text) {
+// csvHelper.js
+export function parseCSV(text) {
   const lines = text.trim().split("\n");
   if (!lines.length) return [];
   const headers = lines.shift().split(",").map(h => h.trim());
   return lines.map(line => {
     const values = line.split(",");
     const obj = {};
-    headers.forEach((header, i) => {
-      obj[header] = values[i]?.trim() || "";
-    });
+    headers.forEach((header, i) => { obj[header] = values[i]?.trim() || ""; });
     return obj;
   });
 }
 
-// --- Group by orderId ---
-function groupRowsByOrderId(rows) {
+export function groupRowsByOrderId(rows) {
   const grouped = {};
   rows.forEach(row => {
     const orderId = row.orderId || `order-${Date.now()}`;
@@ -24,8 +21,7 @@ function groupRowsByOrderId(rows) {
   return Object.values(grouped);
 }
 
-// --- Convert grouped rows to invoice JSON ---
-function rowsToInvoiceJson(rows) {
+export function rowsToInvoiceJson(rows) {
   if (!rows.length) return null;
   const first = rows[0];
   return {
@@ -52,6 +48,3 @@ function rowsToInvoiceJson(rows) {
     isPremium: (first.isPremium || "").toLowerCase() === "true",
   };
 }
-
-// --- Export functions ---
-export { parseCSV, groupRowsByOrderId, rowsToInvoiceJson };
