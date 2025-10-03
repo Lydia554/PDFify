@@ -720,40 +720,35 @@ fetch('/api/get-stripe-key')
 const premiumBtn = document.getElementById('payment-button');
 const proBtn = document.getElementById('pro-payment-button');
 
-// Helper function to disable & style a button
-function disableButton(btn, text) {
+
+function disableButton(btn) {
   btn.disabled = true;
-  btn.textContent = text;
-  btn.classList.add('opacity-50', 'cursor-not-allowed');
+  btn.classList.add('opacity-50', 'cursor-not-allowed'); 
 }
 
-// Helper function to enable & reset button
-function enableButton(btn, text) {
+function enableButton(btn) {
   btn.disabled = false;
-  btn.textContent = text;
   btn.classList.remove('opacity-50', 'cursor-not-allowed');
 }
 
-// Reset buttons first (in case page reloads)
-enableButton(premiumBtn, '💎 Pay for Premium Access');
-enableButton(proBtn, '🚀 Upgrade to Pro Plan');
 
-// Apply current plan logic
+[premiumBtn, proBtn].forEach(enableButton);
+
+
 switch (userData.planType) {
   case 'free':
-    // Free users can upgrade to both Premium and Pro (nothing to disable)
+   
     break;
   case 'premium':
-    disableButton(premiumBtn, 'Premium (Current Plan)');
-    // Pro button remains active for upgrade
+    disableButton(premiumBtn);
+    
     break;
   case 'pro':
-    disableButton(proBtn, 'Pro (Current Plan)');
-    // Optionally disable Premium as it’s a lower tier
-    disableButton(premiumBtn, 'Premium');
+    disableButton(proBtn);     
+    disableButton(premiumBtn); 
     break;
   default:
-    // Fallback: treat as free
+   
     break;
 }
 
