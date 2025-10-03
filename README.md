@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/pdfify.png" alt="PDFify Logo" width="280"/>
+  <img src="./assets/pdfify.png" alt="PDFify Logo" width="400"/>
 </p>
 
 # 📄 PDFify
