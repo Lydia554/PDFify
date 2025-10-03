@@ -326,27 +326,32 @@ menuBtn.addEventListener("click", () => {
   // ------------------------------
   // Axios API setup
   // ------------------------------
-  const api = axios.create({
-    baseURL: "/api",
-    timeout: 10000,
-  });
+const api = axios.create({
+  baseURL: "/api",
+  timeout: 10000,
+});
 
-  api.interceptors.request.use(config => {
-    const apiKeyInput = document.getElementById("merchantApiKey");
-    const apiKey = apiKeyInput?.value || localStorage.getItem("apiKey");
-    if (apiKey) config.headers.Authorization = `Bearer ${apiKey}`;
-    return config;
-  });
+
+api.interceptors.request.use(config => {
+  const apiKeyInput = document.getElementById("merchantApiKey");
+  const apiKey = apiKeyInput?.value || localStorage.getItem("apiKey");
+  if (apiKey) config.headers.Authorization = `Bearer ${apiKey}`;
+  return config;
+});
+
 
 api.interceptors.response.use(
   response => response,
   error => {
-    if (error.response && error.response.status === 401) {
-     
+    if (error.response?.status === 401) {
       console.warn("Session expired, redirecting...");
       localStorage.removeItem("apiKey");
+
+     
       window.location.href = "/login.html";
-      return; 
+
+      
+      return new Promise(() => {}); 
     }
     return Promise.reject(error);
   }

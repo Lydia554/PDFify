@@ -204,21 +204,47 @@
 const api = axios.create({
   baseURL: "/api",
   timeout: 10000,
-  withCredentials: true  
+  withCredentials: true
 });
 
-// -------------------------
-// Load connected WooCommerce store
-// -------------------------
+// -------------------- Axios Interceptors --------------------
+api.interceptors.request.use(config => {
+  const apiKey = localStorage.getItem("apiKey");
+  if (apiKey) config.headers.Authorization = `Bearer ${apiKey}`;
+  return config;
+});
+
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      console.warn("Session expired or unauthorized, redirecting to login...");
+      localStorage.removeItem("apiKey");
+      window.location.href = "/login.html";
+      return new Promise(() => {}); 
+    }
+    return Promise.reject(error);
+  }
+);
+
+// -------------------- Mobile Menu --------------------
+const menuBtn = document.getElementById("mobileMenuBtn");
+const mobileNav = document.getElementById("mobileNav");
+
+menuBtn.addEventListener("click", () => {
+  mobileNav.classList.toggle("hidden");
+  mobileNav.style.display = mobileNav.classList.contains("hidden") ? "none" : "flex";
+});
+
+// -------------------- Load Connected Store --------------------
 async function loadConnectedStore() {
   try {
-    const res = await api.post("/api/woocommerce/store", { shopDomain, consumerKey, consumerSecret }, { withCredentials: true });
-
+    const res = await api.get("/woocommerce/store"); 
     if (res.data.storeUrl) {
       document.getElementById("connectedStoreUrl").textContent = res.data.storeUrl;
       document.getElementById("storeUrlInput").value = res.data.storeUrl;
-      document.getElementById("consumerKeyInput").value = res.data.consumerKey;
-      document.getElementById("consumerSecretInput").value = res.data.consumerSecret;
+      document.getElementById("consumerKeyInput").value = res.data.consumerKey || "";
+      document.getElementById("consumerSecretInput").value = res.data.consumerSecret || "";
       document.getElementById("allowCustomerPDFCheckbox").checked = res.data.allowCustomerPDF || false;
       document.getElementById("customerPdfSection").classList.remove("hidden");
       await fetchOrders(res.data.storeUrl);
@@ -228,64 +254,39 @@ async function loadConnectedStore() {
   }
 }
 
-// Call on page load
-loadConnectedStore();
-
-// -------------------------
-// Image toggle
-// -------------------------
-function toggleImage(container) {
-  const images = container.querySelectorAll('img');
-  images.forEach(img => img.classList.toggle('hidden'));
-}
-
-
-  const menuBtn = document.getElementById("mobileMenuBtn");
-  const mobileNav = document.getElementById("mobileNav");
-
-  menuBtn.addEventListener("click", () => {
-    mobileNav.classList.toggle("hidden");
-
-    if (!mobileNav.classList.contains("hidden")) {
-      mobileNav.style.display = "flex";
-    } else {
-      mobileNav.style.display = "none";
-    }
-  });
-// -------------------------
-// Fetch orders
-// -------------------------
+// -------------------- Fetch Orders --------------------
 async function fetchOrders(storeUrl) {
   if (!storeUrl) return;
   const orderSelector = document.getElementById("orderSelector");
   const orderContainer = document.getElementById("orderDownloadContainer");
+
   orderSelector.innerHTML = `<option>Loading orders...</option>`;
   orderContainer.classList.remove("hidden");
 
   try {
     const fromDate = document.getElementById("fromDate").value;
     const toDate = document.getElementById("toDate").value;
-    const res = await api.get(`/woocommerce/orders`, { params: { storeUrl, from: fromDate, to: toDate } });
+    const res = await api.get("/woocommerce/orders", { params: { storeUrl, from: fromDate, to: toDate } });
     const orders = Array.isArray(res.data.orders) ? res.data.orders : [];
+
     if (!orders.length) {
       orderSelector.innerHTML = `<option>No orders found</option>`;
       return;
     }
+
     orderSelector.innerHTML = orders.map(order => {
       const name = order.number || order.id;
       const total = order.total || "0.00";
       const currency = order.currency || "USD";
       return `<option value="${order.id}">#${name} - ${total} ${currency}</option>`;
     }).join("");
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     orderSelector.innerHTML = `<option>Error loading orders</option>`;
   }
 }
 
-// -------------------------
-// Connect store
-// -------------------------
+// -------------------- Connect Store --------------------
 document.getElementById("connectWooButton").addEventListener("click", async () => {
   const storeUrl = document.getElementById("storeUrlInput").value.trim();
   const consumerKey = document.getElementById("consumerKeyInput").value.trim();
@@ -305,7 +306,7 @@ document.getElementById("connectWooButton").addEventListener("click", async () =
     document.getElementById("connectedStoreUrl").textContent = storeUrl;
     document.getElementById("customerPdfSection").classList.remove("hidden");
     await fetchOrders(storeUrl);
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     resultEl.textContent = "Failed to connect store.";
   } finally {
@@ -313,9 +314,7 @@ document.getElementById("connectWooButton").addEventListener("click", async () =
   }
 });
 
-// -------------------------
-// Disconnect store
-// -------------------------
+// -------------------- Disconnect Store --------------------
 document.getElementById("disconnectWooButton").addEventListener("click", async () => {
   const resultEl = document.getElementById("wooResult");
   try {
@@ -327,15 +326,13 @@ document.getElementById("disconnectWooButton").addEventListener("click", async (
     document.getElementById("customerPdfSection").classList.add("hidden");
     document.getElementById("orderDownloadContainer").classList.add("hidden");
     resultEl.textContent = "Store disconnected.";
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     resultEl.textContent = "Failed to disconnect store.";
   }
 });
 
-// -------------------------
-// Download single order PDF
-// -------------------------
+// -------------------- Download Single Order PDF --------------------
 document.getElementById("downloadOrderPdf").addEventListener("click", async () => {
   const storeUrl = document.getElementById("connectedStoreUrl").textContent.trim();
   const orderId = document.getElementById("orderSelector").value;
@@ -352,19 +349,20 @@ document.getElementById("downloadOrderPdf").addEventListener("click", async () =
     const blob = new Blob([res.data], { type: "application/pdf" });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `Order_${orderId}.pdf`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    a.href = url;
+    a.download = `Order_${orderId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     statusEl.textContent = "PDF downloaded!";
-  } catch(err) {
+  } catch (err) {
     console.error(err);
     statusEl.textContent = "Failed to download PDF.";
   }
 });
 
-// -------------------------
-// ZIP download
-// -------------------------
+// -------------------- ZIP Download --------------------
 document.getElementById("downloadAllZip").addEventListener("click", async () => {
   const storeUrl = document.getElementById("connectedStoreUrl").textContent.trim();
   const fromDate = document.getElementById("fromDate").value;
@@ -383,8 +381,11 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
     const url = window.URL.createObjectURL(blob);
     const filename = `Invoices_${fromDate || "start"}_to_${toDate || "end"}.zip`;
     const a = document.createElement("a");
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     statusEl.textContent = "ZIP file downloaded successfully!";
   } catch (err) {
@@ -393,9 +394,7 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
   }
 });
 
-// -------------------------
-// Save Customer PDF settings
-// -------------------------
+// -------------------- Save Customer PDF Settings --------------------
 document.getElementById("saveCustomerPDFSettingButton").addEventListener("click", async () => {
   const storeUrl = document.getElementById("connectedStoreUrl").textContent.trim();
   const allowCustomerPDF = document.getElementById("allowCustomerPDFCheckbox").checked;
@@ -415,15 +414,17 @@ document.getElementById("saveCustomerPDFSettingButton").addEventListener("click"
   }
 });
 
-// -------------------------
-// Apply date filter
-// -------------------------
+// -------------------- Apply Date Filter --------------------
 document.getElementById("applyDateFilter").addEventListener("click", async () => {
   const storeUrl = document.getElementById("connectedStoreUrl").textContent.trim();
   if (!storeUrl || storeUrl === "No store connected") return;
   await fetchOrders(storeUrl);
 });
+
+// -------------------- Init --------------------
+loadConnectedStore();
 </script>
+
 
 </body>
 </html>
