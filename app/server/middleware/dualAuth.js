@@ -45,12 +45,12 @@ const dualAuth = async (req, res, next) => {
     if (!user && req.session?.userId) {
       user = await User.findById(req.session.userId);
       if (!user || user.deleted) {
-        return res.status(403).json({ error: "User not found or inactive" });
+        return res.status(401).json({ error: "User not found or inactive" });
       }
     }
 
     if (!user) {
-      return res.status(403).json({ error: "Authentication failed" });
+      return res.status(401).json({ error: "Authentication failed" });
     }
 
     req.user = {

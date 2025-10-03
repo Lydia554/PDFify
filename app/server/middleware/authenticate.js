@@ -32,13 +32,13 @@ const authenticate = async (req, res, next) => {
 });
 
 if (!user || user.deleted) {
-  return res.status(403).json({ error: "User not found or inactive" });
+  return res.status(401).json({ error: "User not found or inactive" });
 }
 
 
 
     if (!user) {
-      return res.status(403).json({ error: "User not found or API key is invalid" });
+      return res.status(401).json({ error: "User not found or API key is invalid" });
     }
 
     const decryptedKey = user.getDecryptedApiKey();
