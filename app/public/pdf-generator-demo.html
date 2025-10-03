@@ -367,128 +367,113 @@ async function fetchUserUsage() {
 fetchUserUsage();
 
 
+// -----------------------------
+// JSON Templates per Endpoint
+// -----------------------------
 function updateJsonForEndpoint(endpoint) {
   const baseUrl = window.location.origin;
-
   let jsonData = "";
-  if (endpoint === "generate-recipe") {
-    jsonData = `{
-  "data": {
-    "recipeName": "Cheese Pie",
-    "author": "Anna Moore",
-    "ingredients": [
-      "500g flour",
-      "200g cheese",
-      "100g butter",
-      "1 egg"
-    ],
-    "instructions": [
-      "Mix the flour, egg, and butter.",
-      "Add crumbled cheese.",
-      "Bake in preheated oven at 180°C for 40 minutes."
-    ],
-    "prepTime": "30 minutes",
-    "cookTime": "40 minutes",
-    "ingredientBreakdown": {
-      "Flour": 500,
-      "Cheese": 200,
-      "Butter": 100,
-      "Egg": 1
-    }
-  }
-}`;
-  } else if (endpoint === "generate-therapy-report") {
-    jsonData = `{
-  "data": {
-    "childName": "Anna Moore",
-    "birthDate": "2021-02-14",
-    "sessionDate": "2025-03-25",
-    "therapyType": "Speech Therapy",
-    "observations": "The child shows progress in articulating sounds.",
-    "recommendations": "Continue home exercises for 10 minutes daily. Next check-up in 4 weeks.",
-    "milestones": [
-      { "name": "Pronounce B", "progress": "Improved" },
-      { "name": "Pronounce M", "progress": "Satisfactory" },
-      { "name": "Pronounce P", "progress": "Excellent" }
-    ],
-    "milestonesData": [60, 70, 90],
-    "logoUrl": "${baseUrl}/images/Logo.png"
-  }
-}`;
-  } else if (endpoint === "generate-shop-order") {
-    jsonData = `{
-  "data": {
-    "shopName": "TetaFit Store",
-    "customer": {
-      "name": "Anna Moore",
-      "email": "anna@example.com"
-    },
-    "orderId": "ORD-98765",
-    "date": "2025-03-25",
-    "products": [
-      { "name": "Protein Bar", "quantity": 2, "price": "4.00€" },
-      { "name": "Yoga Mat", "quantity": 1, "price": "19.99€" }
-    ],
-    "total": "27.99€"
-  }
-}`;
-  } else if (endpoint === "generate-invoice") {
-    jsonData = `{
-  "data": {
-    "customerName": "Anna Moore",
-    "customerEmail": "anna@example.com",
-    "orderId": "12345",
-    "country": "germany",
-    "date": "2025-03-25",
-    "items": [
-      {
-        "name": "PDF Template",
-        "quantity": "1",
-        "price": "10.00",
-        "net": "8.40",
-        "tax": "1.60",
-        "total": "10.00",
-        "position": "1"
-      },
-      {
-        "name": "Extra Support",
-        "quantity": "1",
-        "price": "5.00",
-        "net": "4.20",
-        "tax": "0.80",
-        "total": "5.00",
-        "position": "2"
-      }
-    ],
-    "subtotal": "12.60",
-    "taxRate": "19%",
-    "tax": "2.40",
-    "total": "15.00",
-    "iban": "DE89370400440532013000",
-    "bic": "COBADEFFXXX",
-    "paymentTerms": "Due within 14 days",
-    "customLogoUrl": "https://example.com/custom-logo.png",
-    "showChart": false,
-    "isPremium": false
-  }
-}`;
-  } else if (endpoint === "generate-packing-slip") {
-    jsonData = `{
-  "data": {
-    "orderId": "98765",
-    "customerName": "John Smith",
-    "shippingAddress": "1234 Maple Street, Springfield, USA",
-    "date": "2025-05-14",
-    "items": [
-      { "name": "Yoga Mat", "sku": "YM-001", "quantity": 1 },
-      { "name": "Dumbbells Set", "sku": "DB-002", "quantity": 2 },
-      { "name": "Water Bottle", "sku": "WB-003", "quantity": 3 }
-    ]
-  }
-}`;
-  } else if (endpoint === "generate-pdf-from-html") {
-    jsonData = JSON.stringify({
-      html: `
+
+  switch (endpoint) {
+    case "generate-recipe":
+      jsonData = `{
+        "data": {
+          "recipeName": "Cheese Pie",
+          "author": "Anna Moore",
+          "ingredients": ["500g flour","200g cheese","100g butter","1 egg"],
+          "instructions": [
+            "Mix the flour, egg, and butter.",
+            "Add crumbled cheese.",
+            "Bake in preheated oven at 180°C for 40 minutes."
+          ],
+          "prepTime": "30 minutes",
+          "cookTime": "40 minutes",
+          "ingredientBreakdown": {"Flour":500,"Cheese":200,"Butter":100,"Egg":1}
+        }
+      }`;
+      break;
+
+    case "generate-therapy-report":
+      jsonData = `{
+        "data": {
+          "childName": "Anna Moore",
+          "birthDate": "2021-02-14",
+          "sessionDate": "2025-03-25",
+          "therapyType": "Speech Therapy",
+          "observations": "The child shows progress in articulating sounds.",
+          "recommendations": "Continue home exercises for 10 minutes daily. Next check-up in 4 weeks.",
+          "milestones": [
+            { "name": "Pronounce B", "progress": "Improved" },
+            { "name": "Pronounce M", "progress": "Satisfactory" },
+            { "name": "Pronounce P", "progress": "Excellent" }
+          ],
+          "milestonesData": [60,70,90],
+          "logoUrl": "${baseUrl}/images/Logo.png"
+        }
+      }`;
+      break;
+
+    case "generate-shop-order":
+      jsonData = `{
+        "data": {
+          "shopName": "TetaFit Store",
+          "customer": {"name":"Anna Moore","email":"anna@example.com"},
+          "orderId": "ORD-98765",
+          "date": "2025-03-25",
+          "products": [
+            {"name":"Protein Bar","quantity":2,"price":"4.00€"},
+            {"name":"Yoga Mat","quantity":1,"price":"19.99€"}
+          ],
+          "total": "27.99€"
+        }
+      }`;
+      break;
+
+    case "generate-invoice":
+      jsonData = `{
+        "data": {
+          "customerName": "Anna Moore",
+          "customerEmail": "anna@example.com",
+          "orderId": "12345",
+          "country": "germany",
+          "date": "2025-03-25",
+          "items": [
+            {"name":"PDF Template","quantity":"1","price":"10.00","net":"8.40","tax":"1.60","total":"10.00","position":"1"},
+            {"name":"Extra Support","quantity":"1","price":"5.00","net":"4.20","tax":"0.80","total":"5.00","position":"2"}
+          ],
+          "subtotal":"12.60",
+          "taxRate":"19%",
+          "tax":"2.40",
+          "total":"15.00",
+          "iban":"DE89370400440532013000",
+          "bic":"COBADEFFXXX",
+          "paymentTerms":"Due within 14 days",
+          "customLogoUrl":"https://example.com/custom-logo.png",
+          "showChart":false,
+          "isPremium":false
+        }
+      }`;
+      break;
+
+    case "generate-packing-slip":
+      jsonData = `{
+        "data": {
+          "orderId":"98765",
+          "customerName":"John Smith",
+          "shippingAddress":"1234 Maple Street, Springfield, USA",
+          "date":"2025-05-14",
+          "items":[
+            {"name":"Yoga Mat","sku":"YM-001","quantity":1},
+            {"name":"Dumbbells Set","sku":"DB-002","quantity":2},
+            {"name":"Water Bottle","sku":"WB-003","quantity":3}
+          ]
+        }
+      }`;
+      break;
+
+    case "generate-pdf-from-html":
+      jsonData = JSON.stringify({
+        html: `
 <html>
 <head>
   <style>
@@ -505,97 +490,66 @@ function updateJsonForEndpoint(endpoint) {
   <p>This is a sample PDF generated from raw HTML.</p>
   <table>
     <thead>
-      <tr>
-        <th>Item</th>
-        <th>Quantity</th>
-        <th>Price</th>
-      </tr>
+      <tr><th>Item</th><th>Quantity</th><th>Price</th></tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Sample Item 1</td>
-        <td>2</td>
-        <td>$10.00</td>
-      </tr>
-      <tr>
-        <td>Sample Item 2</td>
-        <td>1</td>
-        <td>$5.00</td>
-      </tr>
+      <tr><td>Sample Item 1</td><td>2</td><td>$10.00</td></tr>
+      <tr><td>Sample Item 2</td><td>1</td><td>$5.00</td></tr>
     </tbody>
   </table>
 </body>
 </html>`
-    }, null, 2);
+      }, null, 2);
+      break;
+
+    default:
+      jsonData = "{}";
   }
 
-  // Populate textarea
-  const jsonInput = document.getElementById('json');
-  jsonInput.value = jsonData;
-
-  // Immediately update window.data
   try {
-    window.data = JSON.parse(jsonData);
+    const parsed = JSON.parse(jsonData);
+    window.data = parsed.data || parsed;
   } catch {
     window.data = null;
   }
+
+  const jsonInput = document.getElementById('json');
+  if (jsonInput) jsonInput.value = JSON.stringify(window.data, null, 2);
 }
 
-// Update window.data when user edits textarea
-document.getElementById('json').addEventListener('input', () => {
-  try {
-    window.data = JSON.parse(document.getElementById('json').value);
-  } catch {
-    window.data = null;
+// -----------------------------
+// API Key & Dashboard Handling
+// -----------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  const storedApiKey = localStorage.getItem('apiKey');
+  const apiInput = document.getElementById('apiKey');
+  const endpointSelect = document.getElementById('endpoint');
+  const userDashboardLink = document.getElementById('userDashboardLink');
+
+  if (storedApiKey) {
+    apiInput.value = storedApiKey;
+    userDashboardLink.href = `/user-dashboard?apiKey=${storedApiKey}`;
+  } else {
+    alert('No API key found. Please log in.');
+    window.location.href = 'login.html';
   }
+
+  // Initialize JSON for selected endpoint
+  updateJsonForEndpoint(endpointSelect.value);
+  endpointSelect.addEventListener('change', () => updateJsonForEndpoint(endpointSelect.value));
 });
 
-// Initialize on page load
-document.getElementById('endpoint').addEventListener('change', (event) => {
-  updateJsonForEndpoint(event.target.value);
-});
-updateJsonForEndpoint(document.getElementById('endpoint').value);
-
-    
-    const storedApiKey = localStorage.getItem('apiKey');
-    if (storedApiKey) {
-      document.getElementById('apiKey').value = storedApiKey;
-    } else {
-      alert('No API key found. Please log in.');
-      window.location.href = 'login.html'; 
-    }
-    
-    const apiKey = localStorage.getItem("apiKey");
-    const userDashboardLink = document.getElementById("userDashboardLink");
-    
-    if (apiKey) {
-      userDashboardLink.href = `/user-dashboard?apiKey=${apiKey}`;
-    } else {
-      userDashboardLink.href = "/login.html"; 
-    }
-    
+// -----------------------------
+// Logout Handler
+// -----------------------------
 document.getElementById("logoutButton").addEventListener("click", async () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   loadingOverlay.style.display = "flex";
 
   try {
-    const res = await fetch("/api/logout", {
-      method: "POST",
-      credentials: "include",
-    });
-
-    if (res.status === 401 || res.status === 403) {
-      localStorage.removeItem("apiKey");
-      window.location.href = "/login.html";
-      return;
-    }
-
+    const res = await fetch("/api/logout", { method: "POST", credentials: "include" });
     localStorage.removeItem("apiKey");
-
-    setTimeout(() => {
-      window.location.href = "/login.html";
-    }, 500);
-    
+    window.location.href = "/login.html";
   } catch (error) {
     console.error("Logout failed:", error);
     alert("Failed to log out. Please try again.");
@@ -603,104 +557,75 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   }
 });
 
-
-
+// -----------------------------
+// Connect Shopify
+// -----------------------------
 async function connectShopify(domain, token) {
-        const apiKey = localStorage.getItem('apiKey');
-
+  const apiKey = localStorage.getItem('apiKey');
   if (!apiKey) return alert('You must login first.');
 
   try {
     const res = await fetch('/api/auth/connect-shopify', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey
-      },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
       body: JSON.stringify({ connectedShopDomain: domain, shopifyAccessToken: token }),
-        credentials: "include",
+      credentials: "include"
     });
 
     const data = await res.json();
-    if (res.ok) {
-      alert('Shopify connected!');
-    } else {
-      alert(data.error || 'Failed to connect Shopify');
-    }
+    alert(res.ok ? 'Shopify connected!' : data.error || 'Failed to connect Shopify');
   } catch (err) {
     alert('Error connecting Shopify');
   }
 }
 
+// -----------------------------
+// Send Request (Generic for any Endpoint)
+// -----------------------------
 async function sendRequest(isPreview = false) {
-  // Grab the current data for the request
   const data = window.data;
-  if (!data) {
-    alert("No data available to generate PDF.");
-    return;
-  }
+  if (!data) return alert("No data available to generate PDF.");
 
   const apiKey = document.getElementById("apiKey").value.trim();
-  if (!apiKey) {
-    alert("API key is required.");
-    return;
-  }
+  if (!apiKey) return alert("API key is required.");
 
+  const endpoint = document.getElementById("endpoint").value;
   let newWindow;
+
   if (isPreview) {
     newWindow = window.open("", "_blank");
-    if (!newWindow) {
-      alert("Popup blocked! Please allow popups for preview.");
-      return;
-    }
+    if (!newWindow) return alert("Popup blocked! Please allow popups for preview.");
   }
 
   try {
-    console.log("Sending request to backend...", { data, isPreview });
+    console.log("Sending request...", { endpoint, data, isPreview });
 
-    const response = await fetch(`/api/${endpoint.value}`, {
+    const response = await fetch(`/api/${endpoint}`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`
       },
-      body: JSON.stringify({ data, isPreview })
+      body: JSON.stringify({ requests: [{ data, isPreview }] })
     });
 
-    if (!response.ok) {
-      throw new Error(await response.text());
-    }
+    if (!response.ok) throw new Error(await response.text());
 
     const blob = await response.blob();
-    console.log("Received blob:", blob);
-    console.log("Blob size:", blob.size, "Blob type:", blob.type);
-
-    if (blob.size === 0) {
-      throw new Error("Received empty PDF from backend.");
-    }
+    if (blob.size === 0) throw new Error("Received empty PDF from backend.");
 
     const blobUrl = URL.createObjectURL(blob);
 
-    if (isPreview) {
-      // Try opening in a new window as PDF
-      if (blob.type === "application/pdf" && newWindow) {
-        newWindow.location.href = blobUrl;
-      } else {
-        // fallback: embed inside the new window
-        newWindow.document.write(`
-          <html>
-            <body style="margin:0">
-              <h2>Preview not supported for this content, downloaded instead</h2>
-              <iframe src="${blobUrl}" style="width:100%;height:100vh;" frameborder="0"></iframe>
-            </body>
-          </html>
-        `);
-      }
+    if (isPreview && newWindow) {
+      newWindow.document.write(`
+        <html><body style="margin:0">
+          <iframe src="${blobUrl}" style="width:100%;height:100vh;" frameborder="0"></iframe>
+        </body></html>
+      `);
     } else {
-      // Download PDF
       const a = document.createElement("a");
       a.href = blobUrl;
-      a.download = "Generated.pdf";
+      a.download = `${data.orderId || "document"}.pdf`;
       a.click();
     }
 
@@ -710,8 +635,6 @@ async function sendRequest(isPreview = false) {
     if (newWindow) newWindow.close();
   }
 }
-
-
 
 
     async function fetchUserData() {
