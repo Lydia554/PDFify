@@ -144,14 +144,15 @@ John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.
 </div>
 
 <div class="flex gap-4">
-  <button onclick="sendRequest(true)"
-          class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
-    🔍 Preview
-  </button>
-  <button onclick="sendRequest(false)"
-          class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
-    ⬇️ Download PDF
-  </button>
+<button onclick="sendPdfRequest(true)"
+        class="flex-1 py-3 bg-indigo-500 text-white rounded-md font-semibold hover:bg-indigo-600 transition-transform hover:scale-105 shadow-md">
+  🔍 Preview
+</button>
+<button onclick="sendPdfRequest(false)"
+        class="flex-1 py-3 bg-emerald-500 text-white rounded-md font-semibold hover:bg-emerald-600 transition-transform hover:scale-105 shadow-md">
+  ⬇️ Download PDF
+</button>
+
 </div>
 
 <p id="result"></p>
