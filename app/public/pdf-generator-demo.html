@@ -591,17 +591,12 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 // -----------------------------
 // Send Request
 // -----------------------------
-
-
 async function sendRequest(isPreview = false) {
   const data = window.data;
   if (!data) return alert("No data available to generate PDF.");
 
   const apiKey = document.getElementById("apiKey").value.trim();
   if (!apiKey) return alert("API key is required.");
-
-  const endpoint = document.getElementById("endpoint").value;
-  console.log(`[sendRequest] Preparing request for endpoint "${endpoint}" with data:`, data);
 
   let newWindow;
   if (isPreview) {
@@ -611,9 +606,8 @@ async function sendRequest(isPreview = false) {
 
   try {
     const payload = { requests: [{ data, isPreview }] };
-    console.log("[sendRequest] Sending payload to backend:", payload);
 
-    const response = await fetch(`/api/${endpoint}`, {
+    const response = await fetch(`/api/${document.getElementById("endpoint").value}`, {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
@@ -622,23 +616,24 @@ async function sendRequest(isPreview = false) {
       body: JSON.stringify(payload)
     });
 
-    console.log("[sendRequest] Response status:", response.status);
-
     if (!response.ok) {
       const text = await response.text();
-      console.error("[sendRequest] Backend error:", text);
-      throw new Error(text);
+      throw new Error(text || "Backend error");
+    }
+
+    // Always check MIME type before assuming it's a PDF
+    const contentType = response.headers.get("Content-Type");
+    if (!contentType || !contentType.includes("application/pdf")) {
+      const text = await response.text();
+      throw new Error("Invalid PDF response: " + text);
     }
 
     const blob = await response.blob();
-    console.log("[sendRequest] Received blob of size:", blob.size);
-
     if (blob.size === 0) throw new Error("Received empty PDF from backend.");
 
     const blobUrl = URL.createObjectURL(blob);
 
     if (isPreview && newWindow) {
-      console.log("[sendRequest] Opening preview window");
       newWindow.document.write(`
         <html>
           <body style="margin:0">
@@ -647,11 +642,13 @@ async function sendRequest(isPreview = false) {
         </html>
       `);
     } else {
-      console.log("[sendRequest] Triggering download");
       const a = document.createElement("a");
       a.href = blobUrl;
       a.download = `${data.orderId || "document"}.pdf`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
     }
 
   } catch (err) {
@@ -660,6 +657,7 @@ async function sendRequest(isPreview = false) {
     if (newWindow) newWindow.close();
   }
 }
+
 
 // -----------------------------
 // Initialize on page load

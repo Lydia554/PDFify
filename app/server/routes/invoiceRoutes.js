@@ -12,7 +12,7 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
 const { generateInvoiceHTML } = require("../../templates/english.js");
-const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf } = require("../Helpers/pdf-helpers");
+const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -40,7 +40,7 @@ async function generatePdf(invoiceData, user, browser) {
 
   // Generate HTML
   const html = await generateInvoiceHTML(invoiceData);
-  console.log("[PDF] Generated HTML for order:", invoiceData.orderId, "\n", html.substring(0, 500), "..."); // log first 500 chars
+  console.log("[PDF] Generated HTML for order:", invoiceData.orderId, "\n", html.substring(0, 500), "...");
 
   // Set page content
   await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
@@ -66,7 +66,9 @@ async function generatePdf(invoiceData, user, browser) {
   const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
   if (!usageAllowed) throw new Error('Monthly limit reached.');
 
-  // Pro embedding
+  // -----------------------------
+  // Pro embedding + optional PDF/A-3b
+  // -----------------------------
   if (user.plan === "pro") {
     console.log("[PDF] Embedding ICC, XMP, ZUGFeRD XML for PRO user.");
     const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
@@ -76,18 +78,24 @@ async function generatePdf(invoiceData, user, browser) {
     embedXmlIntoPdf(pdfDocPro, zugferdXml);
     pdfBuffer = await pdfDocPro.save();
     console.log("[PDF] PRO PDF embedding completed, new size:", pdfBuffer.length);
-  }
 
-
-      // 3️⃣ ⬇️ PUT YOUR DEBUG CHECK **HERE**
-    if (user.plan === "pro") {
-      if (process.env.DEBUG_MODE === "true") {
-        console.log("⚠️ Skipping PDF/A-3b enforcement for debugging.");
-      } else {
-        console.log("[PDF] Enforcing PDF/A-3b compliance for PRO user.");
+    if (process.env.DEBUG_MODE === "true") {
+      console.log("⚠️ Skipping PDF/A-3b enforcement for debugging.");
+    } else {
+      console.log("[PDF] Enforcing PDF/A-3b compliance for PRO user.");
+      try {
+        const metadata = {
+          title: invoiceData.orderId || "Invoice",
+          author: user.email,
+          subject: "Invoice PDF",
+        };
         pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
+        console.log("[PDF] PDF/A-3b enforcement completed, new size:", pdfBuffer.length);
+      } catch (err) {
+        console.error("[PDF] PDF/A-3b failed:", err);
       }
     }
+  }
 
   return { pdfBuffer, pageCount };
 }
