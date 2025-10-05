@@ -45,14 +45,15 @@ async function generateInvoiceHTML(data) {
   return `
 <html>
   <head>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
     
-     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">,
+    
 
 
       body {
         font-family: 'Open Sans', Arial, sans-serif;
-        color: #000000ff;
+        color: #000;
         background: #f4f7fb;
         margin: 0;
         padding: 0;
@@ -108,7 +109,7 @@ async function generateInvoiceHTML(data) {
 
       .total p {
         font-weight: bold;
-        color: #000000ff;
+        color: #000;
         font-size: 1.1em;
       }
 
@@ -142,7 +143,7 @@ async function generateInvoiceHTML(data) {
       }
 
       .footer a {
-        color: #000000ff;
+        color: #000;
         text-decoration: none;
         word-break: break-word;
       }
