@@ -38,22 +38,24 @@ async function generatePdf(invoiceData, user, browser) {
     console.log("[PDF] Using default logo for free user:", invoiceData.customLogoUrl);
   }
 
-  // Generate HTML
-  const html = await generateInvoiceHTML(invoiceData);
-  console.log("[PDF] Generated HTML for order:", invoiceData.orderId, "\n", html.substring(0, 500), "...");
+// Generate HTML
+const html = await generateInvoiceHTML(invoiceData);
+// Only log metadata, not full HTML
+console.log(`[PDF] Generated HTML for order ${invoiceData.orderId}, length=${html.length}`);
 
-  // Set page content
-  await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
-  console.log("[PDF] HTML content set in Puppeteer page.");
+// Set page content
+await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
+console.log("[PDF] HTML content set in Puppeteer page.");
 
-  // Generate PDF buffer
-  let pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    displayHeaderFooter: false
-  });
-  console.log("[PDF] PDF buffer generated, size:", pdfBuffer.length);
+// Generate PDF buffer
+let pdfBuffer = await page.pdf({
+  format: "A4",
+  printBackground: true,
+  margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+  displayHeaderFooter: false
+});
+console.log("[PDF] PDF buffer generated, size:", pdfBuffer.length);
+
 
   await page.close();
 
