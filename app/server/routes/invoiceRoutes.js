@@ -78,6 +78,17 @@ async function generatePdf(invoiceData, user, browser) {
     console.log("[PDF] PRO PDF embedding completed, new size:", pdfBuffer.length);
   }
 
+
+      // 3️⃣ ⬇️ PUT YOUR DEBUG CHECK **HERE**
+    if (user.plan === "pro") {
+      if (process.env.DEBUG_MODE === "true") {
+        console.log("⚠️ Skipping PDF/A-3b enforcement for debugging.");
+      } else {
+        console.log("[PDF] Enforcing PDF/A-3b compliance for PRO user.");
+        pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
+      }
+    }
+
   return { pdfBuffer, pageCount };
 }
 
