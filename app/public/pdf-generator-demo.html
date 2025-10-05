@@ -207,27 +207,21 @@ Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.
 
 
   <script >
-    // === MAIN MODE TOGGLE ===
-const devBtn = document.getElementById('developerModeBtn');
-const friendlyBtn = document.getElementById('friendlyModeBtn');
-const devSection = document.getElementById('developerMode');
-const friendlySection = document.getElementById('friendlyMode');
-
-// Initialize default: Developer mode
+// === MAIN MODE TOGGLE WITH CHECK ===
 function selectMainMode(mode) {
   if (mode === 'developer') {
-    devBtn.classList.add('bg-indigo-600');
+    devBtn.classList.add('bg-indigo-600', 'ring-4', 'ring-indigo-300');
     devBtn.classList.remove('bg-indigo-500');
+    friendlyBtn.classList.remove('bg-cyan-600', 'ring-4', 'ring-cyan-300');
     friendlyBtn.classList.add('bg-cyan-500');
-    friendlyBtn.classList.remove('bg-cyan-600');
 
     devSection.style.display = 'block';
     friendlySection.style.display = 'none';
   } else {
-    friendlyBtn.classList.add('bg-cyan-600');
+    friendlyBtn.classList.add('bg-cyan-600', 'ring-4', 'ring-cyan-300');
     friendlyBtn.classList.remove('bg-cyan-500');
+    devBtn.classList.remove('bg-indigo-600', 'ring-4', 'ring-indigo-300');
     devBtn.classList.add('bg-indigo-500');
-    devBtn.classList.remove('bg-indigo-600');
 
     devSection.style.display = 'none';
     friendlySection.style.display = 'block';
@@ -241,27 +235,23 @@ friendlyBtn.addEventListener('click', () => selectMainMode('friendly'));
 selectMainMode('developer');
 
 
-// === COMPLIANCE MODE TOGGLE ===
-let isCompliant = false;
-const bwBtn = document.getElementById("bwCompliantBtn");
-const colorBtn = document.getElementById("colorfulBtn");
-
+// === COMPLIANCE MODE TOGGLE WITH CHECK ===
 function selectComplianceMode(compliant) {
   isCompliant = compliant;
   if (compliant) {
     // B/W active
-    bwBtn.classList.add("bg-gray-900");
+    bwBtn.classList.add("bg-gray-900", "ring-4", "ring-gray-400");
     bwBtn.classList.remove("bg-gray-800");
     // Colorful inactive
+    colorBtn.classList.remove("bg-indigo-700", "ring-4", "ring-indigo-300");
     colorBtn.classList.add("bg-indigo-600");
-    colorBtn.classList.remove("bg-indigo-700");
   } else {
     // Colorful active
-    colorBtn.classList.add("bg-indigo-700");
+    colorBtn.classList.add("bg-indigo-700", "ring-4", "ring-indigo-300");
     colorBtn.classList.remove("bg-indigo-600");
     // B/W inactive
+    bwBtn.classList.remove("bg-gray-900", "ring-4", "ring-gray-400");
     bwBtn.classList.add("bg-gray-800");
-    bwBtn.classList.remove("bg-gray-900");
   }
 }
 
