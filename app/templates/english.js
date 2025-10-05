@@ -1,4 +1,4 @@
-const fetch = require("node-fetch"); // make sure you have node-fetch installed
+const fetch = require("node-fetch");
 
 /**
  * Generate HTML invoice for free/pro users
@@ -9,40 +9,39 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // ensure there's an explicit source so server logic can react
+  // Ensure there's an explicit source
   data.invoiceSource ||= "colorful";
 
-  // ---- Logo handling ----
-  let logoHTML = "";
+  // -------------------------
+  // Handle logo (base64 embed for Puppeteer)
+  // -------------------------
+  let logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+    <rect width="180" height="40" fill="#2a3d66" rx="6" />
+    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+  </svg>`; // default fallback
 
-  if (data.customLogoUrl && !data.isFreeUser) {
-    // Pro/premium users: fetch remote logo and embed inline
+  const userLogo = data.customLogoUrl;
+  const freeUserLogo = data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "";
+
+  const finalLogoUrl = userLogo && !userLogo.includes("example.png") ? userLogo : freeUserLogo;
+
+  if (finalLogoUrl) {
     try {
-      const isSvg = data.customLogoUrl.endsWith(".svg");
+      const isSvg = finalLogoUrl.endsWith(".svg");
       const mime = isSvg ? "image/svg+xml" : "image/png";
-      const response = await fetch(data.customLogoUrl);
-      const buffer = await response.arrayBuffer();
-      const base64Logo = Buffer.from(buffer).toString("base64");
-      logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64Logo}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
+      const resp = await fetch(finalLogoUrl);
+      const buffer = await resp.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString("base64");
+      logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
+      console.log("[generateInvoiceHTML] ✅ Logo embedded from URL");
     } catch (err) {
-      console.warn("[generateInvoiceHTML] ⚠️ Logo fetch failed, using fallback SVG", err);
-      logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-        <rect width="180" height="40" fill="#2a3d66" rx="6" />
-        <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-      </svg>`;
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG", err.message);
     }
-  } else if (data.isFreeUser) {
-    // Free users: always use default logo
-    logoHTML = `<img id="invoice-logo" src="https://pdfify.pro/images/Logo.png" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
-  } else {
-    // fallback SVG if no custom logo
-    logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-      <rect width="180" height="40" fill="#2a3d66" rx="6" />
-      <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-    </svg>`;
   }
 
-  // ---- Chart (only if showChart is true) ----
+  // -------------------------
+  // Chart (only if showChart is true)
+  // -------------------------
   const chartConfig = {
     type: "pie",
     data: {
@@ -65,20 +64,24 @@ async function generateInvoiceHTML(data) {
        </div>`
     : "";
 
-  // ---- Watermark for basic + preview users ----
+  // -------------------------
+  // Watermark for basic + preview users
+  // -------------------------
   const watermarkHTML =
     data.isBasicUser && data.isPreview
       ? `<div class="watermark" data-debug="watermark-visible">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
       : "";
 
-  // ---- Debug info ----
+  // -------------------------
+  // Debug info
+  // -------------------------
   const debugInfo = {
     invoiceSource: data.invoiceSource,
-    hasLogoUrl: !!data.customLogoUrl,
+    hasLogoUrl: !!finalLogoUrl,
     showChart: !!data.showChart,
     pagePreview: !!data.isPreview,
     compliant: !!data.compliant,
-    itemsLength: items.length
+    itemsLength: items.length,
   };
 
   const debugHTML = `<div id="__pdf_debug" style="font-family: monospace; font-size:10px; color:#111; background:#fffbdd; border:1px solid #f0e58c; padding:8px; margin-bottom:12px;">
@@ -86,32 +89,17 @@ async function generateInvoiceHTML(data) {
     <pre style="white-space:pre-wrap;margin:6px 0 0 0;">${JSON.stringify(debugInfo,null,2)}</pre>
   </div>`;
 
-  // ---- Return full HTML ----
+  // -------------------------
+  // Return full HTML
+  // -------------------------
   return `
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-      html, body {
-        background: #ffffff !important;
-        color: #000 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        margin: 0; padding: 0;
-        font-family: Arial, Helvetica, sans-serif;
-      }
-      .container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 30px 24px 60px;
-        background: #ffffff !important;
-        border-radius: 8px;
-        border: 1px solid #c5d0f9;
-        box-shadow: none;
-        position: relative;
-        z-index: 1;
-      }
+      html, body { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; }
+      .container { max-width: 800px; margin: 20px auto; padding: 30px 24px 60px; background: #fff !important; border-radius: 8px; border: 1px solid #c5d0f9; box-shadow: none; position: relative; z-index: 1; }
       .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
       .table th, .table td { padding: 10px; border: 1px solid #c5d0f9; text-align: left; }
       .table th { background-color: #dbe7ff; color: #2a3d66; font-weight: 600; }
@@ -125,14 +113,11 @@ async function generateInvoiceHTML(data) {
       [data-debug-overlay] { display: none !important; }
     </style>
   </head>
-
   <body>
     <div class="container">
       ${debugHTML}
       ${logoHTML}
-
       <h1 style="margin-top:8px;">${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
-
       <div class="invoice-header" style="display:flex;justify-content:space-between;gap:12px;margin-bottom:18px;">
         <div class="left" style="flex:1;">
           <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
@@ -158,14 +143,13 @@ async function generateInvoiceHTML(data) {
         <tbody>
           ${
             items.length
-              ? items.map(item => `
-                <tr>
-                  <td>${item?.name || ""}</td>
-                  <td>${item?.quantity || ""}</td>
-                  <td>${item?.price || ""}</td>
-                  <td>${item?.net ?? "-"}</td>
-                  <td>${item?.tax ?? "-"}</td>
-                  <td>${item?.total || ""}</td>
+              ? items.map(item => `<tr>
+                  <td>${item.name || ""}</td>
+                  <td>${item.quantity || ""}</td>
+                  <td>${item.price || ""}</td>
+                  <td>${item.net || "-"}</td>
+                  <td>${item.tax || "-"}</td>
+                  <td>${item.total || ""}</td>
                 </tr>`).join("")
               : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
           }
@@ -177,10 +161,7 @@ async function generateInvoiceHTML(data) {
         </tfoot>
       </table>
 
-      <div class="total">
-        <p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p>
-      </div>
-
+      <div class="total"><p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p></div>
       ${chartHTML}
     </div>
 
