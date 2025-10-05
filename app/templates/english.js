@@ -53,7 +53,32 @@ async function generateInvoiceHTML(data) {
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
       body { font-family: 'Open Sans', sans-serif; color: #000000ff; background: #f4f7fb; margin: 0; padding: 0; min-height: 100vh; position: relative; }
-      .container { max-width: 800px; margin: 20px auto; padding: 30px 40px 60px; background: linear-gradient(to bottom right, #ffffff, #f0f4ff); border-radius: 16px; border: 1px solid #c5d0f9; box-shadow: 0 6px 15px rgba(42,61,102,0.15); position: relative; z-index: 1; }
+    .container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 30px 40px 60px;
+  background: #f0f4ff; /* solid fallback for PDF */
+  border-radius: 16px;
+  border: 1px solid #c5d0f9;
+  /* box-shadow removed for stability */
+  position: relative;
+  z-index: 1;
+}
+
+.watermark {
+  position: absolute; /* changed from fixed */
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  font-size: 60px;
+  color: #ffcccc;
+  font-weight: 900;
+  pointer-events: none;
+  user-select: none;
+  z-index: 9999;
+  white-space: nowrap;
+}
+
       .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
       .table th, .table td { padding: 12px; border: 1px solid #c5d0f9; text-align: left; }
       .table th { background-color: #dbe7ff; color: #2a3d66; font-weight: 600; }
@@ -61,7 +86,7 @@ async function generateInvoiceHTML(data) {
       .table tr:nth-child(even) td { background-color: #f6f9fe; }
       .table tfoot td { background-color: #dbe7ff; font-weight: bold; color: #2a3d66; }
       .total p { font-weight: bold; color: #000000ff; font-size: 1.1em; }
-      .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 60px; color: #ffcccc; font-weight: 900; pointer-events: none; user-select: none; z-index: 9999; white-space: nowrap; }
+     
       .footer { position: static; max-width: 800px; margin: 40px auto 10px auto; padding: 10px; line-height: 1.6; font-size: 11px; border-radius: 0 0 16px 16px; box-sizing: border-box; color: #2a3d66; background: #e8f0ff; border-top: 1px solid #c5d0f9; text-align: center; }
       .footer a { color: #000000ff; text-decoration: none; word-break: break-word; }
       .footer a:hover { text-decoration: underline; }
