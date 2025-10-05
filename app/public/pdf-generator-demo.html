@@ -207,92 +207,125 @@ Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.
 
 
   <script >
-    
-    
+    // === MAIN MODE TOGGLE ===
 const devBtn = document.getElementById('developerModeBtn');
 const friendlyBtn = document.getElementById('friendlyModeBtn');
 const devSection = document.getElementById('developerMode');
 const friendlySection = document.getElementById('friendlyMode');
 
-devBtn.addEventListener('click', () => {
-  devBtn.classList.add('active');
-  friendlyBtn.classList.remove('active');
-  devSection.style.display = 'block';
-  friendlySection.style.display = 'none';
-});
+// Initialize default: Developer mode
+function selectMainMode(mode) {
+  if (mode === 'developer') {
+    devBtn.classList.add('bg-indigo-600');
+    devBtn.classList.remove('bg-indigo-500');
+    friendlyBtn.classList.add('bg-cyan-500');
+    friendlyBtn.classList.remove('bg-cyan-600');
 
-friendlyBtn.addEventListener('click', () => {
-  friendlyBtn.classList.add('active');
-  devBtn.classList.remove('active');
-  devSection.style.display = 'none';
-  friendlySection.style.display = 'block';
+    devSection.style.display = 'block';
+    friendlySection.style.display = 'none';
+  } else {
+    friendlyBtn.classList.add('bg-cyan-600');
+    friendlyBtn.classList.remove('bg-cyan-500');
+    devBtn.classList.add('bg-indigo-500');
+    devBtn.classList.remove('bg-indigo-600');
+
+    devSection.style.display = 'none';
+    friendlySection.style.display = 'block';
+  }
+}
+
+devBtn.addEventListener('click', () => selectMainMode('developer'));
+friendlyBtn.addEventListener('click', () => selectMainMode('friendly'));
+
+// Initialize
+selectMainMode('developer');
 
 
-    document.addEventListener("DOMContentLoaded", () => {
-      document.querySelectorAll('.fade-in-up').forEach(el => {
-        el.classList.add('opacity-0');
-        setTimeout(() => el.classList.remove('opacity-0'), 50);
-      });
-    });
-  
-});
+// === COMPLIANCE MODE TOGGLE ===
+let isCompliant = false;
+const bwBtn = document.getElementById("bwCompliantBtn");
+const colorBtn = document.getElementById("colorfulBtn");
+
+function selectComplianceMode(compliant) {
+  isCompliant = compliant;
+  if (compliant) {
+    // B/W active
+    bwBtn.classList.add("bg-gray-900");
+    bwBtn.classList.remove("bg-gray-800");
+    // Colorful inactive
+    colorBtn.classList.add("bg-indigo-600");
+    colorBtn.classList.remove("bg-indigo-700");
+  } else {
+    // Colorful active
+    colorBtn.classList.add("bg-indigo-700");
+    colorBtn.classList.remove("bg-indigo-600");
+    // B/W inactive
+    bwBtn.classList.add("bg-gray-800");
+    bwBtn.classList.remove("bg-gray-900");
+  }
+}
+
+bwBtn.addEventListener("click", () => selectComplianceMode(true));
+colorBtn.addEventListener("click", () => selectComplianceMode(false));
+
+// Initialize default: Colorful
+selectComplianceMode(false);
 
 
-
+// === MOBILE MENU ===
 const menuBtn = document.getElementById("mobileMenuBtn");
 const mobileNav = document.getElementById("mobileNav");
 
 menuBtn.addEventListener("click", () => {
   mobileNav.classList.toggle("hidden");
-
-  if (!mobileNav.classList.contains("hidden")) {
-    mobileNav.style.display = "flex";
-  } else {
-    mobileNav.style.display = "none";
-  }
+  mobileNav.style.display = mobileNav.classList.contains("hidden") ? "none" : "flex";
 });
 
 
-    document.querySelectorAll("nav a").forEach((link) => {
-      link.addEventListener("click", (event) => {
-        event.preventDefault();
-        const targetUrl = event.target.href;
-    
-        const loadingOverlay = document.getElementById("loadingOverlay");
-        loadingOverlay.style.display = "flex";
-        console.log("Spinner shown");
-    
-        if (!targetUrl) {
-          console.error("Invalid target URL");
-          loadingOverlay.style.display = "none";
-          return;
-        }
-    
-        setTimeout(() => {
-          console.log("Navigating to:", targetUrl);
-          window.location.href = targetUrl;
-        }, 500);
-      });
-    });
-    
-    window.addEventListener("load", () => {
-      const loadingOverlay = document.getElementById("loadingOverlay");
+// === FADE IN UP EFFECT ===
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll('.fade-in-up').forEach(el => {
+    el.classList.add('opacity-0');
+    setTimeout(() => el.classList.remove('opacity-0'), 50);
+  });
+});
+
+
+// === LOADING OVERLAY NAVIGATION ===
+document.querySelectorAll("nav a").forEach((link) => {
+  link.addEventListener("click", (event) => {
+    event.preventDefault();
+    const targetUrl = event.target.href;
+    const loadingOverlay = document.getElementById("loadingOverlay");
+    loadingOverlay.style.display = "flex";
+
+    if (!targetUrl) {
       loadingOverlay.style.display = "none";
-      console.log("Spinner hidden on page load");
-    });
-    
-    async function sendRequest() {
-      showProgressBar();
-    
-      try {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        alert("Request completed!");
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setTimeout(hideProgressBar, 500);
-      }
+      return;
     }
+
+    setTimeout(() => window.location.href = targetUrl, 500);
+  });
+});
+
+window.addEventListener("load", () => {
+  document.getElementById("loadingOverlay").style.display = "none";
+});
+
+
+// === SEND REQUEST PLACEHOLDER ===
+async function sendRequest() {
+  showProgressBar();
+
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    alert("Request completed!");
+  } catch (error) {
+    console.error("Error:", error);
+  } finally {
+    setTimeout(hideProgressBar, 500);
+  }
+}
 
 
 
@@ -552,37 +585,6 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
     loadingOverlay.style.display = "none";
   }
 });
-// Default selection: Colorful
-let isCompliant = false;
-
-const bwBtn = document.getElementById("bwCompliantBtn");
-const colorBtn = document.getElementById("colorfulBtn");
-
-function selectComplianceMode(compliant) {
-  isCompliant = compliant;
-
-  if (compliant) {
-    // B/W active
-    bwBtn.classList.add("bg-gray-900");
-    bwBtn.classList.remove("bg-gray-800");
-    // Colorful inactive
-    colorBtn.classList.add("bg-indigo-600");
-    colorBtn.classList.remove("bg-indigo-700");
-  } else {
-    // Colorful active
-    colorBtn.classList.add("bg-indigo-700");
-    colorBtn.classList.remove("bg-indigo-600");
-    // B/W inactive
-    bwBtn.classList.add("bg-gray-800");
-    bwBtn.classList.remove("bg-gray-900");
-  }
-}
-
-bwBtn.addEventListener("click", () => selectComplianceMode(true));
-colorBtn.addEventListener("click", () => selectComplianceMode(false));
-
-// Initialize default
-selectComplianceMode(false);
 
 
 // -----------------------------
