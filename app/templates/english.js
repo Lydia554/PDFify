@@ -46,7 +46,9 @@ async function generateInvoiceHTML(data) {
 <html>
   <head>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
+    
+     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">,
+
 
       body {
         font-family: 'Open Sans', Arial, sans-serif;
@@ -62,7 +64,8 @@ async function generateInvoiceHTML(data) {
         max-width: 800px;
         margin: 20px auto;
         padding: 30px 40px 60px;
-        background: linear-gradient(to bottom right, #ffffff, #f0f4ff);
+        background: #ffffff;
+
         border-radius: 16px;
         border: 1px solid #c5d0f9;
         box-shadow: 0 6px 15px rgba(42,61,102,0.15);

@@ -37,6 +37,9 @@ async function generatePdf(invoiceData, user, browser) {
   log("Starting PDF generation", { invoiceData, planType: user.planType });
 
   const page = await browser.newPage();
+
+  // Set viewport explicitly
+  await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType('print');
 
   const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
@@ -44,24 +47,32 @@ async function generatePdf(invoiceData, user, browser) {
 
   log("Using template", { useCompliant });
 
+  // Set default logo for free users
   if (user.planType === "free" && !invoiceData.customLogoUrl) {
     invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
     log("Set default logo for free user", { logo: invoiceData.customLogoUrl });
   }
 
+  // Generate HTML
   const html = useCompliant
     ? await generateInvoiceHTMLPro(invoiceData)
     : await generateInvoiceHTML(invoiceData);
 
   log("HTML generated for PDF", { length: html.length });
 
-  await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
+  // Set HTML content
+  await page.setContent(html, { waitUntil: "load", timeout: 30000 });
 
+  // Wait for all fonts to be loaded (prevents black pages with Google Fonts)
+  await page.evaluateHandle('document.fonts.ready');
+
+  // Generate PDF with improved options
   let pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
     margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    displayHeaderFooter: false
+    displayHeaderFooter: false,
+    preferCSSPageSize: true
   });
 
   await page.close();
@@ -78,16 +89,10 @@ async function generatePdf(invoiceData, user, browser) {
 
   if (useCompliant) {
     try {
-      // ------------------------
-      // FIX: Set invoiceSource if missing
       invoiceData.invoiceSource ||= "standard";
       const isStandardInvoice = invoiceData.invoiceSource === "standard";
 
-      log("Compliant check", { 
-        useCompliant, 
-        invoiceSource: invoiceData.invoiceSource, 
-        isStandardInvoice 
-      });
+      log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
 
       if (isStandardInvoice) {
         const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
