@@ -21,81 +21,56 @@ const locales = {
 };
 
 const FORCE_PLAN = process.env.FORCE_PLAN;
+const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
 // -----------------------------
-// PDF generation helper with logging
+// PDF generation helper
 // -----------------------------
 async function generatePdf(invoiceData, user, browser) {
   const PDFLib = require("pdf-lib");
-  console.log("[PDF] Starting PDF generation for order:", invoiceData.orderId);
 
   const page = await browser.newPage();
   await page.emulateMediaType('print');
 
-  invoiceData.userClass = user.plan === "pro" ? "pdfa-clean" : "";
-  if (user.plan === "free" && !invoiceData.customLogoUrl) {
+  invoiceData.userClass = user.planType === "pro" ? "pdfa-clean" : "";
+  if (user.planType === "free" && !invoiceData.customLogoUrl) {
     invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-    console.log("[PDF] Using default logo for free user:", invoiceData.customLogoUrl);
   }
 
-// Generate HTML
-const html = await generateInvoiceHTML(invoiceData);
-// Only log metadata, not full HTML
-console.log(`[PDF] Generated HTML for order ${invoiceData.orderId}, length=${html.length}`);
+  const html = await generateInvoiceHTML(invoiceData);
 
-// Set page content
-await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
-console.log("[PDF] HTML content set in Puppeteer page.");
+  await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
 
-// Generate PDF buffer
-let pdfBuffer = await page.pdf({
-  format: "A4",
-  printBackground: true,
-  margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-  displayHeaderFooter: false
-});
-console.log("[PDF] PDF buffer generated, size:", pdfBuffer.length);
-
+  let pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    displayHeaderFooter: false
+  });
 
   await page.close();
 
-  // Count pages
   const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = pdfDoc.getPageCount();
-  console.log(`[PDF] Loaded PDF with ${pageCount} page(s)`);
 
   // Increment usage
   const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
   if (!usageAllowed) throw new Error('Monthly limit reached.');
 
-  // -----------------------------
-  // Pro embedding + optional PDF/A-3b
-  // -----------------------------
-  if (user.plan === "pro") {
-    console.log("[PDF] Embedding ICC, XMP, ZUGFeRD XML for PRO user.");
+  // Pro embedding
+  if (user.planType === "pro") {
     const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
     const zugferdXml = generateZugferdXML(invoiceData);
+
     await embedIccProfile(pdfDocPro);
     await embedXmp(pdfDocPro);
     embedXmlIntoPdf(pdfDocPro, zugferdXml);
-    pdfBuffer = await pdfDocPro.save();
-    console.log("[PDF] PRO PDF embedding completed, new size:", pdfBuffer.length);
 
-    if (process.env.DEBUG_MODE === "true") {
-      console.log("⚠️ Skipping PDF/A-3b enforcement for debugging.");
-    } else {
-      console.log("[PDF] Enforcing PDF/A-3b compliance for PRO user.");
-      try {
-        const metadata = {
-          title: invoiceData.orderId || "Invoice",
-          author: user.email,
-          subject: "Invoice PDF",
-        };
-        pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
-        console.log("[PDF] PDF/A-3b enforcement completed, new size:", pdfBuffer.length);
-      } catch (err) {
-        console.error("[PDF] PDF/A-3b failed:", err);
-      }
+    pdfBuffer = await pdfDocPro.save();
+
+    if (!DEBUG_MODE) {
+      const metadata = {}; // Add metadata if needed
+      pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
     }
   }
 
@@ -108,50 +83,42 @@ console.log("[PDF] PDF buffer generated, size:", pdfBuffer.length);
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
-  console.log("[Route] Temporary directory created:", tmpDir);
 
   let browser;
+
   try {
     const requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
     if (!requests.length) return res.status(400).json({ error: "No requests provided." });
 
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
-    console.log("[Route] User loaded:", user.email, "Plan:", user.plan);
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-    console.log("[Route] Puppeteer launched.");
 
     const results = [];
 
     for (const { data: invoiceDataRaw, isPreview } of requests) {
       const invoiceData = { ...invoiceDataRaw, isPreview };
-      invoiceData.iban = invoiceData.iban || "";
-      invoiceData.bic = invoiceData.bic || "";
+      invoiceData.iban ||= "";
+      invoiceData.bic ||= "";
 
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.locale = locales[lang] || locales["en"];
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      console.log("[Route] Preparing PDF for order:", orderId, "Locale:", lang);
       const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser);
-      console.log(`[Route] PDF for order ${orderId} generated with ${pageCount} page(s), size: ${pdfBuffer.length}`);
-
       results.push({ pdfBuffer, orderId });
     }
 
     await user.save();
-    console.log("[Route] User usage updated.");
 
     await browser.close();
-    console.log("[Route] Puppeteer closed.");
 
-    // Single invoice
+    // Send single PDF
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
-      console.log("[Route] Sending single PDF:", orderId, "Preview:", isPreview);
 
       res.set({
         "Content-Type": "application/pdf",
@@ -164,27 +131,27 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.send(pdfBuffer);
     }
 
-    // Multiple PDFs => ZIP
-    console.log("[Route] Multiple PDFs, generating ZIP...");
-    const archive = archiver("zip", { zlib: { level: 9 } });
+    // Send ZIP for multiple PDFs
     res.set({
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="invoices.zip"`
     });
+
+    const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(res);
-    results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
+
+    results.forEach(({ pdfBuffer, orderId }) => {
+      archive.append(pdfBuffer, { name: `${orderId}.pdf` });
+    });
+
     await archive.finalize();
-    console.log("[Route] ZIP archive sent.");
 
   } catch (err) {
-    console.error("❌ Exception in /generate-invoice:", err);
     if (browser) await browser.close();
-    fs.rmSync(tmpDir, { recursive: true, force: true });
     res.status(500).json({ error: "Internal Server Error", details: err.message });
   } finally {
     if (browser) await browser.close();
     fs.rmSync(tmpDir, { recursive: true, force: true });
-    console.log("[Route] Temporary directory cleaned up:", tmpDir);
   }
 });
 
