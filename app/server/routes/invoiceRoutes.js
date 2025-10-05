@@ -11,7 +11,9 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateInvoiceHTML } = require("../../templates/english.js");
+const { generateInvoiceHTML } = require("../../templates/english.js"); // free template
+const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js"); // pro compliant
+
 const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
 
 const locales = {
@@ -32,12 +34,21 @@ async function generatePdf(invoiceData, user, browser) {
   const page = await browser.newPage();
   await page.emulateMediaType('print');
 
-  invoiceData.userClass = user.planType === "pro" ? "pdfa-clean" : "";
+  // Only Pro users get compliant template
+  const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
+  invoiceData.userClass = useCompliant ? "pdfa-clean" : "";
+
+  // Default logo for free users
   if (user.planType === "free" && !invoiceData.customLogoUrl) {
     invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
   }
 
-  const html = await generateInvoiceHTML(invoiceData);
+  // Generate HTML template depending on compliance
+// Generate HTML template depending on compliance
+const html = useCompliant
+  ? await generateInvoiceHTMLPro(invoiceData) 
+  : await generateInvoiceHTML(invoiceData);
+
 
   await page.setContent(html, { waitUntil: "networkidle2", timeout: 30000 });
 
@@ -57,8 +68,8 @@ async function generatePdf(invoiceData, user, browser) {
   const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
   if (!usageAllowed) throw new Error('Monthly limit reached.');
 
-  // Pro embedding
-  if (user.planType === "pro") {
+
+  if (useCompliant) {
     const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
     const zugferdXml = generateZugferdXML(invoiceData);
 
@@ -69,13 +80,14 @@ async function generatePdf(invoiceData, user, browser) {
     pdfBuffer = await pdfDocPro.save();
 
     if (!DEBUG_MODE) {
-      const metadata = {}; // Add metadata if needed
+      const metadata = {}; 
       pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
     }
   }
 
   return { pdfBuffer, pageCount };
 }
+
 
 // -----------------------------
 // /generate-invoice route
@@ -97,8 +109,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     const results = [];
 
-    for (const { data: invoiceDataRaw, isPreview } of requests) {
-      const invoiceData = { ...invoiceDataRaw, isPreview };
+    for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
+  const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
+
       invoiceData.iban ||= "";
       invoiceData.bic ||= "";
 

@@ -80,18 +80,22 @@ mongoose.connect(process.env.MONGODB_URI, {
 // -------------------- API Routes --------------------
 app.use("/api/auth", authRoutes);
 app.use("/api/user", authenticate, userRoutes);
-app.use("/api", invoiceRoutes);
+
 app.use("/api", recipeRoutes);
 app.use("/api", shopOrderRoutes);
 app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
 app.use("/api", packingSlipRoutes);
-app.use("/api/friendly", friendlyMode);
 app.use("/api", foodTrekRoutes);
-app.use("/api/shopify", dualAuth, shopifyApiRoutes);
 app.use("/api/stripe", paymentRoutes);
-app.use("/api/woocommerce", dualAuth, woocommerceApiRoutes);
 app.use("/woocommerce-webhook", woocommerceWebhookRoutes);
+
+
+app.use("/api/shopify", (req, res, next) => { req.invoiceSource = "shopify"; next(); }, shopifyApiRoutes);
+app.use("/api/woocommerce", (req, res, next) => { req.invoiceSource = "woocommerce"; next(); }, woocommerceApiRoutes);
+app.use("/api/friendly", (req, res, next) => { req.invoiceSource = "friendly"; next(); }, friendlyMode);
+app.use("/api", (req, res, next) => { req.invoiceSource = "dev"; next(); }, invoiceRoutes);
+
 
 // -------------------- Static & Landing --------------------
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));

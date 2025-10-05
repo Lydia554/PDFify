@@ -103,6 +103,12 @@
   </div>
 
 
+  <div class="flex items-center gap-2 mb-4">
+  <input type="checkbox" id="compliantCheckbox" class="h-4 w-4">
+  <label for="compliantCheckbox" class="text-gray-200 font-semibold">Generate compliant PDF/A-3b + ZUGFeRD (Pro only)</label>
+</div>
+
+
 
 <!-- Bulk CSV Section: Visible ONLY for Invoices -->
 <div id="bulkCsvSection" class="space-y-4 mt-12 p-4 border border-indigo-500 rounded-md bg-gray-800 shadow-md hidden">
@@ -113,19 +119,19 @@
   <input type="file" id="csvUpload" accept=".csv"
          class="block w-full text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md p-2" />
 
-  <div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3 max-w-full overflow-x-auto whitespace-pre font-mono">
-  Example CSV:<br />
-  <code>
-customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium,iban,bic
-customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium,iban,bic
-Anna Moore,anna@example.com,12345,Germany,2025-03-25,PDF Template,1,10.00€,10.00,19.00%,1,15.00€,3.15€,18.15€,https://example.com/custom-logo.png,False,False,DE89370400440532013000,COBADEFFXXX
-John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.00,22.00%,1,110.00€,22.00€,132.00€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,True,True,SI56123456789012345,ABCDSI2X
-Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.00,19.00%,1,95.00€,18.05€,113.05€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,False,True,DE44500105175407324931,COBADEFFXXX
-Michael Brown,michael@example.com,12348,Slovenia,2025-06-01,Training,4,25.00€,100.00,22.00%,1,120.00€,26.40€,146.40€,https://example.com/logo4.png,True,False,SI56123456789067890,ABCDSI2X
-Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00€,70.00,19.00%,1,80.00€,15.20€,95.20€,https://example.com/logo5.png,False,False,DE89370400440532013001,COBADEFFXXX
-
-  </code>
+<div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3 max-w-full overflow-x-auto whitespace-pre font-mono">
+Example CSV:<br />
+<code>
+customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium,iban,bic,compliant
+customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium,iban,bic,compliant
+Anna Moore,anna@example.com,12345,Germany,2025-03-25,PDF Template,1,10.00€,10.00,19.00%,1,15.00€,3.15€,18.15€,https://example.com/custom-logo.png,False,False,DE89370400440532013000,COBADEFFXXX,True
+John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.00,22.00%,1,110.00€,22.00€,132.00€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,True,True,SI56123456789012345,ABCDSI2X,False
+Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.00,19.00%,1,95.00€,18.05€,113.05€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,False,True,DE44500105175407324931,COBADEFFXXX,True
+Michael Brown,michael@example.com,12348,Slovenia,2025-06-01,Training,4,25.00€,100.00,22.00%,1,120.00€,26.40€,146.40€,https://example.com/logo4.png,True,False,SI56123456789067890,ABCDSI2X,False
+Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00€,70.00,19.00%,1,80.00€,15.20€,95.20€,https://example.com/logo5.png,False,False,DE89370400440532013001,COBADEFFXXX,True
+</code>
 </div>
+
 
 
   <button id="csvGenerateBtn"
@@ -143,6 +149,20 @@ Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00
   
   <p id="csvResult" class="text-sm text-gray-300 mt-4"></p>
 </div>
+
+
+<!-- Compliance Mode Toggle -->
+<div id="complianceToggle" class="flex gap-4 mt-4">
+  <button id="bwCompliantBtn" 
+    class="flex-1 py-2 rounded-md bg-gray-800 text-white font-semibold hover:bg-gray-900 transition-transform hover:scale-105 shadow-md">
+    🖤 B/W Compliant
+  </button>
+  <button id="colorfulBtn" 
+    class="flex-1 py-2 rounded-md bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-transform hover:scale-105 shadow-md">
+    🎨 Colorful
+  </button>
+</div>
+
 
 <!-- JSON input for single PDF -->
 <div>
@@ -586,6 +606,29 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   }
 });
 
+// Default selection: Colorful
+let isCompliant = false;
+
+const bwBtn = document.getElementById("bwCompliantBtn");
+const colorBtn = document.getElementById("colorfulBtn");
+
+function selectComplianceMode(compliant) {
+  isCompliant = compliant;
+  if (compliant) {
+    bwBtn.classList.add("bg-gray-700");
+    bwBtn.classList.remove("bg-gray-800");
+    colorBtn.classList.add("bg-indigo-600");
+    colorBtn.classList.remove("bg-indigo-700");
+  } else {
+    colorBtn.classList.add("bg-indigo-700");
+    colorBtn.classList.remove("bg-indigo-600");
+    bwBtn.classList.add("bg-gray-800");
+    bwBtn.classList.remove("bg-gray-700");
+  }
+}
+
+bwBtn.addEventListener("click", () => selectComplianceMode(true));
+colorBtn.addEventListener("click", () => selectComplianceMode(false));
 
 
 // -----------------------------
@@ -605,7 +648,7 @@ async function sendRequest(isPreview = false) {
   }
 
   try {
-    const payload = { requests: [{ data, isPreview }] };
+    const payload = { requests: [{ data, isPreview, compliant: isCompliant }] };
 
     const response = await fetch(`/api/${document.getElementById("endpoint").value}`, {
       method: "POST",
@@ -874,7 +917,18 @@ csvGenerateBtn.addEventListener('click', async () => {
     if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
     const groupedInvoices = groupRowsByOrderId(rows);      
-    const requests = groupedInvoices.map(rowsToInvoiceJson).map(data => ({ data, isPreview: false })); 
+    const userPlan = userData.planType; 
+const isPro = userPlan === "pro";
+const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
+
+const requests = groupedInvoices
+  .map(rowsToInvoiceJson)
+  .map(data => ({
+    data,
+    isPreview: false,
+    compliant: useCompliant 
+  }));
+
 
     console.log(`[CSV] Prepared ${requests.length} invoice requests`);
 
