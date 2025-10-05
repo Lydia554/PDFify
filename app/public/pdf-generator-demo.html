@@ -552,7 +552,6 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
     loadingOverlay.style.display = "none";
   }
 });
-
 // Default selection: Colorful
 let isCompliant = false;
 
@@ -561,21 +560,29 @@ const colorBtn = document.getElementById("colorfulBtn");
 
 function selectComplianceMode(compliant) {
   isCompliant = compliant;
+
   if (compliant) {
-    bwBtn.classList.add("bg-gray-700");
+    // B/W active
+    bwBtn.classList.add("bg-gray-900");
     bwBtn.classList.remove("bg-gray-800");
+    // Colorful inactive
     colorBtn.classList.add("bg-indigo-600");
     colorBtn.classList.remove("bg-indigo-700");
   } else {
+    // Colorful active
     colorBtn.classList.add("bg-indigo-700");
     colorBtn.classList.remove("bg-indigo-600");
+    // B/W inactive
     bwBtn.classList.add("bg-gray-800");
-    bwBtn.classList.remove("bg-gray-700");
+    bwBtn.classList.remove("bg-gray-900");
   }
 }
 
 bwBtn.addEventListener("click", () => selectComplianceMode(true));
 colorBtn.addEventListener("click", () => selectComplianceMode(false));
+
+// Initialize default
+selectComplianceMode(false);
 
 
 // -----------------------------
