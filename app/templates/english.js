@@ -7,13 +7,19 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
+  // ensure there's an explicit source so server logic can react
   data.invoiceSource ||= "colorful";
 
-  // Use logo only if available
+  // use logo only if available; otherwise inline a simple SVG placeholder (no external fetch)
   const logoUrl = data.customLogoUrl || (data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "");
-  const logoHTML = logoUrl ? `<img src="${logoUrl}" alt="Logo" style="height:60px;margin-bottom:20px;" />` : "";
+  const logoHTML = logoUrl
+    ? `<img id="invoice-logo" src="${logoUrl}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`
+    : `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+         <rect width="180" height="40" fill="#2a3d66" rx="6" />
+         <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+       </svg>`;
 
-  // Chart (only if showChart is true)
+  // Chart (only if showChart is true). We do not fetch inline images here.
   const chartConfig = {
     type: "pie",
     data: {
@@ -32,144 +38,153 @@ async function generateInvoiceHTML(data) {
   const chartHTML = data.showChart
     ? `<div class="chart-container">
          <h2>${locale.breakdown || "Breakdown"}</h2>
-         <img src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="${locale.invoiceBreakdown || "Invoice Breakdown"}" style="max-width:500px;display:block;margin:auto;" />
+         <img id="invoice-chart" src="https://quickchart.io/chart?c=${chartConfigEncoded}" alt="${locale.invoiceBreakdown || "Invoice Breakdown"}" style="max-width:500px;display:block;margin:auto;" />
        </div>`
     : "";
 
-  // Watermark for basic + preview users
+  // Watermark for basic + preview users (kept lightweight)
   const watermarkHTML =
     data.isBasicUser && data.isPreview
-      ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
+      ? `<div class="watermark" data-debug="watermark-visible">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
       : "";
 
+  // Visible debug block (shows invoiceSource, presence of logo, showChart etc.)
+  const debugInfo = {
+    invoiceSource: data.invoiceSource,
+    hasLogoUrl: !!logoUrl,
+    showChart: !!data.showChart,
+    pagePreview: !!data.isPreview,
+    compliant: !!data.compliant,
+    itemsLength: items.length
+  };
+
+  const debugHTML = `<div id="__pdf_debug" style="font-family: monospace; font-size:10px; color:#111; background:#fffbdd; border:1px solid #f0e58c; padding:8px; margin-bottom:12px;">
+    <strong>DEBUG</strong>
+    <pre style="white-space:pre-wrap;margin:6px 0 0 0;">${JSON.stringify(debugInfo,null,2)}</pre>
+  </div>`;
+
+  // Enforce white background and print-color-adjust to avoid headless black pages
   return `
 <html>
   <head>
-  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-    
-    
+      /* -------------------------
+         IMPORTANT: Minimal, robust CSS for headless rendering
+         ------------------------- */
 
-
-      body {
-        font-family: 'Open Sans', Arial, sans-serif;
-        color: #000;
-        background: #f4f7fb;
-        margin: 0;
-        padding: 0;
-        min-height: 100vh;
-        position: relative;
+      /* Force white backgrounds and exact print colors */
+      html, body {
+        background: #ffffff !important;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        margin: 0; padding: 0;
+        font-family: Arial, Helvetica, sans-serif;
       }
 
+      /* Make sure shadows/overlays can't cover whole page in print */
       .container {
         max-width: 800px;
         margin: 20px auto;
-        padding: 30px 40px 60px;
-        background: #ffffff;
-
-        border-radius: 16px;
+        padding: 30px 24px 60px;
+        background: #ffffff !important;
+        border-radius: 8px;
         border: 1px solid #c5d0f9;
-        box-shadow: 0 6px 15px rgba(42,61,102,0.15);
+        box-shadow: none; /* remove shadow for print robustness */
         position: relative;
         z-index: 1;
       }
 
+      /* Table */
       .table {
         width: 100%;
         border-collapse: collapse;
         margin-bottom: 20px;
       }
-
       .table th, .table td {
-        padding: 12px;
+        padding: 10px;
         border: 1px solid #c5d0f9;
         text-align: left;
       }
-
       .table th {
         background-color: #dbe7ff;
         color: #2a3d66;
         font-weight: 600;
       }
-
       .table td {
-        background-color: #fdfdff;
+        background-color: #fff;
         color: #2a3d66;
       }
-
       .table tr:nth-child(even) td {
         background-color: #f6f9fe;
       }
-
       .table tfoot td {
         background-color: #dbe7ff;
         font-weight: bold;
         color: #2a3d66;
       }
 
-      .total p {
-        font-weight: bold;
-        color: #000;
-        font-size: 1.1em;
-      }
+      .total p { font-weight: bold; color: #000; font-size: 1.05em; }
 
+      /* Make watermark unobtrusive in case it overlaps */
       .watermark {
         position: fixed;
         top: 40%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 60px;
-        color: #ffcccc;
+        font-size: 44px;
+        color: rgba(255, 204, 204, 0.8);
         font-weight: 900;
         pointer-events: none;
         user-select: none;
-        z-index: 9999;
+        z-index: 99;
         white-space: nowrap;
       }
 
+      /* Footer */
       .footer {
-        position: static;
         max-width: 800px;
         margin: 40px auto 10px auto;
         padding: 10px;
-        line-height: 1.6;
         font-size: 11px;
-        border-radius: 0 0 16px 16px;
-        box-sizing: border-box;
-        color: #2a3d66;
-        background: #e8f0ff;
         border-top: 1px solid #c5d0f9;
         text-align: center;
+        color: #2a3d66;
+        background: #fff !important;
       }
 
-      .footer a {
-        color: #000;
-        text-decoration: none;
-        word-break: break-word;
-      }
+      /* Debug panel styling (visible in PDF) */
+      #__pdf_debug { page-break-inside: avoid; }
 
-      .footer a:hover {
-        text-decoration: underline;
-      }
+      /* Prevent any absolutely positioned full-screen overlay from hiding content */
+      [data-debug-overlay] { display: none !important; }
     </style>
   </head>
+
   <body>
     <div class="container">
-      ${logoHTML}
-      <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+      <!-- visible debug block so we can see the runtime state in the PDF -->
+      ${debugHTML}
 
-      <div class="invoice-header">
-        <div class="left">
+      <!-- logo -->
+      ${logoHTML}
+
+      <h1 style="margin-top:8px;">${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+
+      <div class="invoice-header" style="display:flex;justify-content:space-between;gap:12px;margin-bottom:18px;">
+        <div class="left" style="flex:1;">
           <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
           <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
         </div>
-        <div class="right">
+        <div class="right" style="flex:1;text-align:right;">
           <p><strong>${locale.customer || "Customer"}:</strong><br>${data.customerName || ""}</p>
           <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || ""}</a></p>
         </div>
       </div>
 
-      <table class="table">
+      <table class="table" role="table" aria-label="Invoice items">
         <thead>
           <tr>
             <th>${locale.item || "Item"}</th>
@@ -185,12 +200,12 @@ async function generateInvoiceHTML(data) {
             items.length
               ? items.map(item => `
                 <tr>
-                  <td>${item.name || ""}</td>
-                  <td>${item.quantity || ""}</td>
-                  <td>${item.price || ""}</td>
-                  <td>${item.net || "-"}</td>
-                  <td>${item.tax || "-"}</td>
-                  <td>${item.total || ""}</td>
+                  <td>${(item && item.name) ? item.name : ""}</td>
+                  <td>${item && item.quantity ? item.quantity : ""}</td>
+                  <td>${item && item.price ? item.price : ""}</td>
+                  <td>${item && item.net ? item.net : "-"}</td>
+                  <td>${item && item.tax ? item.tax : "-"}</td>
+                  <td>${item && item.total ? item.total : ""}</td>
                 </tr>`).join("")
               : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
           }
