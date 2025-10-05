@@ -102,55 +102,6 @@
     </select>
   </div>
 
-
-  <div class="flex items-center gap-2 mb-4">
-  <input type="checkbox" id="compliantCheckbox" class="h-4 w-4">
-  <label for="compliantCheckbox" class="text-gray-200 font-semibold">Generate compliant PDF/A-3b + ZUGFeRD (Pro only)</label>
-</div>
-
-
-
-<!-- Bulk CSV Section: Visible ONLY for Invoices -->
-<div id="bulkCsvSection" class="space-y-4 mt-12 p-4 border border-indigo-500 rounded-md bg-gray-800 shadow-md hidden">
-  <h2 class="text-lg font-bold text-indigo-300">📁 Bulk Generate from CSV</h2>
-  <p class="text-sm text-gray-400">Generate multiple PDFs by uploading a properly formatted CSV file.</p>
-
-  <label for="csvUpload" class="block font-semibold text-gray-200">Upload CSV File:</label>
-  <input type="file" id="csvUpload" accept=".csv"
-         class="block w-full text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md p-2" />
-
-<div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3 max-w-full overflow-x-auto whitespace-pre font-mono">
-Example CSV:<br />
-<code>
-customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium,iban,bic,compliant
-customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium,iban,bic,compliant
-Anna Moore,anna@example.com,12345,Germany,2025-03-25,PDF Template,1,10.00€,10.00,19.00%,1,15.00€,3.15€,18.15€,https://example.com/custom-logo.png,False,False,DE89370400440532013000,COBADEFFXXX,True
-John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.00,22.00%,1,110.00€,22.00€,132.00€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,True,True,SI56123456789012345,ABCDSI2X,False
-Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.00,19.00%,1,95.00€,18.05€,113.05€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,False,True,DE44500105175407324931,COBADEFFXXX,True
-Michael Brown,michael@example.com,12348,Slovenia,2025-06-01,Training,4,25.00€,100.00,22.00%,1,120.00€,26.40€,146.40€,https://example.com/logo4.png,True,False,SI56123456789067890,ABCDSI2X,False
-Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00€,70.00,19.00%,1,80.00€,15.20€,95.20€,https://example.com/logo5.png,False,False,DE89370400440532013001,COBADEFFXXX,True
-</code>
-</div>
-
-
-
-  <button id="csvGenerateBtn"
-          class="w-full py-3 bg-fuchsia-600 text-white rounded-md font-semibold hover:bg-fuchsia-700 transition-transform hover:scale-105 shadow-md">
-    🧾 Generate from CSV
-  </button>
-
-  <div id="csvProgress" class="text-sm text-indigo-200 mt-4 hidden">
-    <div class="mb-1">Progress: <span id="progressCount">0</span>/<span id="progressTotal">0</span></div>
-    <div class="w-full bg-gray-600 rounded-full h-2.5">
-      <div id="progressBar" class="bg-indigo-500 h-2.5 rounded-full transition-all" style="width: 0%"></div>
-    </div>
-  </div>
-
-  
-  <p id="csvResult" class="text-sm text-gray-300 mt-4"></p>
-</div>
-
-
 <!-- Compliance Mode Toggle -->
 <div id="complianceToggle" class="flex gap-4 mt-4">
   <button id="bwCompliantBtn" 
@@ -162,6 +113,36 @@ Sophia Wilson,sophia@example.com,12349,Germany,2025-07-10,Graphic Design,1,70.00
     🎨 Colorful
   </button>
 </div>
+
+<!-- Bulk CSV Section: Visible ONLY for Invoices -->
+<div id="bulkCsvSection" class="space-y-4 mt-8 p-4 border border-indigo-500 rounded-md bg-gray-800 shadow-md hidden">
+  <h2 class="text-lg font-bold text-indigo-300">📁 Bulk Generate from CSV</h2>
+  <p class="text-sm text-gray-400">Generate multiple PDFs by uploading a properly formatted CSV file and selecting the desired mode above.</p>
+
+  <label for="csvUpload" class="block font-semibold text-gray-200">Upload CSV File:</label>
+  <input type="file" id="csvUpload" accept=".csv"
+         class="block w-full text-sm text-gray-300 bg-gray-700 border border-gray-600 rounded-md p-2" />
+
+  <div id="csvExample" class="text-sm text-gray-400 bg-gray-900 border border-gray-700 rounded-md p-3 max-w-full overflow-x-auto whitespace-pre font-mono">
+Example CSV:<br />
+<code>
+customerName,customerEmail,orderId,country,date,itemName,quantity,price,itemTotal,itemTax,position,subtotal,totalTax,total,customLogoUrl,showChart,isPremium,iban,bic,compliant
+Anna Moore,anna@example.com,12345,Germany,2025-03-25,PDF Template,1,10.00€,10.00,19.00%,1,15.00€,3.15€,18.15€,https://example.com/custom-logo.png,False,False,DE89370400440532013000,COBADEFFXXX,True
+John Smith,john@example.com,12346,Slovenia,2025-04-12,Web Design,2,50.00€,100.00,22.00%,1,110.00€,22.00€,132.00€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,True,True,SI56123456789012345,ABCDSI2X,False
+Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.00,19.00%,1,95.00€,18.05€,113.05€,https://www.mwimmerdesign.de/wp-content/uploads/2023/01/abstraktes-logo.svg,False,True,DE44500105175407324931,COBADEFFXXX,True
+</code>
+  </div>
+
+  <div id="csvProgress" class="text-sm text-indigo-200 mt-4 hidden">
+    <div class="mb-1">Progress: <span id="progressCount">0</span>/<span id="progressTotal">0</span></div>
+    <div class="w-full bg-gray-600 rounded-full h-2.5">
+      <div id="progressBar" class="bg-indigo-500 h-2.5 rounded-full transition-all" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <p id="csvResult" class="text-sm text-gray-300 mt-4"></p>
+</div>
+
 
 
 <!-- JSON input for single PDF -->
