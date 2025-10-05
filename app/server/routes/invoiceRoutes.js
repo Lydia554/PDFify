@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const archiver = require("archiver");
+const fetch = require("node-fetch");
 
 const router = express.Router();
 
@@ -24,10 +25,7 @@ const locales = {
 const FORCE_PLAN = process.env.FORCE_PLAN;
 const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
-const log = (message, meta = {}) => {
- 
-  console.log("[InvoiceRoute]", message, meta);
-};
+const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta);
 
 // -----------------------------
 // PDF generation helper
@@ -38,32 +36,46 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   const page = await browser.newPage();
 
-  // 🧩 Hook into Puppeteer console and errors
-  page.on("console", msg => {
-    const type = msg.type();
-    log(`[Puppeteer Console:${type}]`, { text: msg.text() });
-  });
+  // Puppeteer console/error logging
+  page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
   page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message, stack: err.stack }));
   page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
 
-  // Explicit viewport and media type
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
 
   const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
   invoiceData.userClass = useCompliant ? "pdfa-clean" : "";
-
-  // Source tracking
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
+
   log("📦 Invoice source determined", { invoiceSource: invoiceData.invoiceSource });
 
-  // Default logo
-  if (user.planType === "free" && !invoiceData.customLogoUrl) {
+  // -----------------------------
+  // Handle logo safely as base64
+  // -----------------------------
+  if (invoiceData.customLogoUrl && invoiceData.customLogoUrl !== "example.png") {
+    try {
+      const isSvg = invoiceData.customLogoUrl.endsWith(".svg");
+      const mime = isSvg ? "image/svg+xml" : "image/png";
+      const resp = await fetch(invoiceData.customLogoUrl);
+      const buffer = await resp.arrayBuffer();
+      const base64Logo = Buffer.from(buffer).toString("base64");
+      invoiceData.customLogoUrl = `data:${mime};base64,${base64Logo}`;
+      log("✅ Logo embedded as base64", { length: invoiceData.customLogoUrl.length });
+    } catch (err) {
+      log("⚠️ Failed to fetch custom logo, fallback to inline SVG", { error: err.message });
+      invoiceData.customLogoUrl = null;
+    }
+  } else if (user.planType === "free") {
     invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
     log("🖼️ Default logo set for free user", { logo: invoiceData.customLogoUrl });
+  } else {
+    invoiceData.customLogoUrl = null;
   }
 
-  // HTML generation
+  // -----------------------------
+  // Generate HTML
+  // -----------------------------
   let html;
   try {
     html = useCompliant
@@ -75,10 +87,12 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     throw err;
   }
 
+  // -----------------------------
   // Load content into Puppeteer
+  // -----------------------------
   try {
     log("🧠 Setting page content...");
-    await page.setContent(html, { waitUntil: ["load", "domcontentloaded", "networkidle0"], timeout: 45000 });
+    await page.setContent(html, { waitUntil: ["load", "domcontentloaded", "networkidle0"], timeout: 60000 });
     await page.evaluateHandle("document.fonts.ready");
     const contentHTML = await page.content();
     log("📄 Page content length", { length: contentHTML.length });
@@ -87,7 +101,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     throw err;
   }
 
-  // Screenshot sanity check (to see if it renders visually)
+  // Screenshot for debugging
   try {
     const screenshotPath = path.join(os.tmpdir(), `preview-${Date.now()}.png`);
     await page.screenshot({ path: screenshotPath, fullPage: true });
@@ -96,7 +110,9 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     log("⚠️ Screenshot failed", { error: err.message });
   }
 
+  // -----------------------------
   // PDF generation
+  // -----------------------------
   let pdfBuffer;
   try {
     log("🖨️ Generating PDF with Puppeteer...");
@@ -193,7 +209,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       log("Processing invoice", { orderId, invoiceData });
 
-      // <-- pass req.invoiceSource here -->
       const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
       results.push({ pdfBuffer, orderId, pageCount, useCompliant: invoiceData.compliant });
       log("Invoice processed", { orderId, pageCount, compliant: invoiceData.compliant });
@@ -243,6 +258,5 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     log("Temporary files cleaned up", { tmpDir });
   }
 });
-
 
 module.exports = router;
