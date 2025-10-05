@@ -10,14 +10,33 @@ async function generateInvoiceHTML(data) {
   // ensure there's an explicit source so server logic can react
   data.invoiceSource ||= "colorful";
 
-  // use logo only if available; otherwise inline a simple SVG placeholder (no external fetch)
-  const logoUrl = data.customLogoUrl || (data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "");
-  const logoHTML = logoUrl
-    ? `<img id="invoice-logo" src="${logoUrl}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`
-    : `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-         <rect width="180" height="40" fill="#2a3d66" rx="6" />
-         <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-       </svg>`;
+// Auto-embed logo safely for Puppeteer (no remote requests)
+let logoHTML = "";
+
+if (data.customLogoUrl) {
+  // convert remote SVG/PNG into inline base64
+  try {
+    const isSvg = data.customLogoUrl.endsWith(".svg");
+    const mime = isSvg ? "image/svg+xml" : "image/png";
+    const logoResponse = await fetch(data.customLogoUrl);
+    const buffer = await logoResponse.arrayBuffer();
+    const base64Logo = Buffer.from(buffer).toString("base64");
+    logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64Logo}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
+  } catch (err) {
+    console.warn("[generateInvoiceHTML] ⚠️ Logo fetch failed, using fallback SVG", err);
+    logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+      <rect width="180" height="40" fill="#2a3d66" rx="6" />
+      <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+    </svg>`;
+  }
+} else {
+  // No custom logo provided → fallback SVG
+  logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+    <rect width="180" height="40" fill="#2a3d66" rx="6" />
+    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+  </svg>`;
+}
+
 
   // Chart (only if showChart is true). We do not fetch inline images here.
   const chartConfig = {
