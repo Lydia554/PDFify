@@ -1,28 +1,31 @@
-// invoiceRoutes.mjs
-import express from "express";
-import puppeteer from "puppeteer";
-import path from "path";
-import fs from "fs";
-import os from "os";
-import archiver from "archiver";
+const express = require("express");
+const puppeteer = require("puppeteer");
+const path = require("path");
+const fs = require("fs");
+const os = require("os");
+const archiver = require("archiver");
 
-import User from "../models/User.mjs";
-import authenticate from "../middleware/authenticate.mjs";
-import dualAuth from "../middleware/dualAuth.mjs";
-import { incrementUsage } from "../utils/usageUtils.mjs";
-import { generateInvoiceHTML } from "../../templates/english.js"; // free template
-import { generateInvoiceHTMLPro } from "../../templates/english-pro-compliant.js"; // pro compliant
-import { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } from "../Helpers/pdf-helpers.mjs";
+const router = express.Router();
 
-import slLocale from '../../locales/sl.json' assert { type: "json" };
-import enLocale from '../../locales/en.json' assert { type: "json" };
-import deLocale from '../../locales/de.json' assert { type: "json" };
+const User = require("../models/User");
+const authenticate = require("../middleware/authenticate");
+const dualAuth = require("../middleware/dualAuth");
+const { incrementUsage } = require("../utils/usageUtils");
+const { generateInvoiceHTML } = require("../../templates/english.js"); // free template
+const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js"); // pro compliant
+const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
 
-const locales = { sl: slLocale, en: enLocale, de: deLocale };
+const locales = {
+  sl: require('../../locales/sl.json'),
+  en: require('../../locales/en.json'),
+  de: require('../../locales/de.json'),
+};
+
 const FORCE_PLAN = process.env.FORCE_PLAN;
 const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
 const log = (message, meta = {}) => {
+ 
   console.log("[InvoiceRoute]", message, meta);
 };
 
@@ -30,10 +33,12 @@ const log = (message, meta = {}) => {
 // PDF generation helper
 // -----------------------------
 async function generatePdf(invoiceData, user, browser) {
-  const PDFLib = (await import("pdf-lib")).PDFDocument;
+  const PDFLib = require("pdf-lib");
   log("Starting PDF generation", { invoiceData, planType: user.planType });
 
   const page = await browser.newPage();
+
+  // Set viewport explicitly
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType('print');
 
@@ -42,20 +47,26 @@ async function generatePdf(invoiceData, user, browser) {
 
   log("Using template", { useCompliant });
 
+  // Set default logo for free users
   if (user.planType === "free" && !invoiceData.customLogoUrl) {
-    invoiceData.customLogoUrl = path.resolve("./public/images/Logo.png");
+    invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
     log("Set default logo for free user", { logo: invoiceData.customLogoUrl });
   }
 
+  // Generate HTML
   const html = useCompliant
     ? await generateInvoiceHTMLPro(invoiceData)
     : await generateInvoiceHTML(invoiceData);
 
   log("HTML generated for PDF", { length: html.length });
 
+ 
   await page.setContent(html, { waitUntil: "load", timeout: 30000 });
+
+ 
   await page.evaluateHandle('document.fonts.ready');
 
+  
   let pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
@@ -66,7 +77,7 @@ async function generatePdf(invoiceData, user, browser) {
 
   await page.close();
 
-  const pdfDoc = await PDFLib.load(pdfBuffer);
+  const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = pdfDoc.getPageCount();
   log("PDF page count", { pageCount });
 
@@ -84,7 +95,7 @@ async function generatePdf(invoiceData, user, browser) {
       log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
 
       if (isStandardInvoice) {
-        const pdfDocPro = await PDFLib.load(pdfBuffer);
+        const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
 
         const zugferdXml = generateZugferdXML(invoiceData);
         log("Generated ZUGFeRD XML", { length: zugferdXml.length });
@@ -119,11 +130,10 @@ async function generatePdf(invoiceData, user, browser) {
   return { pdfBuffer, pageCount };
 }
 
+
 // -----------------------------
 // /generate-invoice route
 // -----------------------------
-const router = express.Router();
-
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -143,6 +153,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
       const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
+
       invoiceData.iban ||= "";
       invoiceData.bic ||= "";
 
@@ -203,4 +214,4 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;
