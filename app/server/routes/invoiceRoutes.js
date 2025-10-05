@@ -32,7 +32,7 @@ const log = (message, meta = {}) => {
 // -----------------------------
 // PDF generation helper
 // -----------------------------
-async function generatePdf(invoiceData, user, browser) {
+async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
   log("Starting PDF generation", { invoiceData, planType: user.planType });
 
@@ -45,7 +45,9 @@ async function generatePdf(invoiceData, user, browser) {
   const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
   invoiceData.userClass = useCompliant ? "pdfa-clean" : "";
 
-  log("Using template", { useCompliant });
+  // Determine invoice source properly
+  invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
+  log("Invoice source determined", { invoiceSource: invoiceData.invoiceSource });
 
   // Set default logo for free users
   if (user.planType === "free" && !invoiceData.customLogoUrl) {
@@ -57,16 +59,12 @@ async function generatePdf(invoiceData, user, browser) {
   const html = useCompliant
     ? await generateInvoiceHTMLPro(invoiceData)
     : await generateInvoiceHTML(invoiceData);
-
   log("HTML generated for PDF", { length: html.length });
 
- 
   await page.setContent(html, { waitUntil: "load", timeout: 30000 });
-
- 
   await page.evaluateHandle('document.fonts.ready');
 
-  
+  // Generate PDF
   let pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
@@ -77,21 +75,16 @@ async function generatePdf(invoiceData, user, browser) {
 
   await page.close();
 
-  const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
-  const pageCount = pdfDoc.getPageCount();
+  const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
+  const pageCount = PDFDocument.getPageCount();
   log("PDF page count", { pageCount });
 
   const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
-  if (!usageAllowed) {
-    log("Usage limit reached", { userId: user._id });
-    throw new Error('Monthly limit reached.');
-  }
+  if (!usageAllowed) throw new Error('Monthly limit reached.');
 
   if (useCompliant) {
     try {
-      invoiceData.invoiceSource ||= "standard";
       const isStandardInvoice = invoiceData.invoiceSource === "standard";
-
       log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
 
       if (isStandardInvoice) {
@@ -101,13 +94,8 @@ async function generatePdf(invoiceData, user, browser) {
         log("Generated ZUGFeRD XML", { length: zugferdXml.length });
 
         await embedIccProfile(pdfDocPro);
-        log("ICC profile embedded");
-
         await embedXmp(pdfDocPro);
-        log("XMP metadata embedded");
-
         embedXmlIntoPdf(pdfDocPro, zugferdXml);
-        log("ZUGFeRD XML embedded into PDF");
 
         pdfBuffer = await pdfDocPro.save();
         log("PDF saved after ZUGFeRD embedding", { size: pdfBuffer.length });
@@ -129,7 +117,6 @@ async function generatePdf(invoiceData, user, browser) {
   log("PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
   return { pdfBuffer, pageCount };
 }
-
 
 // -----------------------------
 // /generate-invoice route
@@ -164,7 +151,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       log("Processing invoice", { orderId, invoiceData });
 
-      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser);
+      // <-- pass req.invoiceSource here -->
+      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
       results.push({ pdfBuffer, orderId, pageCount, useCompliant: invoiceData.compliant });
       log("Invoice processed", { orderId, pageCount, compliant: invoiceData.compliant });
     }
@@ -213,5 +201,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     log("Temporary files cleaned up", { tmpDir });
   }
 });
+
 
 module.exports = router;
