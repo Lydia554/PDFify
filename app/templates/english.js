@@ -1,3 +1,5 @@
+const fetch = require("node-fetch"); // make sure you have node-fetch installed
+
 /**
  * Generate HTML invoice for free/pro users
  * @param {Object} data
@@ -10,16 +12,37 @@ async function generateInvoiceHTML(data) {
   // ensure there's an explicit source so server logic can react
   data.invoiceSource ||= "colorful";
 
-  // use logo only if available; otherwise inline a simple SVG placeholder (no external fetch)
-  const logoUrl = data.customLogoUrl || (data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "");
-  const logoHTML = logoUrl
-    ? `<img id="invoice-logo" src="${logoUrl}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`
-    : `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-         <rect width="180" height="40" fill="#2a3d66" rx="6" />
-         <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-       </svg>`;
+  // ---- Logo handling ----
+  let logoHTML = "";
 
-  // Chart (only if showChart is true). We do not fetch inline images here.
+  if (data.customLogoUrl && !data.isFreeUser) {
+    // Pro/premium users: fetch remote logo and embed inline
+    try {
+      const isSvg = data.customLogoUrl.endsWith(".svg");
+      const mime = isSvg ? "image/svg+xml" : "image/png";
+      const response = await fetch(data.customLogoUrl);
+      const buffer = await response.arrayBuffer();
+      const base64Logo = Buffer.from(buffer).toString("base64");
+      logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64Logo}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
+    } catch (err) {
+      console.warn("[generateInvoiceHTML] ⚠️ Logo fetch failed, using fallback SVG", err);
+      logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+        <rect width="180" height="40" fill="#2a3d66" rx="6" />
+        <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+      </svg>`;
+    }
+  } else if (data.isFreeUser) {
+    // Free users: always use default logo
+    logoHTML = `<img id="invoice-logo" src="https://pdfify.pro/images/Logo.png" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
+  } else {
+    // fallback SVG if no custom logo
+    logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+      <rect width="180" height="40" fill="#2a3d66" rx="6" />
+      <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+    </svg>`;
+  }
+
+  // ---- Chart (only if showChart is true) ----
   const chartConfig = {
     type: "pie",
     data: {
@@ -42,16 +65,16 @@ async function generateInvoiceHTML(data) {
        </div>`
     : "";
 
-  // Watermark for basic + preview users (kept lightweight)
+  // ---- Watermark for basic + preview users ----
   const watermarkHTML =
     data.isBasicUser && data.isPreview
       ? `<div class="watermark" data-debug="watermark-visible">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
       : "";
 
-  // Visible debug block (shows invoiceSource, presence of logo, showChart etc.)
+  // ---- Debug info ----
   const debugInfo = {
     invoiceSource: data.invoiceSource,
-    hasLogoUrl: !!logoUrl,
+    hasLogoUrl: !!data.customLogoUrl,
     showChart: !!data.showChart,
     pagePreview: !!data.isPreview,
     compliant: !!data.compliant,
@@ -63,18 +86,13 @@ async function generateInvoiceHTML(data) {
     <pre style="white-space:pre-wrap;margin:6px 0 0 0;">${JSON.stringify(debugInfo,null,2)}</pre>
   </div>`;
 
-  // Enforce white background and print-color-adjust to avoid headless black pages
+  // ---- Return full HTML ----
   return `
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-      /* -------------------------
-         IMPORTANT: Minimal, robust CSS for headless rendering
-         ------------------------- */
-
-      /* Force white backgrounds and exact print colors */
       html, body {
         background: #ffffff !important;
         color: #000 !important;
@@ -83,8 +101,6 @@ async function generateInvoiceHTML(data) {
         margin: 0; padding: 0;
         font-family: Arial, Helvetica, sans-serif;
       }
-
-      /* Make sure shadows/overlays can't cover whole page in print */
       .container {
         max-width: 800px;
         margin: 20px auto;
@@ -92,83 +108,27 @@ async function generateInvoiceHTML(data) {
         background: #ffffff !important;
         border-radius: 8px;
         border: 1px solid #c5d0f9;
-        box-shadow: none; /* remove shadow for print robustness */
+        box-shadow: none;
         position: relative;
         z-index: 1;
       }
-
-      /* Table */
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-      }
-      .table th, .table td {
-        padding: 10px;
-        border: 1px solid #c5d0f9;
-        text-align: left;
-      }
-      .table th {
-        background-color: #dbe7ff;
-        color: #2a3d66;
-        font-weight: 600;
-      }
-      .table td {
-        background-color: #fff;
-        color: #2a3d66;
-      }
-      .table tr:nth-child(even) td {
-        background-color: #f6f9fe;
-      }
-      .table tfoot td {
-        background-color: #dbe7ff;
-        font-weight: bold;
-        color: #2a3d66;
-      }
-
+      .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+      .table th, .table td { padding: 10px; border: 1px solid #c5d0f9; text-align: left; }
+      .table th { background-color: #dbe7ff; color: #2a3d66; font-weight: 600; }
+      .table td { background-color: #fff; color: #2a3d66; }
+      .table tr:nth-child(even) td { background-color: #f6f9fe; }
+      .table tfoot td { background-color: #dbe7ff; font-weight: bold; color: #2a3d66; }
       .total p { font-weight: bold; color: #000; font-size: 1.05em; }
-
-      /* Make watermark unobtrusive in case it overlaps */
-      .watermark {
-        position: fixed;
-        top: 40%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 44px;
-        color: rgba(255, 204, 204, 0.8);
-        font-weight: 900;
-        pointer-events: none;
-        user-select: none;
-        z-index: 99;
-        white-space: nowrap;
-      }
-
-      /* Footer */
-      .footer {
-        max-width: 800px;
-        margin: 40px auto 10px auto;
-        padding: 10px;
-        font-size: 11px;
-        border-top: 1px solid #c5d0f9;
-        text-align: center;
-        color: #2a3d66;
-        background: #fff !important;
-      }
-
-      /* Debug panel styling (visible in PDF) */
+      .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 44px; color: rgba(255, 204, 204, 0.8); font-weight: 900; pointer-events: none; user-select: none; z-index: 99; white-space: nowrap; }
+      .footer { max-width: 800px; margin: 40px auto 10px auto; padding: 10px; font-size: 11px; border-top: 1px solid #c5d0f9; text-align: center; color: #2a3d66; background: #fff !important; }
       #__pdf_debug { page-break-inside: avoid; }
-
-      /* Prevent any absolutely positioned full-screen overlay from hiding content */
       [data-debug-overlay] { display: none !important; }
     </style>
   </head>
 
   <body>
     <div class="container">
-      <!-- visible debug block so we can see the runtime state in the PDF -->
       ${debugHTML}
-
-      <!-- logo -->
       ${logoHTML}
 
       <h1 style="margin-top:8px;">${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
@@ -200,29 +160,20 @@ async function generateInvoiceHTML(data) {
             items.length
               ? items.map(item => `
                 <tr>
-                  <td>${(item && item.name) ? item.name : ""}</td>
-                  <td>${item && item.quantity ? item.quantity : ""}</td>
-                  <td>${item && item.price ? item.price : ""}</td>
-                  <td>${item && item.net ? item.net : "-"}</td>
-                  <td>${item && item.tax ? item.tax : "-"}</td>
-                  <td>${item && item.total ? item.total : ""}</td>
+                  <td>${item?.name || ""}</td>
+                  <td>${item?.quantity || ""}</td>
+                  <td>${item?.price || ""}</td>
+                  <td>${item?.net ?? "-"}</td>
+                  <td>${item?.tax ?? "-"}</td>
+                  <td>${item?.total || ""}</td>
                 </tr>`).join("")
               : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
           }
         </tbody>
         <tfoot>
-          <tr>
-            <td colspan="5">${locale.subtotal || "Subtotal"}</td>
-            <td>${data.subtotal || ""}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.tax || "Tax"} (${data.taxRate || "21%"})</td>
-            <td>${data.tax || ""}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.total || "Total"}</td>
-            <td>${data.total || ""}</td>
-          </tr>
+          <tr><td colspan="5">${locale.subtotal || "Subtotal"}</td><td>${data.subtotal || ""}</td></tr>
+          <tr><td colspan="5">${locale.tax || "Tax"} (${data.taxRate || "21%"})</td><td>${data.tax || ""}</td></tr>
+          <tr><td colspan="5">${locale.total || "Total"}</td><td>${data.total || ""}</td></tr>
         </tfoot>
       </table>
 
