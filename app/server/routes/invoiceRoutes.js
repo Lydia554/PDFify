@@ -76,25 +76,46 @@ async function generatePdf(invoiceData, user, browser) {
     throw new Error('Monthly limit reached.');
   }
 
-  if (useCompliant) {
-    const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
-    const zugferdXml = generateZugferdXML(invoiceData);
-    log("Generated ZUGFeRD XML", { length: zugferdXml.length });
+if (useCompliant) {
+  try {
+    // Only generate ZUGFeRD if the invoice source is standard (not colorful)
+    const isStandardInvoice = invoiceData.invoiceSource === "standard";
+    log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
 
-    await embedIccProfile(pdfDocPro);
-    await embedXmp(pdfDocPro);
-    embedXmlIntoPdf(pdfDocPro, zugferdXml);
-    pdfBuffer = await pdfDocPro.save();
+    if (isStandardInvoice) {
+      const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
 
-    if (!DEBUG_MODE) {
-      const metadata = {};
-      pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
-      log("PDF/A-3b conversion done", { metadata });
+      const zugferdXml = generateZugferdXML(invoiceData);
+      log("Generated ZUGFeRD XML", { length: zugferdXml.length });
+
+      await embedIccProfile(pdfDocPro);
+      log("ICC profile embedded");
+
+      await embedXmp(pdfDocPro);
+      log("XMP metadata embedded");
+
+      embedXmlIntoPdf(pdfDocPro, zugferdXml);
+      log("ZUGFeRD XML embedded into PDF");
+
+      pdfBuffer = await pdfDocPro.save();
+      log("PDF saved after ZUGFeRD embedding", { size: pdfBuffer.length });
+
+      if (!DEBUG_MODE) {
+        const metadata = {};
+        pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
+        log("PDF/A-3b conversion done", { metadata });
+      }
+    } else {
+      log("Skipping ZUGFeRD and PDF/A for non-standard invoice (e.g., colorful)", { invoiceSource: invoiceData.invoiceSource });
     }
+  } catch (err) {
+    log("Error in compliant PDF processing", { error: err.message, stack: err.stack });
+    throw err; // bubble up to route handler
   }
+}
 
-  log("PDF generation complete", { pageCount, useCompliant });
-  return { pdfBuffer, pageCount };
+log("PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
+return { pdfBuffer, pageCount };
 }
 
 // -----------------------------
