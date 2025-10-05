@@ -1,31 +1,28 @@
-const express = require("express");
-const puppeteer = require("puppeteer");
-const path = require("path");
-const fs = require("fs");
-const os = require("os");
-const archiver = require("archiver");
+// invoiceRoutes.mjs
+import express from "express";
+import puppeteer from "puppeteer";
+import path from "path";
+import fs from "fs";
+import os from "os";
+import archiver from "archiver";
 
-const router = express.Router();
+import User from "../models/User.mjs";
+import authenticate from "../middleware/authenticate.mjs";
+import dualAuth from "../middleware/dualAuth.mjs";
+import { incrementUsage } from "../utils/usageUtils.mjs";
+import { generateInvoiceHTML } from "../../templates/english.js"; // free template
+import { generateInvoiceHTMLPro } from "../../templates/english-pro-compliant.js"; // pro compliant
+import { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } from "../Helpers/pdf-helpers.mjs";
 
-const User = require("../models/User");
-const authenticate = require("../middleware/authenticate");
-const dualAuth = require("../middleware/dualAuth");
-const { incrementUsage } = require("../utils/usageUtils");
-const { generateInvoiceHTML } = require("../../templates/english.js"); // free template
-const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js"); // pro compliant
-const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
+import slLocale from '../../locales/sl.json' assert { type: "json" };
+import enLocale from '../../locales/en.json' assert { type: "json" };
+import deLocale from '../../locales/de.json' assert { type: "json" };
 
-const locales = {
-  sl: require('../../locales/sl.json'),
-  en: require('../../locales/en.json'),
-  de: require('../../locales/de.json'),
-};
-
+const locales = { sl: slLocale, en: enLocale, de: deLocale };
 const FORCE_PLAN = process.env.FORCE_PLAN;
 const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
 const log = (message, meta = {}) => {
- 
   console.log("[InvoiceRoute]", message, meta);
 };
 
@@ -33,159 +30,100 @@ const log = (message, meta = {}) => {
 // PDF generation helper
 // -----------------------------
 async function generatePdf(invoiceData, user, browser) {
-  const PDFLib = require("pdf-lib");
+  const PDFLib = (await import("pdf-lib")).PDFDocument;
   log("Starting PDF generation", { invoiceData, planType: user.planType });
 
   const page = await browser.newPage();
+  await page.setViewport({ width: 1200, height: 1600 });
+  await page.emulateMediaType('print');
 
-  try {
-    // -----------------------------
-    // Puppeteer debug / environment logs
-    // -----------------------------
-    log("Setting viewport and emulating print media");
-    await page.setViewport({ width: 1200, height: 1600 });
-    await page.emulateMediaType('print');
+  const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
+  invoiceData.userClass = useCompliant ? "pdfa-clean" : "";
 
-    // Enable network request logging to see if images fail
-    page.on('requestfailed', req => {
-      log("Request failed", { url: req.url(), failure: req.failure() });
-    });
+  log("Using template", { useCompliant });
 
-    page.on('console', msg => {
-      log("Console message from page", { type: msg.type(), text: msg.text() });
-    });
+  if (user.planType === "free" && !invoiceData.customLogoUrl) {
+    invoiceData.customLogoUrl = path.resolve("./public/images/Logo.png");
+    log("Set default logo for free user", { logo: invoiceData.customLogoUrl });
+  }
 
-    // -----------------------------
-    // Template selection
-    // -----------------------------
-    const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
-    invoiceData.userClass = useCompliant ? "pdfa-clean" : "";
-    log("Using template", { useCompliant });
+  const html = useCompliant
+    ? await generateInvoiceHTMLPro(invoiceData)
+    : await generateInvoiceHTML(invoiceData);
 
-    if (user.planType === "free" && !invoiceData.customLogoUrl) {
-      invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-      log("Set default logo for free user", { logo: invoiceData.customLogoUrl });
-    }
+  log("HTML generated for PDF", { length: html.length });
 
-    const html = useCompliant
-      ? await generateInvoiceHTMLPro(invoiceData)
-      : await generateInvoiceHTML(invoiceData);
-    log("HTML generated for PDF", { length: html.length });
+  await page.setContent(html, { waitUntil: "load", timeout: 30000 });
+  await page.evaluateHandle('document.fonts.ready');
 
-    // -----------------------------
-    // Set HTML content with timeout + debug
-    // -----------------------------
+  let pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    displayHeaderFooter: false,
+    preferCSSPageSize: true
+  });
+
+  await page.close();
+
+  const pdfDoc = await PDFLib.load(pdfBuffer);
+  const pageCount = pdfDoc.getPageCount();
+  log("PDF page count", { pageCount });
+
+  const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
+  if (!usageAllowed) {
+    log("Usage limit reached", { userId: user._id });
+    throw new Error('Monthly limit reached.');
+  }
+
+  if (useCompliant) {
     try {
-      await page.setContent(html, { waitUntil: "load", timeout: 45000 });
-      log("Page content set successfully");
+      invoiceData.invoiceSource ||= "standard";
+      const isStandardInvoice = invoiceData.invoiceSource === "standard";
+
+      log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
+
+      if (isStandardInvoice) {
+        const pdfDocPro = await PDFLib.load(pdfBuffer);
+
+        const zugferdXml = generateZugferdXML(invoiceData);
+        log("Generated ZUGFeRD XML", { length: zugferdXml.length });
+
+        await embedIccProfile(pdfDocPro);
+        log("ICC profile embedded");
+
+        await embedXmp(pdfDocPro);
+        log("XMP metadata embedded");
+
+        embedXmlIntoPdf(pdfDocPro, zugferdXml);
+        log("ZUGFeRD XML embedded into PDF");
+
+        pdfBuffer = await pdfDocPro.save();
+        log("PDF saved after ZUGFeRD embedding", { size: pdfBuffer.length });
+
+        if (!DEBUG_MODE) {
+          const metadata = {};
+          pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
+          log("PDF/A-3b conversion done", { metadata });
+        }
+      } else {
+        log("Skipping ZUGFeRD and PDF/A for non-standard invoice", { invoiceSource: invoiceData.invoiceSource });
+      }
     } catch (err) {
-      log("Error setting page content", { error: err.message });
+      log("Error in compliant PDF processing", { error: err.message, stack: err.stack });
       throw err;
     }
-
-    // Wait for fonts to load (Google Fonts fix)
-    try {
-      await page.evaluateHandle('document.fonts.ready');
-      log("Fonts ready");
-    } catch (err) {
-      log("Font loading failed, PDF may be blank", { error: err.message });
-    }
-
-    // -----------------------------
-    // Generate PDF with fallback options
-    // -----------------------------
-    let pdfBuffer;
-    try {
-      pdfBuffer = await page.pdf({
-        format: "A4",
-        printBackground: true,
-        margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-        displayHeaderFooter: false,
-        preferCSSPageSize: true
-      });
-      log("PDF generated successfully", { length: pdfBuffer.length });
-    } catch (err) {
-      log("PDF generation failed, retrying with fallback options", { error: err.message });
-      pdfBuffer = await page.pdf({ format: "A4", printBackground: true });
-    }
-
-    await page.close();
-
-    // -----------------------------
-    // PDF-lib processing
-    // -----------------------------
-    const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
-    const pageCount = pdfDoc.getPageCount();
-    log("PDF page count", { pageCount });
-
-    const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
-    if (!usageAllowed) {
-      log("Usage limit reached", { userId: user._id });
-      throw new Error('Monthly limit reached.');
-    }
-
-    // Compliant PDF handling...
-    if (useCompliant) {
-      try {
-        invoiceData.invoiceSource ||= "standard";
-        const isStandardInvoice = invoiceData.invoiceSource === "standard";
-        log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
-
-        if (isStandardInvoice) {
-          const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
-          const zugferdXml = generateZugferdXML(invoiceData);
-          log("Generated ZUGFeRD XML", { length: zugferdXml.length });
-
-          await embedIccProfile(pdfDocPro);
-          log("ICC profile embedded");
-          await embedXmp(pdfDocPro);
-          log("XMP metadata embedded");
-
-          embedXmlIntoPdf(pdfDocPro, zugferdXml);
-          log("ZUGFeRD XML embedded into PDF");
-
-          pdfBuffer = await pdfDocPro.save();
-          log("PDF saved after ZUGFeRD embedding", { size: pdfBuffer.length });
-
-          if (!DEBUG_MODE) {
-            const metadata = {};
-            pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
-            log("PDF/A-3b conversion done", { metadata });
-          }
-        }
-      } catch (err) {
-        log("Error in compliant PDF processing", { error: err.message, stack: err.stack });
-        throw err;
-      }
-    }
-
-    log("PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
-    return { pdfBuffer, pageCount };
-
-  } catch (err) {
-    await page.close().catch(() => {});
-    throw err;
   }
+
+  log("PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
+  return { pdfBuffer, pageCount };
 }
-
-// -----------------------------
-// Puppeteer launch with debug
-// -----------------------------
-browser = await puppeteer.launch({
-  headless: true,
-  args: [
-    "--no-sandbox",
-    "--disable-setuid-sandbox",
-    "--disable-dev-shm-usage", 
-    "--font-render-hinting=none" 
-  ],
-  dumpio: true, 
-});
-
 
 // -----------------------------
 // /generate-invoice route
 // -----------------------------
+const router = express.Router();
+
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -205,7 +143,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
       const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
-
       invoiceData.iban ||= "";
       invoiceData.bic ||= "";
 
@@ -266,4 +203,4 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
