@@ -207,49 +207,65 @@ Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.
 
 
   <script >
+// === MAIN MODE TOGGLE ===
 const devBtn = document.getElementById('developerModeBtn');
 const friendlyBtn = document.getElementById('friendlyModeBtn');
 const devSection = document.getElementById('developerMode');
 const friendlySection = document.getElementById('friendlyMode');
 
+// Helper: toggle persistent checkmarks
+function toggleCheck(group, selectedBtn) {
+  group.forEach(btn => {
+    btn.textContent = btn.textContent.replace(' ✅', '');
+  });
+  selectedBtn.textContent += ' ✅'; 
+}
+
+// Main mode selection
+function selectMainMode(mode) {
+  if (mode === 'developer') {
+    devSection.style.display = 'block';
+    friendlySection.style.display = 'none';
+    toggleCheck([devBtn, friendlyBtn], devBtn);
+  } else {
+    devSection.style.display = 'none';
+    friendlySection.style.display = 'block';
+    toggleCheck([devBtn, friendlyBtn], friendlyBtn);
+  }
+}
+
+devBtn.addEventListener('click', () => selectMainMode('developer'));
+friendlyBtn.addEventListener('click', () => selectMainMode('friendly'));
+
+// Initialize default
+selectMainMode('developer');
+
+
+// === COMPLIANCE MODE TOGGLE ===
+let isCompliant = false;
 const bwBtn = document.getElementById("bwCompliantBtn");
 const colorBtn = document.getElementById("colorfulBtn");
 
+function selectComplianceMode(compliant) {
+  isCompliant = compliant;
 
-function updateCheck(button) {
- 
-  [devBtn, friendlyBtn, bwBtn, colorBtn].forEach(btn => {
-    btn.innerHTML = btn.innerHTML.replace(' ✅','');
-  });
-
-  button.innerHTML += ' ✅';
+  if (compliant) {
+    // B/W active
+    bwBtn.textContent = '🖤 B/W Compliant ✅';
+    colorBtn.textContent = '🎨 Colorful';
+  } else {
+    // Colorful active
+    bwBtn.textContent = '🖤 B/W Compliant';
+    colorBtn.textContent = '🎨 Colorful ✅';
+  }
 }
 
-// Developer/Friendly toggle
-devBtn.addEventListener('click', () => {
-  devSection.style.display = 'block';
-  friendlySection.style.display = 'none';
-  updateCheck(devBtn);
-});
+bwBtn.addEventListener("click", () => selectComplianceMode(true));
+colorBtn.addEventListener("click", () => selectComplianceMode(false));
 
-friendlyBtn.addEventListener('click', () => {
-  devSection.style.display = 'none';
-  friendlySection.style.display = 'block';
-  updateCheck(friendlyBtn);
-});
+// Initialize default: Colorful
+selectComplianceMode(false);
 
-// Compliance toggle
-bwBtn.addEventListener('click', () => {
-  updateCheck(bwBtn);
-});
-
-colorBtn.addEventListener('click', () => {
-  updateCheck(colorBtn);
-});
-
-
-updateCheck(devBtn); 
-updateCheck(colorBtn); 
 
 // === MOBILE MENU ===
 const menuBtn = document.getElementById("mobileMenuBtn");
