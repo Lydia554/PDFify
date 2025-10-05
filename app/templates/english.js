@@ -7,6 +7,9 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
+
+   data.invoiceSource ||= "colorful";
+
   // Free users always get PDFify logo
   const logoUrl = "https://pdfify.pro/images/Logo.png";
 

@@ -9,6 +9,8 @@ async function generateInvoiceHTMLPro(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
+   data.invoiceSource ||= "standard";
+
   // Use user-provided logo or default
   const logoUrl = data.customLogoUrl || "https://pdfify.pro/images/Logo.png";
 

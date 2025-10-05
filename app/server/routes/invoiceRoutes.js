@@ -25,7 +25,7 @@ const FORCE_PLAN = process.env.FORCE_PLAN;
 const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
 const log = (message, meta = {}) => {
-  // Replace with Graylog logger if you have one; here we just console.log
+ 
   console.log("[InvoiceRoute]", message, meta);
 };
 
@@ -76,47 +76,55 @@ async function generatePdf(invoiceData, user, browser) {
     throw new Error('Monthly limit reached.');
   }
 
-if (useCompliant) {
-  try {
-    // Only generate ZUGFeRD if the invoice source is standard (not colorful)
-    const isStandardInvoice = invoiceData.invoiceSource === "standard";
-    log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
+  if (useCompliant) {
+    try {
+      // ------------------------
+      // FIX: Set invoiceSource if missing
+      invoiceData.invoiceSource ||= "standard";
+      const isStandardInvoice = invoiceData.invoiceSource === "standard";
 
-    if (isStandardInvoice) {
-      const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
+      log("Compliant check", { 
+        useCompliant, 
+        invoiceSource: invoiceData.invoiceSource, 
+        isStandardInvoice 
+      });
 
-      const zugferdXml = generateZugferdXML(invoiceData);
-      log("Generated ZUGFeRD XML", { length: zugferdXml.length });
+      if (isStandardInvoice) {
+        const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
 
-      await embedIccProfile(pdfDocPro);
-      log("ICC profile embedded");
+        const zugferdXml = generateZugferdXML(invoiceData);
+        log("Generated ZUGFeRD XML", { length: zugferdXml.length });
 
-      await embedXmp(pdfDocPro);
-      log("XMP metadata embedded");
+        await embedIccProfile(pdfDocPro);
+        log("ICC profile embedded");
 
-      embedXmlIntoPdf(pdfDocPro, zugferdXml);
-      log("ZUGFeRD XML embedded into PDF");
+        await embedXmp(pdfDocPro);
+        log("XMP metadata embedded");
 
-      pdfBuffer = await pdfDocPro.save();
-      log("PDF saved after ZUGFeRD embedding", { size: pdfBuffer.length });
+        embedXmlIntoPdf(pdfDocPro, zugferdXml);
+        log("ZUGFeRD XML embedded into PDF");
 
-      if (!DEBUG_MODE) {
-        const metadata = {};
-        pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
-        log("PDF/A-3b conversion done", { metadata });
+        pdfBuffer = await pdfDocPro.save();
+        log("PDF saved after ZUGFeRD embedding", { size: pdfBuffer.length });
+
+        if (!DEBUG_MODE) {
+          const metadata = {};
+          pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
+          log("PDF/A-3b conversion done", { metadata });
+        }
+      } else {
+        log("Skipping ZUGFeRD and PDF/A for non-standard invoice", { invoiceSource: invoiceData.invoiceSource });
       }
-    } else {
-      log("Skipping ZUGFeRD and PDF/A for non-standard invoice (e.g., colorful)", { invoiceSource: invoiceData.invoiceSource });
+    } catch (err) {
+      log("Error in compliant PDF processing", { error: err.message, stack: err.stack });
+      throw err;
     }
-  } catch (err) {
-    log("Error in compliant PDF processing", { error: err.message, stack: err.stack });
-    throw err; // bubble up to route handler
   }
+
+  log("PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
+  return { pdfBuffer, pageCount };
 }
 
-log("PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
-return { pdfBuffer, pageCount };
-}
 
 // -----------------------------
 // /generate-invoice route
