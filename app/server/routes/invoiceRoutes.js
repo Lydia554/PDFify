@@ -34,87 +34,129 @@ const log = (message, meta = {}) => {
 // -----------------------------
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
-  log("Starting PDF generation", { invoiceData, planType: user.planType });
+  log("🧾 Starting PDF generation", { planType: user.planType, compliant: invoiceData.compliant });
 
   const page = await browser.newPage();
 
-  // Set viewport explicitly
+  // 🧩 Hook into Puppeteer console and errors
+  page.on("console", msg => {
+    const type = msg.type();
+    log(`[Puppeteer Console:${type}]`, { text: msg.text() });
+  });
+  page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message, stack: err.stack }));
+  page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
+
+  // Explicit viewport and media type
   await page.setViewport({ width: 1200, height: 1600 });
-  await page.emulateMediaType('print');
+  await page.emulateMediaType("print");
 
   const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
   invoiceData.userClass = useCompliant ? "pdfa-clean" : "";
 
-  // Determine invoice source properly
+  // Source tracking
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
-  log("Invoice source determined", { invoiceSource: invoiceData.invoiceSource });
+  log("📦 Invoice source determined", { invoiceSource: invoiceData.invoiceSource });
 
-  // Set default logo for free users
+  // Default logo
   if (user.planType === "free" && !invoiceData.customLogoUrl) {
     invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-    log("Set default logo for free user", { logo: invoiceData.customLogoUrl });
+    log("🖼️ Default logo set for free user", { logo: invoiceData.customLogoUrl });
   }
 
-  // Generate HTML
-  const html = useCompliant
-    ? await generateInvoiceHTMLPro(invoiceData)
-    : await generateInvoiceHTML(invoiceData);
-  log("HTML generated for PDF", { length: html.length });
+  // HTML generation
+  let html;
+  try {
+    html = useCompliant
+      ? await generateInvoiceHTMLPro(invoiceData)
+      : await generateInvoiceHTML(invoiceData);
+    log("✅ HTML generated", { htmlLength: html.length });
+  } catch (err) {
+    log("❌ Error generating HTML", { error: err.message, stack: err.stack });
+    throw err;
+  }
 
-  await page.setContent(html, { waitUntil: "load", timeout: 30000 });
-  await page.evaluateHandle('document.fonts.ready');
+  // Load content into Puppeteer
+  try {
+    log("🧠 Setting page content...");
+    await page.setContent(html, { waitUntil: ["load", "domcontentloaded", "networkidle0"], timeout: 45000 });
+    await page.evaluateHandle("document.fonts.ready");
+    const contentHTML = await page.content();
+    log("📄 Page content length", { length: contentHTML.length });
+  } catch (err) {
+    log("❌ Error setting page content", { error: err.message, stack: err.stack });
+    throw err;
+  }
 
-  // Generate PDF
-  let pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    displayHeaderFooter: false,
-    preferCSSPageSize: true
-  });
+  // Screenshot sanity check (to see if it renders visually)
+  try {
+    const screenshotPath = path.join(os.tmpdir(), `preview-${Date.now()}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    log("📸 Screenshot captured for debug", { path: screenshotPath });
+  } catch (err) {
+    log("⚠️ Screenshot failed", { error: err.message });
+  }
 
-  await page.close();
+  // PDF generation
+  let pdfBuffer;
+  try {
+    log("🖨️ Generating PDF with Puppeteer...");
+    pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+      displayHeaderFooter: false,
+      preferCSSPageSize: true
+    });
+    log("📦 PDF buffer created", { size: pdfBuffer.length });
+  } catch (err) {
+    log("❌ PDF generation error", { error: err.message, stack: err.stack });
+    throw err;
+  } finally {
+    await page.close();
+  }
 
+  // Count pages
   const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = PDFDocument.getPageCount();
-  log("PDF page count", { pageCount });
+  log("📑 PDF page count", { pageCount });
 
+  // Increment usage
   const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
-  if (!usageAllowed) throw new Error('Monthly limit reached.');
+  if (!usageAllowed) throw new Error("Monthly limit reached.");
 
+  // Optional compliant processing
   if (useCompliant) {
     try {
       const isStandardInvoice = invoiceData.invoiceSource === "standard";
-      log("Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
+      log("🧩 Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
 
       if (isStandardInvoice) {
         const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
-
         const zugferdXml = generateZugferdXML(invoiceData);
-        log("Generated ZUGFeRD XML", { length: zugferdXml.length });
+        log("🔧 Generated ZUGFeRD XML", { length: zugferdXml.length });
 
         await embedIccProfile(pdfDocPro);
         await embedXmp(pdfDocPro);
         embedXmlIntoPdf(pdfDocPro, zugferdXml);
 
         pdfBuffer = await pdfDocPro.save();
-        log("PDF saved after ZUGFeRD embedding", { size: pdfBuffer.length });
+        log("💾 Saved PDF after embedding XML", { newSize: pdfBuffer.length });
 
         if (!DEBUG_MODE) {
           const metadata = {};
           pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
-          log("PDF/A-3b conversion done", { metadata });
+          log("✅ PDF/A-3b conversion done", { metadata });
         }
       } else {
-        log("Skipping ZUGFeRD and PDF/A for non-standard invoice", { invoiceSource: invoiceData.invoiceSource });
+        log("⏩ Skipping ZUGFeRD/PDF-A for non-standard invoice", { invoiceSource: invoiceData.invoiceSource });
       }
     } catch (err) {
-      log("Error in compliant PDF processing", { error: err.message, stack: err.stack });
+      log("❌ Error in compliant PDF processing", { error: err.message, stack: err.stack });
       throw err;
     }
   }
 
-  log("PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
+  log("🏁 PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
   return { pdfBuffer, pageCount };
 }
 
