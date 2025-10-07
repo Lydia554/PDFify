@@ -108,33 +108,33 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     const results = [];
     let totalPagesToCount = 0; 
+// -----------------------------
+// Generate PDFs
+// -----------------------------
+for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
+  const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
+  invoiceData.iban ||= "";
+  invoiceData.bic ||= "";
+  const country = (invoiceData.country || "").toLowerCase();
+  const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
+  invoiceData.locale = locales[lang] || locales["en"];
+  invoiceData.isFreeUser = user.planType === "free";
 
-    // -----------------------------
-    // Generate PDFs
-    // -----------------------------
-    for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
-      const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
-      invoiceData.iban ||= "";
-      invoiceData.bic ||= "";
-      const country = (invoiceData.country || "").toLowerCase();
-      const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
-      invoiceData.locale = locales[lang] || locales["en"];
-      invoiceData.isFreeUser = user.planType === "free";
+  const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+  const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  results.push({ pdfBuffer, orderId });
 
-      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
-      const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      results.push({ pdfBuffer, orderId });
+  // -----------------------------
+  // Increment usage per PDF per page
+  // -----------------------------
+  if (!invoiceData.isPreview) {
+    await incrementUsage(user, pageCount, false, FORCE_PLAN);
+  } else {
+    // Increment preview separately
+    await incrementUsage(user, 0, true);
+  }
+}
 
-      // -----------------------------
-      // Count pages for usage (skip previews)
-      // -----------------------------
-      if (!invoiceData.isPreview) {
-        totalPagesToCount += pageCount;
-      } else {
-        // Increment preview separately
-        await incrementUsage(user, 0, true);
-      }
-    }
 
     // -----------------------------
     // Increment usage for total pages in batch
