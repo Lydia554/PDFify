@@ -865,125 +865,111 @@ switch (userData.planType) {
   .catch(error => console.error('Error fetching Stripe key:', error));
 
 
+fetchUserData().then(userData => {
+  const endpoint = document.getElementById('endpoint');
+  const csvSection = document.getElementById('bulkCsvSection');
+  const csvUpload = document.getElementById("csvUpload");
+  const csvGenerateBtn = document.getElementById("csvGenerateBtn");
+  const csvProgress = document.getElementById("csvProgress");
+  const progressCount = document.getElementById("progressCount");
+  const progressTotal = document.getElementById("progressTotal");
+  const progressBar = document.getElementById("progressBar");
+  const csvResult = document.getElementById("csvResult");
 
+  // Toggle CSV section visibility
+  function toggleCsvSection() {
+    const isInvoice = endpoint.value === 'generate-invoice';
+    csvSection.classList.toggle('hidden', !isInvoice);
+  }
 
-const endpoint = document.getElementById('endpoint');
-const csvSection = document.getElementById('bulkCsvSection');
-const csvUpload = document.getElementById("csvUpload");
-const csvGenerateBtn = document.getElementById("csvGenerateBtn");
-const csvProgress = document.getElementById("csvProgress");
-const progressCount = document.getElementById("progressCount");
-const progressTotal = document.getElementById("progressTotal");
-const progressBar = document.getElementById("progressBar");
-const csvResult = document.getElementById("csvResult");
+  endpoint.addEventListener('change', toggleCsvSection);
+  document.addEventListener('DOMContentLoaded', toggleCsvSection);
 
-// Toggle CSV section visibility
-function toggleCsvSection() {
-  const isInvoice = endpoint.value === 'generate-invoice';
-  csvSection.classList.toggle('hidden', !isInvoice);
-}
+  // CSV Handling
+  csvGenerateBtn.addEventListener('click', async () => {
+    if (!csvUpload.files.length) return alert("Please upload a CSV file.");
+    csvProgress.classList.remove("hidden");
+    csvResult.textContent = "";
 
-endpoint.addEventListener('change', toggleCsvSection);
-document.addEventListener('DOMContentLoaded', toggleCsvSection);
+    const apiKey = document.getElementById("apiKey").value.trim();
+    if (!apiKey) return alert("API key is required.");
 
-// -----------------------------
-// CSV Handling
-// -----------------------------
-csvGenerateBtn.addEventListener('click', async () => {
-  if (!csvUpload.files.length) return alert("Please upload a CSV file.");
-  csvProgress.classList.remove("hidden");
-  csvResult.textContent = "";
+    const file = csvUpload.files[0];
+    try {
+      const text = await file.text();
+      const rows = parseCSV(text);  
+      if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
-  const apiKey = document.getElementById("apiKey").value.trim();
-  if (!apiKey) return alert("API key is required.");
+      const groupedInvoices = groupRowsByOrderId(rows);      
+      const userPlan = userData.planType; 
+      const isPro = userPlan === "pro";
+      const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
 
-  const file = csvUpload.files[0];
+      const requests = groupedInvoices
+        .map(rowsToInvoiceJson)
+        .map(data => ({
+          data,
+          isPreview: false,
+          compliant: useCompliant 
+        }));
 
-  console.log("[CSV] Uploading file:", file.name);
+      const total = requests.length;
+      let completed = 0;
+      progressTotal.textContent = total;
+      progressBar.style.width = '0%';
+      progressCount.textContent = '0';
 
-  try {
-    const text = await file.text();
-    console.log("[CSV] File read successfully, length:", text.length);
+      const zip = new JSZip();
+      const updateProgress = () => {
+        completed++;
+        const percent = Math.round((completed / total) * 100);
+        progressBar.style.width = `${percent}%`;
+        progressCount.textContent = completed;
+      };
 
-    const rows = parseCSV(text);  
-    console.log("[CSV] Parsed rows:", rows.length);
+      for (const req of requests) {
+        const res = await fetch('/api/generate-invoice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({ requests: [req] })
+        });
 
-    if (!rows.length) throw new Error("CSV file is empty or invalid.");
+        if (!res.ok) throw new Error(await res.text());
 
-    const groupedInvoices = groupRowsByOrderId(rows);      
-    const userPlan = userData.planType; 
-const isPro = userPlan === "pro";
-const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
+        const blob = await res.blob();
+        const contentDisposition = res.headers.get('Content-Disposition');
+        let filename = 'invoice.pdf';
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
+          if (match) filename = decodeURIComponent(match[1]);
+        }
 
-const requests = groupedInvoices
-  .map(rowsToInvoiceJson)
-  .map(data => ({
-    data,
-    isPreview: false,
-    compliant: useCompliant 
-  }));
-
-
-    console.log(`[CSV] Prepared ${requests.length} invoice requests`);
-
-    const total = requests.length;
-    let completed = 0;
-    progressTotal.textContent = total;
-    progressBar.style.width = '0%';
-    progressCount.textContent = '0';
-
-    const zip = new JSZip();
-
-    const updateProgress = () => {
-      completed++;
-      const percent = Math.round((completed / total) * 100);
-      progressBar.style.width = `${percent}%`;
-      progressCount.textContent = completed;
-      console.log(`[CSV] Progress: ${completed}/${total}`);
-    };
-
-    for (const req of requests) {
-      console.log("[CSV] Sending invoice request:", req.data.orderId);
-      const res = await fetch('/api/generate-invoice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ requests: [req] })
-      });
-
-      console.log(`[CSV] Response status for ${req.data.orderId}: ${res.status}`);
-
-      if (!res.ok) throw new Error(await res.text());
-
-      const blob = await res.blob();
-      console.log(`[CSV] Blob received for ${req.data.orderId}, size: ${blob.size}`);
-
-      const contentDisposition = res.headers.get('Content-Disposition');
-      let filename = 'invoice.pdf';
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
-        if (match) filename = decodeURIComponent(match[1]);
+        zip.file(filename, await blob.arrayBuffer());
+        updateProgress();
       }
 
-      zip.file(filename, await blob.arrayBuffer());
-      updateProgress();
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "invoices.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+
+      csvResult.innerHTML = `<span class="text-green-600">✅ ${total} invoices downloaded.</span>`;
+    } catch (err) {
+      csvResult.innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
     }
+  });
 
-    const zipBlob = await zip.generateAsync({ type: "blob" });
-    const url = URL.createObjectURL(zipBlob);
-    console.log("[CSV] ZIP file generated:", url);
+  // Initialize JSON for selected endpoint
+  const endpointSelect = document.getElementById('endpoint');
+  updateJsonForEndpoint(endpointSelect.value);
+  endpointSelect.addEventListener('change', () => updateJsonForEndpoint(endpointSelect.value));
 
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = "invoices.zip";
-    a.click();
-    URL.revokeObjectURL(url);
+}).catch(err => console.error("Failed to fetch user data for CSV:", err));
 
-    csvResult.innerHTML = `<span class="text-green-600">✅ ${total} invoices downloaded.</span>`;
-  } catch (err) {
-    console.error("[CSV] Error processing CSV:", err);
-    csvResult.innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
-  }
-});
 
 
 
