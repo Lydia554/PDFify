@@ -24,7 +24,6 @@ const locales = {
 const FORCE_PLAN = process.env.FORCE_PLAN;
 const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
-const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta);
 
 // -----------------------------
 // PDF generation helper
@@ -99,27 +98,26 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     const results = [];
     let totalPagesToCount = 0; 
+for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
+  const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
+  invoiceData.iban ||= "";
+  invoiceData.bic ||= "";
+  const country = (invoiceData.country || "").toLowerCase();
+  const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
+  invoiceData.locale = locales[lang] || locales["en"];
+  invoiceData.isFreeUser = user.planType === "free";
 
-    for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
-      const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
-      invoiceData.iban ||= "";
-      invoiceData.bic ||= "";
-      const country = (invoiceData.country || "").toLowerCase();
-      const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
-      invoiceData.locale = locales[lang] || locales["en"];
-      invoiceData.isFreeUser = user.planType === "free";
+  const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+  const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  results.push({ pdfBuffer, orderId });
 
-      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
-      results.push({ pdfBuffer, orderId: invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}` });
+  // Increment usage per PDF 
+  if (!invoiceData.isPreview) {
+    const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
+    if (!allowed) throw new Error("Monthly limit reached.");
+  }
+}
 
-      if (!invoiceData.isPreview) totalPagesToCount += pageCount;
-    }
-
-    // Increment usage once for all pages in ZIP / batch
-    if (totalPagesToCount > 0) {
-      const allowed = await incrementUsage(user, totalPagesToCount, false, FORCE_PLAN);
-      if (!allowed) throw new Error("Monthly limit reached.");
-    }
 
     await user.save();
     await browser.close();
