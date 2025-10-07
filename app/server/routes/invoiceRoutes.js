@@ -99,8 +99,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const results = [];
 
 
-    let totalPagesToCount = 0;
-
 for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
   const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
   invoiceData.iban ||= "";
@@ -114,14 +112,15 @@ for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
   const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   results.push({ pdfBuffer, orderId });
 
-  if (!invoiceData.isPreview) totalPagesToCount += pageCount;
+  // Increment usage **per PDF per page**
+  if (!invoiceData.isPreview) {
+    for (let i = 0; i < pageCount; i++) {
+      const allowed = await incrementUsage(user, 1, false, FORCE_PLAN);
+      if (!allowed) throw new Error("Monthly limit reached.");
+    }
+  }
 }
 
-// Increment usage once for all pages in ZIP
-if (totalPagesToCount > 0) {
-  const allowed = await incrementUsage(user, totalPagesToCount, false, FORCE_PLAN);
-  if (!allowed) throw new Error("Monthly limit reached.");
-}
 
 
     await user.save();
