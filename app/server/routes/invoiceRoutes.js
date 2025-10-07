@@ -93,7 +93,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   // -----------------------------
   try {
     log("🧠 Setting page content...");
-    await page.setContent(html, { waitUntil: ["load", "domcontentloaded", "networkidle0"], timeout: 60000 });
+    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 15000 });
+
     await page.evaluateHandle("document.fonts.ready");
     const contentHTML = await page.content();
     log("📄 Page content length", { length: contentHTML.length });
