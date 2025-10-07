@@ -15,20 +15,34 @@ async function generateInvoiceHTML(data) {
   // -------------------------
   // Logo
   // -------------------------
-  let logoHTML = "";
-  const userLogo = data.customLogoUrl;
-  if (userLogo && !userLogo.includes("example.png")) {
-    try {
-      const isSvg = userLogo.endsWith(".svg");
-      const mime = isSvg ? "image/svg+xml" : "image/png";
-      const resp = await fetch(userLogo);
-      const buffer = await resp.arrayBuffer();
-      const base64 = Buffer.from(buffer).toString("base64");
-      logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
-    } catch (err) {
-      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, skipping logo", err.message);
-    }
+
+let logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+  <rect width="180" height="40" fill="#2a3d66" rx="6" />
+  <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+</svg>`; 
+
+const finalLogoUrl = data.customLogoUrl && !data.customLogoUrl.includes("example.png")
+  ? data.customLogoUrl
+  : data.isFreeUser
+    ? "https://pdfify.pro/images/Logo.png"
+    : null;
+
+if (finalLogoUrl) {
+  try {
+    const resp = await fetch(finalLogoUrl);
+    if (!resp.ok) throw new Error(`Status ${resp.status}`);
+    const buffer = await resp.arrayBuffer();
+    const isSvg = finalLogoUrl.endsWith(".svg");
+    const mime = isSvg ? "image/svg+xml" : "image/png";
+    const base64 = Buffer.from(buffer).toString("base64");
+    logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
+    console.log("[generateInvoiceHTML] ✅ Logo embedded successfully");
+  } catch (err) {
+    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
+    logoHTML = logoHTML; 
   }
+}
+
 
   // -------------------------
   // Chart
