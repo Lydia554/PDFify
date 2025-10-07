@@ -122,8 +122,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       format: "A4",
       printBackground: true,
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      displayHeaderFooter: false,
-      preferCSSPageSize: true
+      
     });
     log("📦 PDF buffer created", { size: pdfBuffer.length });
   } catch (err) {
