@@ -29,7 +29,7 @@ const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta);
 
 // -----------------------------
-// PDF generation 
+// PDF generation helper
 // -----------------------------
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
@@ -60,7 +60,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       const mime = isSvg ? "image/svg+xml" : "image/png";
       const resp = await fetch(invoiceData.customLogoUrl);
       const buffer = await resp.arrayBuffer();
-      invoiceData.customLogoUrl = `data:${mime};base64,${Buffer.from(buffer).toString("base64")}`;
+      const base64Logo = Buffer.from(buffer).toString("base64");
+      invoiceData.customLogoUrl = `data:${mime};base64,${base64Logo}`;
       log("✅ Logo embedded as base64", { length: invoiceData.customLogoUrl.length });
     } catch (err) {
       log("⚠️ Failed to fetch custom logo, fallback to inline SVG", { error: err.message });
@@ -93,8 +94,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   try {
     log("🧠 Setting page content...");
     await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 15000 });
-    await page.evaluateHandle("document.fonts.ready");
 
+    await page.evaluateHandle("document.fonts.ready");
     const contentHTML = await page.content();
     log("📄 Page content length", { length: contentHTML.length });
   } catch (err) {
@@ -102,41 +103,30 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     throw err;
   }
 
-// -----------------------------
-// Save screenshot + HTML to container-safe debugDir
-// -----------------------------
-// Debug folder always accessible from Windows
-const debugDir = path.resolve("C:\\Users\\goldb\\Pro\\pdfify-debug"); // Windows folder
+  // Screenshot for debugging
+const debugDir = "C:\\Users\\goldb\\Pro"; 
+
 
 if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
 
-const timestamp = Date.now();
-
 try {
-  // Use path.resolve to avoid any mixed slash issues
-  const screenshotPath = path.resolve(debugDir, `preview-${timestamp}.png`);
+  const screenshotPath = path.join(debugDir, `preview-${Date.now()}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
-  log("📸 Screenshot captured for debug", { screenshotPath });
+  log("📸 Screenshot captured for debug", { path: screenshotPath });
 
-  const htmlPath = path.resolve(debugDir, `preview-${timestamp}.html`);
-  const pageContent = await page.content(); 
+  
+  const htmlPath = path.join(debugDir, `preview-${Date.now()}.html`);
+  const pageContent = await page.content();
   fs.writeFileSync(htmlPath, pageContent, "utf-8");
-  log("📄 HTML saved for debug", { htmlPath });
+  log("📄 HTML saved for debug", { path: htmlPath });
 
-  // Verify files
-  if (fs.existsSync(screenshotPath) && fs.existsSync(htmlPath)) {
-    log("✅ Debug files confirmed on disk", { screenshotPath, htmlPath });
-  } else {
-    log("⚠️ Debug files not found after save!", { screenshotPath, htmlPath });
-  }
 } catch (err) {
-  log("❌ Screenshot/HTML save failed", { error: err.message, stack: err.stack });
+  log("⚠️ Screenshot/HTML save failed", { error: err.message });
 }
 
 
-
   // -----------------------------
-  // Generate PDF
+  // PDF generation
   // -----------------------------
   let pdfBuffer;
   try {
@@ -156,22 +146,22 @@ try {
     await page.close();
   }
 
-  // -----------------------------
-  // Count pages and increment usage
-  // -----------------------------
+  // Count pages
   const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = PDFDocument.getPageCount();
   log("📑 PDF page count", { pageCount });
 
+  // Increment usage
   const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
   if (!usageAllowed) throw new Error("Monthly limit reached.");
 
-  // -----------------------------
-  // Compliant processing (optional)
-  // -----------------------------
+  // Optional compliant processing
   if (useCompliant) {
     try {
-      if (invoiceData.invoiceSource === "standard") {
+      const isStandardInvoice = invoiceData.invoiceSource === "standard";
+      log("🧩 Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
+
+      if (isStandardInvoice) {
         const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
         const zugferdXml = generateZugferdXML(invoiceData);
         log("🔧 Generated ZUGFeRD XML", { length: zugferdXml.length });
@@ -200,7 +190,6 @@ try {
   log("🏁 PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
   return { pdfBuffer, pageCount };
 }
-
 
 // -----------------------------
 // /generate-invoice route
