@@ -97,7 +97,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
-    let totalPagesToCount = 0; 
+
+
+    let totalPagesToCount = 0;
+
 for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
   const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
   invoiceData.iban ||= "";
@@ -111,11 +114,13 @@ for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
   const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   results.push({ pdfBuffer, orderId });
 
-  // Increment usage per PDF 
-  if (!invoiceData.isPreview) {
-    const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
-    if (!allowed) throw new Error("Monthly limit reached.");
-  }
+  if (!invoiceData.isPreview) totalPagesToCount += pageCount;
+}
+
+// Increment usage once for all pages in ZIP
+if (totalPagesToCount > 0) {
+  const allowed = await incrementUsage(user, totalPagesToCount, false, FORCE_PLAN);
+  if (!allowed) throw new Error("Monthly limit reached.");
 }
 
 
