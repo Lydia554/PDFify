@@ -24,13 +24,19 @@ const locales = {
 const FORCE_PLAN = process.env.FORCE_PLAN;
 const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
+const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta);
 
 // -----------------------------
 // PDF generation helper
 // -----------------------------
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
+  log("🧾 Starting PDF generation", { planType: user.planType, compliant: invoiceData.compliant });
+
   const page = await browser.newPage();
+  page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
+  page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message }));
+  page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
 
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
@@ -38,26 +44,36 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   invoiceData.isFreeUser = user.planType === "free";
 
   // Generate HTML
-  let html = user.planType === "pro" && invoiceData.compliant
-    ? await generateInvoiceHTMLPro(invoiceData)
-    : await generateInvoiceHTML(invoiceData);
+  let html;
+  try {
+    html = user.planType === "pro" && invoiceData.compliant
+      ? await generateInvoiceHTMLPro(invoiceData)
+      : await generateInvoiceHTML(invoiceData);
+    log("✅ HTML generated", { htmlLength: html.length });
+  } catch (err) {
+    log("❌ Error generating HTML", { error: err.message });
+    throw err;
+  }
 
   await page.setContent(html, { waitUntil: "load", timeout: 15000 });
   await page.evaluateHandle("document.fonts.ready");
 
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    displayHeaderFooter: true,
-    headerTemplate: `<div></div>`,
-    footerTemplate: `<div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
-      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-    </div>`,
-    preferCSSPageSize: true
-  });
-
-  await page.close();
+  let pdfBuffer;
+  try {
+    pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+      displayHeaderFooter: true,
+      headerTemplate: `<div></div>`,
+      footerTemplate: `<div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
+        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+      </div>`,
+      preferCSSPageSize: true
+    });
+  } finally {
+    await page.close();
+  }
 
   // Count pages
   const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
@@ -70,12 +86,12 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     await embedIccProfile(pdfDocPro);
     await embedXmp(pdfDocPro);
     embedXmlIntoPdf(pdfDocPro, zugferdXml);
-    let finalPdf = await pdfDocPro.save();
+
+    pdfBuffer = await pdfDocPro.save();
 
     if (!DEBUG_MODE) {
-      finalPdf = await makePdfA3b(finalPdf, {});
+      pdfBuffer = await makePdfA3b(pdfBuffer, {});
     }
-    return { pdfBuffer: finalPdf, pageCount };
   }
 
   return { pdfBuffer, pageCount };
@@ -87,6 +103,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 // -----------------------------
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
+  log("Request received", { body: req.body, userId: req.user.userId });
+
   try {
     const requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
     if (!requests.length) return res.status(400).json({ error: "No requests provided." });
@@ -94,79 +112,49 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // -----------------------------
-    // Reset monthly usage once
-    // -----------------------------
-    const now = new Date();
-    if (!user.usageLastReset || new Date(user.usageLastReset).getMonth() !== now.getMonth()) {
-      user.usageCount = 0;
-      user.previewCount = 0;
-      user.usageLastReset = now;
-      await user.save();
-      console.log("🔄 Usage and preview reset for new month");
-    }
-
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-
     const results = [];
-    let totalPagesToCount = 0; 
 
-    // -----------------------------
-    // Generate PDFs
-    // -----------------------------
     for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
       const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
       invoiceData.iban ||= "";
       invoiceData.bic ||= "";
+
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.locale = locales[lang] || locales["en"];
       invoiceData.isFreeUser = user.planType === "free";
 
-      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      results.push({ pdfBuffer, orderId, pageCount });
+      log("Processing invoice", { orderId, invoiceData });
 
-      // -----------------------------
-      // Count pages for usage (skip previews)
-      // -----------------------------
+      // Generate PDF
+      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+
+      // Increment usage per PDF **per page**
       if (!invoiceData.isPreview) {
-        totalPagesToCount += pageCount;
-      } else {
-        // Increment preview separately
-        await incrementUsage(user, 0, true);
+        const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
+        if (!allowed) throw new Error("Monthly limit reached.");
       }
-    }
 
-    // -----------------------------
-    // Increment usage once per page for this batch
-    // -----------------------------
-    if (totalPagesToCount > 0) {
-      const allowed = await incrementUsage(user, totalPagesToCount, false, FORCE_PLAN);
-      if (!allowed) throw new Error("Monthly limit reached.");
+      results.push({ pdfBuffer, orderId });
+      log("Invoice processed", { orderId, pageCount });
     }
 
     await user.save();
     await browser.close();
 
-    // -----------------------------
     // Single PDF
-    // -----------------------------
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        isPreview ? `inline; filename="${orderId}.pdf"` : `attachment; filename="${orderId}.pdf"`
-      );
+      res.setHeader("Content-Disposition", isPreview ? `inline; filename="${orderId}.pdf"` : `attachment; filename="${orderId}.pdf"`);
       res.setHeader("Content-Length", pdfBuffer.length);
       return res.end(pdfBuffer);
     }
 
-    // -----------------------------
     // Multiple PDFs → ZIP
-    // -----------------------------
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
 
@@ -178,10 +166,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     });
 
     await archive.finalize();
+    log("ZIP archive sent", { count: results.length });
 
   } catch (err) {
     if (browser) await browser.close();
-    console.error("Error in /generate-invoice", err);
+    log("Error in /generate-invoice", { error: err.message, stack: err.stack });
     res.status(500).json({ error: "Internal Server Error", details: err.message });
   } finally {
     if (browser) await browser.close();

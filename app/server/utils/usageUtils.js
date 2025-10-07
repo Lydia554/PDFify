@@ -1,7 +1,9 @@
+
+
 const PLAN_LIMITS = {
-  free: 30,
-  premium: 1000,
-  pro: 10000
+  free: 30,        // Free users: 30 pages/month
+  premium: 1000,   // Premium users: 1,000 pages/month
+  pro: 10000       // Pro users: 10,000 pages/month
 };
 
 const PREVIEW_LIMITS = {
@@ -10,61 +12,54 @@ const PREVIEW_LIMITS = {
   pro: 25
 };
 
-const User = require("../models/User");
-
 async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = null) {
   const plan = (forcePlan || user.planType || "free").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
 
+  // Reset monthly usage and preview count if needed
   const now = new Date();
   if (!user.usageLastReset || new Date(user.usageLastReset).getMonth() !== now.getMonth()) {
-    await User.findByIdAndUpdate(user._id, {
-      usageCount: 0,
-      previewCount: 0,
-      usageLastReset: now
-    });
     user.usageCount = 0;
     user.previewCount = 0;
     user.usageLastReset = now;
+    await user.save();
     console.log("🔄 Usage and preview reset for new month");
   }
 
   if (isPreview) {
-    const maxPreviews = PREVIEW_LIMITS[plan] || PREVIEW_LIMITS.free;
-    if ((user.previewCount || 0) < maxPreviews) {
-      const updated = await User.findByIdAndUpdate(
-        user._id,
-        { $inc: { previewCount: 1 } },
-        { new: true }
-      );
-      user.previewCount = updated.previewCount;
-      console.log(`👀 Preview count incremented to ${user.previewCount}/${maxPreviews}`);
+    const maxPreviews = PREVIEW_LIMITS[plan] || PREVIEW_LIMITS["free"];
+    user.previewCount = user.previewCount || 0;
+
+    if (user.previewCount < maxPreviews) {
+      
+      user.previewCount++;
+      await user.save();
+      console.log(`👀 Preview count incremented to ${user.previewCount}/${maxPreviews} (no usage deducted)`);
       return true;
+    } else {
+      console.log(`⚠️ Preview limit reached for ${plan} plan. Counting toward normal usage.`);
+      
     }
   }
 
-  const limit = PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+  // Normal page usage
+  const limit = PLAN_LIMITS[plan] || PLAN_LIMITS["free"];
   const totalLimit = limit + (user.extraPages || 0);
 
-  // Load latest usage atomically from DB
-  const updated = await User.findByIdAndUpdate(
-    user._id,
-    { $inc: { usageCount: pages } },
-    { new: true }
-  );
-
-  // Deduct from extraPages if over plan limit
-  if (updated.usageCount > limit) {
-    const over = updated.usageCount - limit;
-    const updatedExtra = await User.findByIdAndUpdate(
-      user._id,
-      { $inc: { extraPages: -over } },
-      { new: true }
-    );
-    user.extraPages = updatedExtra.extraPages;
+  if (user.usageCount + pages > totalLimit) {
+    console.log(`🚫 Usage limit exceeded for ${plan} plan. Requested ${pages} pages.`);
+    return false;
   }
 
-  user.usageCount = updated.usageCount;
+  user.usageCount += pages;
+
+  // Deduct from extraPages if over plan limit
+  if (user.usageCount > limit) {
+    const over = user.usageCount - limit;
+    user.extraPages = Math.max((user.extraPages || 0) - over, 0);
+  }
+
+  await user.save();
   console.log(`✅ Usage incremented for ${plan} plan to ${user.usageCount}/${totalLimit}`);
   return true;
 }
