@@ -180,30 +180,38 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
       const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
-
       invoiceData.iban ||= "";
       invoiceData.bic ||= "";
 
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.locale = locales[lang] || locales["en"];
-      invoiceData.isFreeUser = user.planType === "free"; // <-- auto detect free users
+      invoiceData.isFreeUser = user.planType === "free";
 
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
       log("Processing invoice", { orderId, invoiceData });
 
-      const { pdfBuffer } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+      // Generate PDF
+      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+
+      // Increment usage per page
+      const usageAllowed = await incrementUsage(
+        user,
+        invoiceData.isPreview ? 0 : pageCount, 
+        invoiceData.isPreview,
+        FORCE_PLAN
+      );
+      if (!usageAllowed) throw new Error("Monthly limit reached.");
+
       results.push({ pdfBuffer, orderId });
-      log("Invoice processed", { orderId });
+      log("Invoice processed", { orderId, pageCount });
     }
 
     await user.save();
     await browser.close();
 
-    // -----------------------------
     // Single PDF
-    // -----------------------------
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
@@ -221,9 +229,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.end(pdfBuffer); 
     }
 
-    // -----------------------------
     // Multiple PDFs → ZIP
-    // -----------------------------
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
 
@@ -245,5 +251,4 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (browser) await browser.close();
   }
 });
-
 module.exports = router;
