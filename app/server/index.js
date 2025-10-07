@@ -11,14 +11,13 @@ dotenv.config();
 
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
-const authProtect = require("./middleware/authProtect");
 
 // Routes
 const recipeRoutes = require("./routes/recipeRoutes");
 const shopOrderRoutes = require("./routes/shopOrderRoutes");
 const therapyReportRoutes = require("./routes/therapyReportRoutes");
 const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes");
+const userRoutes = require("./routes/userRoutes"); // your current routes
 const stripeRoutes = require("./routes/stripeRoutes");
 const invoiceRoutes = require("./routes/invoiceRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
@@ -77,9 +76,18 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((error) => console.error("MongoDB connection error:", error));
 
 // -------------------- API Routes --------------------
+
+// Auth routes
 app.use("/api/auth", authRoutes);
+
+// -------------------- USER ROUTES --------------------
+// 1️⃣ Unprotected user creation
+app.post("/api/user/user-creation", userRoutes.stack.find(r => r.route.path === '/user-creation').route.stack[0].handle);
+
+// 2️⃣ Protected user routes
 app.use("/api/user", authenticate, userRoutes);
 
+// Other API routes
 app.use("/api", recipeRoutes);
 app.use("/api", shopOrderRoutes);
 app.use("/api", therapyReportRoutes);
@@ -89,12 +97,10 @@ app.use("/api", foodTrekRoutes);
 app.use("/api/stripe", paymentRoutes);
 app.use("/woocommerce-webhook", woocommerceWebhookRoutes);
 
-
 app.use("/api/shopify", (req, res, next) => { req.invoiceSource = "shopify"; next(); }, shopifyApiRoutes);
 app.use("/api/woocommerce", (req, res, next) => { req.invoiceSource = "woocommerce"; next(); }, woocommerceApiRoutes);
 app.use("/api/friendly", (req, res, next) => { req.invoiceSource = "friendly"; next(); }, friendlyMode);
 app.use("/api", (req, res, next) => { req.invoiceSource = "dev"; next(); }, invoiceRoutes);
-
 
 // -------------------- Static & Landing --------------------
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
@@ -106,6 +112,7 @@ app.get("/success.html", (req, res) => res.sendFile(path.join(__dirname, "public
 app.get("/cancel.html", (req, res) => res.sendFile(path.join(__dirname, "public", "cancel.html")));
 
 // -------------------- Protected Pages --------------------
+const authProtect = require("./middleware/authProtect");
 app.get("/user-dashboard", authProtect, (req, res) =>
   res.sendFile(path.join(__dirname, "../public/user-dashboard.html"))
 );
