@@ -102,42 +102,44 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       user.usageCount = 0;
       user.previewCount = 0;
       user.usageLastReset = now;
+      await user.save();
+      console.log("🔄 Usage and preview reset for new month");
     }
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
     let totalPagesToCount = 0; 
-// -----------------------------
-// Generate PDFs
-// -----------------------------
-for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
-  const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
-  invoiceData.iban ||= "";
-  invoiceData.bic ||= "";
-  const country = (invoiceData.country || "").toLowerCase();
-  const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
-  invoiceData.locale = locales[lang] || locales["en"];
-  invoiceData.isFreeUser = user.planType === "free";
-
-  const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
-  const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  results.push({ pdfBuffer, orderId });
-
-  // -----------------------------
-  // Increment usage per PDF per page
-  // -----------------------------
-  if (!invoiceData.isPreview) {
-    await incrementUsage(user, pageCount, false, FORCE_PLAN);
-  } else {
-    // Increment preview separately
-    await incrementUsage(user, 0, true);
-  }
-}
-
 
     // -----------------------------
-    // Increment usage for total pages in batch
+    // Generate PDFs
+    // -----------------------------
+    for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
+      const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
+      invoiceData.iban ||= "";
+      invoiceData.bic ||= "";
+      const country = (invoiceData.country || "").toLowerCase();
+      const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
+      invoiceData.locale = locales[lang] || locales["en"];
+      invoiceData.isFreeUser = user.planType === "free";
+
+      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+      const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      results.push({ pdfBuffer, orderId, pageCount });
+
+      // -----------------------------
+      // Count pages for usage (skip previews)
+      // -----------------------------
+      if (!invoiceData.isPreview) {
+        totalPagesToCount += pageCount;
+      } else {
+        // Increment preview separately
+        await incrementUsage(user, 0, true);
+      }
+    }
+
+    // -----------------------------
+    // Increment usage once per page for this batch
     // -----------------------------
     if (totalPagesToCount > 0) {
       const allowed = await incrementUsage(user, totalPagesToCount, false, FORCE_PLAN);
@@ -176,6 +178,7 @@ for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
     });
 
     await archive.finalize();
+
   } catch (err) {
     if (browser) await browser.close();
     console.error("Error in /generate-invoice", err);
@@ -184,6 +187,5 @@ for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
     if (browser) await browser.close();
   }
 });
-
 
 module.exports = router;
