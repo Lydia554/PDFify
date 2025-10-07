@@ -101,6 +101,9 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 // -----------------------------
 // /generate-invoice route
 // -----------------------------
+// -----------------------------
+// /generate-invoice route (per-page usage fixed for ZIP)
+// -----------------------------
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
   log("Request received", { body: req.body, userId: req.user.userId });
@@ -114,6 +117,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const results = [];
+    let totalPages = 0; 
 
     for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
       const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
@@ -126,19 +130,22 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isFreeUser = user.planType === "free";
 
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      log("Processing invoice", { orderId, invoiceData });
+      log("Processing invoice", { orderId });
 
       // Generate PDF
       const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
 
-      // Increment usage per PDF **per page**
-      if (!invoiceData.isPreview) {
-        const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
-        if (!allowed) throw new Error("Monthly limit reached.");
-      }
-
       results.push({ pdfBuffer, orderId });
+      totalPages += pageCount; 
       log("Invoice processed", { orderId, pageCount });
+    }
+
+    // Increment usage **once per total pages in the batch**
+    const isPreview = requests.every(r => r.isPreview);
+    if (!isPreview) {
+      const allowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
+      if (!allowed) throw new Error("Monthly limit reached.");
+      log("Usage incremented for total pages", { totalPages });
     }
 
     await user.save();
@@ -147,7 +154,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // Single PDF
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
-      const isPreview = requests[0].isPreview;
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", isPreview ? `inline; filename="${orderId}.pdf"` : `attachment; filename="${orderId}.pdf"`);
       res.setHeader("Content-Length", pdfBuffer.length);
