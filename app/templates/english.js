@@ -31,18 +31,15 @@ data.invoiceSource ||= "colorful";
   const borderColor = isFree ? "#aaaaaa" : "#c5d0f9";
   const evenRowColor = isFree ? "#eee" : "#f6f9fe";
 
-  // -------------------------
-  //Logo
-  // -------------------------
+let logoHTML = "";
 
-let logoHTML;
-
+// Free users always get the default logo
 if (isFree) {
-  // Default logo for free users
   logoHTML = `<img src="https://pdfify.pro/images/Logo.png"
     style="height:60px;margin-bottom:18px;display:block;" alt="PDFify Logo" />`;
-} else if (data.customLogoUrl) {
-  // Pro/premium users with custom logo
+}
+// Pro/premium users only if custom logo is provided
+else if (data.customLogoUrl) {
   try {
     const customLogo = data.customLogoUrl;
     let buffer;
@@ -68,12 +65,12 @@ if (isFree) {
     console.log("[generateInvoiceHTML] ✅ Custom logo embedded successfully.");
   } catch (err) {
     console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo:", err.message);
-    logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`; 
+    
+    logoHTML = "";
   }
-} else {
-  // Pro user without custom logo
-  logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`; 
 }
+
+
 
 
   
