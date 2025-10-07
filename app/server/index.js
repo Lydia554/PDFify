@@ -56,7 +56,8 @@ app.use(session({
 }));
 
 
-app.use('/debug-pdfs', express.static(path.join(__dirname, 'debug-pdfs')));
+app.use('/debug-pdfs', express.static(debugPdfDir));
+
 
 
 // -------------------- Webhooks --------------------
