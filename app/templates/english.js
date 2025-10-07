@@ -123,8 +123,9 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 </head>
 <body>
 <div class="container">
-  ${logoHTML}
+  ${isFree || data.customLogoUrl ? logoHTML : ""}
   <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+
 
   <div class="invoice-header" style="display:flex; justify-content:space-between; gap:12px; margin-bottom:18px;">
     <div class="left" style="flex:1;">
