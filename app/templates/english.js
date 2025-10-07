@@ -12,46 +12,54 @@ async function generateInvoiceHTML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
   data.invoiceSource ||= "colorful";
 
-  // -------------------------
-  // Logo
-  // -------------------------
-  const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-    <rect width="180" height="40" fill="#2a3d66" rx="6" />
-    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-  </svg>`;
+// -------------------------
+// Logo
+// -------------------------
+const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+  <rect width="180" height="40" fill="#2a3d66" rx="6" />
+  <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+</svg>`;
 
-  let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
+let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
 
-  const customLogo = data.customLogoUrl;
-  if (customLogo) {
-    try {
-      let buffer;
 
-      if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
-        const resp = await fetch(customLogo);
-        if (!resp.ok) throw new Error(`Status ${resp.status}`);
-        buffer = await resp.arrayBuffer();
-      } else {
-        
-        buffer = fs.readFileSync(customLogo);
-      }
+const customLogo = data.customLogoUrl;
 
-      // Convert SVG → PNG if needed
-      let pngBuffer;
-      if (customLogo.endsWith(".svg")) {
-        pngBuffer = await sharp(Buffer.from(buffer)).png().resize({ height: 60 }).toBuffer();
-      } else {
-        pngBuffer = Buffer.from(buffer);
-      }
+if (customLogo) {
+  try {
+    let buffer;
 
-      const base64 = pngBuffer.toString("base64");
-      logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
-
-      console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG");
-    } catch (err) {
-      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
+    if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
+      const resp = await fetch(customLogo);
+      if (!resp.ok) throw new Error(`Status ${resp.status}`);
+      buffer = Buffer.from(await resp.arrayBuffer());
+    } else if (customLogo.startsWith("data:")) {
+     
+      const base64Data = customLogo.split(",")[1];
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+   
+      if (!fs.existsSync(customLogo)) throw new Error("Local logo file not found");
+      buffer = fs.readFileSync(customLogo);
     }
+
+
+    let pngBuffer;
+    if (customLogo.endsWith(".svg") || customLogo.startsWith("data:image/svg+xml")) {
+      pngBuffer = await sharp(buffer).png().resize({ height: 60 }).toBuffer();
+    } else {
+      pngBuffer = buffer;
+    }
+
+    const base64 = pngBuffer.toString("base64");
+    logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
+
+    console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG");
+  } catch (err) {
+    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
+    logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
   }
+}
 
   // -------------------------
   // Chart
