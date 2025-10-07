@@ -2,12 +2,6 @@ const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
-
-
-// Debug PDF folder
-const debugPdfDir = path.resolve(__dirname, "../../debug-pdfs"); 
-if (!fs.existsSync(debugPdfDir)) fs.mkdirSync(debugPdfDir, { recursive: true });
-console.log("[InvoiceRoute Debug] Debug PDF folder ready at:", debugPdfDir);
 const os = require("os");
 const archiver = require("archiver");
 const fetch = require("node-fetch");
@@ -109,29 +103,14 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     throw err;
   }
 
-// -----------------------------
-// Screenshot + HTML for debugging
-// -----------------------------
-const timestamp = Date.now();
-try {
-  const screenshotPath = path.resolve(debugPdfDir, `preview-${timestamp}.png`);
-  await page.screenshot({ path: screenshotPath, fullPage: true });
-  log("📸 Screenshot captured for debug", { screenshotPath });
-
-  const htmlPath = path.resolve(debugPdfDir, `preview-${timestamp}.html`);
-  const pageContent = await page.content();
-  fs.writeFileSync(htmlPath, pageContent, "utf-8");
-  log("📄 HTML saved for debug", { htmlPath });
-
-  if (fs.existsSync(screenshotPath) && fs.existsSync(htmlPath)) {
-    log("✅ Debug files confirmed on disk", { screenshotPath, htmlPath });
-  } else {
-    log("⚠️ Debug files not found after save!", { screenshotPath, htmlPath });
+  // Screenshot for debugging
+  try {
+    const screenshotPath = path.join(os.tmpdir(), `preview-${Date.now()}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    log("📸 Screenshot captured for debug", { path: screenshotPath });
+  } catch (err) {
+    log("⚠️ Screenshot failed", { error: err.message });
   }
-} catch (err) {
-  log("❌ Screenshot/HTML save failed", { error: err.message, stack: err.stack });
-}
-
 
   // -----------------------------
   // PDF generation

@@ -8,12 +8,6 @@ const MongoStore = require("connect-mongo");
 const dotenv = require("dotenv");
 
 dotenv.config();
-const fs = require("fs"); 
-
-const debugPdfDir = path.resolve(__dirname, "../debug-pdfs");
-if (!fs.existsSync(debugPdfDir)) fs.mkdirSync(debugPdfDir, { recursive: true });
-console.log("[Debug] Debug PDF folder ready at:", debugPdfDir);
-
 
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
@@ -54,11 +48,6 @@ app.use(session({
     secure: process.env.NODE_ENV === "production",
   },
 }));
-
-
-app.use('/debug-pdfs', express.static(debugPdfDir));
-
-
 
 // -------------------- Webhooks --------------------
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
