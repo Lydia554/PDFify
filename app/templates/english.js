@@ -11,9 +11,15 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // Determine free/pro user
-  const isFree = !!data.isFreeUser; // must be passed from route
-  data.invoiceSource ||= "colorful";
+// -------------------------
+// Determine free/pro user safely
+// -------------------------
+const isFree = Boolean(data?.isFreeUser || !data?.planType || data?.planType === "free" || data?.planType === "starter");
+
+// Ensure invoiceSource always exists
+if (!data) data = {};
+data.invoiceSource ||= "colorful";
+
 
   // -------------------------
   // Colors
@@ -31,7 +37,7 @@ async function generateInvoiceHTML(data) {
     <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
   </svg>`;
 
-  let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
+let logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`;
 
   // -------------------------
   // Custom logo for pro users
@@ -40,9 +46,10 @@ async function generateInvoiceHTML(data) {
   if (!isFree && customLogo) {
     try {
       let buffer;
+
       if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
         const resp = await fetch(customLogo);
-        if (!resp.ok) throw new Error(`Status ${resp.status}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         buffer = Buffer.from(await resp.arrayBuffer());
       } else if (customLogo.startsWith("data:")) {
         const base64Data = customLogo.split(",")[1];
@@ -62,11 +69,16 @@ async function generateInvoiceHTML(data) {
       const base64 = pngBuffer.toString("base64");
       logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
 
-      console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG");
+      console.log("[generateInvoiceHTML] ✅ Custom logo embedded successfully.");
     } catch (err) {
-      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo. Leaving blank area:", err.message);
+      logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`; 
     }
+  } else if (isFree) {
+ 
+    logoHTML = `<div style="height:60px;margin-bottom:18px;background-color:#f5f5f5;border-radius:6px;"></div>`;
   }
+  
 
   // -------------------------
   // Chart for pro users only

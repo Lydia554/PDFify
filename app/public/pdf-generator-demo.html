@@ -916,11 +916,20 @@ const isPro = userPlan === "pro";
 const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
 
 const requests = groupedInvoices
-  .map(rowsToInvoiceJson)
+  .map(row => {
+    const data = rowsToInvoiceJson(row);
+
+ 
+    data.isFreeUser = !userData?.planType || userData.planType === "free";
+    data.planType = userData?.planType || "free";
+    data.customLogoUrl = userData?.customLogoUrl || null;
+
+    return data;
+  })
   .map(data => ({
     data,
     isPreview: false,
-    compliant: useCompliant 
+    compliant: useCompliant
   }));
 
 
