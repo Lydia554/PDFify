@@ -15,10 +15,7 @@ async function generateInvoiceHTML(data) {
   // -------------------------
   // Handle logo (base64 embed for Puppeteer)
   // -------------------------
-  let logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-    <rect width="180" height="40" fill="#2a3d66" rx="6" />
-    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-  </svg>`; // default fallback
+  let logoHTML = "";
 
   const userLogo = data.customLogoUrl;
   const freeUserLogo = data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "";
@@ -33,9 +30,8 @@ async function generateInvoiceHTML(data) {
       const buffer = await resp.arrayBuffer();
       const base64 = Buffer.from(buffer).toString("base64");
       logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
-      console.log("[generateInvoiceHTML] ✅ Logo embedded from URL");
     } catch (err) {
-      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG", err.message);
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, skipping logo", err.message);
     }
   }
 
@@ -72,9 +68,8 @@ async function generateInvoiceHTML(data) {
       ? `<div class="watermark" data-debug="watermark-visible">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>`
       : "";
 
-
   // -------------------------
-  // Return full HTML
+  // Full HTML
   // -------------------------
   return `
 <html>
@@ -93,13 +88,10 @@ async function generateInvoiceHTML(data) {
       .total p { font-weight: bold; color: #000; font-size: 1.05em; }
       .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 44px; color: rgba(255, 204, 204, 0.8); font-weight: 900; pointer-events: none; user-select: none; z-index: 99; white-space: nowrap; }
       .footer { max-width: 800px; margin: 40px auto 10px auto; padding: 10px; font-size: 11px; border-top: 1px solid #c5d0f9; text-align: center; color: #2a3d66; background: #fff !important; }
-      #__pdf_debug { page-break-inside: avoid; }
-      [data-debug-overlay] { display: none !important; }
     </style>
   </head>
   <body>
     <div class="container">
-      ${debugHTML}
       ${logoHTML}
       <h1 style="margin-top:8px;">${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
       <div class="invoice-header" style="display:flex;justify-content:space-between;gap:12px;margin-bottom:18px;">
@@ -153,9 +145,8 @@ async function generateInvoiceHTML(data) {
 
     <div class="footer">
       <p>${locale.thanks || "Thanks for using our service!"}</p>
-      <p>${locale.contact || "If you have questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-      <p>&copy; 2025 🧾PDFify — ${locale.copyright || "All rights reserved."}</p>
-      <p>${locale.generated || "Generated using"} <strong>PDFify</strong>. ${locale.visitSite || '<a href="https://pdfify.pro/" target="_blank">Visit our site for more.</a>'}</p>
+      <p>${locale.contact || "For questions, contact us at"} <a href="mailto:support@example.com">support@example.com</a>.</p>
+      <p>&copy; 2025 — ${locale.copyright || "All rights reserved."}</p>
     </div>
   </body>
 </html>
