@@ -20,28 +20,39 @@ function groupRowsByOrderId(rows) {
   return Object.values(grouped);
 }
 
+
+function cleanNumber(str) {
+  if (!str) return 0;
+  const num = parseFloat(str.replace(/[^\d.-]/g, ""));
+  return isNaN(num) ? 0 : num;
+}
+
 function rowsToInvoiceJson(rows) {
   if (!rows.length) return null;
   const first = rows[0];
   return {
-    customerName: first.customerName,
-    customerEmail: first.customerEmail,
-    orderId: first.orderId,
-    country: first.country,
-    date: first.date,
+    customerName: first.customerName || "",
+    customerEmail: first.customerEmail || "",
+    orderId: first.orderId || "",
+    country: first.country || "",
+    date: first.date || "",
     items: rows.map(r => ({
-      name: r.itemName,
+      name: r.itemName || "",
       quantity: Number(r.quantity || 0),
-      price: parseFloat(r.price || 0),
-      total: parseFloat(r.itemTotal || 0),
-      tax: parseFloat(r.itemTax || 0),
+      price: cleanNumber(r.price),
+      total: cleanNumber(r.itemTotal),
+      tax: cleanNumber(r.itemTax),
       position: r.position || ""
     })),
-    subtotal: parseFloat(first.subtotal || 0),
-    tax: parseFloat(first.totalTax || 0),
-    total: parseFloat(first.total || 0),
+    subtotal: cleanNumber(first.subtotal),
+    tax: cleanNumber(first.totalTax),
+    total: cleanNumber(first.total),
     customLogoUrl: first.customLogoUrl || "",
     showChart: (first.showChart || "").toLowerCase() === "true",
     isPremium: (first.isPremium || "").toLowerCase() === "true",
+    iban: first.iban || "",
+    bic: first.bic || "",
+    compliant: (first.compliant || "").toLowerCase() === "true",
+    planType: (first.planType || "").toLowerCase() 
   };
 }
