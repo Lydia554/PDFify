@@ -1,7 +1,6 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
-const os = require("os");
 const archiver = require("archiver");
 const fetch = require("node-fetch");
 if (!globalThis.fetch) globalThis.fetch = fetch;
@@ -83,7 +82,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   // Load HTML into Puppeteer
   try {
     await page.setContent(html, { waitUntil: "load", timeout: 15000 });
-
     await page.evaluateHandle("document.fonts.ready");
     log("🧠 Page content loaded");
   } catch (err) {
@@ -190,26 +188,31 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     await user.save();
     await browser.close();
 
+    // -----------------------------
+    // Single PDF
+    // -----------------------------
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
 
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": isPreview
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        isPreview
           ? `inline; filename="${orderId}.pdf"`
-          : `attachment; filename="${orderId}.pdf"`,
-        "Content-Length": pdfBuffer.length
-      });
+          : `attachment; filename="${orderId}.pdf"`
+      );
+      res.setHeader("Content-Length", pdfBuffer.length);
 
       log("Sending single PDF", { orderId, length: pdfBuffer.length });
-      res.end(pdfBuffer);
+      return res.end(pdfBuffer); 
     }
 
-    res.set({
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="invoices.zip"`
-    });
+    // -----------------------------
+    // Multiple PDFs → ZIP
+    // -----------------------------
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
 
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(res);
