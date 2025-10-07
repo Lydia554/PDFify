@@ -20,10 +20,9 @@ function groupRowsByOrderId(rows) {
   return Object.values(grouped);
 }
 
-
 function cleanNumber(str) {
   if (!str) return 0;
-  const num = parseFloat(str.replace(/[^\d.-]/g, ""));
+  const num = parseFloat(str.toString().replace(/[^\d.-]/g, ""));
   return isNaN(num) ? 0 : num;
 }
 
@@ -60,6 +59,6 @@ function rowsToInvoiceJson(rows) {
     bic: first.bic || "",
     compliant: (first.compliant || "").toLowerCase() === "true",
     planType: (first.planType || "").toLowerCase(),
-    locale: first.locale || {}  // pass full locale for footer
+    locale: first.locale || {} 
   };
 }

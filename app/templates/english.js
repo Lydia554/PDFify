@@ -88,9 +88,8 @@ async function generateInvoiceHTML(data) {
 <html>
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
-html, body { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; }
+html, body { margin:0; padding:0; font-family:Arial,sans-serif; background:#fff; color:#000; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
 .container { max-width:800px; margin:20px auto; padding:30px 24px 60px; background:#fff; border-radius:8px; border:1px solid ${borderColor}; }
 .table { width:100%; border-collapse:collapse; margin-bottom:20px; }
 .table th, .table td { padding:10px; border:1px solid ${borderColor}; text-align:left; }
@@ -99,30 +98,30 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 .table tr:nth-child(even) td { background-color:${evenRowColor}; }
 .table tfoot td { background-color:${secondaryColor}; font-weight:bold; color:${primaryColor}; }
 .total p { font-weight:bold; color:#000; font-size:1.05em; }
-.watermark { position: fixed; top: 40%; left:50%; transform:translate(-50%, -50%) rotate(-45deg); font-size:44px; color: rgba(255,204,204,0.8); font-weight:900; pointer-events:none; user-select:none; z-index:99; white-space:nowrap; }
-.footer { max-width:800px; margin:40px auto 10px auto; padding:10px; font-size:11px; border-top:1px solid ${borderColor}; text-align:center; color:${primaryColor}; background:#fff; }
+.watermark { position: fixed; top:40%; left:50%; transform:translate(-50%,-50%) rotate(-45deg); font-size:44px; color:rgba(255,204,204,0.8); font-weight:900; pointer-events:none; user-select:none; z-index:99; }
+.footer { max-width:800px; margin:40px auto 10px auto; padding:10px; font-size:11px; border-top:1px solid ${borderColor}; text-align:center; color:${primaryColor}; }
 </style>
 </head>
 <body>
 <div class="container">
   ${renderLogoSection(logoHTML)}
-  <h1 style="${logoHTML ? '' : 'margin-top:0;'}">${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+  <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || ""}</h1>
 
   <div class="invoice-header" style="display:flex; justify-content:space-between; gap:12px; margin-bottom:18px;">
-    <div class="left" style="flex:1;">
-      <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
-      <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
-      ${data.paymentTerms ? `<p><strong>${locale.paymentTerms || "Payment Terms"}:</strong> ${data.paymentTerms}</p>` : ""}
+    <div style="flex:1;">
+      <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId}</p>
+      <p><strong>${locale.date || "Date"}:</strong> ${data.date}</p>
+      ${data.paymentTerms ? `<p><strong>${locale.paymentTerms}:</strong> ${data.paymentTerms}</p>` : ""}
       ${data.iban ? `<p><strong>IBAN:</strong> ${data.iban}</p>` : ""}
       ${data.bic ? `<p><strong>BIC:</strong> ${data.bic}</p>` : ""}
     </div>
-    <div class="right" style="flex:1;text-align:right;">
-      <p><strong>${locale.customer || "Customer"}:</strong><br>${data.customerName || ""}</p>
-      <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${data.customerEmail || ""}">${data.customerEmail || ""}</a></p>
+    <div style="flex:1; text-align:right;">
+      <p><strong>${locale.customer || "Customer"}:</strong><br>${data.customerName}</p>
+      <p><strong>${locale.email || "Email"}:</strong><br><a href="mailto:${data.customerEmail}">${data.customerEmail}</a></p>
     </div>
   </div>
 
-  <table class="table" role="table" aria-label="Invoice items">
+  <table class="table">
     <thead>
       <tr>
         <th>${locale.position || "Pos"}</th>
@@ -135,36 +134,34 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
       </tr>
     </thead>
     <tbody>
-      ${items.length
-        ? items.map(item => `<tr>
-            <td>${item.position || ""}</td>
-            <td>${item.name || ""}</td>
-            <td>${item.quantity || ""}</td>
-            <td>${item.price || ""}</td>
-            <td>${item.net || "-"}</td>
-            <td>${item.tax || "-"}</td>
-            <td>${item.total || ""}</td>
-          </tr>`).join("")
-        : `<tr><td colspan="7">${locale.noItems || "No items available"}</td></tr>`}
+      ${items.length ? items.map(i => `<tr>
+        <td>${i.position}</td>
+        <td>${i.name}</td>
+        <td>${i.quantity}</td>
+        <td>${i.priceFormatted}</td>
+        <td>${i.totalFormatted}</td>
+        <td>${i.taxFormatted}</td>
+        <td>${i.totalFormatted}</td>
+      </tr>`).join("") : `<tr><td colspan="7">${locale.noItemsAvailable || "No items available"}</td></tr>`}
     </tbody>
     <tfoot>
-      <tr><td colspan="6">${locale.subtotal || "Subtotal"}</td><td>${data.subtotal || ""}</td></tr>
-      <tr><td colspan="6">${locale.taxLabel || "Tax"} (${data.taxRate || "0%"})</td><td>${data.tax || ""}</td></tr>
-      <tr><td colspan="6">${locale.total || "Total"}</td><td>${data.total || ""}</td></tr>
+      <tr><td colspan="6">${locale.subtotal || "Subtotal"}</td><td>${data.subtotalFormatted}</td></tr>
+      <tr><td colspan="6">${locale.taxLabel || "Tax"} (${data.taxFormatted})</td><td>${data.taxFormatted}</td></tr>
+      <tr><td colspan="6">${locale.total || "Total"}</td><td>${data.totalFormatted}</td></tr>
     </tfoot>
   </table>
 
-  <div class="total"><p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p></div>
+  <div class="total"><p>${locale.totalAmountDue || "Total Amount Due"}: ${data.totalFormatted}</p></div>
   ${chartHTML}
 </div>
 
 ${watermarkHTML}
 
 <div class="footer">
-  <p>${locale.thanks || "Thanks for using our service!"}</p>
-  <p>${locale.contact || "If you have questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-  <p>© 2025 🧾PDFify — ${locale.copyright || "All rights reserved."}</p>
-  <p>${locale.generated || "Generated using PDFify."} <a href="https://pdfify.pro" target="_blank" rel="noopener">${locale.visitSite || "Visit our site for more."}</a></p>
+  <p>${locale.thanks}</p>
+  <p>${locale.contact} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+  <p>© 2025 🧾PDFify — ${locale.copyright}</p>
+  <p>${locale.generated} <a href="https://pdfify.pro" target="_blank">${locale.visitSite}</a></p>
 </div>
 
 </body>
