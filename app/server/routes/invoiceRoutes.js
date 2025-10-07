@@ -4,8 +4,17 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const archiver = require("archiver");
-const fetch = require("node-fetch");
-if (!globalThis.fetch) globalThis.fetch = fetch;
+
+let fetch;
+try {
+
+  fetch = (await import("node-fetch")).default;
+} catch {
+  
+  fetch = require("node-fetch");
+}
+globalThis.fetch = fetch;
+
 
 const router = express.Router();
 
