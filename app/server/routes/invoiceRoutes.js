@@ -11,7 +11,7 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateInvoiceHTML } = require("../../templates/english.js"); // free template
+const { generateInvoiceHTML } = require("../../templates/english.js"); // free/pro template
 const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js"); // pro compliant
 const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
 
@@ -45,8 +45,16 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
 
-  // Handle logo as base64 if present
-  if (invoiceData.customLogoUrl && invoiceData.customLogoUrl !== "example.png") {
+  // -----------------------------
+  // Determine if free user
+  // -----------------------------
+  invoiceData.isFreeUser = user.planType === "free";
+
+  // -----------------------------
+  // Handle logo as base64 if pro user
+  // Free users will get default logo in template
+  // -----------------------------
+  if (invoiceData.customLogoUrl && !invoiceData.isFreeUser) {
     try {
       const isSvg = invoiceData.customLogoUrl.endsWith(".svg");
       const mime = isSvg ? "image/svg+xml" : "image/png";
@@ -59,14 +67,11 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       log("⚠️ Failed to fetch custom logo", { error: err.message });
       invoiceData.customLogoUrl = null;
     }
-  } else if (user.planType === "free") {
-    invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-    log("🖼️ Default logo set for free user", { logo: invoiceData.customLogoUrl });
-  } else {
-    invoiceData.customLogoUrl = null;
   }
 
+  // -----------------------------
   // Generate HTML
+  // -----------------------------
   let html;
   try {
     html = user.planType === "pro" && invoiceData.compliant
@@ -89,31 +94,30 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     throw err;
   }
 
- // Generate PDF
-let pdfBuffer;
-try {
-  log("🖨️ Generating PDF with Puppeteer...");
-  pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    displayHeaderFooter: true, 
-    headerTemplate: `<div></div>`, 
-    footerTemplate: `
-      <div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
-        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-      </div>
-    `,
-    preferCSSPageSize: true
-  });
-  log("📦 PDF buffer created", { size: pdfBuffer.length });
-} catch (err) {
-  log("❌ PDF generation error", { error: err.message, stack: err.stack });
-  throw err;
-} finally {
-  await page.close();
-}
-
+  // Generate PDF
+  let pdfBuffer;
+  try {
+    log("🖨️ Generating PDF with Puppeteer...");
+    pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+      displayHeaderFooter: true, 
+      headerTemplate: `<div></div>`, 
+      footerTemplate: `
+        <div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
+          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+        </div>
+      `,
+      preferCSSPageSize: true
+    });
+    log("📦 PDF buffer created", { size: pdfBuffer.length });
+  } catch (err) {
+    log("❌ PDF generation error", { error: err.message, stack: err.stack });
+    throw err;
+  } finally {
+    await page.close();
+  }
 
   // Count pages
   try {
@@ -128,7 +132,7 @@ try {
   const usageAllowed = await incrementUsage(user, invoiceData.isPreview ? 0 : 1, invoiceData.isPreview, FORCE_PLAN);
   if (!usageAllowed) throw new Error("Monthly limit reached.");
 
-  // Optional compliant processing
+  // Optional compliant processing for pro users
   if (user.planType === "pro" && invoiceData.compliant) {
     try {
       const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
@@ -183,6 +187,8 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.locale = locales[lang] || locales["en"];
+      invoiceData.isFreeUser = user.planType === "free"; // <-- auto detect free users
+
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
       log("Processing invoice", { orderId, invoiceData });
