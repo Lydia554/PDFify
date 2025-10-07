@@ -212,9 +212,6 @@ Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.
 
   <script >
     
-userData = await fetchUserData();
-setupCsvHandler(userData);
-
     
 const devBtn = document.getElementById('developerModeBtn');
 const friendlyBtn = document.getElementById('friendlyModeBtn');
@@ -736,18 +733,12 @@ fetch('/api/get-stripe-key')
 
     let userData;
     try {
-      userData = await fetchUserData(); 
+      userData = await fetchUserData();
     } catch (err) {
       console.error('Error fetching user data:', err);
       alert(err.message);
       return;
     }
-
-    
-    setupCsvHandler(userData);
-
-    
-  
 
  
     
@@ -875,130 +866,124 @@ switch (userData.planType) {
 
 
 
+
+const endpoint = document.getElementById('endpoint');
+const csvSection = document.getElementById('bulkCsvSection');
+const csvUpload = document.getElementById("csvUpload");
+const csvGenerateBtn = document.getElementById("csvGenerateBtn");
+const csvProgress = document.getElementById("csvProgress");
+const progressCount = document.getElementById("progressCount");
+const progressTotal = document.getElementById("progressTotal");
+const progressBar = document.getElementById("progressBar");
+const csvResult = document.getElementById("csvResult");
+
+// Toggle CSV section visibility
+function toggleCsvSection() {
+  const isInvoice = endpoint.value === 'generate-invoice';
+  csvSection.classList.toggle('hidden', !isInvoice);
+}
+
+endpoint.addEventListener('change', toggleCsvSection);
+document.addEventListener('DOMContentLoaded', toggleCsvSection);
+
 // -----------------------------
 // CSV Handling
 // -----------------------------
-function setupCsvHandler(userData) {
-  if (!userData) {
-    console.warn("[CSV] User data not loaded yet.");
-    return;
-  }
+csvGenerateBtn.addEventListener('click', async () => {
+  if (!csvUpload.files.length) return alert("Please upload a CSV file.");
+  csvProgress.classList.remove("hidden");
+  csvResult.textContent = "";
 
-  const endpoint = document.getElementById('endpoint');
-  const csvSection = document.getElementById('bulkCsvSection');
-  const csvUpload = document.getElementById("csvUpload");
-  const csvGenerateBtn = document.getElementById("csvGenerateBtn");
-  const csvProgress = document.getElementById("csvProgress");
-  const progressCount = document.getElementById("progressCount");
-  const progressTotal = document.getElementById("progressTotal");
-  const progressBar = document.getElementById("progressBar");
-  const csvResult = document.getElementById("csvResult");
+  const apiKey = document.getElementById("apiKey").value.trim();
+  if (!apiKey) return alert("API key is required.");
 
-  // Toggle CSV section visibility
-  function toggleCsvSection() {
-    const isInvoice = endpoint.value === 'generate-invoice';
-    csvSection.classList.toggle('hidden', !isInvoice);
-  }
+  const file = csvUpload.files[0];
 
-  endpoint.addEventListener('change', toggleCsvSection);
-  document.addEventListener('DOMContentLoaded', toggleCsvSection);
+  console.log("[CSV] Uploading file:", file.name);
 
-  csvGenerateBtn.addEventListener('click', async () => {
-    if (!csvUpload.files.length) return alert("Please upload a CSV file.");
-    csvProgress.classList.remove("hidden");
-    csvResult.textContent = "";
+  try {
+    const text = await file.text();
+    console.log("[CSV] File read successfully, length:", text.length);
 
-    const apiKey = document.getElementById("apiKey").value.trim();
-    if (!apiKey) return alert("API key is required.");
+    const rows = parseCSV(text);  
+    console.log("[CSV] Parsed rows:", rows.length);
 
-    const file = csvUpload.files[0];
-    console.log("[CSV] Uploading file:", file.name);
+    if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
-    try {
-      const text = await file.text();
-      console.log("[CSV] File read successfully, length:", text.length);
+    const groupedInvoices = groupRowsByOrderId(rows);      
+    const userPlan = userData.planType; 
+const isPro = userPlan === "pro";
+const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
 
-      const rows = parseCSV(text);  
-      console.log("[CSV] Parsed rows:", rows.length);
+const requests = groupedInvoices
+  .map(rowsToInvoiceJson)
+  .map(data => ({
+    data,
+    isPreview: false,
+    compliant: useCompliant 
+  }));
 
-      if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
-      const groupedInvoices = groupRowsByOrderId(rows);      
-      const isPro = userData.planType === "pro";
-      const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
+    console.log(`[CSV] Prepared ${requests.length} invoice requests`);
 
-      const requests = groupedInvoices
-        .map(rowsToInvoiceJson)
-        .map(data => ({
-          data,
-          isPreview: false,
-          compliant: useCompliant 
-        }));
+    const total = requests.length;
+    let completed = 0;
+    progressTotal.textContent = total;
+    progressBar.style.width = '0%';
+    progressCount.textContent = '0';
 
-      console.log(`[CSV] Prepared ${requests.length} invoice requests`);
+    const zip = new JSZip();
 
-      const total = requests.length;
-      let completed = 0;
-      progressTotal.textContent = total;
-      progressBar.style.width = '0%';
-      progressCount.textContent = '0';
+    const updateProgress = () => {
+      completed++;
+      const percent = Math.round((completed / total) * 100);
+      progressBar.style.width = `${percent}%`;
+      progressCount.textContent = completed;
+      console.log(`[CSV] Progress: ${completed}/${total}`);
+    };
 
-      const zip = new JSZip();
+    for (const req of requests) {
+      console.log("[CSV] Sending invoice request:", req.data.orderId);
+      const res = await fetch('/api/generate-invoice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ requests: [req] })
+      });
 
-      const updateProgress = () => {
-        completed++;
-        const percent = Math.round((completed / total) * 100);
-        progressBar.style.width = `${percent}%`;
-        progressCount.textContent = completed;
-        console.log(`[CSV] Progress: ${completed}/${total}`);
-      };
+      console.log(`[CSV] Response status for ${req.data.orderId}: ${res.status}`);
 
-      for (const req of requests) {
-        console.log("[CSV] Sending invoice request:", req.data.orderId);
-        const res = await fetch('/api/generate-invoice', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json', 
-            'Authorization': `Bearer ${apiKey}` 
-          },
-          body: JSON.stringify({ requests: [req] })
-        });
+      if (!res.ok) throw new Error(await res.text());
 
-        console.log(`[CSV] Response status for ${req.data.orderId}: ${res.status}`);
+      const blob = await res.blob();
+      console.log(`[CSV] Blob received for ${req.data.orderId}, size: ${blob.size}`);
 
-        if (!res.ok) throw new Error(await res.text());
-
-        const blob = await res.blob();
-        console.log(`[CSV] Blob received for ${req.data.orderId}, size: ${blob.size}`);
-
-        const contentDisposition = res.headers.get('Content-Disposition');
-        let filename = 'invoice.pdf';
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
-          if (match) filename = decodeURIComponent(match[1]);
-        }
-
-        zip.file(filename, await blob.arrayBuffer());
-        updateProgress();
+      const contentDisposition = res.headers.get('Content-Disposition');
+      let filename = 'invoice.pdf';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
+        if (match) filename = decodeURIComponent(match[1]);
       }
 
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const url = URL.createObjectURL(zipBlob);
-      console.log("[CSV] ZIP file generated:", url);
-
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = "invoices.zip";
-      a.click();
-      URL.revokeObjectURL(url);
-
-      csvResult.innerHTML = `<span class="text-green-600">✅ ${total} invoices downloaded.</span>`;
-    } catch (err) {
-      console.error("[CSV] Error processing CSV:", err);
-      csvResult.innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
+      zip.file(filename, await blob.arrayBuffer());
+      updateProgress();
     }
-  });
-}
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(zipBlob);
+    console.log("[CSV] ZIP file generated:", url);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = "invoices.zip";
+    a.click();
+    URL.revokeObjectURL(url);
+
+    csvResult.innerHTML = `<span class="text-green-600">✅ ${total} invoices downloaded.</span>`;
+  } catch (err) {
+    console.error("[CSV] Error processing CSV:", err);
+    csvResult.innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
+  }
+});
 
 
 
