@@ -106,21 +106,31 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   // Save screenshot + HTML to debugDir
   // -----------------------------
   const debugDir = "C:\\Users\\goldb\\Pro";
-  if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
-  log("🖼️ Debug folder ready", { debugDir });
+if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
 
-  const timestamp = Date.now();
-  try {
-    const screenshotPath = path.join(debugDir, `preview-${timestamp}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    log("📸 Screenshot captured for debug", { screenshotPath });
+const timestamp = Date.now();
 
-    const htmlPath = path.join(debugDir, `preview-${timestamp}.html`);
-    fs.writeFileSync(htmlPath, await page.content(), "utf-8");
-    log("📄 HTML saved for debug", { htmlPath });
-  } catch (err) {
-    log("⚠️ Screenshot/HTML save failed", { error: err.message });
+try {
+  // Use path.resolve to avoid any mixed slash issues
+  const screenshotPath = path.resolve(debugDir, `preview-${timestamp}.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  log("📸 Screenshot captured for debug", { screenshotPath });
+
+  const htmlPath = path.resolve(debugDir, `preview-${timestamp}.html`);
+  const pageContent = await page.content(); 
+  fs.writeFileSync(htmlPath, pageContent, "utf-8");
+  log("📄 HTML saved for debug", { htmlPath });
+
+  // Verify file actually exists
+  if (fs.existsSync(screenshotPath) && fs.existsSync(htmlPath)) {
+    log("✅ Debug files confirmed on disk", { screenshotPath, htmlPath });
+  } else {
+    log("⚠️ Debug files not found after save!", { screenshotPath, htmlPath });
   }
+} catch (err) {
+  log("❌ Screenshot/HTML save failed", { error: err.message, stack: err.stack });
+}
+
 
   // -----------------------------
   // Generate PDF
