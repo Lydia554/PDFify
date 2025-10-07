@@ -8,6 +8,7 @@ const MongoStore = require("connect-mongo");
 const dotenv = require("dotenv");
 
 dotenv.config();
+const fs = require("fs"); 
 
 const debugPdfDir = path.resolve(__dirname, "../debug-pdfs");
 if (!fs.existsSync(debugPdfDir)) fs.mkdirSync(debugPdfDir, { recursive: true });
