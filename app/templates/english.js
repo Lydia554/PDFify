@@ -24,20 +24,22 @@ async function generateInvoiceHTML(data) {
   const freeUserLogo = data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "";
 
   const finalLogoUrl = userLogo && !userLogo.includes("example.png") ? userLogo : freeUserLogo;
-
-  if (finalLogoUrl) {
-    try {
-      const isSvg = finalLogoUrl.endsWith(".svg");
-      const mime = isSvg ? "image/svg+xml" : "image/png";
-      const resp = await fetch(finalLogoUrl);
-      const buffer = await resp.arrayBuffer();
-      const base64 = Buffer.from(buffer).toString("base64");
-      logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
-      console.log("[generateInvoiceHTML] ✅ Logo embedded from URL");
-    } catch (err) {
-      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG", err.message);
-    }
+if (finalLogoUrl && /^https?:\/\//.test(finalLogoUrl)) {
+  try {
+    const isSvg = finalLogoUrl.endsWith(".svg");
+    const mime = isSvg ? "image/svg+xml" : "image/png";
+    const resp = await fetch(finalLogoUrl);
+    const buffer = await resp.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
+    console.log("[generateInvoiceHTML] ✅ Logo embedded from URL");
+  } catch (err) {
+    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG", err.message);
   }
+} else {
+  console.log("[generateInvoiceHTML] ℹ️ No remote logo to fetch (using fallback)");
+}
+
 
   // -------------------------
   // Chart (only if showChart is true)
