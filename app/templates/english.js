@@ -24,22 +24,21 @@ async function generateInvoiceHTML(data) {
   const freeUserLogo = data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "";
 
   const finalLogoUrl = userLogo && !userLogo.includes("example.png") ? userLogo : freeUserLogo;
-if (finalLogoUrl && /^https?:\/\//.test(finalLogoUrl)) {
-  try {
-    const isSvg = finalLogoUrl.endsWith(".svg");
-    const mime = isSvg ? "image/svg+xml" : "image/png";
-    const resp = await fetch(finalLogoUrl);
-    const buffer = await resp.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
-    logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
-    console.log("[generateInvoiceHTML] ✅ Logo embedded from URL");
-  } catch (err) {
-    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG", err.message);
+  if (finalLogoUrl && /^https?:\/\//.test(finalLogoUrl)) {
+    try {
+      const isSvg = finalLogoUrl.endsWith(".svg");
+      const mime = isSvg ? "image/svg+xml" : "image/png";
+      const resp = await fetch(finalLogoUrl);
+      const buffer = await resp.arrayBuffer();
+      const base64 = Buffer.from(buffer).toString("base64");
+      logoHTML = `<img id="invoice-logo" src="data:${mime};base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;"/>`;
+      console.log("[generateInvoiceHTML] ✅ Logo embedded from URL");
+    } catch (err) {
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG", err.message);
+    }
+  } else {
+    console.log("[generateInvoiceHTML] ℹ️ No remote logo to fetch (using fallback)");
   }
-} else {
-  console.log("[generateInvoiceHTML] ℹ️ No remote logo to fetch (using fallback)");
-}
-
 
   // -------------------------
   // Chart (only if showChart is true)
@@ -92,7 +91,7 @@ if (finalLogoUrl && /^https?:\/\//.test(finalLogoUrl)) {
   </div>`;
 
   // -------------------------
-  // Return full HTML
+  // Return full HTML with Puppeteer-friendly CSS
   // -------------------------
   return `
 <html>
@@ -100,19 +99,84 @@ if (finalLogoUrl && /^https?:\/\//.test(finalLogoUrl)) {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <style>
-      html, body { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; }
-      .container { max-width: 800px; margin: 20px auto; padding: 30px 24px 60px; background: #fff !important; border-radius: 8px; border: 1px solid #c5d0f9; box-shadow: none; position: relative; z-index: 1; }
-      .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-      .table th, .table td { padding: 10px; border: 1px solid #c5d0f9; text-align: left; }
-      .table th { background-color: #dbe7ff; color: #2a3d66; font-weight: 600; }
-      .table td { background-color: #fff; color: #2a3d66; }
-      .table tr:nth-child(even) td { background-color: #f6f9fe; }
-      .table tfoot td { background-color: #dbe7ff; font-weight: bold; color: #2a3d66; }
-      .total p { font-weight: bold; color: #000; font-size: 1.05em; }
-      .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 44px; color: rgba(255, 204, 204, 0.8); font-weight: 900; pointer-events: none; user-select: none; z-index: 99; white-space: nowrap; }
-      .footer { max-width: 800px; margin: 40px auto 10px auto; padding: 10px; font-size: 11px; border-top: 1px solid #c5d0f9; text-align: center; color: #2a3d66; background: #fff !important; }
-      #__pdf_debug { page-break-inside: avoid; }
-      [data-debug-overlay] { display: none !important; }
+      /* Minimal Puppeteer-safe CSS */
+      html, body {
+        background: #ffffff;
+        color: #000000;
+        margin: 0;
+        padding: 0;
+        font-family: sans-serif;
+      }
+      .container {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 30px 24px 60px;
+        background: #ffffff;
+        border-radius: 6px;
+        border: 1px solid #c5d0f9;
+      }
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+      }
+      .table th, .table td {
+        padding: 8px;
+        border: 1px solid #c5d0f9;
+        text-align: left;
+      }
+      .table th {
+        background-color: #dbe7ff;
+        color: #2a3d66;
+        font-weight: bold;
+      }
+      .table td {
+        background-color: #ffffff;
+        color: #2a3d66;
+      }
+      .table tr:nth-child(even) td {
+        background-color: #f6f9fe;
+      }
+      .table tfoot td {
+        background-color: #dbe7ff;
+        font-weight: bold;
+        color: #2a3d66;
+      }
+      .total p {
+        font-weight: bold;
+        color: #000000;
+        font-size: 1.05em;
+      }
+      .watermark {
+        position: fixed;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 36px;
+        color: rgba(255, 204, 204, 0.6);
+        font-weight: bold;
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+      }
+      .footer {
+        max-width: 800px;
+        margin: 40px auto 10px auto;
+        padding: 10px;
+        font-size: 11px;
+        border-top: 1px solid #c5d0f9;
+        text-align: center;
+        color: #2a3d66;
+        background: #ffffff;
+      }
+      #invoice-logo {
+        display: block;
+        margin-bottom: 18px;
+        height: 60px;
+      }
+      #__pdf_debug {
+        page-break-inside: avoid;
+      }
     </style>
   </head>
   <body>
