@@ -34,132 +34,69 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   log("🧾 Starting PDF generation", { planType: user.planType, compliant: invoiceData.compliant });
 
   const page = await browser.newPage();
-
-  // Puppeteer console/network logging
   page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
-  page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message, stack: err.stack }));
+  page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message }));
   page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
 
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
-
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
-
-  // -----------------------------
-  // Determine if free user
-  // -----------------------------
   invoiceData.isFreeUser = user.planType === "free";
 
-  // -----------------------------
-  // Handle logo as base64 if pro user
-  // Free users will get default logo in template
-  // -----------------------------
-  if (invoiceData.customLogoUrl && !invoiceData.isFreeUser) {
-    try {
-      const isSvg = invoiceData.customLogoUrl.endsWith(".svg");
-      const mime = isSvg ? "image/svg+xml" : "image/png";
-      const resp = await fetch(invoiceData.customLogoUrl);
-      const buffer = await resp.arrayBuffer();
-      const base64Logo = Buffer.from(buffer).toString("base64");
-      invoiceData.customLogoUrl = `data:${mime};base64,${base64Logo}`;
-      log("✅ Logo embedded as base64", { length: invoiceData.customLogoUrl.length });
-    } catch (err) {
-      log("⚠️ Failed to fetch custom logo", { error: err.message });
-      invoiceData.customLogoUrl = null;
-    }
-  }
-
-  // -----------------------------
   // Generate HTML
-  // -----------------------------
   let html;
   try {
     html = user.planType === "pro" && invoiceData.compliant
       ? await generateInvoiceHTMLPro(invoiceData)
       : await generateInvoiceHTML(invoiceData);
     log("✅ HTML generated", { htmlLength: html.length });
-    log("📄 HTML snippet", { snippet: html.slice(0, 500) });
   } catch (err) {
-    log("❌ Error generating HTML", { error: err.message, stack: err.stack });
+    log("❌ Error generating HTML", { error: err.message });
     throw err;
   }
 
-  // Load HTML into Puppeteer
-  try {
-    await page.setContent(html, { waitUntil: "load", timeout: 15000 });
-    await page.evaluateHandle("document.fonts.ready");
-    log("🧠 Page content loaded");
-  } catch (err) {
-    log("❌ Error setting page content", { error: err.message, stack: err.stack });
-    throw err;
-  }
+  await page.setContent(html, { waitUntil: "load", timeout: 15000 });
+  await page.evaluateHandle("document.fonts.ready");
 
-  // Generate PDF
   let pdfBuffer;
   try {
-    log("🖨️ Generating PDF with Puppeteer...");
     pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      displayHeaderFooter: true, 
-      headerTemplate: `<div></div>`, 
-      footerTemplate: `
-        <div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
-          Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-        </div>
-      `,
+      displayHeaderFooter: true,
+      headerTemplate: `<div></div>`,
+      footerTemplate: `<div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
+        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+      </div>`,
       preferCSSPageSize: true
     });
-    log("📦 PDF buffer created", { size: pdfBuffer.length });
-  } catch (err) {
-    log("❌ PDF generation error", { error: err.message, stack: err.stack });
-    throw err;
   } finally {
     await page.close();
   }
 
   // Count pages
-  try {
-    const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
-    const pageCount = PDFDocument.getPageCount();
-    log("📑 PDF page count", { pageCount });
-  } catch (err) {
-    log("❌ PDF inspection failed", { error: err.message });
-  }
+  const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
+  const pageCount = PDFDocument.getPageCount();
 
-  // Increment usage
-  const usageAllowed = await incrementUsage(user, invoiceData.isPreview ? 0 : 1, invoiceData.isPreview, FORCE_PLAN);
-  if (!usageAllowed) throw new Error("Monthly limit reached.");
-
-  // Optional compliant processing for pro users
+  // Optional compliant pro processing
   if (user.planType === "pro" && invoiceData.compliant) {
-    try {
-      const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
-      const zugferdXml = generateZugferdXML(invoiceData);
-      log("🔧 Generated ZUGFeRD XML", { length: zugferdXml.length });
+    const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
+    const zugferdXml = generateZugferdXML(invoiceData);
+    await embedIccProfile(pdfDocPro);
+    await embedXmp(pdfDocPro);
+    embedXmlIntoPdf(pdfDocPro, zugferdXml);
 
-      await embedIccProfile(pdfDocPro);
-      await embedXmp(pdfDocPro);
-      embedXmlIntoPdf(pdfDocPro, zugferdXml);
+    pdfBuffer = await pdfDocPro.save();
 
-      pdfBuffer = await pdfDocPro.save();
-      log("💾 PDF saved after embedding XML", { newSize: pdfBuffer.length });
-
-      if (!DEBUG_MODE) {
-        const metadata = {};
-        pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
-        log("✅ PDF/A-3b conversion done", { metadata });
-      }
-    } catch (err) {
-      log("❌ Error in compliant PDF processing", { error: err.message, stack: err.stack });
-      throw err;
+    if (!DEBUG_MODE) {
+      pdfBuffer = await makePdfA3b(pdfBuffer, {});
     }
   }
 
-  log("🏁 PDF generation complete", { invoiceSource: invoiceData.invoiceSource });
-  return { pdfBuffer };
+  return { pdfBuffer, pageCount };
 }
+
 
 // -----------------------------
 // /generate-invoice route
@@ -189,20 +126,16 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isFreeUser = user.planType === "free";
 
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-
       log("Processing invoice", { orderId, invoiceData });
 
       // Generate PDF
       const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
 
-      // Increment usage per page
-      const usageAllowed = await incrementUsage(
-        user,
-        invoiceData.isPreview ? 0 : pageCount, 
-        invoiceData.isPreview,
-        FORCE_PLAN
-      );
-      if (!usageAllowed) throw new Error("Monthly limit reached.");
+      // Increment usage per PDF **per page**
+      if (!invoiceData.isPreview) {
+        const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
+        if (!allowed) throw new Error("Monthly limit reached.");
+      }
 
       results.push({ pdfBuffer, orderId });
       log("Invoice processed", { orderId, pageCount });
@@ -215,18 +148,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
-
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader(
-        "Content-Disposition",
-        isPreview
-          ? `inline; filename="${orderId}.pdf"`
-          : `attachment; filename="${orderId}.pdf"`
-      );
+      res.setHeader("Content-Disposition", isPreview ? `inline; filename="${orderId}.pdf"` : `attachment; filename="${orderId}.pdf"`);
       res.setHeader("Content-Length", pdfBuffer.length);
-
-      log("Sending single PDF", { orderId, length: pdfBuffer.length });
-      return res.end(pdfBuffer); 
+      return res.end(pdfBuffer);
     }
 
     // Multiple PDFs → ZIP
@@ -251,4 +176,5 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (browser) await browser.close();
   }
 });
+
 module.exports = router;
