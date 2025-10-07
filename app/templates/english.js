@@ -1,5 +1,6 @@
 const fetch = require("node-fetch");
- const sharp = require("sharp");
+const sharp = require("sharp");
+
 /**
  * Generate HTML invoice for free/pro users
  * @param {Object} data
@@ -9,45 +10,50 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // Default invoice source
   data.invoiceSource ||= "colorful";
 
+  // -------------------------
+  // Logo
+  // -------------------------
+  const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40">
+    <rect width="180" height="40" fill="#2a3d66" rx="6" />
+    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+  </svg>`;
 
-let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
+  let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
 
-const finalLogoUrl = data.customLogoUrl && !data.customLogoUrl.includes("example.png")
-  ? data.customLogoUrl
-  : data.isFreeUser
-    ? "https://pdfify.pro/images/Logo.png"
-    : null;
+  const finalLogoUrl = data.customLogoUrl && !data.customLogoUrl.includes("example.png")
+    ? data.customLogoUrl
+    : data.isFreeUser
+      ? "https://pdfify.pro/images/Logo.png"
+      : null;
 
-if (finalLogoUrl) {
-  try {
-    const resp = await fetch(finalLogoUrl);
-    if (!resp.ok) throw new Error(`Status ${resp.status}`);
-    const buffer = await resp.arrayBuffer();
+  if (finalLogoUrl) {
+    try {
+      const resp = await fetch(finalLogoUrl);
+      if (!resp.ok) throw new Error(`Status ${resp.status}`);
+      const buffer = await resp.arrayBuffer();
 
-    // Convert SVG → PNG if needed
-    let pngBuffer;
-    if (finalLogoUrl.endsWith(".svg")) {
-      pngBuffer = await sharp(Buffer.from(buffer))
-        .png()
-        .resize({ height: 60 }) 
-        .toBuffer();
-    } else {
-      pngBuffer = Buffer.from(buffer);
+      // Convert SVG to PNG if needed
+      let pngBuffer;
+      if (finalLogoUrl.endsWith(".svg")) {
+        pngBuffer = await sharp(Buffer.from(buffer))
+          .png()
+          .resize({ height: 60 })
+          .toBuffer();
+      } else {
+        pngBuffer = Buffer.from(buffer);
+      }
+
+      const base64 = pngBuffer.toString("base64");
+      logoHTML = `<img id="invoice-logo" src="data:image/png;base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
+
+      console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG for Puppeteer");
+    } catch (err) {
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
+      logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
     }
-
-    const base64 = pngBuffer.toString("base64");
-    logoHTML = `<img id="invoice-logo" src="data:image/png;base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
-
-    console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG for Puppeteer");
-  } catch (err) {
-    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
-    logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
   }
-}
-
 
   // -------------------------
   // Chart
@@ -59,16 +65,13 @@ if (finalLogoUrl) {
             type: "pie",
             data: {
               labels: ["Subtotal", "Tax"],
-              datasets: [{
-                data: [
-                  Number(String(data.subtotal).replace(/[^\d.-]/g, "")) || 0,
-                  Number(String(data.tax).replace(/[^\d.-]/g, "")) || 0
-                ]
-              }]
+              datasets: [{ data: [
+                Number(String(data.subtotal).replace(/[^\d.-]/g, "")) || 0,
+                Number(String(data.tax).replace(/[^\d.-]/g, "")) || 0
+              ]}]
             }
          }))}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
        </div>` : "";
-
   // -------------------------
   // Watermark
   // -------------------------
