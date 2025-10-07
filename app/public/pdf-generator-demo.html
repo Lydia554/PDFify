@@ -211,7 +211,8 @@ Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.
 
 
   <script >
-    
+    let userData = null;
+
     
 const devBtn = document.getElementById('developerModeBtn');
 const friendlyBtn = document.getElementById('friendlyModeBtn');
@@ -731,14 +732,13 @@ fetch('/api/get-stripe-key')
   .then(async (data) => {
     const stripe = Stripe(data.stripePublishableKey);
 
-    let userData;
-    try {
-      userData = await fetchUserData();
-    } catch (err) {
-      console.error('Error fetching user data:', err);
-      alert(err.message);
-      return;
-    }
+ try {
+  userData = await fetchUserData(); 
+} catch (err) {
+  console.error('Error fetching user data:', err);
+  alert(err.message);
+  return;
+}
 
  
     
