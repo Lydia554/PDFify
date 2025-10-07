@@ -14,7 +14,9 @@ async function generateInvoiceHTML(data) {
 // -------------------------
 // Determine free/pro user safely
 // -------------------------
-const isFree = Boolean(data?.isFreeUser || !data?.planType || data?.planType === "free" || data?.planType === "starter");
+const planType = (data?.planType || "").toLowerCase();
+const isFree = planType === "free" || planType === "starter";
+
 
 // Ensure invoiceSource always exists
 if (!data) data = {};
@@ -30,54 +32,50 @@ data.invoiceSource ||= "colorful";
   const evenRowColor = isFree ? "#eee" : "#f6f9fe";
 
   // -------------------------
-  // Default logo
+  //Logo
   // -------------------------
-  const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-    <rect width="180" height="40" fill="${primaryColor}" rx="6" />
-    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-  </svg>`;
 
-let logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`;
 
-  // -------------------------
-  // Custom logo for pro users
-  // -------------------------
-  const customLogo = data.customLogoUrl;
-  if (!isFree && customLogo) {
-    try {
-      let buffer;
+let logoHTML;
 
-      if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
-        const resp = await fetch(customLogo);
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        buffer = Buffer.from(await resp.arrayBuffer());
-      } else if (customLogo.startsWith("data:")) {
-        const base64Data = customLogo.split(",")[1];
-        buffer = Buffer.from(base64Data, "base64");
-      } else {
-        if (!fs.existsSync(customLogo)) throw new Error("Local logo file not found");
-        buffer = fs.readFileSync(customLogo);
-      }
+if (isFree) {
+  // Default logo for free/starter users
+  logoHTML = `<img src="https://pdfify.pro/images/Logo.png"
+    style="height:60px;margin-bottom:18px;display:block;" alt="PDFify Logo" />`;
+} else if (data.customLogoUrl) {
+  // Pro/premium users with custom logo
+  try {
+    const customLogo = data.customLogoUrl;
+    let buffer;
 
-      let pngBuffer;
-      if (customLogo.endsWith(".svg") || customLogo.startsWith("data:image/svg+xml")) {
-        pngBuffer = await sharp(buffer).png().resize({ height: 60 }).toBuffer();
-      } else {
-        pngBuffer = buffer;
-      }
-
-      const base64 = pngBuffer.toString("base64");
-      logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
-
-      console.log("[generateInvoiceHTML] ✅ Custom logo embedded successfully.");
-    } catch (err) {
-      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo. Leaving blank area:", err.message);
-      logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`; 
+    if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
+      const resp = await fetch(customLogo);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      buffer = Buffer.from(await resp.arrayBuffer());
+    } else if (customLogo.startsWith("data:")) {
+      const base64Data = customLogo.split(",")[1];
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+      if (!fs.existsSync(customLogo)) throw new Error("Local logo file not found");
+      buffer = fs.readFileSync(customLogo);
     }
-  } else if (isFree) {
- 
-    logoHTML = `<div style="height:60px;margin-bottom:18px;background-color:#f5f5f5;border-radius:6px;"></div>`;
+
+    const pngBuffer = customLogo.endsWith(".svg") || customLogo.startsWith("data:image/svg+xml")
+      ? await sharp(buffer).png().resize({ height: 60 }).toBuffer()
+      : buffer;
+
+    const base64 = pngBuffer.toString("base64");
+    logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
+    console.log("[generateInvoiceHTML] ✅ Custom logo embedded successfully.");
+  } catch (err) {
+    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo:", err.message);
+    logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`;
   }
+} else {
+  // Pro user without custom logo
+  logoHTML = `<div style="height:60px;margin-bottom:18px;"></div>`;
+}
+
   
 
   // -------------------------
@@ -135,7 +133,7 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
     <div class="left" style="flex:1;">
       <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
       <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
-      ${data.paymentTerms ? `<p><strong>${locale.paymentTerms || "Payment Terms"}:</strong> ${data.paymentTerms}</p>` : ""}
+   ${data.paymentTerms ? `<p><strong>${locale.paymentTerms || "Payment Terms"}:</strong> ${data.paymentTerms}</p>` : ""}
       ${data.iban ? `<p><strong>IBAN:</strong> ${data.iban}</p>` : ""}
       ${data.bic ? `<p><strong>BIC:</strong> ${data.bic}</p>` : ""}
     </div>
@@ -184,10 +182,10 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 ${watermarkHTML}
 
 <div class="footer">
-  <p>Thanks for using our service!</p>
-  <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-  <p>Generated using PDFify. <a href="https://pdfify.pro" target="_blank" rel="noopener">Visit our site for more.</a></p>
+  <p>${locale.thanks || "Thanks for using our service!"}</p>
+  <p>${locale.contact || "If you have questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+  <p>© 2025 🧾PDFify — ${locale.copyright || "All rights reserved."}</p>
+  <p>${locale.generated || "Generated using PDFify."} <a href="https://pdfify.pro" target="_blank" rel="noopener">${locale.visitSite || "Visit our site for more."}</a></p>
 </div>
 
 </body>

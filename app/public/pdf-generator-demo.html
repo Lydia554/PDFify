@@ -899,42 +899,34 @@ csvGenerateBtn.addEventListener('click', async () => {
 
   const file = csvUpload.files[0];
 
-  console.log("[CSV] Uploading file:", file.name);
-
   try {
     const text = await file.text();
-    console.log("[CSV] File read successfully, length:", text.length);
-
     const rows = parseCSV(text);  
-    console.log("[CSV] Parsed rows:", rows.length);
-
     if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
-    const groupedInvoices = groupRowsByOrderId(rows);      
-    const userPlan = userData.planType; 
-const isPro = userPlan === "pro";
-const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
+    // Group rows by orderId
+    const groupedInvoices = groupRowsByOrderId(rows);
+    console.log("[CSV] Grouped invoices:", groupedInvoices.map(g => g.map(r => r.orderId)));
 
-const requests = groupedInvoices
-  .map(row => {
-    const data = rowsToInvoiceJson(row);
+    // Determine user type and compliance
+    const userPlan = userData?.planType || "free";
+    const isPro = userPlan.toLowerCase() === "pro";
+    const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
 
- 
-    data.isFreeUser = !userData?.planType || userData.planType === "free";
-    data.planType = userData?.planType || "free";
-    data.customLogoUrl = userData?.customLogoUrl || null;
+    // Prepare requests for each invoice
+    const requests = groupedInvoices.map(group => {
+      const data = rowsToInvoiceJson(group); // convert all rows of this group into one invoice JSON
 
-    return data;
-  })
-  .map(data => ({
-    data,
-    isPreview: false,
-    compliant: useCompliant
-  }));
+      data.isFreeUser = !userData?.planType || userData.planType === "free";
+      data.planType = userData?.planType || "free";
+      data.customLogoUrl = userData?.customLogoUrl || null;
 
+      return { data, isPreview: false, compliant: useCompliant };
+    });
 
     console.log(`[CSV] Prepared ${requests.length} invoice requests`);
 
+    // Initialize progress
     const total = requests.length;
     let completed = 0;
     progressTotal.textContent = total;
@@ -948,24 +940,19 @@ const requests = groupedInvoices
       const percent = Math.round((completed / total) * 100);
       progressBar.style.width = `${percent}%`;
       progressCount.textContent = completed;
-      console.log(`[CSV] Progress: ${completed}/${total}`);
     };
 
+    // Send invoices one by one
     for (const req of requests) {
-      console.log("[CSV] Sending invoice request:", req.data.orderId);
       const res = await fetch('/api/generate-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify({ requests: [req] })
       });
 
-      console.log(`[CSV] Response status for ${req.data.orderId}: ${res.status}`);
-
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
-      console.log(`[CSV] Blob received for ${req.data.orderId}, size: ${blob.size}`);
-
       const contentDisposition = res.headers.get('Content-Disposition');
       let filename = 'invoice.pdf';
       if (contentDisposition) {
@@ -977,10 +964,9 @@ const requests = groupedInvoices
       updateProgress();
     }
 
+    // Generate ZIP and download
     const zipBlob = await zip.generateAsync({ type: "blob" });
     const url = URL.createObjectURL(zipBlob);
-    console.log("[CSV] ZIP file generated:", url);
-
     const a = document.createElement('a');
     a.href = url;
     a.download = "invoices.zip";
