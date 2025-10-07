@@ -94,49 +94,77 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
+    // -----------------------------
+    // Reset monthly usage once
+    // -----------------------------
+    const now = new Date();
+    if (!user.usageLastReset || new Date(user.usageLastReset).getMonth() !== now.getMonth()) {
+      user.usageCount = 0;
+      user.previewCount = 0;
+      user.usageLastReset = now;
+    }
+
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
 
     const results = [];
+    let totalPagesToCount = 0; 
 
+    // -----------------------------
+    // Generate PDFs
+    // -----------------------------
+    for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
+      const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
+      invoiceData.iban ||= "";
+      invoiceData.bic ||= "";
+      const country = (invoiceData.country || "").toLowerCase();
+      const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
+      invoiceData.locale = locales[lang] || locales["en"];
+      invoiceData.isFreeUser = user.planType === "free";
 
-for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
-  const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
-  invoiceData.iban ||= "";
-  invoiceData.bic ||= "";
-  const country = (invoiceData.country || "").toLowerCase();
-  const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
-  invoiceData.locale = locales[lang] || locales["en"];
-  invoiceData.isFreeUser = user.planType === "free";
+      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+      const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      results.push({ pdfBuffer, orderId });
 
-  const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
-  const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-  results.push({ pdfBuffer, orderId });
+      // -----------------------------
+      // Count pages for usage (skip previews)
+      // -----------------------------
+      if (!invoiceData.isPreview) {
+        totalPagesToCount += pageCount;
+      } else {
+        // Increment preview separately
+        await incrementUsage(user, 0, true);
+      }
+    }
 
-  
-  if (!invoiceData.isPreview) {
-    const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
-    if (!allowed) throw new Error("Monthly limit reached.");
-
-    
-    await user.save();
-  }
-}
-
+    // -----------------------------
+    // Increment usage for total pages in batch
+    // -----------------------------
+    if (totalPagesToCount > 0) {
+      const allowed = await incrementUsage(user, totalPagesToCount, false, FORCE_PLAN);
+      if (!allowed) throw new Error("Monthly limit reached.");
+    }
 
     await user.save();
     await browser.close();
 
+    // -----------------------------
     // Single PDF
+    // -----------------------------
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", isPreview ? `inline; filename="${orderId}.pdf"` : `attachment; filename="${orderId}.pdf"`);
+      res.setHeader(
+        "Content-Disposition",
+        isPreview ? `inline; filename="${orderId}.pdf"` : `attachment; filename="${orderId}.pdf"`
+      );
       res.setHeader("Content-Length", pdfBuffer.length);
       return res.end(pdfBuffer);
     }
 
+    // -----------------------------
     // Multiple PDFs → ZIP
+    // -----------------------------
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
 
@@ -148,7 +176,6 @@ for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
     });
 
     await archive.finalize();
-
   } catch (err) {
     if (browser) await browser.close();
     console.error("Error in /generate-invoice", err);
@@ -157,5 +184,6 @@ for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
     if (browser) await browser.close();
   }
 });
+
 
 module.exports = router;
