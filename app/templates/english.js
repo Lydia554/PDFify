@@ -10,61 +10,67 @@ const sharp = require("sharp");
 async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
+
+  const isFree = !!data.isFreeUser; 
   data.invoiceSource ||= "colorful";
 
-// -------------------------
-// Logo
-// -------------------------
-const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-  <rect width="180" height="40" fill="#2a3d66" rx="6" />
-  <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-</svg>`;
+  // -------------------------
+  // Colors
+  // -------------------------
+  const primaryColor = isFree ? "#888888" : "#2a3d66";
+  const secondaryColor = isFree ? "#cccccc" : "#dbe7ff";
+  const borderColor = isFree ? "#aaaaaa" : "#c5d0f9";
 
-let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
+  // -------------------------
+  // Default logo
+  // -------------------------
+  const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+    <rect width="180" height="40" fill="${primaryColor}" rx="6" />
+    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+  </svg>`;
 
+  let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
 
-const customLogo = data.customLogoUrl;
+  // -------------------------
+  // Custom logo for pro users
+  // -------------------------
+  const customLogo = data.customLogoUrl;
+  if (!isFree && customLogo) {
+    try {
+      let buffer;
 
-if (customLogo) {
-  try {
-    let buffer;
+      if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
+        const resp = await fetch(customLogo);
+        if (!resp.ok) throw new Error(`Status ${resp.status}`);
+        buffer = Buffer.from(await resp.arrayBuffer());
+      } else if (customLogo.startsWith("data:")) {
+        const base64Data = customLogo.split(",")[1];
+        buffer = Buffer.from(base64Data, "base64");
+      } else {
+        if (!fs.existsSync(customLogo)) throw new Error("Local logo file not found");
+        buffer = fs.readFileSync(customLogo);
+      }
 
-    if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
-      const resp = await fetch(customLogo);
-      if (!resp.ok) throw new Error(`Status ${resp.status}`);
-      buffer = Buffer.from(await resp.arrayBuffer());
-    } else if (customLogo.startsWith("data:")) {
-     
-      const base64Data = customLogo.split(",")[1];
-      buffer = Buffer.from(base64Data, "base64");
-    } else {
-   
-      if (!fs.existsSync(customLogo)) throw new Error("Local logo file not found");
-      buffer = fs.readFileSync(customLogo);
+      let pngBuffer;
+      if (customLogo.endsWith(".svg") || customLogo.startsWith("data:image/svg+xml")) {
+        pngBuffer = await sharp(buffer).png().resize({ height: 60 }).toBuffer();
+      } else {
+        pngBuffer = buffer;
+      }
+
+      const base64 = pngBuffer.toString("base64");
+      logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
+
+      console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG");
+    } catch (err) {
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
     }
-
-
-    let pngBuffer;
-    if (customLogo.endsWith(".svg") || customLogo.startsWith("data:image/svg+xml")) {
-      pngBuffer = await sharp(buffer).png().resize({ height: 60 }).toBuffer();
-    } else {
-      pngBuffer = buffer;
-    }
-
-    const base64 = pngBuffer.toString("base64");
-    logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
-
-    console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG");
-  } catch (err) {
-    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
-    logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
   }
-}
 
   // -------------------------
-  // Chart
+  // Chart for pro users only
   // -------------------------
-  const chartHTML = data.showChart
+  const chartHTML = !isFree && data.showChart
     ? `<div class="chart-container">
          <h2>${locale.breakdown || "Breakdown"}</h2>
          <img src="https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
@@ -78,10 +84,11 @@ if (customLogo) {
             }
          }))}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
        </div>` : "";
+
   // -------------------------
-  // Watermark
+  // Watermark for preview/free users
   // -------------------------
-  const watermarkHTML = data.isBasicUser && data.isPreview
+  const watermarkHTML = isFree && data.isPreview
     ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>` : "";
 
   // -------------------------
@@ -94,16 +101,16 @@ if (customLogo) {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <style>
 html, body { background: #fff !important; color: #000 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; }
-.container { max-width:800px; margin:20px auto; padding:30px 24px 60px; background:#fff; border-radius:8px; border:1px solid #c5d0f9; }
+.container { max-width:800px; margin:20px auto; padding:30px 24px 60px; background:#fff; border-radius:8px; border:1px solid ${borderColor}; }
 .table { width:100%; border-collapse:collapse; margin-bottom:20px; }
-.table th, .table td { padding:10px; border:1px solid #c5d0f9; text-align:left; }
-.table th { background-color:#dbe7ff; color:#2a3d66; font-weight:600; }
-.table td { background-color:#fff; color:#2a3d66; }
+.table th, .table td { padding:10px; border:1px solid ${borderColor}; text-align:left; }
+.table th { background-color:${secondaryColor}; color:${primaryColor}; font-weight:600; }
+.table td { background-color:#fff; color:${primaryColor}; }
 .table tr:nth-child(even) td { background-color:#f6f9fe; }
-.table tfoot td { background-color:#dbe7ff; font-weight:bold; color:#2a3d66; }
+.table tfoot td { background-color:${secondaryColor}; font-weight:bold; color:${primaryColor}; }
 .total p { font-weight:bold; color:#000; font-size:1.05em; }
 .watermark { position: fixed; top: 40%; left:50%; transform:translate(-50%, -50%) rotate(-45deg); font-size:44px; color: rgba(255,204,204,0.8); font-weight:900; pointer-events:none; user-select:none; z-index:99; white-space:nowrap; }
-.footer { max-width:800px; margin:40px auto 10px auto; padding:10px; font-size:11px; border-top:1px solid #c5d0f9; text-align:center; color:#2a3d66; background:#fff; }
+.footer { max-width:800px; margin:40px auto 10px auto; padding:10px; font-size:11px; border-top:1px solid ${borderColor}; text-align:center; color:${primaryColor}; background:#fff; }
 </style>
 </head>
 <body>
@@ -163,7 +170,7 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 
 ${watermarkHTML}
 
-<div class="footer" style="text-align:center; font-size:11px; margin-top:40px; padding:10px; border-top:1px solid #c5d0f9; color:#2a3d66;">
+<div class="footer">
   <p>Thanks for using our service!</p>
   <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
   <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
@@ -172,7 +179,7 @@ ${watermarkHTML}
 
 </body>
 </html>
-`;
+  `;
 }
 
 module.exports = { generateInvoiceHTML };
