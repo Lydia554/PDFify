@@ -11,34 +11,24 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // -------------------------
   // Determine free/pro user safely
-  // -------------------------
   const planType = (data?.planType || "").toLowerCase();
   const isFree = planType === "free" || planType === "starter";
 
-  // Ensure invoiceSource always exists
-  if (!data) data = {};
   data.invoiceSource ||= "colorful";
 
-  // -------------------------
   // Colors
-  // -------------------------
   const primaryColor = isFree ? "#888888" : "#2a3d66";
   const secondaryColor = isFree ? "#cccccc" : "#dbe7ff";
   const borderColor = isFree ? "#aaaaaa" : "#c5d0f9";
   const evenRowColor = isFree ? "#eee" : "#f6f9fe";
 
-  // -------------------------
   // Logo
-  // -------------------------
   let logoHTML = "";
 
   if (isFree) {
-    // Free users → always default logo
     logoHTML = `<img src="https://pdfify.pro/images/Logo.png" style="height:60px;display:block;" alt="PDFify Logo" />`;
   } else if (data.customLogoUrl && data.customLogoUrl.trim() !== "") {
-    // Pro users → only if valid custom logo
     try {
       const customLogo = data.customLogoUrl;
       let buffer;
@@ -63,18 +53,17 @@ async function generateInvoiceHTML(data) {
       logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;display:block;" />`;
     } catch (err) {
       console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo:", err.message);
-      logoHTML = ""; // No placeholder for missing logo
+      logoHTML = ""; 
     }
   }
 
-  // -------------------------
-  // Helper to render logo only if it exists
-  // -------------------------
-  const renderLogo = (html) => html ? `<div style="margin-bottom:18px;">${html}</div>` : "";
+  // Helper to render logo section and top spacing
+  const renderLogoSection = (html) => {
+    if (html) return `<div style="margin-bottom:18px;">${html}</div>`;
+    return ""; // no empty placeholder if no logo
+  };
 
-  // -------------------------
   // Chart for pro users only
-  // -------------------------
   const chartHTML = !isFree && data.showChart
     ? `<div class="chart-container">
          <h2>${locale.breakdown || "Breakdown"}</h2>
@@ -90,15 +79,11 @@ async function generateInvoiceHTML(data) {
          }))}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
        </div>` : "";
 
-  // -------------------------
   // Watermark for free/preview users
-  // -------------------------
   const watermarkHTML = isFree && data.isPreview
     ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>` : "";
 
-  // -------------------------
   // Full HTML
-  // -------------------------
   return `
 <html>
 <head>
@@ -120,8 +105,8 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 </head>
 <body>
 <div class="container">
-  ${renderLogo(logoHTML)}
-  <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+  ${renderLogoSection(logoHTML)}
+  <h1 style="${logoHTML ? '' : 'margin-top:0;'}">${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
 
   <div class="invoice-header" style="display:flex; justify-content:space-between; gap:12px; margin-bottom:18px;">
     <div class="left" style="flex:1;">
