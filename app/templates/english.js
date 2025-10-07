@@ -33,12 +33,11 @@ data.invoiceSource ||= "colorful";
 
 
 
-  let logoHTML = "";
+let logoHTML = "";
 
 // Free users → always default logo
 if (isFree) {
-  logoHTML = `<img src="https://pdfify.pro/images/Logo.png"
-    style="height:60px;margin-bottom:18px;display:block;" alt="PDFify Logo" />`;
+  logoHTML = `<img src="https://pdfify.pro/images/Logo.png" style="height:60px;display:block;" alt="PDFify Logo" />`;
 } 
 // Pro users → only if valid custom logo
 else if (data.customLogoUrl) {
@@ -63,12 +62,10 @@ else if (data.customLogoUrl) {
       : buffer;
 
     const base64 = pngBuffer.toString("base64");
-    logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
-    console.log("[generateInvoiceHTML] ✅ Custom logo embedded successfully.");
+    logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;display:block;" />`;
   } catch (err) {
     console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo:", err.message);
-   
-    logoHTML = "";
+    logoHTML = ""; 
   }
 }
 
@@ -123,8 +120,9 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 </head>
 <body>
 <div class="container">
-  ${isFree || data.customLogoUrl ? logoHTML : ""}
+  ${logoHTML ? `<div style="margin-bottom:18px;">${logoHTML}</div>` : ""}
   <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
+
 
 
   <div class="invoice-header" style="display:flex; justify-content:space-between; gap:12px; margin-bottom:18px;">
