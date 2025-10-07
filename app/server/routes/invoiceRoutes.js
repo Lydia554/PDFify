@@ -29,7 +29,7 @@ const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta);
 
 // -----------------------------
-// PDF generation helper
+// PDF generation 
 // -----------------------------
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
@@ -60,8 +60,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       const mime = isSvg ? "image/svg+xml" : "image/png";
       const resp = await fetch(invoiceData.customLogoUrl);
       const buffer = await resp.arrayBuffer();
-      const base64Logo = Buffer.from(buffer).toString("base64");
-      invoiceData.customLogoUrl = `data:${mime};base64,${base64Logo}`;
+      invoiceData.customLogoUrl = `data:${mime};base64,${Buffer.from(buffer).toString("base64")}`;
       log("✅ Logo embedded as base64", { length: invoiceData.customLogoUrl.length });
     } catch (err) {
       log("⚠️ Failed to fetch custom logo, fallback to inline SVG", { error: err.message });
@@ -94,8 +93,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   try {
     log("🧠 Setting page content...");
     await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 15000 });
-
     await page.evaluateHandle("document.fonts.ready");
+
     const contentHTML = await page.content();
     log("📄 Page content length", { length: contentHTML.length });
   } catch (err) {
@@ -103,30 +102,28 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     throw err;
   }
 
-  // Screenshot for debugging
-const debugDir = "C:\\Users\\goldb\\Pro"; 
+  // -----------------------------
+  // Save screenshot + HTML to debugDir
+  // -----------------------------
+  const debugDir = "C:\\Users\\goldb\\Pro";
+  if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+  log("🖼️ Debug folder ready", { debugDir });
 
+  const timestamp = Date.now();
+  try {
+    const screenshotPath = path.join(debugDir, `preview-${timestamp}.png`);
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    log("📸 Screenshot captured for debug", { screenshotPath });
 
-if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
-
-try {
-  const screenshotPath = path.join(debugDir, `preview-${Date.now()}.png`);
-  await page.screenshot({ path: screenshotPath, fullPage: true });
-  log("📸 Screenshot captured for debug", { path: screenshotPath });
-
-  
-  const htmlPath = path.join(debugDir, `preview-${Date.now()}.html`);
-  const pageContent = await page.content();
-  fs.writeFileSync(htmlPath, pageContent, "utf-8");
-  log("📄 HTML saved for debug", { path: htmlPath });
-
-} catch (err) {
-  log("⚠️ Screenshot/HTML save failed", { error: err.message });
-}
-
+    const htmlPath = path.join(debugDir, `preview-${timestamp}.html`);
+    fs.writeFileSync(htmlPath, await page.content(), "utf-8");
+    log("📄 HTML saved for debug", { htmlPath });
+  } catch (err) {
+    log("⚠️ Screenshot/HTML save failed", { error: err.message });
+  }
 
   // -----------------------------
-  // PDF generation
+  // Generate PDF
   // -----------------------------
   let pdfBuffer;
   try {
@@ -146,22 +143,22 @@ try {
     await page.close();
   }
 
-  // Count pages
+  // -----------------------------
+  // Count pages and increment usage
+  // -----------------------------
   const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = PDFDocument.getPageCount();
   log("📑 PDF page count", { pageCount });
 
-  // Increment usage
   const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
   if (!usageAllowed) throw new Error("Monthly limit reached.");
 
-  // Optional compliant processing
+  // -----------------------------
+  // Compliant processing (optional)
+  // -----------------------------
   if (useCompliant) {
     try {
-      const isStandardInvoice = invoiceData.invoiceSource === "standard";
-      log("🧩 Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
-
-      if (isStandardInvoice) {
+      if (invoiceData.invoiceSource === "standard") {
         const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
         const zugferdXml = generateZugferdXML(invoiceData);
         log("🔧 Generated ZUGFeRD XML", { length: zugferdXml.length });
@@ -190,6 +187,7 @@ try {
   log("🏁 PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
   return { pdfBuffer, pageCount };
 }
+
 
 // -----------------------------
 // /generate-invoice route

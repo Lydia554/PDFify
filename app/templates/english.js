@@ -9,7 +9,7 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // Ensure there's an explicit source
+
   data.invoiceSource ||= "colorful";
 
   // -------------------------
@@ -18,7 +18,7 @@ async function generateInvoiceHTML(data) {
   let logoHTML = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
     <rect width="180" height="40" fill="#2a3d66" rx="6" />
     <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-  </svg>`; // default fallback
+  </svg>`; 
 
   const userLogo = data.customLogoUrl;
   const freeUserLogo = data.isFreeUser ? "https://pdfify.pro/images/Logo.png" : "";
