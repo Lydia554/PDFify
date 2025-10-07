@@ -11,17 +11,15 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-// -------------------------
-// Determine free/pro user safely
-// -------------------------
-const planType = (data?.planType || "").toLowerCase();
-const isFree = planType === "free" || planType === "starter";
+  // -------------------------
+  // Determine free/pro user safely
+  // -------------------------
+  const planType = (data?.planType || "").toLowerCase();
+  const isFree = planType === "free" || planType === "starter";
 
-
-// Ensure invoiceSource always exists
-if (!data) data = {};
-data.invoiceSource ||= "colorful";
-
+  // Ensure invoiceSource always exists
+  if (!data) data = {};
+  data.invoiceSource ||= "colorful";
 
   // -------------------------
   // Colors
@@ -31,46 +29,48 @@ data.invoiceSource ||= "colorful";
   const borderColor = isFree ? "#aaaaaa" : "#c5d0f9";
   const evenRowColor = isFree ? "#eee" : "#f6f9fe";
 
+  // -------------------------
+  // Logo
+  // -------------------------
+  let logoHTML = "";
 
+  if (isFree) {
+    // Free users → always default logo
+    logoHTML = `<img src="https://pdfify.pro/images/Logo.png" style="height:60px;display:block;" alt="PDFify Logo" />`;
+  } else if (data.customLogoUrl && data.customLogoUrl.trim() !== "") {
+    // Pro users → only if valid custom logo
+    try {
+      const customLogo = data.customLogoUrl;
+      let buffer;
 
-let logoHTML = "";
+      if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
+        const resp = await fetch(customLogo);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        buffer = Buffer.from(await resp.arrayBuffer());
+      } else if (customLogo.startsWith("data:")) {
+        const base64Data = customLogo.split(",")[1];
+        buffer = Buffer.from(base64Data, "base64");
+      } else {
+        if (!fs.existsSync(customLogo)) throw new Error("Local logo file not found");
+        buffer = fs.readFileSync(customLogo);
+      }
 
-// Free users → always default logo
-if (isFree) {
-  logoHTML = `<img src="https://pdfify.pro/images/Logo.png" style="height:60px;display:block;" alt="PDFify Logo" />`;
-} 
-// Pro users → only if valid custom logo
-else if (data.customLogoUrl) {
-  try {
-    const customLogo = data.customLogoUrl;
-    let buffer;
+      const pngBuffer = customLogo.endsWith(".svg") || customLogo.startsWith("data:image/svg+xml")
+        ? await sharp(buffer).png().resize({ height: 60 }).toBuffer()
+        : buffer;
 
-    if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
-      const resp = await fetch(customLogo);
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      buffer = Buffer.from(await resp.arrayBuffer());
-    } else if (customLogo.startsWith("data:")) {
-      const base64Data = customLogo.split(",")[1];
-      buffer = Buffer.from(base64Data, "base64");
-    } else {
-      if (!fs.existsSync(customLogo)) throw new Error("Local logo file not found");
-      buffer = fs.readFileSync(customLogo);
+      const base64 = pngBuffer.toString("base64");
+      logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;display:block;" />`;
+    } catch (err) {
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo:", err.message);
+      logoHTML = ""; // No placeholder for missing logo
     }
-
-    const pngBuffer = customLogo.endsWith(".svg") || customLogo.startsWith("data:image/svg+xml")
-      ? await sharp(buffer).png().resize({ height: 60 }).toBuffer()
-      : buffer;
-
-    const base64 = pngBuffer.toString("base64");
-    logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;display:block;" />`;
-  } catch (err) {
-    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo:", err.message);
-    logoHTML = ""; 
   }
-}
 
-
-  
+  // -------------------------
+  // Helper to render logo only if it exists
+  // -------------------------
+  const renderLogo = (html) => html ? `<div style="margin-bottom:18px;">${html}</div>` : "";
 
   // -------------------------
   // Chart for pro users only
@@ -120,16 +120,14 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 </head>
 <body>
 <div class="container">
-  ${logoHTML ? `<div style="margin-bottom:18px;">${logoHTML}</div>` : ""}
+  ${renderLogo(logoHTML)}
   <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
-
-
 
   <div class="invoice-header" style="display:flex; justify-content:space-between; gap:12px; margin-bottom:18px;">
     <div class="left" style="flex:1;">
       <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
       <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
-   ${data.paymentTerms ? `<p><strong>${locale.paymentTerms || "Payment Terms"}:</strong> ${data.paymentTerms}</p>` : ""}
+      ${data.paymentTerms ? `<p><strong>${locale.paymentTerms || "Payment Terms"}:</strong> ${data.paymentTerms}</p>` : ""}
       ${data.iban ? `<p><strong>IBAN:</strong> ${data.iban}</p>` : ""}
       ${data.bic ? `<p><strong>BIC:</strong> ${data.bic}</p>` : ""}
     </div>
