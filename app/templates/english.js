@@ -12,6 +12,23 @@ async function generateInvoiceHTML(data) {
   // Default invoice source
   data.invoiceSource ||= "colorful";
 
+
+  // -------------------------
+// Logo URL
+// -------------------------
+const fallbackLogoSVG = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+  <rect width="180" height="40" fill="#2a3d66" rx="6" />
+  <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+</svg>`;
+
+let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
+
+const finalLogoUrl = data.customLogoUrl && !data.customLogoUrl.includes("example.png")
+  ? data.customLogoUrl
+  : data.isFreeUser
+    ? "https://pdfify.pro/images/Logo.png"
+    : null;
+
  
 
 if (finalLogoUrl) {
