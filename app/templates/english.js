@@ -167,7 +167,7 @@ ${watermarkHTML}
   <p>Thanks for using our service!</p>
   <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
   <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
-  <p>Generated using PDFify. Visit our site for more.</p>
+  <p>Generated using PDFify. <a href="https://pdfify.pro" target="_blank" rel="noopener">Visit our site for more.</a></p>
 </div>
 
 </body>
