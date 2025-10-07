@@ -89,24 +89,31 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     throw err;
   }
 
-  // Generate PDF
-  let pdfBuffer;
-  try {
-    log("🖨️ Generating PDF with Puppeteer...");
-    pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      displayHeaderFooter: false,
-      preferCSSPageSize: true
-    });
-    log("📦 PDF buffer created", { size: pdfBuffer.length });
-  } catch (err) {
-    log("❌ PDF generation error", { error: err.message, stack: err.stack });
-    throw err;
-  } finally {
-    await page.close();
-  }
+ // Generate PDF
+let pdfBuffer;
+try {
+  log("🖨️ Generating PDF with Puppeteer...");
+  pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    displayHeaderFooter: true, 
+    headerTemplate: `<div></div>`, 
+    footerTemplate: `
+      <div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
+        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+      </div>
+    `,
+    preferCSSPageSize: true
+  });
+  log("📦 PDF buffer created", { size: pdfBuffer.length });
+} catch (err) {
+  log("❌ PDF generation error", { error: err.message, stack: err.stack });
+  throw err;
+} finally {
+  await page.close();
+}
+
 
   // Count pages
   try {
