@@ -163,12 +163,13 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
 
 ${watermarkHTML}
 
-<div class="footer">
-  <p>${locale.footerThanks || "Thanks for using our service!"}</p>
-  <p>${locale.footerContact || "For questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
-  <p>&copy; 2025 — ${locale.footerCopyright || "All rights reserved."}</p>
-  <p>${locale.footerGenerated || "Generated with PDFify"}</p>
+<div class="footer" style="text-align:center; font-size:11px; margin-top:40px; padding:10px; border-top:1px solid #c5d0f9; color:#2a3d66;">
+  <p>Thanks for using our service!</p>
+  <p>If you have questions, contact us at <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
+  <p>&copy; 2025 🧾PDFify — All rights reserved.</p>
+  <p>Generated using PDFify. Visit our site for more.</p>
 </div>
+
 </body>
 </html>
 `;
