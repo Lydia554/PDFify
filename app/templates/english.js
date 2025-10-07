@@ -1,3 +1,4 @@
+const fs = require("fs");
 const fetch = require("node-fetch");
 const sharp = require("sharp");
 
@@ -9,49 +10,46 @@ const sharp = require("sharp");
 async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
-
   data.invoiceSource ||= "colorful";
 
   // -------------------------
   // Logo
   // -------------------------
-  const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40">
+  const fallbackLogoSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
     <rect width="180" height="40" fill="#2a3d66" rx="6" />
     <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
   </svg>`;
 
   let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
 
-  const finalLogoUrl = data.customLogoUrl && !data.customLogoUrl.includes("example.png")
-    ? data.customLogoUrl
-    : data.isFreeUser
-      ? "https://pdfify.pro/images/Logo.png"
-      : null;
-
-  if (finalLogoUrl) {
+  const customLogo = data.customLogoUrl;
+  if (customLogo) {
     try {
-      const resp = await fetch(finalLogoUrl);
-      if (!resp.ok) throw new Error(`Status ${resp.status}`);
-      const buffer = await resp.arrayBuffer();
+      let buffer;
 
-      // Convert SVG to PNG if needed
+      if (customLogo.startsWith("http://") || customLogo.startsWith("https://")) {
+        const resp = await fetch(customLogo);
+        if (!resp.ok) throw new Error(`Status ${resp.status}`);
+        buffer = await resp.arrayBuffer();
+      } else {
+        
+        buffer = fs.readFileSync(customLogo);
+      }
+
+      // Convert SVG → PNG if needed
       let pngBuffer;
-      if (finalLogoUrl.endsWith(".svg")) {
-        pngBuffer = await sharp(Buffer.from(buffer))
-          .png()
-          .resize({ height: 60 })
-          .toBuffer();
+      if (customLogo.endsWith(".svg")) {
+        pngBuffer = await sharp(Buffer.from(buffer)).png().resize({ height: 60 }).toBuffer();
       } else {
         pngBuffer = Buffer.from(buffer);
       }
 
       const base64 = pngBuffer.toString("base64");
-      logoHTML = `<img id="invoice-logo" src="data:image/png;base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
+      logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;margin-bottom:18px;display:block;" />`;
 
-      console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG for Puppeteer");
+      console.log("[generateInvoiceHTML] ✅ Logo embedded successfully as PNG");
     } catch (err) {
       console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
-      logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
     }
   }
 
