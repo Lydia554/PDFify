@@ -145,7 +145,7 @@ async function generateInvoiceHTML(data) {
 
     <div class="footer">
       <p>${locale.thanks || "Thanks for using our service!"}</p>
-      <p>${locale.contact || "For questions, contact us at"} <a href="mailto:support@example.com">support@example.com</a>.</p>
+      <p>${locale.contact || "For questions, contact us at"} <a href="mailto:pdfifyapi@gmail.com">pdfifyapi@gmail.com</a>.</p>
       <p>&copy; 2025 — ${locale.copyright || "All rights reserved."}</p>
     </div>
   </body>
