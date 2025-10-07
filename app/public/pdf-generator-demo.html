@@ -901,7 +901,7 @@ csvGenerateBtn.addEventListener('click', async () => {
 
   try {
     const text = await file.text();
-    const rows = parseCSV(text);  
+    const rows = parseCSV(text);
     if (!rows.length) throw new Error("CSV file is empty or invalid.");
 
     // Group rows by orderId
@@ -913,9 +913,9 @@ csvGenerateBtn.addEventListener('click', async () => {
     const isPro = userPlan.toLowerCase() === "pro";
     const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
 
-    // Prepare requests for each invoice
+    // Prepare invoice requests
     const requests = groupedInvoices.map(group => {
-      const data = rowsToInvoiceJson(group); // convert all rows of this group into one invoice JSON
+      const data = rowsToInvoiceJson(group);
 
       data.isFreeUser = !userData?.planType || userData.planType === "free";
       data.planType = userData?.planType || "free";
@@ -942,19 +942,22 @@ csvGenerateBtn.addEventListener('click', async () => {
       progressCount.textContent = completed;
     };
 
-    // Send invoices one by one
-    for (const req of requests) {
+    // Parallel requests with Promise.all
+    await Promise.all(requests.map(async (req) => {
       const res = await fetch('/api/generate-invoice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ requests: [req] })
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': `Bearer ${apiKey}` 
+        },
+        body: JSON.stringify(req) 
       });
 
       if (!res.ok) throw new Error(await res.text());
 
       const blob = await res.blob();
       const contentDisposition = res.headers.get('Content-Disposition');
-      let filename = 'invoice.pdf';
+      let filename = `${req.data.orderId}.pdf`;
       if (contentDisposition) {
         const match = contentDisposition.match(/filename\*?=(?:UTF-8'')?"?([^;\r\n"]+)"/i);
         if (match) filename = decodeURIComponent(match[1]);
@@ -962,7 +965,7 @@ csvGenerateBtn.addEventListener('click', async () => {
 
       zip.file(filename, await blob.arrayBuffer());
       updateProgress();
-    }
+    }));
 
     // Generate ZIP and download
     const zipBlob = await zip.generateAsync({ type: "blob" });
@@ -979,6 +982,7 @@ csvGenerateBtn.addEventListener('click', async () => {
     csvResult.innerHTML = `<span class="text-red-400">❌ Error: ${err.message}</span>`;
   }
 });
+
 
 
 
