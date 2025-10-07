@@ -13,58 +13,49 @@ async function generateInvoiceHTML(data) {
   data.invoiceSource ||= "colorful";
 
   // -------------------------
-// Logo
-// -------------------------
-let fallbackLogoSVG = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
-  <rect width="180" height="40" fill="#2a3d66" rx="6" />
-  <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
-</svg>`;
+  // Logo
+  // -------------------------
+  let fallbackLogoSVG = `<svg id="invoice-logo" xmlns="http://www.w3.org/2000/svg" width="180" height="40" viewBox="0 0 180 40" style="display:block;margin-bottom:18px;">
+    <rect width="180" height="40" fill="#2a3d66" rx="6" />
+    <text x="12" y="26" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="14">PDFify</text>
+  </svg>`;
 
-let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
+  let logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
 
-const finalLogoUrl = data.customLogoUrl && !data.customLogoUrl.includes("example.png")
-  ? data.customLogoUrl
-  : data.isFreeUser
-    ? "https://pdfify.pro/images/Logo.png"
-    : null;
+  const finalLogoUrl = data.customLogoUrl && !data.customLogoUrl.includes("example.png")
+    ? data.customLogoUrl
+    : data.isFreeUser
+      ? "https://pdfify.pro/images/Logo.png"
+      : null;
 
-if (finalLogoUrl) {
-  try {
-    if (finalLogoUrl.startsWith("http://") || finalLogoUrl.startsWith("https://")) {
-      const resp = await fetch(finalLogoUrl);
-      if (!resp.ok) throw new Error(`Status ${resp.status}`);
-      if (finalLogoUrl.endsWith(".svg")) {
-        const svgText = await resp.text();
-        logoHTML = `<div id="invoice-logo" style="margin-bottom:18px; max-height:60px;">${svgText}</div>`;
-      } else {
-        const buffer = await resp.arrayBuffer();
-        const base64 = Buffer.from(buffer).toString("base64");
-        logoHTML = `<img id="invoice-logo" src="data:image/png;base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
-      }
-    } else {
-      // Local file fallback (absolute path)
-      const fs = require("fs");
-      const path = require("path");
-      const filePath = path.resolve(finalLogoUrl);
-      if (fs.existsSync(filePath)) {
-        if (filePath.endsWith(".svg")) {
-          const svgText = fs.readFileSync(filePath, "utf-8");
+  if (finalLogoUrl) {
+    try {
+      if (finalLogoUrl.startsWith("http://") || finalLogoUrl.startsWith("https://")) {
+        const resp = await fetch(finalLogoUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                          "(KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+          }
+        });
+        if (!resp.ok) throw new Error(`Status ${resp.status}`);
+        if (finalLogoUrl.endsWith(".svg")) {
+          const svgText = await resp.text();
           logoHTML = `<div id="invoice-logo" style="margin-bottom:18px; max-height:60px;">${svgText}</div>`;
         } else {
-          const buffer = fs.readFileSync(filePath);
-          const base64 = buffer.toString("base64");
+          const buffer = await resp.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString("base64");
           logoHTML = `<img id="invoice-logo" src="data:image/png;base64,${base64}" alt="Logo" style="height:60px;margin-bottom:18px;display:block;" />`;
         }
       } else {
-        console.warn("[generateInvoiceHTML] ⚠️ Local logo file not found, using fallback SVG");
+        // Optional: handle local files if needed
+        logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
       }
+      console.log("[generateInvoiceHTML] ✅ Logo embedded successfully");
+    } catch (err) {
+      console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
+      logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
     }
-    console.log("[generateInvoiceHTML] ✅ Logo embedded successfully");
-  } catch (err) {
-    console.warn("[generateInvoiceHTML] ⚠️ Could not fetch logo, using fallback SVG:", err.message);
-    logoHTML = `<div style="height:60px;margin-bottom:18px;">${fallbackLogoSVG}</div>`;
   }
-}
 
   // -------------------------
   // Chart
