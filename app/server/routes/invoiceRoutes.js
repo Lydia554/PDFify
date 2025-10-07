@@ -82,7 +82,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   // Load HTML into Puppeteer
   try {
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 20000 });
+    await page.setContent(html, { waitUntil: "load", timeout: 15000 });
+
     await page.evaluateHandle("document.fonts.ready");
     log("🧠 Page content loaded");
   } catch (err) {
