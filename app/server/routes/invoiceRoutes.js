@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const archiver = require("archiver");
 const fetch = require("node-fetch");
+if (!globalThis.fetch) globalThis.fetch = fetch;
 
 const router = express.Router();
 
