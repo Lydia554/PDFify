@@ -37,7 +37,9 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   const page = await browser.newPage();
 
-  // Puppeteer console/error logging
+  // -----------------------------
+  // Puppeteer logging
+  // -----------------------------
   page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
   page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message, stack: err.stack }));
   page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
@@ -45,71 +47,33 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
 
-  const useCompliant = user.planType === "pro" && invoiceData.compliant === true;
-  invoiceData.userClass = useCompliant ? "pdfa-clean" : "";
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
-
-  log("📦 Invoice source determined", { invoiceSource: invoiceData.invoiceSource });
-
-  // -----------------------------
-  // Handle logo safely as base64
-  // -----------------------------
-  if (invoiceData.customLogoUrl && invoiceData.customLogoUrl !== "example.png") {
-    try {
-      const isSvg = invoiceData.customLogoUrl.endsWith(".svg");
-      const mime = isSvg ? "image/svg+xml" : "image/png";
-      const resp = await fetch(invoiceData.customLogoUrl);
-      const buffer = await resp.arrayBuffer();
-      const base64Logo = Buffer.from(buffer).toString("base64");
-      invoiceData.customLogoUrl = `data:${mime};base64,${base64Logo}`;
-      log("✅ Logo embedded as base64", { length: invoiceData.customLogoUrl.length });
-    } catch (err) {
-      log("⚠️ Failed to fetch custom logo, fallback to inline SVG", { error: err.message });
-      invoiceData.customLogoUrl = null;
-    }
-  } else if (user.planType === "free") {
-    invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
-    log("🖼️ Default logo set for free user", { logo: invoiceData.customLogoUrl });
-  } else {
-    invoiceData.customLogoUrl = null;
-  }
 
   // -----------------------------
   // Generate HTML
   // -----------------------------
   let html;
   try {
-    html = useCompliant
+    html = user.planType === "pro" && invoiceData.compliant
       ? await generateInvoiceHTMLPro(invoiceData)
       : await generateInvoiceHTML(invoiceData);
     log("✅ HTML generated", { htmlLength: html.length });
+    log("📄 HTML snippet", { snippet: html.slice(0, 500) });
   } catch (err) {
-    log("❌ Error generating HTML", { error: err.message, stack: err.stack });
+    log("❌ Error generating HTML", { error: err.message });
     throw err;
   }
 
   // -----------------------------
-  // Load content into Puppeteer
+  // Load HTML into Puppeteer
   // -----------------------------
   try {
-    log("🧠 Setting page content...");
-    await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 15000 });
-
+    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 20000 });
     await page.evaluateHandle("document.fonts.ready");
-    const contentHTML = await page.content();
-    log("📄 Page content length", { length: contentHTML.length });
+    log("🧠 Page content loaded");
   } catch (err) {
-    log("❌ Error setting page content", { error: err.message, stack: err.stack });
+    log("❌ Error setting page content", { error: err.message });
     throw err;
-  }
-
-  // Screenshot for debugging
-  try {
-    const screenshotPath = path.join(os.tmpdir(), `preview-${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    log("📸 Screenshot captured for debug", { path: screenshotPath });
-  } catch (err) {
-    log("⚠️ Screenshot failed", { error: err.message });
   }
 
   // -----------------------------
@@ -117,7 +81,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   // -----------------------------
   let pdfBuffer;
   try {
-    log("🖨️ Generating PDF with Puppeteer...");
     pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -125,57 +88,26 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       displayHeaderFooter: false,
       preferCSSPageSize: true
     });
-    log("📦 PDF buffer created", { size: pdfBuffer.length });
+    log("🖨️ PDF generated", { length: pdfBuffer.length });
   } catch (err) {
-    log("❌ PDF generation error", { error: err.message, stack: err.stack });
+    log("❌ PDF generation failed", { error: err.message });
     throw err;
   } finally {
     await page.close();
   }
 
-  // Count pages
-  const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
-  const pageCount = PDFDocument.getPageCount();
-  log("📑 PDF page count", { pageCount });
-
-  // Increment usage
-  const usageAllowed = await incrementUsage(user, pageCount, invoiceData.isPreview, FORCE_PLAN);
-  if (!usageAllowed) throw new Error("Monthly limit reached.");
-
-  // Optional compliant processing
-  if (useCompliant) {
-    try {
-      const isStandardInvoice = invoiceData.invoiceSource === "standard";
-      log("🧩 Compliant check", { useCompliant, invoiceSource: invoiceData.invoiceSource, isStandardInvoice });
-
-      if (isStandardInvoice) {
-        const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
-        const zugferdXml = generateZugferdXML(invoiceData);
-        log("🔧 Generated ZUGFeRD XML", { length: zugferdXml.length });
-
-        await embedIccProfile(pdfDocPro);
-        await embedXmp(pdfDocPro);
-        embedXmlIntoPdf(pdfDocPro, zugferdXml);
-
-        pdfBuffer = await pdfDocPro.save();
-        log("💾 Saved PDF after embedding XML", { newSize: pdfBuffer.length });
-
-        if (!DEBUG_MODE) {
-          const metadata = {};
-          pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
-          log("✅ PDF/A-3b conversion done", { metadata });
-        }
-      } else {
-        log("⏩ Skipping ZUGFeRD/PDF-A for non-standard invoice", { invoiceSource: invoiceData.invoiceSource });
-      }
-    } catch (err) {
-      log("❌ Error in compliant PDF processing", { error: err.message, stack: err.stack });
-      throw err;
-    }
+  // -----------------------------
+  // Inspect PDF
+  // -----------------------------
+  try {
+    const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
+    const pageCount = PDFDocument.getPageCount();
+    log("📑 PDF page count", { pageCount });
+  } catch (err) {
+    log("❌ PDF inspection failed", { error: err.message });
   }
 
-  log("🏁 PDF generation complete", { pageCount, useCompliant, invoiceSource: invoiceData.invoiceSource });
-  return { pdfBuffer, pageCount };
+  return { pdfBuffer };
 }
 
 // -----------------------------
