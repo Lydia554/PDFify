@@ -9,9 +9,13 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+const debugPdfDir = path.resolve(__dirname, "../debug-pdfs");
+if (!fs.existsSync(debugPdfDir)) fs.mkdirSync(debugPdfDir, { recursive: true });
+console.log("[Debug] Debug PDF folder ready at:", debugPdfDir);
+
+
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
-const dualAuth = require("./middleware/dualAuth");
 const authProtect = require("./middleware/authProtect");
 
 // Routes

@@ -106,26 +106,17 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 // -----------------------------
 // Screenshot + HTML for debugging
 // -----------------------------
-const debugDir = path.resolve(__dirname, "../../debug-pdfs"); 
-if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
-
 const timestamp = Date.now();
-
 try {
-  // Resolve paths properly to avoid mixed slashes
-  const screenshotPath = path.join(debugDir, `preview-${timestamp}.png`);
-  const htmlPath = path.join(debugDir, `preview-${timestamp}.html`);
-
-  // Take screenshot
+  const screenshotPath = path.resolve(debugPdfDir, `preview-${timestamp}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
   log("📸 Screenshot captured for debug", { screenshotPath });
 
-  // Save HTML
+  const htmlPath = path.resolve(debugPdfDir, `preview-${timestamp}.html`);
   const pageContent = await page.content();
   fs.writeFileSync(htmlPath, pageContent, "utf-8");
   log("📄 HTML saved for debug", { htmlPath });
 
-  // Confirm files exist
   if (fs.existsSync(screenshotPath) && fs.existsSync(htmlPath)) {
     log("✅ Debug files confirmed on disk", { screenshotPath, htmlPath });
   } else {
@@ -134,6 +125,7 @@ try {
 } catch (err) {
   log("❌ Screenshot/HTML save failed", { error: err.message, stack: err.stack });
 }
+
 
   // -----------------------------
   // PDF generation
