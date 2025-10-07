@@ -55,6 +55,10 @@ app.use(session({
   },
 }));
 
+
+app.use('/debug-pdfs', express.static(path.join(__dirname, 'debug-pdfs')));
+
+
 // -------------------- Webhooks --------------------
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
 app.use("/webhook", shopifyWebhookRoutes);
