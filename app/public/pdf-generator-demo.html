@@ -212,7 +212,8 @@ Emily Davis,emily@example.com,12347,Germany,2025-05-05,Consulting,3,30.00€,90.
 
   <script >
     
-let userData = null;
+userData = await fetchUserData();
+setupCsvHandler(userData);
 
     
 const devBtn = document.getElementById('developerModeBtn');
