@@ -1,7 +1,6 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
-const fs = require("fs");
 const os = require("os");
 const archiver = require("archiver");
 const fetch = require("node-fetch");
@@ -37,9 +36,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   const page = await browser.newPage();
 
-  // -----------------------------
-  // Puppeteer logging
-  // -----------------------------
+  // Puppeteer console/network logging
   page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
   page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message, stack: err.stack }));
   page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
@@ -49,9 +46,28 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
 
-  // -----------------------------
+  // Handle logo as base64 if present
+  if (invoiceData.customLogoUrl && invoiceData.customLogoUrl !== "example.png") {
+    try {
+      const isSvg = invoiceData.customLogoUrl.endsWith(".svg");
+      const mime = isSvg ? "image/svg+xml" : "image/png";
+      const resp = await fetch(invoiceData.customLogoUrl);
+      const buffer = await resp.arrayBuffer();
+      const base64Logo = Buffer.from(buffer).toString("base64");
+      invoiceData.customLogoUrl = `data:${mime};base64,${base64Logo}`;
+      log("✅ Logo embedded as base64", { length: invoiceData.customLogoUrl.length });
+    } catch (err) {
+      log("⚠️ Failed to fetch custom logo", { error: err.message });
+      invoiceData.customLogoUrl = null;
+    }
+  } else if (user.planType === "free") {
+    invoiceData.customLogoUrl = path.resolve(__dirname, "../../public/images/Logo.png");
+    log("🖼️ Default logo set for free user", { logo: invoiceData.customLogoUrl });
+  } else {
+    invoiceData.customLogoUrl = null;
+  }
+
   // Generate HTML
-  // -----------------------------
   let html;
   try {
     html = user.planType === "pro" && invoiceData.compliant
@@ -60,27 +76,24 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     log("✅ HTML generated", { htmlLength: html.length });
     log("📄 HTML snippet", { snippet: html.slice(0, 500) });
   } catch (err) {
-    log("❌ Error generating HTML", { error: err.message });
+    log("❌ Error generating HTML", { error: err.message, stack: err.stack });
     throw err;
   }
 
-  // -----------------------------
   // Load HTML into Puppeteer
-  // -----------------------------
   try {
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 20000 });
     await page.evaluateHandle("document.fonts.ready");
     log("🧠 Page content loaded");
   } catch (err) {
-    log("❌ Error setting page content", { error: err.message });
+    log("❌ Error setting page content", { error: err.message, stack: err.stack });
     throw err;
   }
 
-  // -----------------------------
-  // PDF generation
-  // -----------------------------
+  // Generate PDF
   let pdfBuffer;
   try {
+    log("🖨️ Generating PDF with Puppeteer...");
     pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
@@ -88,17 +101,15 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       displayHeaderFooter: false,
       preferCSSPageSize: true
     });
-    log("🖨️ PDF generated", { length: pdfBuffer.length });
+    log("📦 PDF buffer created", { size: pdfBuffer.length });
   } catch (err) {
-    log("❌ PDF generation failed", { error: err.message });
+    log("❌ PDF generation error", { error: err.message, stack: err.stack });
     throw err;
   } finally {
     await page.close();
   }
 
-  // -----------------------------
-  // Inspect PDF
-  // -----------------------------
+  // Count pages
   try {
     const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
     const pageCount = PDFDocument.getPageCount();
@@ -107,6 +118,36 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     log("❌ PDF inspection failed", { error: err.message });
   }
 
+  // Increment usage
+  const usageAllowed = await incrementUsage(user, invoiceData.isPreview ? 0 : 1, invoiceData.isPreview, FORCE_PLAN);
+  if (!usageAllowed) throw new Error("Monthly limit reached.");
+
+  // Optional compliant processing
+  if (user.planType === "pro" && invoiceData.compliant) {
+    try {
+      const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
+      const zugferdXml = generateZugferdXML(invoiceData);
+      log("🔧 Generated ZUGFeRD XML", { length: zugferdXml.length });
+
+      await embedIccProfile(pdfDocPro);
+      await embedXmp(pdfDocPro);
+      embedXmlIntoPdf(pdfDocPro, zugferdXml);
+
+      pdfBuffer = await pdfDocPro.save();
+      log("💾 PDF saved after embedding XML", { newSize: pdfBuffer.length });
+
+      if (!DEBUG_MODE) {
+        const metadata = {};
+        pdfBuffer = await makePdfA3b(pdfBuffer, metadata);
+        log("✅ PDF/A-3b conversion done", { metadata });
+      }
+    } catch (err) {
+      log("❌ Error in compliant PDF processing", { error: err.message, stack: err.stack });
+      throw err;
+    }
+  }
+
+  log("🏁 PDF generation complete", { invoiceSource: invoiceData.invoiceSource });
   return { pdfBuffer };
 }
 
@@ -114,9 +155,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 // /generate-invoice route
 // -----------------------------
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
-  const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
-  fs.mkdirSync(tmpDir, { recursive: true });
-
   let browser;
   log("Request received", { body: req.body, userId: req.user.userId });
 
@@ -143,9 +181,9 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
       log("Processing invoice", { orderId, invoiceData });
 
-      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
-      results.push({ pdfBuffer, orderId, pageCount, useCompliant: invoiceData.compliant });
-      log("Invoice processed", { orderId, pageCount, compliant: invoiceData.compliant });
+      const { pdfBuffer } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+      results.push({ pdfBuffer, orderId });
+      log("Invoice processed", { orderId });
     }
 
     await user.save();
@@ -188,8 +226,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "Internal Server Error", details: err.message });
   } finally {
     if (browser) await browser.close();
-    fs.rmSync(tmpDir, { recursive: true, force: true });
-    log("Temporary files cleaned up", { tmpDir });
   }
 });
 
