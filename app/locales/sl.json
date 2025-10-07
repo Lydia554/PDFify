@@ -22,8 +22,9 @@
   "bic": "BIC",
   "noItemsAvailable": "Ni razpoložljivih izdelkov",
   "watermarkBasic": "SAMO ZA PRODUKCIJO — NI NA VOLJO V BAZIČNI VERZIJI",
-  "footerThanks": "Hvala, ker uporabljate našo storitev!",
-  "footerContact": "Če imate vprašanja, nas kontaktirajte na",
-  "footerCopyright": "🧾PDFify — Vse pravice pridržane.",
-  "footerGenerated": "Ustvarjeno z uporabo PDFify. Obiščite našo spletno stran na"
+  "thanks": "Hvala, ker uporabljate našo storitev!",
+  "contact": "Če imate vprašanja, nas kontaktirajte na",
+  "copyright": "🧾PDFify — Vse pravice pridržane.",
+  "generated": "Ustvarjeno z uporabo PDFify. Obiščite našo spletno stran na",
+  "visitSite": "<a href=\"https://pdfify.pro/\" target=\"_blank\">Obiščite našo spletno stran za več.</a>"
 }

@@ -40,19 +40,26 @@ function rowsToInvoiceJson(rows) {
       name: r.itemName || "",
       quantity: Number(r.quantity || 0),
       price: cleanNumber(r.price),
+      priceFormatted: r.price || "",
       total: cleanNumber(r.itemTotal),
+      totalFormatted: r.itemTotal || "",
       tax: cleanNumber(r.itemTax),
+      taxFormatted: r.itemTax || "",
       position: r.position || ""
     })),
     subtotal: cleanNumber(first.subtotal),
+    subtotalFormatted: first.subtotal || "",
     tax: cleanNumber(first.totalTax),
+    taxFormatted: first.totalTax || "",
     total: cleanNumber(first.total),
+    totalFormatted: first.total || "",
     customLogoUrl: first.customLogoUrl || "",
     showChart: (first.showChart || "").toLowerCase() === "true",
     isPremium: (first.isPremium || "").toLowerCase() === "true",
     iban: first.iban || "",
     bic: first.bic || "",
     compliant: (first.compliant || "").toLowerCase() === "true",
-    planType: (first.planType || "").toLowerCase() 
+    planType: (first.planType || "").toLowerCase(),
+    locale: first.locale || {}  // pass full locale for footer
   };
 }
