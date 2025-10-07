@@ -2,6 +2,12 @@ const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const fs = require("fs");
+
+
+// Debug PDF folder
+const debugPdfDir = path.resolve(__dirname, "../../debug-pdfs"); 
+if (!fs.existsSync(debugPdfDir)) fs.mkdirSync(debugPdfDir, { recursive: true });
+console.log("[InvoiceRoute Debug] Debug PDF folder ready at:", debugPdfDir);
 const os = require("os");
 const archiver = require("archiver");
 const fetch = require("node-fetch");
