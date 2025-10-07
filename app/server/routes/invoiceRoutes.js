@@ -203,7 +203,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       });
 
       log("Sending single PDF", { orderId, length: pdfBuffer.length });
-      return res.send(pdfBuffer);
+      res.end(pdfBuffer);
     }
 
     res.set({
