@@ -105,26 +105,25 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 // -----------------------------
 // Save screenshot + HTML to container-safe debugDir
 // -----------------------------
-const debugDir = "/tmp/pdfify-debug"; // Linux-friendly path inside container
+// Debug folder always accessible from Windows
+const debugDir = path.resolve("C:\\Users\\goldb\\Pro\\pdfify-debug"); // Windows folder
+
 if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
 
 const timestamp = Date.now();
 
 try {
-  // Paths inside container
-  const screenshotPath = path.join(debugDir, `preview-${timestamp}.png`);
-  const htmlPath = path.join(debugDir, `preview-${timestamp}.html`);
-
-  // Take screenshot and save HTML
+  // Use path.resolve to avoid any mixed slash issues
+  const screenshotPath = path.resolve(debugDir, `preview-${timestamp}.png`);
   await page.screenshot({ path: screenshotPath, fullPage: true });
-  const pageContent = await page.content();
-  fs.writeFileSync(htmlPath, pageContent, "utf-8");
-
-  // Log
   log("📸 Screenshot captured for debug", { screenshotPath });
+
+  const htmlPath = path.resolve(debugDir, `preview-${timestamp}.html`);
+  const pageContent = await page.content(); 
+  fs.writeFileSync(htmlPath, pageContent, "utf-8");
   log("📄 HTML saved for debug", { htmlPath });
 
-  // Confirm files exist
+  // Verify files
   if (fs.existsSync(screenshotPath) && fs.existsSync(htmlPath)) {
     log("✅ Debug files confirmed on disk", { screenshotPath, htmlPath });
   } else {
