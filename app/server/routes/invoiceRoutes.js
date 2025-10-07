@@ -104,13 +104,26 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   }
 
   // Screenshot for debugging
-  try {
-    const screenshotPath = path.join(os.tmpdir(), `preview-${Date.now()}.png`);
-    await page.screenshot({ path: screenshotPath, fullPage: true });
-    log("📸 Screenshot captured for debug", { path: screenshotPath });
-  } catch (err) {
-    log("⚠️ Screenshot failed", { error: err.message });
-  }
+const debugDir = "C:\\Users\\goldb\\Pro"; 
+
+
+if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir, { recursive: true });
+
+try {
+  const screenshotPath = path.join(debugDir, `preview-${Date.now()}.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  log("📸 Screenshot captured for debug", { path: screenshotPath });
+
+  
+  const htmlPath = path.join(debugDir, `preview-${Date.now()}.html`);
+  const pageContent = await page.content();
+  fs.writeFileSync(htmlPath, pageContent, "utf-8");
+  log("📄 HTML saved for debug", { path: htmlPath });
+
+} catch (err) {
+  log("⚠️ Screenshot/HTML save failed", { error: err.message });
+}
+
 
   // -----------------------------
   // PDF generation
@@ -122,7 +135,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       format: "A4",
       printBackground: true,
       margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      
+      displayHeaderFooter: false,
+      preferCSSPageSize: true
     });
     log("📦 PDF buffer created", { size: pdfBuffer.length });
   } catch (err) {
