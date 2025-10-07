@@ -135,8 +135,7 @@ html, body { background: #fff !important; color: #000 !important; -webkit-print-
     <div class="left" style="flex:1;">
       <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
       <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
-  ${data.paymentTerms ? `<p><strong>${data.paymentTermsLabel || ""}</strong> ${data.paymentTerms}</p>` : ""}
-
+   ${data.paymentTerms ? `<p><strong>${locale.paymentTerms || "Payment Terms"}:</strong> ${data.paymentTerms}</p>` : ""}
       ${data.iban ? `<p><strong>IBAN:</strong> ${data.iban}</p>` : ""}
       ${data.bic ? `<p><strong>BIC:</strong> ${data.bic}</p>` : ""}
     </div>
