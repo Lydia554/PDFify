@@ -112,15 +112,15 @@ for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
   const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
   results.push({ pdfBuffer, orderId });
 
-  // Increment usage **per PDF per page**
+  
   if (!invoiceData.isPreview) {
-    for (let i = 0; i < pageCount; i++) {
-      const allowed = await incrementUsage(user, 1, false, FORCE_PLAN);
-      if (!allowed) throw new Error("Monthly limit reached.");
-    }
+    const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
+    if (!allowed) throw new Error("Monthly limit reached.");
+
+    
+    await user.save();
   }
 }
-
 
 
     await user.save();
