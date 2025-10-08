@@ -141,15 +141,20 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-  switch (invoiceData.source) {
-    case "shopify": return generateShopifyXML(invoiceData);
-    case "woocommerce": return generateWooCommerceXML(invoiceData);
-    case "dev":
-    case "pro": return generateDevXML(invoiceData);
-    case "friendly":
-    case "premium": return generateFriendlyXML(invoiceData);
-    default: throw new Error("Unknown invoice source for ZUGFeRD XML");
-  }
+switch ((invoiceData.source || invoiceData.invoiceSource || "").toLowerCase()) {
+  case "shopify": return generateShopifyXML(invoiceData);
+  case "woocommerce": return generateWooCommerceXML(invoiceData);
+  case "dev":
+  case "standard": 
+    return generateDevXML(invoiceData);
+  case "friendly":
+  case "premium":
+    return generateFriendlyXML(invoiceData);
+  default:
+    throw new Error("Unknown invoice source for ZUGFeRD XML");
+}
+
+
 }
 
 module.exports = { generateZugferdXML };
