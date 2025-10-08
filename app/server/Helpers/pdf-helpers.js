@@ -35,6 +35,7 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
+  
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
@@ -43,7 +44,6 @@ await execFileAsync("gs", [
   "-dPDFA",
   "-dBATCH",
   "-dNOPAUSE",
-  "-dUseCIEColor",
   "-sProcessColorModel=DeviceRGB",   
   "-sDEVICE=pdfwrite",
   `-sOutputFile=${tmpOut}`,
@@ -54,6 +54,9 @@ await execFileAsync("gs", [
   `-sOutputICCProfile=${iccPath}`,
   tmpIn,
 ]);
+
+console.log("[makePdfA3b] tmpIn:", tmpIn, "tmpOut:", tmpOut);
+console.log("[makePdfA3b] Executing Ghostscript command:", gsCmd.join(" "));
 
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
