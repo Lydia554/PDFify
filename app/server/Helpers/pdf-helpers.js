@@ -167,23 +167,30 @@ function generateZugferdXML(invoiceData) {
   // -------------------------------------
   // Switch based on source/mode
   // -------------------------------------
-  const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
+const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
 
-
-  switch (src) {
-    case "dev":
-    case "standard":
-      return generateDevXML(invoiceData);
-    case "friendly":
-      return generateFriendlyXML(invoiceData);
-    case "shopify":
-      return `<?xml version="1.0" encoding="UTF-8"?><InvoiceSource>Shopify</InvoiceSource><InvoiceNumber>${orderId}</InvoiceNumber><Date>${date}</Date>`;
-    case "woocommerce":
-      return `<?xml version="1.0" encoding="UTF-8"?><InvoiceSource>WooCommerce</InvoiceSource><InvoiceNumber>${orderId}</InvoiceNumber><Date>${date}</Date>`;
-    default:
-      throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
-  }
+switch (src) {
+  case "dev":
+  case "standard":
+    return generateDevXML(invoiceData);
+  case "friendly":
+  case "premium":
+    return generateFriendlyXML(invoiceData);
+  case "shopify":
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<InvoiceSource>Shopify</InvoiceSource>
+<InvoiceNumber>${invoiceData.orderId || invoiceData.invoiceNumber || "UNKNOWN"}</InvoiceNumber>
+<Date>${invoiceData.date || new Date().toISOString().split("T")[0]}</Date>`;
+  case "woocommerce":
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<InvoiceSource>WooCommerce</InvoiceSource>
+<InvoiceNumber>${invoiceData.orderId || invoiceData.invoiceNumber || "UNKNOWN"}</InvoiceNumber>
+<Date>${invoiceData.date || new Date().toISOString().split("T")[0]}</Date>`;
+  default:
+    throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
 }
+}
+
 
 module.exports = {
   generateZugferdXML,
