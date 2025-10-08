@@ -4,6 +4,7 @@ const archiver = require("archiver");
 const fetch = require("node-fetch");
 if (!globalThis.fetch) globalThis.fetch = fetch;
 
+
 const router = express.Router();
 
 const User = require("../models/User");
@@ -28,6 +29,7 @@ const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta)
 // -----------------------------
 // PDF generation helper
 // -----------------------------
+
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
   const page = await browser.newPage();
@@ -56,12 +58,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   await page.setContent(html, { waitUntil: "load", timeout: 15000 });
   await page.evaluateHandle("document.fonts.ready");
 
-  // Measure content height for accurate page count
-  const contentHeight = await page.evaluate(() => document.body.scrollHeight);
-  const A4_HEIGHT_PX = 1122;
-  const pageCount = Math.max(1, Math.ceil(contentHeight / A4_HEIGHT_PX));
-
-  // Generate actual PDF (can have headers/footers)
+  // Generate PDF buffer
   let pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
@@ -75,6 +72,10 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   });
 
   await page.close();
+
+  
+  const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
+  const pageCount = pdfDoc.getPageCount();
 
   // Optional pro compliant processing
   if (user.planType === "pro" && invoiceData.compliant) {
