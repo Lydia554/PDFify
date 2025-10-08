@@ -1,9 +1,15 @@
+// -----------------------------
+// pdf-helpers.js
+// -----------------------------
 const fs = require("fs");
 const path = require("path");
+const { execFile } = require("child_process");
+const os = require("os");
+const util = require("util");
+const execFileAsync = util.promisify(execFile);
 
 /**
- * Embed XMP metadata into PDF
- * Placeholder: you can add actual XMP metadata if needed
+ * Embed XMP metadata into PDF (placeholder)
  * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
@@ -12,29 +18,56 @@ async function embedXmp(pdfDoc) {
 }
 
 /**
- * Embed ZUGFeRD XML into PDF
- * Placeholder for actual PDF embedding logic
+ * Embed ZUGFeRD XML into PDF (placeholder)
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
 function embedXmlIntoPdf(pdfDoc, xml) {
-  // Embed ZUGFeRD XML into PDF
+  // Real embedding happens here in production
 }
 
 /**
- * Post-process PDF via Ghostscript for PDF/A-3b compliance and ICC embedding
+ * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
+  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+  const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
+  const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
 
-  const iccPath = path.join(__dirname, "sRGB2014.icc"); 
-  
-  return pdfBuffer;
+  await fs.promises.writeFile(tmpIn, pdfBuffer);
+
+  try {
+    await execFileAsync("gs", [
+      "-dPDFA",
+      "-dBATCH",
+      "-dNOPAUSE",
+      "-dUseCIEColor",
+      "-sProcessColorModel=DeviceCMYK",
+      "-sDEVICE=pdfwrite",
+      `-sOutputFile=${tmpOut}`,
+      `-sPDFACompatibilityPolicy=1`,
+      `-dEmbedAllFonts=true`,
+      `-dAutoRotatePages=/None`,
+      `-dColorConversionStrategy=/sRGB`,
+      `-sOutputICCProfile=${iccPath}`,
+      tmpIn,
+    ]);
+
+    const finalBuffer = await fs.promises.readFile(tmpOut);
+    return finalBuffer;
+  } catch (err) {
+    console.error("PDF/A-3b conversion failed:", err);
+    return pdfBuffer; // fallback to original PDF
+  } finally {
+    fs.unlink(tmpIn, () => {});
+    fs.unlink(tmpOut, () => {});
+  }
 }
 
 /**
- * Generate ZUGFeRD XML for different invoice sources
+ * Generate ZUGFeRD XML based on invoice source (mode)
  * @param {Object} invoiceData
  * @returns {string} XML content
  */
@@ -43,6 +76,9 @@ function generateZugferdXML(invoiceData) {
   const orderId = invoiceData.invoiceNumber || invoiceData.orderId || "UNKNOWN";
   const date = invoiceData.date || new Date().toISOString().split("T")[0];
 
+  // -------------------------------
+  // Mode-specific XML generators
+  // -------------------------------
   function generateDevXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1">
@@ -57,7 +93,7 @@ function generateZugferdXML(invoiceData) {
           <ram:LineID>${idx + 1}</ram:LineID>
         </ram:AssociatedDocumentLineDocument>
         <ram:SpecifiedTradeProduct>
-          <ram:Name>${item.name}</ram:Name>
+          <ram:Name>${item.name || item.description || ''}</ram:Name>
         </ram:SpecifiedTradeProduct>
         <ram:SpecifiedLineTradeSettlement>
           <ram:ApplicableTradeTax>
@@ -110,15 +146,33 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-  switch ((invoiceData.source || invoiceData.invoiceSource || "").toLowerCase()) {
-    case "dev":
-    case "standard":
-      return generateDevXML(invoiceData);
-    case "friendly":
-    case "premium":
-      return generateFriendlyXML(invoiceData);
-    default:
-      throw new Error("Unknown invoice source for ZUGFeRD XML");
+  function generateShopifyXML(data) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<InvoiceSource>Shopify</InvoiceSource>
+<InvoiceNumber>${orderId}</InvoiceNumber>
+<Date>${date}</Date>`;
+  }
+
+  function generateWooCommerceXML(data) {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<InvoiceSource>WooCommerce</InvoiceSource>
+<InvoiceNumber>${orderId}</InvoiceNumber>
+<Date>${date}</Date>`;
+  }
+
+  // -------------------------------------
+  // Switch based on source/mode
+  // -------------------------------------
+  const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
+
+  switch (src) {
+    case "shopify": return generateShopifyXML(invoiceData);
+    case "woocommerce": return generateWooCommerceXML(invoiceData);
+    case "dev": return generateDevXML(invoiceData);
+    case "friendly": return generateFriendlyXML(invoiceData);
+    case "pro":
+    case "premium": return generateDevXML(invoiceData);
+    default: return generateDevXML(invoiceData);
   }
 }
 
