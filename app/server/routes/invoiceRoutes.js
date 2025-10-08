@@ -1,6 +1,5 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
-const path = require("path");
 const archiver = require("archiver");
 const fetch = require("node-fetch");
 if (!globalThis.fetch) globalThis.fetch = fetch;
@@ -11,8 +10,8 @@ const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateInvoiceHTML } = require("../../templates/english.js"); // free/pro template
-const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js"); // pro compliant
+const { generateInvoiceHTML } = require("../../templates/english.js");
+const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js");
 const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
 
 const locales = {
@@ -33,9 +32,9 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
   const page = await browser.newPage();
 
-  page.on("console", msg => console.log(`[Puppeteer Console:${msg.type()}]`, msg.text()));
-  page.on("pageerror", err => console.log("[Puppeteer PageError]", err.message));
-  page.on("requestfailed", req => console.log("[Puppeteer RequestFailed]", req.url(), req.failure()?.errorText));
+  page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
+  page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message }));
+  page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
 
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
@@ -48,32 +47,36 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     html = user.planType === "pro" && invoiceData.compliant
       ? await generateInvoiceHTMLPro(invoiceData)
       : await generateInvoiceHTML(invoiceData);
-    console.log("✅ HTML generated", { htmlLength: html.length });
+    log("✅ HTML generated", { htmlLength: html.length });
   } catch (err) {
-    console.log("❌ Error generating HTML", err.message);
+    log("❌ Error generating HTML", { error: err.message });
     throw err;
   }
 
   await page.setContent(html, { waitUntil: "load", timeout: 15000 });
   await page.evaluateHandle("document.fonts.ready");
 
-  // Measure content height for precise page count
+  // Measure content height for accurate page count
   const contentHeight = await page.evaluate(() => document.body.scrollHeight);
-  const A4_HEIGHT_PX = 1122; 
-  const pageCount = Math.ceil(contentHeight / A4_HEIGHT_PX);
+  const A4_HEIGHT_PX = 1122;
+  const pageCount = Math.max(1, Math.ceil(contentHeight / A4_HEIGHT_PX));
 
-  // Generate PDF without extra header/footer pages
+  // Generate actual PDF (can have headers/footers)
   let pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
     margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-    displayHeaderFooter: false, 
+    displayHeaderFooter: true,
+    headerTemplate: `<div></div>`,
+    footerTemplate: `<div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
+      Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+    </div>`,
     preferCSSPageSize: true
   });
 
   await page.close();
 
-  // Optional Pro compliant processing
+  // Optional pro compliant processing
   if (user.planType === "pro" && invoiceData.compliant) {
     const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
     const zugferdXml = generateZugferdXML(invoiceData);
@@ -91,8 +94,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   return { pdfBuffer, pageCount };
 }
 
-
-
 // -----------------------------
 // /generate-invoice route
 // -----------------------------
@@ -109,6 +110,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const results = [];
+    let totalPages = 0;
 
     for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
       const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
@@ -121,23 +123,27 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isFreeUser = user.planType === "free";
 
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
       log("Processing invoice", { orderId, invoiceData });
 
-      // Generate PDF
       const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
 
-      // Increment usage per PDF **per page**
-      if (!invoiceData.isPreview) {
-        const allowed = await incrementUsage(user, pageCount, false, FORCE_PLAN);
-        if (!allowed) throw new Error("Monthly limit reached.");
-      }
-
       results.push({ pdfBuffer, orderId });
+      totalPages += pageCount;
+
       log("Invoice processed", { orderId, pageCount });
     }
 
-    await user.save();
     await browser.close();
+
+    // Increment usage **once for all pages**
+    if (!requests[0]?.isPreview) {
+      const allowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
+      if (!allowed) throw new Error("Monthly limit reached.");
+      log("✅ Total usage incremented", { totalPages });
+    }
+
+    await user.save();
 
     // Single PDF
     if (results.length === 1) {
