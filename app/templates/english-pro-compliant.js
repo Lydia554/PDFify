@@ -1,7 +1,7 @@
 const path = require("path");
 
 /**
- * Generate HTML invoice for Pro compliant users
+ * Generate HTML invoice for Pro compliant PDF/A-3b users
  * @param {Object} data
  * @returns {string}
  */
@@ -9,37 +9,21 @@ async function generateInvoiceHTMLPro(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-   data.invoiceSource ||= "standard";
-
-  // Use user-provided logo or default
-  const logoUrl = data.customLogoUrl || "https://pdfify.pro/images/Logo.png";
-
-  // Chart config
-  const chartConfig = {
-    type: "pie",
-    data: {
-      labels: ["Subtotal", "Tax"],
-      datasets: [
-        {
-          data: [
-            Number(String(data.subtotal).replace(/[^\d.-]/g, "")) || 0,
-            Number(String(data.tax).replace(/[^\d.-]/g, "")) || 0,
-          ],
-        },
-      ],
-    },
-  };
-  const chartConfigEncoded = encodeURIComponent(JSON.stringify(chartConfig));
-  const chartBase64 = data.showChart
-    ? `https://quickchart.io/chart?c=${chartConfigEncoded}`
-    : "";
+  data.invoiceSource ||= "standard";
 
   // Fonts folder (embedded for PDF/A)
   const fontPath = path.join(__dirname, "fonts");
 
+  // Only show chart/logo if not in compliance mode
+  const showLogo = !data.complianceMode && data.customLogoUrl;
+  const logoUrl = data.customLogoUrl || "https://pdfify.pro/images/Logo.png";
+
+  const showChart = !data.complianceMode && data.showChart;
+
   return `
 <html>
 <head>
+  <meta charset="UTF-8">
   <style>
     @font-face {
       font-family: 'OpenSans';
@@ -67,8 +51,8 @@ async function generateInvoiceHTMLPro(data) {
       padding: 30px 40px 60px;
       background: #fff;
       border-radius: 16px;
-      border: 1px solid #c5d0f9;
-      box-shadow: 0 6px 15px rgba(42,61,102,0.15);
+      border: 1px solid #000;
+      box-shadow: none;
       position: relative;
     }
 
@@ -78,28 +62,20 @@ async function generateInvoiceHTMLPro(data) {
       margin-bottom: 20px;
     }
 
-    .table th, .table td {
+    .table th, .table td, .table tfoot td {
       padding: 12px;
-      border: 1px solid #c5d0f9;
+      border: 1px solid #000;
       text-align: left;
+      background-color: #fff;
+      color: #000;
     }
 
     .table th {
-      background-color: #dbe7ff;
       font-weight: 700;
-    }
-
-    .table td {
-      background-color: #fdfdff;
     }
 
     .table tr:nth-child(even) td {
-      background-color: #f6f9fe;
-    }
-
-    .table tfoot td {
-      background-color: #dbe7ff;
-      font-weight: 700;
+      background-color: #fff;
     }
 
     .total p {
@@ -112,19 +88,30 @@ async function generateInvoiceHTMLPro(data) {
       margin: 40px auto 10px auto;
       padding: 10px;
       font-size: 11px;
-      border-top: 1px solid #c5d0f9;
+      border-top: 1px solid #000;
       text-align: center;
+      color: #000;
     }
 
     .footer a {
       text-decoration: none;
       color: #000;
     }
+
+    h1, h2, p {
+      color: #000;
+    }
+
+    img.chart, img.logo {
+      display: block;
+      margin: 10px auto;
+      max-width: 500px;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <img src="${logoUrl}" alt="Logo" style="height:60px;" />
+    ${showLogo ? `<img class="logo" src="${logoUrl}" alt="Logo" style="height:60px;" />` : ""}
     <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
 
     <div class="invoice-header">
@@ -185,10 +172,23 @@ async function generateInvoiceHTMLPro(data) {
     </div>
 
     ${
-      chartBase64
+      showChart
         ? `<div class="chart-container">
             <h2>${locale.breakdown || "Breakdown"}</h2>
-            <img src="${chartBase64}" alt="${locale.invoiceBreakdown || "Invoice Breakdown"}" style="max-width:500px;display:block;margin:auto;" />
+            <img class="chart" src="https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
+              type: "pie",
+              data: {
+                labels: ["Subtotal", "Tax"],
+                datasets: [
+                  {
+                    data: [
+                      Number(String(data.subtotal).replace(/[^\d.-]/g, "")) || 0,
+                      Number(String(data.tax).replace(/[^\d.-]/g, "")) || 0,
+                    ],
+                  },
+                ],
+              },
+            }))}" alt="${locale.invoiceBreakdown || "Invoice Breakdown"}" />
           </div>`
         : ""
     }

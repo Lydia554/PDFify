@@ -609,8 +609,9 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 
 
 // -----------------------------
-// Send Request with Logs
+// Send Request
 // -----------------------------
+
 async function sendRequest(isPreview = false) {
   if (!window.data) return alert("No data available to generate PDF.");
 
@@ -618,42 +619,32 @@ async function sendRequest(isPreview = false) {
   if (!apiKey) return alert("API key is required.");
 
   const endpoint = document.getElementById("endpoint").value;
-  console.log(`[sendRequest] Endpoint: ${endpoint}`);
-  console.log(`[sendRequest] isPreview: ${isPreview}`);
-  console.log(`[sendRequest] isCompliant (PDF/A-3b selected): ${isCompliant}`);
-  console.log("[sendRequest] Original window.data:", window.data);
-  console.log("[sendRequest] User data:", userData);
-
   const payloadData = {
     ...window.data,
     isFreeUser: !userData?.planType || userData.planType === "free",
     planType: userData?.planType || "free",
     customLogoUrl: userData?.customLogoUrl || null
   };
-  console.log("[sendRequest] Payload data before request wrapper:", payloadData);
 
-  const payload = {
-    requests: [{
-      data: {
-        ...payloadData,
-        invoiceSource: isCompliant ? "pro" : "standard",
-        complianceMode: isCompliant,
-      },
-      isPreview,
-      compliant: isCompliant
-    }],
-    invoiceSource: isCompliant ? "pro" : "standard"
-  };
+const payload = {
+  requests: [{
+    data: {
+      ...window.data,
+      invoiceSource: isCompliant ? "pro" : "standard",
+      complianceMode: isCompliant,
+    },
+    isPreview,
+    compliant: isCompliant
+  }],
+  invoiceSource: isCompliant ? "pro" : "standard"
+};
 
-  console.log("[sendRequest] Final payload to be sent:", JSON.stringify(payload, null, 2));
+
 
   let newWindow;
   if (isPreview) {
     newWindow = window.open("", "_blank");
-    if (!newWindow) {
-      console.warn("[sendRequest] Popup blocked for preview.");
-      return alert("Popup blocked! Allow popups for preview.");
-    }
+    if (!newWindow) return alert("Popup blocked! Allow popups for preview.");
   }
 
   try {
@@ -666,16 +657,12 @@ async function sendRequest(isPreview = false) {
       body: JSON.stringify(payload)
     });
 
-    console.log("[sendRequest] API response status:", response.status);
-
     if (!response.ok) {
       const text = await response.text();
-      console.error("[sendRequest] Backend error response:", text);
       throw new Error(text || "Backend error");
     }
 
     const blob = await response.blob();
-    console.log(`[sendRequest] Received PDF blob size: ${blob.size} bytes`);
     if (blob.size === 0) throw new Error("Received empty PDF from backend.");
 
     const blobUrl = URL.createObjectURL(blob);
@@ -688,7 +675,6 @@ async function sendRequest(isPreview = false) {
           </body>
         </html>
       `);
-      console.log("[sendRequest] Preview opened in new window");
     } else {
       const a = document.createElement("a");
       a.href = blobUrl;
@@ -697,7 +683,6 @@ async function sendRequest(isPreview = false) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
-      console.log("[sendRequest] PDF downloaded successfully");
     }
   } catch (err) {
     console.error("[sendRequest] PDF generation failed:", err);
@@ -705,7 +690,6 @@ async function sendRequest(isPreview = false) {
     if (newWindow) newWindow.close();
   }
 }
-
 
 
 
