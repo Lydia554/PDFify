@@ -641,8 +641,15 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
       customLogoUrl: userData?.customLogoUrl || null
     };
 
-    const payload = { requests: [{ data: payloadData, isPreview, compliant: isCompliant }] };
-    console.log("[sendRequest] Sending payload:", payload);
+    const payload = { 
+  requests: [{ 
+    data, 
+    isPreview, 
+    compliant: isCompliant, 
+    invoiceSource: "standard" 
+  }] 
+};
+
 
     const response = await fetch(`/api/${endpoint}`, {
       method: "POST",
@@ -902,7 +909,6 @@ csvGenerateBtn.addEventListener('click', async () => {
 
     // Group rows by orderId
     const groupedInvoices = groupRowsByOrderId(rows);
-    console.log("[CSV] Grouped invoices:", groupedInvoices.map(g => g.map(r => r.orderId)));
 
     // Determine user type and compliance toggle
     const userPlan = userData?.planType || "free";
@@ -912,17 +918,21 @@ csvGenerateBtn.addEventListener('click', async () => {
     const useCompliant = isPro && isCompliant;
 
     // Prepare invoice requests
-    const requests = groupedInvoices.map(group => {
-      const data = rowsToInvoiceJson(group);
+const requests = groupedInvoices.map(group => {
+  const data = rowsToInvoiceJson(group);
 
-      data.isFreeUser = !userData?.planType || userData.planType === "free";
-      data.planType = userData?.planType || "free";
-      data.customLogoUrl = userData?.customLogoUrl || null;
+  data.isFreeUser = !userData?.planType || userData.planType === "free";
+  data.planType = userData?.planType || "free";
+  data.customLogoUrl = userData?.customLogoUrl || null;
 
-      return { data, isPreview: false, compliant: useCompliant };
-    });
+  return { 
+    data, 
+    isPreview: false, 
+    compliant: useCompliant, 
+    invoiceSource: "standard" 
+  };
+});
 
-    console.log(`[CSV] Prepared ${requests.length} invoice requests`);
 
     // Initialize progress
     const total = requests.length;
