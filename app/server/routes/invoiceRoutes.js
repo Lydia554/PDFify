@@ -129,7 +129,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!requests[0]?.isPreview) {
       const allowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
       if (!allowed) throw new Error("Monthly limit reached.");
-      log("✅ Total usage incremented for batch", { totalPages, newUsageCount: user.usageCount });
     }
 
     await user.save();

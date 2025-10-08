@@ -608,7 +608,7 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
 // Send Request
 // -----------------------------
 
-async function sendRequest(isPreview = false) {
+  async function sendRequest(isPreview = false) {
   const data = window.data;
   if (!data) {
     console.warn("[sendRequest] No data available");
@@ -621,7 +621,6 @@ async function sendRequest(isPreview = false) {
     return alert("API key is required.");
   }
 
-  // Log which endpoint and compliance toggle are used
   const endpoint = document.getElementById("endpoint").value;
   console.log("[sendRequest] Endpoint:", endpoint);
   console.log("[sendRequest] Compliance toggle:", isCompliant);
@@ -630,15 +629,19 @@ async function sendRequest(isPreview = false) {
   let newWindow;
   if (isPreview) {
     newWindow = window.open("", "_blank");
-    if (!newWindow) {
-      console.warn("[sendRequest] Popup blocked");
-      return alert("Popup blocked! Please allow popups for preview.");
-    }
+    if (!newWindow) return alert("Popup blocked! Please allow popups for preview.");
   }
 
   try {
-    const payload = { requests: [{ data, isPreview, compliant: isCompliant }] };
+    // Merge user info for ZUGFeRD XML
+    const payloadData = {
+      ...data,
+      isFreeUser: !userData?.planType || userData.planType === "free",
+      planType: userData?.planType || "free",
+      customLogoUrl: userData?.customLogoUrl || null
+    };
 
+    const payload = { requests: [{ data: payloadData, isPreview, compliant: isCompliant }] };
     console.log("[sendRequest] Sending payload:", payload);
 
     const response = await fetch(`/api/${endpoint}`, {
@@ -656,18 +659,8 @@ async function sendRequest(isPreview = false) {
       throw new Error(text || "Backend error");
     }
 
-    const contentType = response.headers.get("Content-Type");
-    if (!contentType || !contentType.includes("application/pdf")) {
-      const text = await response.text();
-      console.error("[sendRequest] Invalid PDF response:", text);
-      throw new Error("Invalid PDF response: " + text);
-    }
-
     const blob = await response.blob();
-    if (blob.size === 0) {
-      console.error("[sendRequest] Received empty PDF");
-      throw new Error("Received empty PDF from backend.");
-    }
+    if (blob.size === 0) throw new Error("Received empty PDF from backend.");
 
     const blobUrl = URL.createObjectURL(blob);
 
@@ -911,10 +904,12 @@ csvGenerateBtn.addEventListener('click', async () => {
     const groupedInvoices = groupRowsByOrderId(rows);
     console.log("[CSV] Grouped invoices:", groupedInvoices.map(g => g.map(r => r.orderId)));
 
-    // Determine user type and compliance
+    // Determine user type and compliance toggle
     const userPlan = userData?.planType || "free";
     const isPro = userPlan.toLowerCase() === "pro";
-    const useCompliant = isPro && document.getElementById("compliantCheckbox")?.checked;
+
+    // Use same compliance toggle as single PDF
+    const useCompliant = isPro && isCompliant;
 
     // Prepare invoice requests
     const requests = groupedInvoices.map(group => {
@@ -937,7 +932,6 @@ csvGenerateBtn.addEventListener('click', async () => {
     progressCount.textContent = '0';
 
     const zip = new JSZip();
-
     const updateProgress = () => {
       completed++;
       const percent = Math.round((completed / total) * 100);
@@ -945,7 +939,6 @@ csvGenerateBtn.addEventListener('click', async () => {
       progressCount.textContent = completed;
     };
 
-    // Parallel requests with Promise.all
     await Promise.all(requests.map(async (req) => {
       const res = await fetch('/api/generate-invoice', {
         method: 'POST',
