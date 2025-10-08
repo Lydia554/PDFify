@@ -93,7 +93,6 @@
   <span id="colorCheck" class="ml-2 text-green-400 font-bold hidden">✔️</span>
 </div>
 
-
     <!-- CSV Bulk Section -->
     <section id="bulkCsvSection" class="space-y-6 mt-8 p-6 border border-indigo-500 rounded-md bg-gray-800 shadow-md hidden">
       <h2 class="text-xl font-bold text-indigo-300 mb-4">📁 Bulk PDF Generation (CSV)</h2>
@@ -286,6 +285,11 @@ friendlyBtn.addEventListener('click', () => {
   // Initialize default: Colorful
   selectComplianceMode(false);
 
+
+  // When calling sendRequest
+async function generatePdf(isPreview = false) {
+  await sendRequest(isPreview, isCompliant); 
+}
 
 
 

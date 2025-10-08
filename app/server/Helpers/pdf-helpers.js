@@ -39,21 +39,22 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
   try {
-    await execFileAsync("gs", [
-      "-dPDFA",
-      "-dBATCH",
-      "-dNOPAUSE",
-      "-dUseCIEColor",
-      "-sProcessColorModel=DeviceCMYK",
-      "-sDEVICE=pdfwrite",
-      `-sOutputFile=${tmpOut}`,
-      `-sPDFACompatibilityPolicy=1`,
-      `-dEmbedAllFonts=true`,
-      `-dAutoRotatePages=/None`,
-      `-dColorConversionStrategy=/sRGB`,
-      `-sOutputICCProfile=${iccPath}`,
-      tmpIn,
-    ]);
+await execFileAsync("gs", [
+  "-dPDFA",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-dUseCIEColor",
+  "-sProcessColorModel=DeviceRGB",   
+  "-sDEVICE=pdfwrite",
+  `-sOutputFile=${tmpOut}`,
+  "-sPDFACompatibilityPolicy=1",
+  "-dEmbedAllFonts=true",
+  "-dAutoRotatePages=/None",
+  "-dColorConversionStrategy=/sRGB",
+  `-sOutputICCProfile=${iccPath}`,
+  tmpIn,
+]);
+
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
     return finalBuffer;
