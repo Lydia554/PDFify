@@ -169,14 +169,19 @@ function generateZugferdXML(invoiceData) {
   // -------------------------------------
   const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
 
+
   switch (src) {
-    case "shopify": return generateShopifyXML(invoiceData);
-    case "woocommerce": return generateWooCommerceXML(invoiceData);
-    case "dev": return generateDevXML(invoiceData);
-    case "friendly": return generateFriendlyXML(invoiceData);
-    case "pro":
-    case "premium": return generateDevXML(invoiceData);
-    default: return generateDevXML(invoiceData);
+    case "dev":
+    case "standard":
+      return generateDevXML(invoiceData);
+    case "friendly":
+      return generateFriendlyXML(invoiceData);
+    case "shopify":
+      return `<?xml version="1.0" encoding="UTF-8"?><InvoiceSource>Shopify</InvoiceSource><InvoiceNumber>${orderId}</InvoiceNumber><Date>${date}</Date>`;
+    case "woocommerce":
+      return `<?xml version="1.0" encoding="UTF-8"?><InvoiceSource>WooCommerce</InvoiceSource><InvoiceNumber>${orderId}</InvoiceNumber><Date>${date}</Date>`;
+    default:
+      throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
   }
 }
 
