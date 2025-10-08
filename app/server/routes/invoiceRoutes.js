@@ -80,7 +80,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
     // Add ICC profile via Ghostscript (PDF/A-3b)
     if (!DEBUG_MODE) {
-      const iccPath = require("path").join(__dirname, "sRGB_v4_ICC_preference.icc");
+      const iccPath = require("path").join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
       pdfBuffer = await makePdfA3b(pdfBuffer, { iccProfilePath: iccPath });
     }
   }

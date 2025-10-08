@@ -32,7 +32,7 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
 
