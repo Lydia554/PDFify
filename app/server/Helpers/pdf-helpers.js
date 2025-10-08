@@ -31,44 +31,56 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
+
+
 async function makePdfA3b(pdfBuffer, options = {}) {
   const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-  
+  const logFile = path.join(os.tmpdir(), `gs_log_${Date.now()}.txt`);
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
   try {
-await execFileAsync("gs", [
-  "-dPDFA",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-sProcessColorModel=DeviceRGB",   
-  "-sDEVICE=pdfwrite",
-  `-sOutputFile=${tmpOut}`,
-  "-sPDFACompatibilityPolicy=1",
-  "-dEmbedAllFonts=true",
-  "-dAutoRotatePages=/None",
-  "-dColorConversionStrategy=/sRGB",
-  `-sOutputICCProfile=${iccPath}`,
-  tmpIn,
-]);
+    const gsArgs = [
+      "-dPDFA",
+      "-dBATCH",
+      "-dNOPAUSE",
+      "-sProcessColorModel=DeviceRGB",
+      "-sDEVICE=pdfwrite",
+      `-sOutputFile=${tmpOut}`,
+      "-sPDFACompatibilityPolicy=1",
+      "-dEmbedAllFonts=true",
+      "-dAutoRotatePages=/None",
+      "-dColorConversionStrategy=/sRGB",
+      `-sOutputICCProfile=${iccPath}`,
+      tmpIn,
+    ];
 
-console.log("[makePdfA3b] tmpIn:", tmpIn, "tmpOut:", tmpOut);
-console.log("[makePdfA3b] Executing Ghostscript command:", gsCmd.join(" "));
+    console.log("[makePdfA3b] tmpIn:", tmpIn, "tmpOut:", tmpOut);
+    console.log("[makePdfA3b] Executing Ghostscript command:", gsArgs.join(" "));
 
+    try {
+      await execFileAsync("gs", gsArgs, { encoding: "utf8" });
+    } catch (err) {
+      // Write full stdout and stderr to log file
+      const logContent = `ERROR: Ghostscript failed\n\nCommand: gs ${gsArgs.join(" ")}\n\nError: ${err.message}\nStdout: ${err.stdout}\nStderr: ${err.stderr}`;
+      await fs.promises.writeFile(logFile, logContent);
+      console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
+      throw err;
+    }
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
     return finalBuffer;
   } catch (err) {
-    console.error("PDF/A-3b conversion failed:", err);
+    console.error("PDF/A-3b conversion failed, returning original PDF. See log for details.");
     return pdfBuffer; // fallback to original PDF
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
   }
 }
+
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
