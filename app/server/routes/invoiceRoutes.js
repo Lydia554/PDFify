@@ -31,12 +31,11 @@ const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta)
 // -----------------------------
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
-  log("🧾 Starting PDF generation", { planType: user.planType, compliant: invoiceData.compliant });
-
   const page = await browser.newPage();
-  page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
-  page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message }));
-  page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
+
+  page.on("console", msg => console.log(`[Puppeteer Console:${msg.type()}]`, msg.text()));
+  page.on("pageerror", err => console.log("[Puppeteer PageError]", err.message));
+  page.on("requestfailed", req => console.log("[Puppeteer RequestFailed]", req.url(), req.failure()?.errorText));
 
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
@@ -49,37 +48,32 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     html = user.planType === "pro" && invoiceData.compliant
       ? await generateInvoiceHTMLPro(invoiceData)
       : await generateInvoiceHTML(invoiceData);
-    log("✅ HTML generated", { htmlLength: html.length });
+    console.log("✅ HTML generated", { htmlLength: html.length });
   } catch (err) {
-    log("❌ Error generating HTML", { error: err.message });
+    console.log("❌ Error generating HTML", err.message);
     throw err;
   }
 
   await page.setContent(html, { waitUntil: "load", timeout: 15000 });
   await page.evaluateHandle("document.fonts.ready");
 
-  let pdfBuffer;
-  try {
-    pdfBuffer = await page.pdf({
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
-      displayHeaderFooter: true,
-      headerTemplate: `<div></div>`,
-      footerTemplate: `<div style="width:100%; font-size:10px; color:#2a3d66; text-align:center; font-family:Arial,sans-serif;">
-        Page <span class="pageNumber"></span> of <span class="totalPages"></span>
-      </div>`,
-      preferCSSPageSize: true
-    });
-  } finally {
-    await page.close();
-  }
+  // Measure content height for precise page count
+  const contentHeight = await page.evaluate(() => document.body.scrollHeight);
+  const A4_HEIGHT_PX = 1122; 
+  const pageCount = Math.ceil(contentHeight / A4_HEIGHT_PX);
 
-  // Count pages
-  const PDFDocument = await PDFLib.PDFDocument.load(pdfBuffer);
-  const pageCount = PDFDocument.getPageCount();
+  // Generate PDF without extra header/footer pages
+  let pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "20mm", bottom: "20mm", left: "10mm", right: "10mm" },
+    displayHeaderFooter: false, 
+    preferCSSPageSize: true
+  });
 
-  // Optional compliant pro processing
+  await page.close();
+
+  // Optional Pro compliant processing
   if (user.planType === "pro" && invoiceData.compliant) {
     const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
     const zugferdXml = generateZugferdXML(invoiceData);
@@ -96,6 +90,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   return { pdfBuffer, pageCount };
 }
+
 
 
 // -----------------------------
