@@ -622,14 +622,19 @@ async function sendRequest(isPreview = false) {
     customLogoUrl: userData?.customLogoUrl || null
   };
 
-  const payload = {
-    requests: [{
-      data: payloadData,
-      isPreview,
-      compliant: isCompliant // true if Pro + compliant toggled
-    }],
-    invoiceSource: "standard" // IMPORTANT for ZUGFeRD XML
-  };
+const payload = {
+  requests: [{
+    data: {
+      ...payloadData,
+      invoiceSource: isCompliant ? "pro" : "standard", 
+      complianceMode: isCompliant,                    
+    },
+    isPreview,
+    compliant: isCompliant
+  }],
+  invoiceSource: isCompliant ? "pro" : "standard"    
+};
+
 
   let newWindow;
   if (isPreview) {
