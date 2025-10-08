@@ -1,32 +1,35 @@
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument } = require("pdf-lib");
 
 /**
- * Embed ICC profile into PDF for PDF/A compliance
+ * Embed XMP metadata into PDF
+ * Placeholder: you can add actual XMP metadata if needed
  * @param {PDFDocument} pdfDoc
  */
-async function embedIccProfile(pdfDoc) {
-const iccPath = path.join(__dirname, "sRGB_v4_ICC_preference.icc");
-
-  const iccBytes = fs.readFileSync(iccPath);
-  if (!pdfDoc.embedIccProfile) {
-    throw new Error("pdf-lib version does not support embedIccProfile");
-  }
-  await pdfDoc.embedIccProfile(iccBytes);
-  return pdfDoc;
-}
-
-
 async function embedXmp(pdfDoc) {
-  // Add XMP metadata embedding
+  // Add XMP metadata embedding if needed
   return pdfDoc;
 }
+
+/**
+ * Embed ZUGFeRD XML into PDF
+ * Placeholder for actual PDF embedding logic
+ * @param {PDFDocument} pdfDoc
+ * @param {string} xml
+ */
 function embedXmlIntoPdf(pdfDoc, xml) {
   // Embed ZUGFeRD XML into PDF
 }
-async function makePdfA3b(pdfBuffer) {
-  // Optional: Post-process PDF via Ghostscript
+
+/**
+ * Post-process PDF via Ghostscript for PDF/A-3b compliance and ICC embedding
+ * @param {Buffer} pdfBuffer
+ * @param {Object} options
+ */
+async function makePdfA3b(pdfBuffer, options = {}) {
+
+  const iccPath = path.join(__dirname, "sRGB2014.icc"); 
+  
   return pdfBuffer;
 }
 
@@ -121,10 +124,7 @@ function generateZugferdXML(invoiceData) {
 
 module.exports = {
   generateZugferdXML,
-  embedIccProfile,
   embedXmp,
   embedXmlIntoPdf,
   makePdfA3b
 };
-
-

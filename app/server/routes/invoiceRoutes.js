@@ -5,14 +5,13 @@ const fetch = require("node-fetch");
 if (!globalThis.fetch) globalThis.fetch = fetch;
 
 const router = express.Router();
-
 const User = require("../models/User");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
 const { generateInvoiceHTML } = require("../../templates/english.js");
 const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js");
-const { generateZugferdXML, embedXmp, embedIccProfile, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
+const { generateZugferdXML, embedXmp, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
 
 const locales = {
   sl: require('../../locales/sl.json'),
@@ -37,7 +36,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
   invoiceData.isFreeUser = user.planType === "free";
 
-  // Generate HTML
   let html;
   try {
     html = user.planType === "pro" && invoiceData.compliant
@@ -50,7 +48,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   await page.setContent(html, { waitUntil: "load", timeout: 15000 });
   await page.evaluateHandle("document.fonts.ready");
 
-  // Generate PDF buffer
   let pdfBuffer = await page.pdf({
     format: "A4",
     printBackground: true,
@@ -68,14 +65,12 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = pdfDoc.getPageCount();
 
-  // Optional pro compliant processing
+  // Optional pro processing
   if (user.planType === "pro" && invoiceData.compliant) {
     const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
     const zugferdXml = generateZugferdXML(invoiceData);
-    await embedIccProfile(pdfDocPro);
     await embedXmp(pdfDocPro);
     embedXmlIntoPdf(pdfDocPro, zugferdXml);
-
     pdfBuffer = await pdfDocPro.save();
 
     if (!DEBUG_MODE) {
@@ -85,7 +80,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   return { pdfBuffer, pageCount };
 }
-
 
 // -----------------------------
 // /generate-invoice route
@@ -111,7 +105,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.compliant = !!reqItem.compliant;
       invoiceData.invoiceSource = reqItem.invoiceSource || req.invoiceSource || "standard"; 
 
-    
       invoiceData.iban ||= "";
       invoiceData.bic ||= "";
 
@@ -129,14 +122,12 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     await browser.close();
 
-    // Increment usage
     if (!requests[0]?.isPreview) {
       const allowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
       if (!allowed) throw new Error("Monthly limit reached.");
     }
     await user.save();
 
-    // Single PDF
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
@@ -146,12 +137,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       return res.end(pdfBuffer);
     }
 
-    // Multiple PDFs → ZIP
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(res);
-
     results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
     await archive.finalize();
     log("ZIP archive sent", { count: results.length });
@@ -164,6 +153,5 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (browser) await browser.close();
   }
 });
-
 
 module.exports = router;
