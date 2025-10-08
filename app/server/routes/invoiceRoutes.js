@@ -86,6 +86,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   return { pdfBuffer, pageCount };
 }
 
+
 // -----------------------------
 // /generate-invoice route
 // -----------------------------
@@ -93,7 +94,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
 
   try {
-    const requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
+    const requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview, compliant: !!req.body.compliant }];
     if (!requests.length) return res.status(400).json({ error: "No requests provided." });
 
     const user = await User.findById(req.user.userId);
@@ -104,20 +105,23 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     const results = [];
     let totalPages = 0;
 
-    // Generate PDFs
-    for (const { data: invoiceDataRaw, isPreview, compliant } of requests) {
-      const invoiceData = { ...invoiceDataRaw, isPreview, compliant: !!compliant };
+    for (const reqItem of requests) {
+      const invoiceData = { ...reqItem.data };
+      invoiceData.isFreeUser = user.planType === "free";
+      invoiceData.compliant = !!reqItem.compliant;
+      invoiceData.invoiceSource = reqItem.invoiceSource || req.invoiceSource || "standard"; 
+
+    
       invoiceData.iban ||= "";
       invoiceData.bic ||= "";
 
       const country = (invoiceData.country || "").toLowerCase();
       const lang = invoiceData.invoiceLanguage || (country === "germany" ? "de" : country === "slovenia" ? "sl" : "en");
       invoiceData.locale = locales[lang] || locales["en"];
-      invoiceData.isFreeUser = user.planType === "free";
 
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
+      const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, invoiceData.invoiceSource);
 
       results.push({ pdfBuffer, orderId });
       totalPages += pageCount;
@@ -125,15 +129,14 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
     await browser.close();
 
-    // Increment usage **once for all PDFs**
+    // Increment usage
     if (!requests[0]?.isPreview) {
       const allowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
       if (!allowed) throw new Error("Monthly limit reached.");
     }
-
     await user.save();
 
-    // Single PDF response
+    // Single PDF
     if (results.length === 1) {
       const { pdfBuffer, orderId } = results[0];
       const isPreview = requests[0].isPreview;
@@ -146,14 +149,10 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     // Multiple PDFs → ZIP
     res.setHeader("Content-Type", "application/zip");
     res.setHeader("Content-Disposition", `attachment; filename="invoices.zip"`);
-
     const archive = archiver("zip", { zlib: { level: 9 } });
     archive.pipe(res);
 
-    results.forEach(({ pdfBuffer, orderId }) => {
-      archive.append(pdfBuffer, { name: `${orderId}.pdf` });
-    });
-
+    results.forEach(({ pdfBuffer, orderId }) => archive.append(pdfBuffer, { name: `${orderId}.pdf` }));
     await archive.finalize();
     log("ZIP archive sent", { count: results.length });
 
@@ -165,5 +164,6 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (browser) await browser.close();
   }
 });
+
 
 module.exports = router;
