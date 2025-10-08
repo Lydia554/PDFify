@@ -31,56 +31,77 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
-
-
 async function makePdfA3b(pdfBuffer, options = {}) {
   const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-  const logFile = path.join(os.tmpdir(), `gs_log_${Date.now()}.txt`);
+
+  const logDir = path.join(__dirname, "../logs");
+  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+  const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
+
+  // Pre-checks
+  if (!fs.existsSync(iccPath)) {
+    const msg = `[makePdfA3b] ICC profile missing: ${iccPath}`;
+    await fs.promises.writeFile(logFile, msg);
+    console.error(msg);
+    return pdfBuffer;
+  }
+  if (!pdfBuffer || pdfBuffer.length === 0) {
+    const msg = `[makePdfA3b] Input PDF buffer is empty`;
+    await fs.promises.writeFile(logFile, msg);
+    console.error(msg);
+    return pdfBuffer;
+  }
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
+  const gsArgs = [
+    "-dPDFA",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-sProcessColorModel=DeviceRGB",
+    "-sDEVICE=pdfwrite",
+    `-sOutputFile=${tmpOut}`,
+    "-sPDFACompatibilityPolicy=1",
+    "-dEmbedAllFonts=true",
+    "-dAutoRotatePages=/None",
+    "-dColorConversionStrategy=/sRGB",
+    `-sOutputICCProfile=${iccPath}`,
+    tmpIn,
+  ];
+
   try {
-    const gsArgs = [
-      "-dPDFA",
-      "-dBATCH",
-      "-dNOPAUSE",
-      "-sProcessColorModel=DeviceRGB",
-      "-sDEVICE=pdfwrite",
-      `-sOutputFile=${tmpOut}`,
-      "-sPDFACompatibilityPolicy=1",
-      "-dEmbedAllFonts=true",
-      "-dAutoRotatePages=/None",
-      "-dColorConversionStrategy=/sRGB",
-      `-sOutputICCProfile=${iccPath}`,
-      tmpIn,
-    ];
+    console.log("[makePdfA3b] Running Ghostscript command:", "gs", gsArgs.join(" "));
+    await execFileAsync("gs", gsArgs, { encoding: "utf8" });
 
-    console.log("[makePdfA3b] tmpIn:", tmpIn, "tmpOut:", tmpOut);
-    console.log("[makePdfA3b] Executing Ghostscript command:", gsArgs.join(" "));
-
-    try {
-      await execFileAsync("gs", gsArgs, { encoding: "utf8" });
-    } catch (err) {
-      // Write full stdout and stderr to log file
-      const logContent = `ERROR: Ghostscript failed\n\nCommand: gs ${gsArgs.join(" ")}\n\nError: ${err.message}\nStdout: ${err.stdout}\nStderr: ${err.stderr}`;
-      await fs.promises.writeFile(logFile, logContent);
-      console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-      throw err;
-    }
+    console.log("[makePdfA3b] PDF/A-3b conversion successful");
+    await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
     return finalBuffer;
+
   } catch (err) {
-    console.error("PDF/A-3b conversion failed, returning original PDF. See log for details.");
-    return pdfBuffer; // fallback to original PDF
+    const logContent = `
+[makePdfA3b] Ghostscript conversion failed
+Tmp Input: ${tmpIn}
+Tmp Output: ${tmpOut}
+ICC Path: ${iccPath}
+GS Command: gs ${gsArgs.join(" ")}
+Error: ${err.message}
+Stdout: ${err.stdout || ""}
+Stderr: ${err.stderr || ""}
+PDF Buffer Size: ${pdfBuffer.length} bytes
+`;
+    await fs.promises.writeFile(logFile, logContent);
+    console.error(logContent);
+    console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
+    return pdfBuffer; // fallback
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
   }
 }
-
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
@@ -92,9 +113,6 @@ function generateZugferdXML(invoiceData) {
   const orderId = invoiceData.invoiceNumber || invoiceData.orderId || "UNKNOWN";
   const date = invoiceData.date || new Date().toISOString().split("T")[0];
 
-  // -------------------------------
-  // Mode-specific XML generators
-  // -------------------------------
   function generateDevXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1">
@@ -176,29 +194,24 @@ function generateZugferdXML(invoiceData) {
 <Date>${date}</Date>`;
   }
 
-  // -------------------------------------
-  // Switch based on source/mode
-  // -------------------------------------
-const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
+  const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
 
-switch (src) {
-  case "dev":
-  case "standard":
-  case "pro":       
-    return generateDevXML(invoiceData);
-  case "friendly":
-  case "premium":
-    return generateFriendlyXML(invoiceData);
-  case "shopify":
-    return generateShopifyXML(invoiceData);
-  case "woocommerce":
-    return generateWooCommerceXML(invoiceData);
-  default:
-    throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
+  switch (src) {
+    case "dev":
+    case "standard":
+    case "pro":
+      return generateDevXML(invoiceData);
+    case "friendly":
+    case "premium":
+      return generateFriendlyXML(invoiceData);
+    case "shopify":
+      return generateShopifyXML(invoiceData);
+    case "woocommerce":
+      return generateWooCommerceXML(invoiceData);
+    default:
+      throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
+  }
 }
-
-}
-
 
 module.exports = {
   generateZugferdXML,
