@@ -32,10 +32,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   const PDFLib = require("pdf-lib");
   const page = await browser.newPage();
 
-  page.on("console", msg => log(`[Puppeteer Console:${msg.type()}]`, { text: msg.text() }));
-  page.on("pageerror", err => log("[Puppeteer PageError]", { message: err.message }));
-  page.on("requestfailed", req => log("[Puppeteer RequestFailed]", { url: req.url(), error: req.failure()?.errorText }));
-
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
@@ -47,10 +43,8 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     html = user.planType === "pro" && invoiceData.compliant
       ? await generateInvoiceHTMLPro(invoiceData)
       : await generateInvoiceHTML(invoiceData);
-    log("✅ HTML generated", { htmlLength: html.length });
   } catch (err) {
-    log("❌ Error generating HTML", { error: err.message });
-    throw err;
+    throw new Error(`Error generating HTML: ${err.message}`);
   }
 
   await page.setContent(html, { waitUntil: "load", timeout: 15000 });
@@ -71,7 +65,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   await page.close();
 
-  // Accurate page count using PDFLib
   const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
   const pageCount = pdfDoc.getPageCount();
 
@@ -98,7 +91,6 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 // -----------------------------
 router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
   let browser;
-  log("Request received", { body: req.body, userId: req.user.userId });
 
   try {
     const requests = req.body.requests || [{ data: req.body.data, isPreview: req.body.isPreview }];
@@ -124,14 +116,11 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
       invoiceData.isFreeUser = user.planType === "free";
 
       const orderId = invoiceData.orderId || `order-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      log("Processing invoice", { orderId, invoiceData });
 
       const { pdfBuffer, pageCount } = await generatePdf(invoiceData, user, browser, req.invoiceSource);
 
       results.push({ pdfBuffer, orderId });
       totalPages += pageCount;
-
-      log("Invoice processed", { orderId, pageCount });
     }
 
     await browser.close();
@@ -140,7 +129,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
     if (!requests[0]?.isPreview) {
       const allowed = await incrementUsage(user, totalPages, false, FORCE_PLAN);
       if (!allowed) throw new Error("Monthly limit reached.");
-      log("✅ Total usage incremented", { totalPages });
+      log("✅ Total usage incremented for batch", { totalPages, newUsageCount: user.usageCount });
     }
 
     await user.save();
@@ -171,7 +160,7 @@ router.post("/generate-invoice", authenticate, dualAuth, async (req, res) => {
 
   } catch (err) {
     if (browser) await browser.close();
-    log("Error in /generate-invoice", { error: err.message, stack: err.stack });
+    log("Error in /generate-invoice", { error: err.message });
     res.status(500).json({ error: "Internal Server Error", details: err.message });
   } finally {
     if (browser) await browser.close();
