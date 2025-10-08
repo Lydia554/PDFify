@@ -1,9 +1,7 @@
-
-
 const PLAN_LIMITS = {
-  free: 30,        // Free users: 30 pages/month
-  premium: 1000,   // Premium users: 1,000 pages/month
-  pro: 10000       // Pro users: 10,000 pages/month
+  free: 30,
+  premium: 1000,
+  pro: 10000
 };
 
 const PREVIEW_LIMITS = {
@@ -12,55 +10,69 @@ const PREVIEW_LIMITS = {
   pro: 25
 };
 
+/**
+ * Atomically increments usage for a user.
+ * Handles previews, normal usage, extra pages, and monthly reset.
+ */
 async function incrementUsage(user, pages = 1, isPreview = false, forcePlan = null) {
   const plan = (forcePlan || user.planType || "free").toLowerCase();
   console.log(`🔍 incrementUsage called with plan="${plan}", isPreview=${isPreview}, pages=${pages}`);
 
-  // Reset monthly usage and preview count if needed
   const now = new Date();
-  if (!user.usageLastReset || new Date(user.usageLastReset).getMonth() !== now.getMonth()) {
-    user.usageCount = 0;
-    user.previewCount = 0;
-    user.usageLastReset = now;
-    await user.save();
+
+  // Reset monthly usage and preview count if needed
+  const resetMonth = !user.usageLastReset || new Date(user.usageLastReset).getMonth() !== now.getMonth();
+  if (resetMonth) {
+    await user.constructor.findByIdAndUpdate(user._id, {
+      usageCount: 0,
+      previewCount: 0,
+      usageLastReset: now
+    });
     console.log("🔄 Usage and preview reset for new month");
   }
 
   if (isPreview) {
     const maxPreviews = PREVIEW_LIMITS[plan] || PREVIEW_LIMITS["free"];
-    user.previewCount = user.previewCount || 0;
+    const previewCount = user.previewCount || 0;
 
-    if (user.previewCount < maxPreviews) {
-      
-      user.previewCount++;
-      await user.save();
-      console.log(`👀 Preview count incremented to ${user.previewCount}/${maxPreviews} (no usage deducted)`);
+    if (previewCount < maxPreviews) {
+      // Atomic increment for preview
+      await user.constructor.findByIdAndUpdate(user._id, { $inc: { previewCount: 1 } });
+      console.log(`👀 Preview count incremented (atomic)`);
       return true;
     } else {
-      console.log(`⚠️ Preview limit reached for ${plan} plan. Counting toward normal usage.`);
-      
+      console.log(`⚠️ Preview limit reached. Counting toward normal usage.`);
     }
   }
 
-  // Normal page usage
+  // Normal usage: atomic increment
   const limit = PLAN_LIMITS[plan] || PLAN_LIMITS["free"];
   const totalLimit = limit + (user.extraPages || 0);
 
-  if (user.usageCount + pages > totalLimit) {
-    console.log(`🚫 Usage limit exceeded for ${plan} plan. Requested ${pages} pages.`);
+  // Reload latest usageCount from DB to avoid race conditions
+  const freshUser = await user.constructor.findById(user._id);
+  const currentUsage = freshUser.usageCount || 0;
+
+  if (currentUsage + pages > totalLimit) {
+    console.log(`🚫 Usage limit exceeded. Requested ${pages} pages.`);
     return false;
   }
 
-  user.usageCount += pages;
+  // Atomically increment usageCount
+  const updated = await user.constructor.findByIdAndUpdate(
+    user._id,
+    { $inc: { usageCount: pages } },
+    { new: true }
+  );
 
-  // Deduct from extraPages if over plan limit
-  if (user.usageCount > limit) {
-    const over = user.usageCount - limit;
-    user.extraPages = Math.max((user.extraPages || 0) - over, 0);
+  // Adjust extraPages if over limit
+  if (updated.usageCount > limit) {
+    const over = updated.usageCount - limit;
+    updated.extraPages = Math.max((updated.extraPages || 0) - over, 0);
+    await updated.save();
   }
 
-  await user.save();
-  console.log(`✅ Usage incremented for ${plan} plan to ${user.usageCount}/${totalLimit}`);
+  console.log(`✅ Usage incremented atomically for ${plan} plan to ${updated.usageCount}/${totalLimit}`);
   return true;
 }
 
