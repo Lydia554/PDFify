@@ -29,6 +29,8 @@ const shopifyWebhookRoutes = require('./routes/shopify/shopifyWebhookRoutes');
 const shopifyApiRoutes = require('./routes/shopify/shopifyApiRoutes');
 const woocommerceApiRoutes = require("./routes/woocommerce/woocommerceApiRoutes");
 const woocommerceWebhookRoutes = require("./routes/woocommerce/woocommerceWebhookRoutes");
+const betaRegistrationRoutes = require("./routes/betaRegistrationRoutes");
+
 
 const app = express();
 
@@ -94,6 +96,7 @@ app.use("/api", therapyReportRoutes);
 app.use("/api", htmlRoutes);
 app.use("/api", packingSlipRoutes);
 app.use("/api", foodTrekRoutes);
+app.use("/api", betaRegistrationRoutes);
 app.use("/api/stripe", paymentRoutes);
 app.use("/woocommerce-webhook", woocommerceWebhookRoutes);
 
@@ -108,6 +111,7 @@ app.use(express.static(path.join(__dirname, "../public")));
 
 app.get("/", (req, res) => res.sendFile(path.join(__dirname, "../public/landing.html")));
 app.get("/api-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/api-guide.html")));
+app.get("/beta-registration", (req, res) => res.sendFile(path.join(__dirname, "../public/beta-registration.html")));
 app.get("/success.html", (req, res) => res.sendFile(path.join(__dirname, "public", "success.html")));
 app.get("/cancel.html", (req, res) => res.sendFile(path.join(__dirname, "public", "cancel.html")));
 
