@@ -15,6 +15,27 @@ const log = (message, data = null) => {
   }
 };
 
+
+// Helper: HTML template for emails
+const generateEmailHTML = ({ title, body, ctaText, ctaLink }) => `
+<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
+  <div style="text-align: center; padding: 20px;">
+    <img src="https://pdfify.pro/logo.png" alt="PDFify Logo" width="120" />
+  </div>
+  <h2 style="color: #6b21a8;">${title}</h2>
+  <p>${body}</p>
+  ${ctaText && ctaLink ? `<p style="text-align: center;">
+    <a href="${ctaLink}" 
+       style="background-color:#6b21a8; color:#fff; padding: 10px 20px; text-decoration:none; border-radius:5px;">
+       ${ctaText}
+    </a>
+  </p>` : ""}
+  <hr style="border:none; border-top:1px solid #ddd; margin:20px 0;" />
+  <p style="font-size: 12px; color:#999;">PDFify Team</p>
+</div>
+`;
+
+// ---------------- USER CREATION ----------------
 router.post("/user-creation", async (req, res) => {
   const { email, password } = req.body;
 
@@ -26,7 +47,6 @@ router.post("/user-creation", async (req, res) => {
         return res.status(400).json({ error: "User already exists" });
       }
 
-    
       const deletedAt = user.deletedAt || new Date(0);
       const now = new Date();
       const hoursSinceDeleted = (now - deletedAt) / (1000 * 60 * 60);
@@ -38,7 +58,6 @@ router.post("/user-creation", async (req, res) => {
         });
       }
 
-     
       const newApiKey = require("crypto").randomBytes(24).toString("hex");
       user.password = password;
       user.apiKey = newApiKey;
@@ -46,10 +65,17 @@ router.post("/user-creation", async (req, res) => {
       user.deletedAt = null;
       await user.save();
 
+      // Account restore email
       const subject = "Welcome back to PDFify!";
-      const text = `Hi ${email},\n\nThis account was previously deleted. It has now been restored. Your new API key is: ${newApiKey}\n\nWelcome back!\n\nPDFify Team`;
+      const html = generateEmailHTML({
+        title: "Welcome Back!",
+        body: `Hi ${email},<br><br>This account was previously deleted. It has now been restored.<br>Your new API key is: <strong>${newApiKey}</strong>`,
+        ctaText: "Login Now",
+        ctaLink: `${process.env.BASE_URL}login.html`,
+      });
+      const text = `Hi ${email},\n\nThis account was previously deleted. It has now been restored. Your new API key is: ${newApiKey}\n\nLogin here: ${process.env.BASE_URL}login.html\n\nPDFify Team`;
 
-      await sendEmail({ to: email, subject, text });
+      await sendEmail({ to: email, subject, text, html });
 
       return res.status(200).json({
         message: "This account was previously deleted. Restoring...",
@@ -57,15 +83,21 @@ router.post("/user-creation", async (req, res) => {
       });
     }
 
-   
+    // New user creation
     const apiKey = require("crypto").randomBytes(24).toString("hex");
     const newUser = new User({ email, password, apiKey });
     await newUser.save();
 
     const subject = "Welcome to PDFify!";
-    const text = `Hi ${email},\n\nThank you for signing up! Your API key is: ${apiKey}\n\nEnjoy!\n\nThe PDFify Team`;
+    const html = generateEmailHTML({
+      title: "Welcome to PDFify!",
+      body: `Hi ${email},<br><br>Thank you for signing up! Your API key is: <strong>${apiKey}</strong><br>Enjoy your PDFify experience.`,
+      ctaText: "Go to PDFify",
+      ctaLink: process.env.BASE_URL,
+    });
+    const text = `Hi ${email},\n\nThank you for signing up! Your API key is: ${apiKey}\n\nGo to PDFify: ${process.env.BASE_URL}\n\nPDFify Team`;
 
-    await sendEmail({ to: email, subject, text });
+    await sendEmail({ to: email, subject, text, html });
 
     res.status(201).json({ message: "User created", redirect: "/login.html" });
 
@@ -202,13 +234,13 @@ router.put("/shop-config/update", authenticate, async (req, res) => {
 
 
 
+// ---------------- USER UPDATE (EMAIL/PASSWORD) ----------------
 router.put("/update", authenticate, dualAuth, async (req, res) => {
   const { email, password } = req.body;
   const userId = req.user.userId;
 
   try {
     const user = await User.findById(userId);
-
     let emailChanged = false;
 
     if (email && email !== user.email) {
@@ -226,14 +258,15 @@ router.put("/update", authenticate, dualAuth, async (req, res) => {
 
     if (emailChanged || password) {
       const subject = "Your Account Information Has Been Updated";
-      const text = `Hi ${user.email},\n\nYour account information has been updated. If you did not make this change, please contact support immediately.\n\nBest regards,\nThe PDFify Team`;
-
-      await sendEmail({
-        to: user.email,
-        subject,
-        text,
+      const html = generateEmailHTML({
+        title: "Account Updated",
+        body: `Hi ${user.email},<br><br>Your account information has been updated.<br>If you did not make this change, please contact support immediately.`,
+        ctaText: "Go to PDFify",
+        ctaLink: `${process.env.BASE_URL}login.html`,
       });
+      const text = `Hi ${user.email},\n\nYour account information has been updated.\nIf you did not make this change, please contact support immediately.\n\nPDFify Team`;
 
+      await sendEmail({ to: user.email, subject, text, html });
       log("Update notification email sent to:", user.email);
     }
 
@@ -243,27 +276,6 @@ router.put("/update", authenticate, dualAuth, async (req, res) => {
     res.status(500).json({ error: "Error updating user information" });
   }
 });
-
-router.delete("/delete", authenticate, dualAuth, async (req, res) => {
-  const userId = req.user.userId;
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    user.deleted = true;
-    user.deletedAt = new Date();
-    await user.save();
-
-    log("User marked as deleted:", user.email);
-
-    res.json({ message: "Account deleted successfully!" });
-  } catch (error) {
-    console.error("Account delete error:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
 
 
 
