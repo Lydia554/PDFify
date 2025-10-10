@@ -20,37 +20,41 @@
   </div>
 
 <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 shadow bg-gray-800">
+<header class="fixed top-0 left-0 right-0 z-50 shadow">
   <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <h1 class="text-4xl font-bold">
-      <a href="https://pdfify.pro"
-        class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
-        PDFify
+      <a href="https://pdfify.pro" 
+         class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
+         PDFify
       </a>
     </h1>
 
-    <!-- Mobile Menu Button -->
+    <!-- Hamburger button (mobile only) -->
     <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
 
-    <!-- Desktop Nav -->
-    <nav id="mainNav" class="hidden md:flex space-x-4">
-      <a href="/api-guide" class="nav-link">📑 API Guide</a>
-      <a href="/shopify" class="nav-link">📑 Shopify</a>
-      <a href="/woocommerce" class="nav-link">📑 WooCommerce</a>
-      <a href="/pdf-generator-demo" class="nav-link">📄 PDF Generator</a>
-      <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
+    <!-- Desktop navigation -->
+    <nav id="mainNav" class="hidden md:flex space-x-4 items-center">
+      <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑 API Guide</a>
+      <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
+      <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
+      <a href="/user-dashboard" id="userDashboardLink" class="text-purple-400 font-semibold">👤 User Dashboard</a>
+      <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-2">
         🚪 Logout
       </button>
     </nav>
   </div>
 
-  <!-- Mobile Nav -->
+  <!-- Mobile dropdown -->
   <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+    <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
     <a href="/api-guide" class="block text-gray-300 hover:text-purple-400">📑 API Guide</a>
     <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
     <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
     <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
-    <button id="logoutButtonMobile" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
+    <a href="/user-dashboard" id="userDashboardLinkMobile" class="block text-purple-400 font-semibold">👤 User Dashboard</a>
+    <button id="logoutButtonMobile" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md">
       🚪 Logout
     </button>
   </nav>
@@ -344,10 +348,13 @@ header {
   top: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
+  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 1000;
+  padding-bottom: 22px; 
+  padding-top: 22px;
 }
+
 
 main {
   margin-top: 30px;
