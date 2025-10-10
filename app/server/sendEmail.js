@@ -20,6 +20,9 @@ const sendEmail = async ({ to, subject, text, html, attachments }) => {
         user: process.env.ZEPTO_USER, 
         pass: process.env.ZEPTO_PASS, 
       },
+
+      authMethod: "PLAIN"
+
     });
 
     const mailOptions = {
