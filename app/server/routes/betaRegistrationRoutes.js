@@ -1,10 +1,77 @@
 const express = require("express");
 const router = express.Router();
 const sendEmail = require("../sendEmail");
+const { verifyTurnstile } = require("../utils/turnstileVerification");
 
-router.post("/beta-registration", async (req, res) => {
+// Rate limiting store (simple in-memory, use Redis for production)
+const rateLimitStore = new Map();
+const RATE_LIMIT_WINDOW = 10 * 60 * 1000; // 10 minutes
+const RATE_LIMIT_MAX_REQUESTS = 5;
+
+// Rate limiting middleware
+function rateLimiter(req, res, next) {
+  const clientIP = req.ip || req.connection.remoteAddress;
+  const now = Date.now();
+
+  // Get or create rate limit record for this IP
+  if (!rateLimitStore.has(clientIP)) {
+    rateLimitStore.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+
+  const record = rateLimitStore.get(clientIP);
+
+  // Reset if window expired
+  if (now > record.resetTime) {
+    rateLimitStore.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return next();
+  }
+
+  // Check if limit exceeded
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return res.status(429).json({
+      error: "Too many registration attempts. Please try again later."
+    });
+  }
+
+  // Increment count
+  record.count++;
+  rateLimitStore.set(clientIP, record);
+  next();
+}
+
+// Clean up old entries every hour
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of rateLimitStore.entries()) {
+    if (now > record.resetTime) {
+      rateLimitStore.delete(ip);
+    }
+  }
+}, 60 * 60 * 1000);
+
+router.post("/beta-registration", rateLimiter, async (req, res) => {
   try {
-    const { name, email, company, useCase, referral } = req.body;
+    const { name, email, company, useCase, referral, turnstileToken, website } = req.body;
+
+    // Honeypot check - reject if filled
+    if (website && website !== "") {
+      console.log("Bot detected via honeypot field");
+      return res.status(400).json({ error: "Invalid submission" });
+    }
+
+    // Verify Turnstile token
+    if (!turnstileToken) {
+      return res.status(400).json({ error: "Security verification required" });
+    }
+
+    const clientIP = req.ip || req.connection.remoteAddress;
+    const turnstileResult = await verifyTurnstile(turnstileToken, clientIP);
+
+    if (!turnstileResult.success) {
+      console.log("Turnstile verification failed:", turnstileResult.error);
+      return res.status(403).json({ error: "Security verification failed. Please try again." });
+    }
 
     if (!name || !email || !useCase || !referral) {
       return res.status(400).json({ error: "Missing required fields" });
