@@ -1,30 +1,46 @@
 const nodemailer = require("nodemailer");
 
-const sendEmail = async ({ to, subject, text, attachments }) => {
+/**
+ * Send an email using ZeptoMail SMTP
+ * @param {Object} options
+ * @param {string} options.to - Recipient email address
+ * @param {string} options.subject - Subject line
+ * @param {string} [options.text] - Plain text version
+ * @param {string} [options.html] - HTML content (preferred)
+ * @param {Array} [options.attachments] - Attachments if any
+ */
+const sendEmail = async ({ to, subject, text, html, attachments }) => {
   try {
+    // Create ZeptoMail SMTP transporter
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.zeptomail.eu",
+      port: 587,
+      secure: false, 
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: process.env.ZEPTO_USER, 
+        pass: process.env.ZEPTO_PASS, 
       },
+
+      authMethod: "PLAIN"
+
     });
 
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"PDFify Team" <mailer@pdfify.pro>`,
       to,
       subject,
       text,
-      attachments, 
+      html: html || text, 
+      attachments,
     };
 
     await transporter.sendMail(mailOptions);
 
     if (process.env.NODE_ENV !== "production") {
-      console.log("Email sent successfully to:", to);
+      console.log(`✅ Email sent successfully to: ${to}`);
     }
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("❌ Error sending email:", error);
     throw error;
   }
 };
