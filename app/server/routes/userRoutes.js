@@ -20,7 +20,8 @@ const log = (message, data = null) => {
 const generateEmailHTML = ({ title, body, ctaText, ctaLink }) => `
 <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
   <div style="text-align: center; padding: 20px;">
-    <img src="https://pdfify.pro/logo.png" alt="PDFify Logo" width="120" />
+  <img src="${process.env.BASE_URL}images/Icon.png" alt="PDFify Icon" width="100" style="border-radius: 10px;" />
+
   </div>
   <h2 style="color: #6b21a8;">${title}</h2>
   <p>${body}</p>
