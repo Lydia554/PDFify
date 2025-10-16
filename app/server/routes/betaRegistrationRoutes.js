@@ -92,8 +92,9 @@ router.post("/beta-registration", rateLimiter, async (req, res) => {
       return res.status(400).json({ error: "Use case description is too short" });
     }
 
-    const emailSubject = "New Shopify Beta Partner Application";
-    const emailText = `
+const emailSubject = "New Shopify Beta Partner Application";
+
+const emailText = `
 New Shopify Beta Partner Application
 
 === ABOUT YOU & YOUR BUSINESS ===
@@ -113,17 +114,40 @@ Feedback Commitment: ${feedbackCommitment ? "Yes - Agreed" : "Not confirmed"}
 
 === ADDITIONAL INFORMATION ===
 Use Case Details: ${useCase}
-How They Heard About Us: ${referral || "Not provided"}
+Referral: ${referral || "Not provided"}
 
 Submitted at: ${new Date().toLocaleString()}
 `;
 
-    await sendEmail({
-      to: process.env.BETA_NOTIFICATION_EMAIL || process.env.EMAIL_USER,
-      subject: emailSubject,
-      text: emailText,
-      attachments: [],
-    });
+
+const emailHtml = `
+<html>
+  <body>
+    <h2>New Shopify Beta Partner Application</h2>
+    <p><strong>Full Name:</strong> ${name}</p>
+    <p><strong>Business Email:</strong> ${email}</p>
+    <p><strong>Business/Brand Name:</strong> ${company}</p>
+    <p><strong>Shopify Store URL:</strong> ${shopifyStoreUrl || "Not provided"}</p>
+    <p><strong>Monthly Order Volume:</strong> ${monthlyOrderVolume || "Not provided"}</p>
+    <p><strong>Current Invoicing Process:</strong> ${currentProcess || "Not provided"}</p>
+    <p><strong>Biggest Challenge:</strong> ${biggestChallenge || "Not provided"}</p>
+    <p><strong>Technical Comfort Level:</strong> ${technicalComfort || "Not provided"}</p>
+    <p><strong>Feedback Commitment:</strong> ${feedbackCommitment ? "Yes - Agreed" : "Not confirmed"}</p>
+    <p><strong>Use Case Details:</strong> ${useCase}</p>
+    <p><strong>Referral:</strong> ${referral || "Not provided"}</p>
+    <p>Submitted at: ${new Date().toLocaleString()}</p>
+  </body>
+</html>
+`;
+
+await sendEmail({
+  to: process.env.BETA_NOTIFICATION_EMAIL || process.env.EMAIL_USER,
+  subject: emailSubject,
+  text: emailText,
+  html: emailHtml,
+  attachments: [],
+});
+
 
     res.status(200).json({
       message: "Thank you for your interest! We'll be in touch soon.",
