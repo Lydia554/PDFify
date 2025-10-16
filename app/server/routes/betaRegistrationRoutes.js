@@ -52,7 +52,9 @@ setInterval(() => {
 
 router.post("/beta-registration", rateLimiter, async (req, res) => {
   try {
-    const { name, email, company, useCase, referral, turnstileToken, website } = req.body;
+    const { name, email, company, useCase, referral, turnstileToken, website,
+            shopifyStoreUrl, monthlyOrderVolume, currentProcess, biggestChallenge,
+            technicalComfort, feedbackCommitment } = req.body;
 
     // Honeypot check - reject if filled
     if (website && website !== "") {
@@ -73,7 +75,7 @@ router.post("/beta-registration", rateLimiter, async (req, res) => {
       return res.status(403).json({ error: "Security verification failed. Please try again." });
     }
 
-    if (!name || !email || !useCase || !referral) {
+    if (!name || !email || !company || !useCase) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
@@ -90,14 +92,29 @@ router.post("/beta-registration", rateLimiter, async (req, res) => {
       return res.status(400).json({ error: "Use case description is too short" });
     }
 
-    const emailSubject = "New Beta Program Registration";
+    const emailSubject = "New Shopify Beta Partner Application";
     const emailText = `
-New Beta Program Registration:
-Name: ${name}
-Email: ${email}
-Company: ${company || "Not provided"}
-Use Case: ${useCase}
-Referral Source: ${referral}
+New Shopify Beta Partner Application
+
+=== ABOUT YOU & YOUR BUSINESS ===
+Full Name: ${name}
+Business Email: ${email}
+Business/Brand Name: ${company}
+Shopify Store URL: ${shopifyStoreUrl || "Not provided"}
+
+=== INVOICING NEEDS ===
+Monthly Order Volume: ${monthlyOrderVolume || "Not provided"}
+Current Invoicing Process: ${currentProcess || "Not provided"}
+Biggest Challenge: ${biggestChallenge || "Not provided"}
+
+=== TECHNICAL & FEEDBACK ===
+Technical Comfort Level: ${technicalComfort || "Not provided"}
+Feedback Commitment: ${feedbackCommitment ? "Yes - Agreed" : "Not confirmed"}
+
+=== ADDITIONAL INFORMATION ===
+Use Case Details: ${useCase}
+How They Heard About Us: ${referral || "Not provided"}
+
 Submitted at: ${new Date().toLocaleString()}
 `;
 

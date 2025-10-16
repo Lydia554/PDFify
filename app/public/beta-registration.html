@@ -9,47 +9,117 @@
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body class="bg-gray-950 text-gray-200 min-h-screen flex flex-col items-center justify-center p-6">
-  <div class="max-w-md w-full bg-gray-900 rounded-2xl shadow-lg p-8 space-y-6 border border-gray-800">
-    <h1 class="text-3xl font-bold text-center text-white">🚀 Join the PDFify Beta Program</h1>
-    <p class="text-center text-gray-400">Be among the first to test upcoming features and help shape the future of PDFify.</p>
+  <div class="max-w-2xl w-full bg-gray-900 rounded-2xl shadow-lg p-8 space-y-6 border border-gray-800">
+    <h1 class="text-3xl font-bold text-center text-white">Shopify PDF Invoice API - Beta Partner Application</h1>
+    <p class="text-center text-gray-400">Thank you for your interest in becoming a founding partner for our new PDF Invoice API. This program is for Shopify store owners who want to automate their invoicing and are willing to provide feedback to help us build the best possible service. In return, you will receive our Pro plan, including dedicated support, completely free for 12 months.</p>
 
-    <form id="beta-form" class="space-y-4">
-      <div>
-        <label for="name" class="block text-sm font-medium text-gray-300">Name *</label>
-        <input id="name" name="name" type="text" required
-          class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+    <form id="beta-form" class="space-y-6">
+      <!-- Section 1: About You & Your Business -->
+      <div class="space-y-4">
+        <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2">About You & Your Business</h2>
+
+        <div>
+          <label for="name" class="block text-sm font-medium text-gray-300">Your Full Name *</label>
+          <input id="name" name="name" type="text" required
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-300">Your Business Email *</label>
+          <input id="email" name="email" type="email" required
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label for="company" class="block text-sm font-medium text-gray-300">Your Business / Brand Name *</label>
+          <input id="company" name="company" type="text" required
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label for="shopifyStoreUrl" class="block text-sm font-medium text-gray-300">Your Shopify Store URL</label>
+          <input id="shopifyStoreUrl" name="shopifyStoreUrl" type="url"
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="e.g., your-store.myshopify.com or example.com">
+        </div>
       </div>
 
-      <div>
-        <label for="email" class="block text-sm font-medium text-gray-300">Email *</label>
-        <input id="email" name="email" type="email" required
-          class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      <!-- Section 2: Your Invoicing Needs -->
+      <div class="space-y-4">
+        <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2">Your Invoicing Needs</h2>
+
+        <div>
+          <label for="monthlyOrderVolume" class="block text-sm font-medium text-gray-300">On average, how many orders do you process per month?</label>
+          <select id="monthlyOrderVolume" name="monthlyOrderVolume"
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select...</option>
+            <option value="1-50">1-50</option>
+            <option value="51-200">51-200</option>
+            <option value="201-500">201-500</option>
+            <option value="500+">500+</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="currentProcess" class="block text-sm font-medium text-gray-300">How do you currently create and send invoices? What do you like or dislike about your process?</label>
+          <textarea id="currentProcess" name="currentProcess" rows="3"
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="Tell us about your current invoicing workflow..."></textarea>
+        </div>
+
+        <div>
+          <label for="biggestChallenge" class="block text-sm font-medium text-gray-300">What is the #1 challenge or feature you wish you had for your invoicing?</label>
+          <textarea id="biggestChallenge" name="biggestChallenge" rows="3"
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="e.g., custom templates, batch processing, automatic sending"></textarea>
+        </div>
       </div>
 
-      <div>
-        <label for="company" class="block text-sm font-medium text-gray-300">Company (optional)</label>
-        <input id="company" name="company" type="text"
-          class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      <!-- Section 3: Technical & Feedback Commitment -->
+      <div class="space-y-4">
+        <h2 class="text-xl font-semibold text-white border-b border-gray-700 pb-2">Technical & Feedback Commitment</h2>
+
+        <div>
+          <label for="technicalComfort" class="block text-sm font-medium text-gray-300">How comfortable are you or your team with integrating a simple API?</label>
+          <select id="technicalComfort" name="technicalComfort"
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select...</option>
+            <option value="very">Very comfortable (We can handle it ourselves)</option>
+            <option value="somewhat">Somewhat comfortable (We might need a little guidance)</option>
+            <option value="not">Not comfortable (We would need significant help)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="useCase" class="block text-sm font-medium text-gray-300">Additional information about your use case *</label>
+          <textarea id="useCase" name="useCase" rows="3" required
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            placeholder="Any other details you'd like to share..."></textarea>
+        </div>
+
+        <div class="flex items-start">
+          <input id="feedbackCommitment" name="feedbackCommitment" type="checkbox"
+            class="mt-1 h-4 w-4 rounded bg-gray-800 border-gray-700 text-indigo-600 focus:ring-2 focus:ring-indigo-500">
+          <label for="feedbackCommitment" class="ml-2 block text-sm text-gray-300">
+            I understand this is a beta program and I agree to provide feedback on the service via occasional emails or brief calls over the next 12 months.
+          </label>
+        </div>
       </div>
 
-      <div>
-        <label for="useCase" class="block text-sm font-medium text-gray-300">How do you plan to use PDFify? *</label>
-        <textarea id="useCase" name="useCase" rows="3" required
-          class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          placeholder="Tell us briefly about your use case..."></textarea>
-      </div>
-
-      <div>
-        <label for="referral" class="block text-sm font-medium text-gray-300">How did you hear about us? *</label>
-        <select id="referral" name="referral" required
-          class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-          <option value="">Select...</option>
-          <option value="Search Engine">Search Engine</option>
-          <option value="Friend or Colleague">Friend or Colleague</option>
-          <option value="Social Media">Social Media</option>
-          <option value="Blog / Article">Blog / Article</option>
-          <option value="Other">Other</option>
-        </select>
+      <!-- Optional: Marketing -->
+      <div class="space-y-4">
+        <div>
+          <label for="referral" class="block text-sm font-medium text-gray-300">How did you hear about us?</label>
+          <select id="referral" name="referral"
+            class="mt-1 w-full rounded-lg bg-gray-800 border border-gray-700 text-gray-100 p-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select...</option>
+            <option value="Search Engine">Search Engine</option>
+            <option value="Friend or Colleague">Friend or Colleague</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Blog / Article">Blog / Article</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
       </div>
 
       <!-- Honeypot field (hidden from humans, visible to bots) -->
@@ -114,7 +184,13 @@
         name: form.name.value.trim(),
         email: form.email.value.trim(),
         company: form.company.value.trim(),
+        shopifyStoreUrl: form.shopifyStoreUrl.value.trim(),
+        monthlyOrderVolume: form.monthlyOrderVolume.value,
+        currentProcess: form.currentProcess.value.trim(),
+        biggestChallenge: form.biggestChallenge.value.trim(),
+        technicalComfort: form.technicalComfort.value,
         useCase: form.useCase.value.trim(),
+        feedbackCommitment: form.feedbackCommitment.checked,
         referral: form.referral.value,
         turnstileToken: turnstileToken,
       };
