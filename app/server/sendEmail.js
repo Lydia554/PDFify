@@ -11,7 +11,7 @@ const nodemailer = require("nodemailer");
  */
 const sendEmail = async ({ to, subject, text, html, attachments }) => {
   try {
-    // Create ZeptoMail SMTP transporter
+    
     const transporter = nodemailer.createTransport({
       host: "smtp.zeptomail.eu",
       port: 587,

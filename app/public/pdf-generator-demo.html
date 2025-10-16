@@ -9,8 +9,8 @@
   <script src="https://js.stripe.com/v3/"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/cookie-consent.js"></script>
-  <link rel="icon" href="images/Icon.png" type="image/png" sizes="32x32">
-  <link rel="apple-touch-icon" href="Icon.png">
+  <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="images/Icon.png?v=2">
 </head>
 <body class="bg-gray-700 font-sans max-w-3xl mx-auto p-8 text-gray-100">
 
@@ -22,15 +22,19 @@
   <!-- Header -->
   <header class="fixed top-0 left-0 right-0 z-50 shadow bg-gray-800">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-4xl font-bold bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent">
-        PDFify
-      </h1>
+    <h1 class="text-4xl font-bold">
+  <a href="https://pdfify.pro" 
+     class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
+     PDFify
+  </a>
+</h1>
+
       <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
       <nav id="mainNav" class="hidden md:flex space-x-4">
         <a href="/api-guide" class="nav-link">📑 API Guide</a>
         <a href="/shopify" class="nav-link">📑 Shopify</a>
         <a href="/woocommerce" class="nav-link">📑 WooCommerce</a>
-        <a href="#" id="userDashboardLink" class="nav-link">👤 User Dashboard</a>
+        <a href="/user-dashboard" class="nav-link">👤 User Dashboard</a>
         <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
           🚪 Logout
         </button>
@@ -42,8 +46,8 @@
       <a href="/api-guide" class="block text-gray-300 hover:text-purple-400">📑 API Guide</a>
       <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
       <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
-      <a href="#" class="block text-gray-300 hover:text-purple-400">👤 User Dashboard</a>
-      <button id="ogoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
+     <a href="/user-dashboard" class="block text-gray-300 hover:text-purple-400">👤 User Dashboard</a>
+      <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
         🚪 Logout
       </button>
     </nav>
