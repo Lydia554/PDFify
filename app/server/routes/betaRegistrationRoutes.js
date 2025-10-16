@@ -13,7 +13,6 @@ function rateLimiter(req, res, next) {
   const clientIP = req.ip || req.connection.remoteAddress;
   const now = Date.now();
 
-  // Get or create rate limit record for this IP
   if (!rateLimitStore.has(clientIP)) {
     rateLimitStore.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     return next();
@@ -21,26 +20,22 @@ function rateLimiter(req, res, next) {
 
   const record = rateLimitStore.get(clientIP);
 
-  // Reset if window expired
   if (now > record.resetTime) {
     rateLimitStore.set(clientIP, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     return next();
   }
 
-  // Check if limit exceeded
   if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
     return res.status(429).json({
       error: "Too many registration attempts. Please try again later."
     });
   }
 
-  // Increment count
   record.count++;
   rateLimitStore.set(clientIP, record);
   next();
 }
 
-// Clean up old entries every hour
 setInterval(() => {
   const now = Date.now();
   for (const [ip, record] of rateLimitStore.entries()) {
@@ -52,17 +47,17 @@ setInterval(() => {
 
 router.post("/beta-registration", rateLimiter, async (req, res) => {
   try {
-    const { name, email, company, useCase, referral, turnstileToken, website,
-            shopifyStoreUrl, monthlyOrderVolume, currentProcess, biggestChallenge,
-            technicalComfort, feedbackCommitment } = req.body;
+    const {
+      name, email, company, useCase, referral, turnstileToken, website,
+      shopifyStoreUrl, monthlyOrderVolume, currentProcess, biggestChallenge,
+      technicalComfort, feedbackCommitment
+    } = req.body;
 
-    // Honeypot check - reject if filled
     if (website && website !== "") {
       console.log("Bot detected via honeypot field");
       return res.status(400).json({ error: "Invalid submission" });
     }
 
-    // Verify Turnstile token
     if (!turnstileToken) {
       return res.status(400).json({ error: "Security verification required" });
     }
@@ -92,36 +87,69 @@ router.post("/beta-registration", rateLimiter, async (req, res) => {
       return res.status(400).json({ error: "Use case description is too short" });
     }
 
-    const emailSubject = "New Shopify Beta Partner Application";
+    // Plain-text fallback
     const emailText = `
 New Shopify Beta Partner Application
 
-=== ABOUT YOU & YOUR BUSINESS ===
-Full Name: ${name}
-Business Email: ${email}
-Business/Brand Name: ${company}
+Name: ${name}
+Email: ${email}
+Company: ${company}
 Shopify Store URL: ${shopifyStoreUrl || "Not provided"}
-
-=== INVOICING NEEDS ===
 Monthly Order Volume: ${monthlyOrderVolume || "Not provided"}
-Current Invoicing Process: ${currentProcess || "Not provided"}
+Current Process: ${currentProcess || "Not provided"}
 Biggest Challenge: ${biggestChallenge || "Not provided"}
-
-=== TECHNICAL & FEEDBACK ===
 Technical Comfort Level: ${technicalComfort || "Not provided"}
 Feedback Commitment: ${feedbackCommitment ? "Yes - Agreed" : "Not confirmed"}
-
-=== ADDITIONAL INFORMATION ===
 Use Case Details: ${useCase}
-How They Heard About Us: ${referral || "Not provided"}
-
+Referral: ${referral || "Not provided"}
 Submitted at: ${new Date().toLocaleString()}
+`;
+
+    // HTML email
+    const emailHtml = `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>New Shopify Beta Partner Application</title>
+    <style>
+      body { font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 0; padding: 20px; color: #333; }
+      .container { background: #fff; max-width: 600px; margin: 0 auto; padding: 20px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+      h2 { color: #6b21a8; margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 8px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+      td { padding: 8px; border-bottom: 1px solid #eee; vertical-align: top; }
+      td.label { font-weight: bold; width: 180px; color: #555; }
+      .footer { margin-top: 20px; font-size: 12px; color: #999; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>New Shopify Beta Partner Application</h2>
+      <table>
+        <tr><td class="label">Full Name:</td><td>${name}</td></tr>
+        <tr><td class="label">Business Email:</td><td>${email}</td></tr>
+        <tr><td class="label">Business/Brand Name:</td><td>${company}</td></tr>
+        <tr><td class="label">Shopify Store URL:</td><td>${shopifyStoreUrl || "Not provided"}</td></tr>
+        <tr><td class="label">Monthly Order Volume:</td><td>${monthlyOrderVolume || "Not provided"}</td></tr>
+        <tr><td class="label">Current Process:</td><td>${currentProcess || "Not provided"}</td></tr>
+        <tr><td class="label">Biggest Challenge:</td><td>${biggestChallenge || "Not provided"}</td></tr>
+        <tr><td class="label">Technical Comfort Level:</td><td>${technicalComfort || "Not provided"}</td></tr>
+        <tr><td class="label">Feedback Commitment:</td><td>${feedbackCommitment ? "Yes - Agreed" : "Not confirmed"}</td></tr>
+        <tr><td class="label">Use Case Details:</td><td>${useCase}</td></tr>
+        <tr><td class="label">Referral:</td><td>${referral || "Not provided"}</td></tr>
+        <tr><td class="label">Submitted at:</td><td>${new Date().toLocaleString()}</td></tr>
+      </table>
+      <div class="footer">PDFify Team</div>
+    </div>
+  </body>
+</html>
 `;
 
     await sendEmail({
       to: process.env.BETA_NOTIFICATION_EMAIL || process.env.EMAIL_USER,
       subject: emailSubject,
       text: emailText,
+      html: emailHtml,
       attachments: [],
     });
 
@@ -129,6 +157,7 @@ Submitted at: ${new Date().toLocaleString()}
       message: "Thank you for your interest! We'll be in touch soon.",
       success: true,
     });
+
   } catch (error) {
     console.error("Beta registration error:", error);
     res.status(500).json({
