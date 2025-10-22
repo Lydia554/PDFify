@@ -50,7 +50,7 @@ function mapOrderToPdfData(order, shopConfig = {}, invoiceSource = "shopify") {
     iban: shopConfig.iban || "DE89370400440532013000",
     bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
-    invoiceSource, 
+    invoiceSource,
   };
 }
 
@@ -132,22 +132,16 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}, invoiceSource
     drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right" });
   });
 
-  // Embed XMP metadata before PDF/A conversion
+  // Embed ZUGFeRD XML **before** PDF/A-3b conversion
   await embedXmp(pdfDoc);
-
-  // Save PDF to bytes
-  let pdfBytes = await pdfDoc.save();
-
-  // Convert to PDF/A-3b via Ghostscript
-  pdfBytes = await makePdfA3b(Buffer.from(pdfBytes));
-
-  // Reload PDF after Ghostscript and embed ZUGFeRD XML
-  const pdfDocFinal = await PDFDocument.load(pdfBytes);
   const xmlContent = generateZugferdXML(data);
-  embedXmlIntoPdf(pdfDocFinal, xmlContent);
+  embedXmlIntoPdf(pdfDoc, xmlContent);
 
-  const finalPdfBuffer = await pdfDocFinal.save();
-  return finalPdfBuffer;
+  // Save and run Ghostscript **once** — do not reload in pdf-lib
+  const pdfBytes = await pdfDoc.save();
+  const pdfBuffer = await makePdfA3b(Buffer.from(pdfBytes));
+
+  return pdfBuffer;
 }
 
 module.exports = { createShopifyInvoiceZugferd };
