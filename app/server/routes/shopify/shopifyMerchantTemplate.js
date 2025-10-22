@@ -1,9 +1,9 @@
 // shopifyMerchantTemplate.js
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb } = require("pdf-lib");
+const { PDFDocument, rgb, PDFName, PDFString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { embedXmp, embedXmlIntoPdf, generateZugferdXML, makePdfA3b } = require("../../Helpers/pdf-helpers");
+const { embedXmp, generateZugferdXML, makePdfA3b } = require("../../Helpers/pdf-helpers");
 
 /**
  * Safely parse numbers
@@ -62,6 +62,41 @@ function drawCell(page, text, x, y, width, height, font, { size = 10, align = "l
   let textX = x + 2;
   if (align === "right") textX = x + width - (text.length * size * 0.5) - 2;
   page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
+}
+
+/**
+ * Attach ZUGFeRD XML after PDF/A-3b conversion
+ */
+async function attachZugferdAfterPdfA3b(pdfBuffer, xmlContent) {
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const xmlBytes = Buffer.from(xmlContent, "utf8");
+
+  const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
+    Type: PDFName.of("EmbeddedFile"),
+    Subtype: PDFName.of("text#2Fxml"),
+  });
+
+  const fileSpecDict = pdfDoc.context.obj({
+    Type: "Filespec",
+    F: PDFString.of("ZUGFeRD-invoice.xml"),
+    UF: PDFString.of("ZUGFeRD-invoice.xml"),
+    AFRelationship: PDFName.of("Alternative"),
+    EF: { F: xmlStream },
+  });
+
+  const fileSpecRef = pdfDoc.context.register(fileSpecDict);
+  const catalog = pdfDoc.catalog;
+  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+
+  // Optional: EmbeddedFiles name tree
+  const namesDict = pdfDoc.context.obj({
+    EmbeddedFiles: pdfDoc.context.obj({
+      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+    }),
+  });
+  catalog.set(PDFName.of("Names"), namesDict);
+
+  return Buffer.from(await pdfDoc.save());
 }
 
 /**
@@ -132,16 +167,22 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}, invoiceSource
     drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right" });
   });
 
-  // Embed ZUGFeRD XML **before** PDF/A-3b conversion
+  // Embed XMP
   await embedXmp(pdfDoc);
-  const xmlContent = generateZugferdXML(data);
-  embedXmlIntoPdf(pdfDoc, xmlContent);
 
-  // Save and run Ghostscript **once** — do not reload in pdf-lib
+  // Save intermediate PDF
   const pdfBytes = await pdfDoc.save();
-  const pdfBuffer = await makePdfA3b(Buffer.from(pdfBytes));
 
-  return pdfBuffer;
+  // Convert to PDF/A-3b
+  const pdfA3bBuffer = await makePdfA3b(Buffer.from(pdfBytes));
+
+  // Generate ZUGFeRD XML
+  const xmlContent = generateZugferdXML(data);
+
+  // Attach ZUGFeRD XML after PDF/A-3b conversion
+  const finalBuffer = await attachZugferdAfterPdfA3b(pdfA3bBuffer, xmlContent);
+
+  return finalBuffer;
 }
 
 module.exports = { createShopifyInvoiceZugferd };
