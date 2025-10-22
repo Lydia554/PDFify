@@ -97,13 +97,19 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     let pdfBuffer;
 
-    // ----------------------------
-    // Merchant PDF (PDF-lib + ZUGFeRD / PDF/A-3b)
-    // ----------------------------
+// ----------------------------
+// Merchant PDF (PDF-lib + ZUGFeRD / PDF/A-3b)
+// ----------------------------
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
-    pdfBuffer = await createShopifyInvoiceZugferd(order);
+
+
+    pdfBuffer = await createShopifyInvoiceZugferd({
+      ...order,
+      invoiceSource: req.invoiceSource || "shopify"
+    });
+
     console.log("✅ [Shopify] PDF generated:", pdfBuffer?.length, "bytes");
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
