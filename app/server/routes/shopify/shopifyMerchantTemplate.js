@@ -72,10 +72,15 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   pdfDoc.registerFontkit(fontkit);
 
   // Load fonts
-  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "./fonts/LiberationSans-Regular.ttf"));
-  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "./fonts/LiberationSans-Bold.ttf"));
-  const regularFont = await pdfDoc.embedFont(regularFontBytes);
-  const boldFont = await pdfDoc.embedFont(boldFontBytes);
+const regularFontBytes = fs.readFileSync(
+  path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf")
+);
+const boldFontBytes = fs.readFileSync(
+  path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf")
+);
+const regularFont = await pdfDoc.embedFont(regularFontBytes);
+const boldFont = await pdfDoc.embedFont(boldFontBytes);
+
 
   // Add page
   const page = pdfDoc.addPage([595, 842]);
