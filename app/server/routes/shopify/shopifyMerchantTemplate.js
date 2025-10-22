@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML } = require("../../Helpers/pdf-helpers");
+const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML, makePdfA3b } = require("../../Helpers/pdf-helpers");
 
 /**
  * Safely parse numbers
@@ -16,7 +16,7 @@ function parseNumber(value, fallback = 0) {
 /**
  * Map Shopify order to PDF-ready data
  */
-function mapOrderToPdfData(order, shopConfig = {}) {
+function mapOrderToPdfData(order, shopConfig = {}, invoiceSource = "shopify") {
   const items = (order.line_items || []).map((item) => {
     const price = parseNumber(item.price);
     const quantity = parseNumber(item.quantity, 1);
@@ -50,6 +50,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     iban: shopConfig.iban || "DE89370400440532013000",
     bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
+    invoiceSource, 
   };
 }
 
@@ -66,21 +67,20 @@ function drawCell(page, text, x, y, width, height, font, { size = 10, align = "l
 /**
  * Generate Shopify invoice PDF with ZUGFeRD / PDF/A-3b
  */
-async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
-  const data = mapOrderToPdfData(order, shopConfig);
+async function createShopifyInvoiceZugferd(order, shopConfig = {}, invoiceSource = "shopify") {
+  const data = mapOrderToPdfData(order, shopConfig, invoiceSource);
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
   // Load fonts
-const regularFontBytes = fs.readFileSync(
-  path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf")
-);
-const boldFontBytes = fs.readFileSync(
-  path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf")
-);
-const regularFont = await pdfDoc.embedFont(regularFontBytes);
-const boldFont = await pdfDoc.embedFont(boldFontBytes);
-
+  const regularFontBytes = fs.readFileSync(
+    path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf")
+  );
+  const boldFontBytes = fs.readFileSync(
+    path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf")
+  );
+  const regularFont = await pdfDoc.embedFont(regularFontBytes);
+  const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
   // Add page
   const page = pdfDoc.addPage([595, 842]);
@@ -137,9 +137,9 @@ const boldFont = await pdfDoc.embedFont(boldFontBytes);
   const xmlContent = generateZugferdXML(data);
   embedXmlIntoPdf(pdfDoc, xmlContent);
 
-const pdfBytes = await pdfDoc.save();
-const pdfBuffer = await makePdfA3b(Buffer.from(pdfBytes)); 
-return pdfBuffer;
+  const pdfBytes = await pdfDoc.save();
+  const pdfBuffer = await makePdfA3b(Buffer.from(pdfBytes)); 
+  return pdfBuffer;
 }
 
 module.exports = { createShopifyInvoiceZugferd };

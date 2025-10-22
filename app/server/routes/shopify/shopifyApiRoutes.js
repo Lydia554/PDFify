@@ -104,11 +104,8 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
+pdfBuffer = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
 
-    pdfBuffer = await createShopifyInvoiceZugferd({
-      ...order,
-      invoiceSource: req.invoiceSource || "shopify"
-    });
 
     console.log("✅ [Shopify] PDF generated:", pdfBuffer?.length, "bytes");
   } catch (err) {
