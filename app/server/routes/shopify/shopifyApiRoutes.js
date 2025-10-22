@@ -100,16 +100,29 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     // ----------------------------
     // Merchant PDF (PDF-lib + ZUGFeRD / PDF/A-3b)
     // ----------------------------
-    if (isMerchant) {
-      pdfBuffer = await createShopifyInvoiceZugferd(order);
-      await incrementUsage(user, 1, isPreview);
+if (isMerchant) {
+  try {
+    console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
+    pdfBuffer = await createShopifyInvoiceZugferd(order);
+    console.log("✅ [Shopify] PDF generated:", pdfBuffer?.length, "bytes");
+  } catch (err) {
+    console.error("❌ [Shopify] Merchant PDF generation failed:", err);
+    return res.status(500).json({
+      error: "Merchant PDF generation failed",
+      details: err.message,
+      stack: err.stack
+    });
+  }
 
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
-      });
-      return res.send(pdfBuffer);
-    }
+  await incrementUsage(user, 1, isPreview);
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": isPreview
+      ? "inline"
+      : `attachment; filename=${invoiceData.orderId}.pdf`,
+  });
+  return res.send(pdfBuffer);
+}
 
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
