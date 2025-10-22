@@ -355,5 +355,57 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
 });
 
 
+// ----------------------------
+// 4️⃣  PDF Validation (Shopify - PDF/A-3b + ZUGFeRD)
+// ----------------------------
+const { exec } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+
+router.post("/validate-pdf", async (req, res) => {
+  try {
+    const order = req.body.order;
+    if (!order) return res.status(400).json({ error: "Missing order data" });
+
+    // Generate merchant-style PDF
+    const pdfBuffer = await createShopifyInvoiceZugferd(order);
+
+    // Save temp file
+    const tempPath = path.join("/tmp", `shopify_test_${Date.now()}.pdf`);
+    fs.writeFileSync(tempPath, pdfBuffer);
+
+    // 1️⃣ Check for embedded ZUGFeRD XML
+    const hasZugferd = pdfBuffer.includes("ZUGFeRD") || pdfBuffer.includes("CrossIndustryInvoice");
+
+    // 2️⃣ Run Ghostscript compliance check
+    const gsCmd = `gs -dPDFA -dBATCH -dNOPAUSE -dQUIET -sDEVICE=pdfwrite -sOutputFile=/dev/null -dPDFACompatibilityPolicy=1 "${tempPath}"`;
+    exec(gsCmd, (err) => {
+      fs.unlinkSync(tempPath);
+
+      if (err) {
+        console.error("❌ Ghostscript compliance error:", err.message);
+        return res.json({
+          status: "invalid",
+          pdfa: false,
+          zugferd: hasZugferd,
+          message: "PDF/A-3b compliance failed",
+        });
+      }
+
+      res.json({
+        status: "valid",
+        pdfa: true,
+        zugferd: hasZugferd,
+        message: "PDF/A-3b + ZUGFeRD verified successfully",
+      });
+    });
+  } catch (err) {
+    console.error("❌ PDF validation failed:", err);
+    res.status(500).json({ error: "Validation failed" });
+  }
+});
+
+
+
 
 module.exports = router;

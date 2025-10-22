@@ -7,24 +7,72 @@ const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
+const { PDFName, PDFString } = require("pdf-lib");
 
 /**
  * Embed XMP metadata into PDF (placeholder)
  * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
-  // Add XMP metadata embedding if needed
+  const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+      pdfaid:part="3"
+      pdfaid:conformance="B"/>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`;
+
+  pdfDoc.setMetadata(xmp);
   return pdfDoc;
 }
+
 
 /**
  * Embed ZUGFeRD XML into PDF (placeholder)
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
+
+
 function embedXmlIntoPdf(pdfDoc, xml) {
-  // Real embedding happens here in production
+  if (!xml) return pdfDoc;
+
+  const xmlBytes = Buffer.from(xml, "utf8");
+  const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
+    Type: PDFName.of("EmbeddedFile"),
+    Subtype: PDFName.of("text#2Fxml"),
+  });
+
+  const fileSpecDict = pdfDoc.context.obj({
+    Type: "Filespec",
+    F: PDFString.of("ZUGFeRD-invoice.xml"),
+    UF: PDFString.of("ZUGFeRD-invoice.xml"),
+    AFRelationship: PDFName.of("Alternative"),
+    EF: { F: xmlStream },
+  });
+
+  const fileSpecRef = pdfDoc.context.register(fileSpecDict);
+  const catalog = pdfDoc.catalog;
+
+  // Register AF entry
+  catalog.set(
+    PDFName.of("AF"),
+    pdfDoc.context.obj([fileSpecRef])
+  );
+
+  // Register EmbeddedFiles name tree (optional but recommended)
+  const namesDict = pdfDoc.context.obj({
+    EmbeddedFiles: pdfDoc.context.obj({
+      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+    }),
+  });
+  catalog.set(PDFName.of("Names"), namesDict);
+
+  return pdfDoc;
 }
+
 
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
@@ -180,12 +228,37 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-  function generateShopifyXML(data) {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<InvoiceSource>Shopify</InvoiceSource>
-<InvoiceNumber>${orderId}</InvoiceNumber>
-<Date>${date}</Date>`;
-  }
+function generateShopifyXML(data) {
+  const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
+  const date = data.date || new Date().toISOString().split("T")[0];
+  const items = Array.isArray(data.items) ? data.items : [];
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
+  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
+  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
+  <rsm:ExchangedDocument>
+    <ram:ID>${orderId}</ram:ID>
+    <ram:TypeCode>380</ram:TypeCode>
+    <ram:IssueDateTime>
+      <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
+    </ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>
+    ${items.map((item, i) => `
+      <ram:IncludedSupplyChainTradeLineItem>
+        <ram:AssociatedDocumentLineDocument>
+          <ram:LineID>${i + 1}</ram:LineID>
+        </ram:AssociatedDocumentLineDocument>
+        <ram:SpecifiedTradeProduct>
+          <ram:Name>${item.name || item.description || ""}</ram:Name>
+        </ram:SpecifiedTradeProduct>
+      </ram:IncludedSupplyChainTradeLineItem>
+    `).join("")}
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>`;
+}
+
 
   function generateWooCommerceXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>
