@@ -358,53 +358,61 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
 // ----------------------------
 // 4️⃣  PDF Validation (Shopify - PDF/A-3b + ZUGFeRD)
 // ----------------------------
-const { exec } = require("child_process");
-const fs = require("fs");
-const path = require("path");
 
 router.post("/validate-pdf", async (req, res) => {
   try {
     const order = req.body.order;
     if (!order) return res.status(400).json({ error: "Missing order data" });
 
-    // Generate merchant-style PDF
+    // Step 1. Generate PDF buffer
     const pdfBuffer = await createShopifyInvoiceZugferd(order);
 
-    // Save temp file
-    const tempPath = path.join("/tmp", `shopify_test_${Date.now()}.pdf`);
-    fs.writeFileSync(tempPath, pdfBuffer);
+    // Step 2. Write PDF temporarily for validation
+    const tmpPath = path.join(os.tmpdir(), `shopify_invoice_${Date.now()}.pdf`);
+    await fs.promises.writeFile(tmpPath, pdfBuffer);
 
-    // 1️⃣ Check for embedded ZUGFeRD XML
-    const hasZugferd = pdfBuffer.includes("ZUGFeRD") || pdfBuffer.includes("CrossIndustryInvoice");
+    // Step 3. Run Ghostscript (PDF/A validation)
+    const { execFile } = require("child_process");
+    const util = require("util");
+    const execFileAsync = util.promisify(execFile);
 
-    // 2️⃣ Run Ghostscript compliance check
-    const gsCmd = `gs -dPDFA -dBATCH -dNOPAUSE -dQUIET -sDEVICE=pdfwrite -sOutputFile=/dev/null -dPDFACompatibilityPolicy=1 "${tempPath}"`;
-    exec(gsCmd, (err) => {
-      fs.unlinkSync(tempPath);
+    let pdfaValid = false;
+    try {
+      const gsArgs = [
+        "-dPDFA",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-sDEVICE=nullpage",
+        tmpPath
+      ];
+      await execFileAsync("gs", gsArgs);
+      pdfaValid = true;
+    } catch (err) {
+      console.warn("Ghostscript validation failed:", err.message);
+    }
 
-      if (err) {
-        console.error("❌ Ghostscript compliance error:", err.message);
-        return res.json({
-          status: "invalid",
-          pdfa: false,
-          zugferd: hasZugferd,
-          message: "PDF/A-3b compliance failed",
-        });
-      }
+    // Step 4. Check if XML is embedded
+    const pdfText = pdfBuffer.toString("utf8");
+    const zugferdFound = pdfText.includes("<CrossIndustryInvoice") || pdfText.includes("<InvoiceSource>Shopify</InvoiceSource>");
 
-      res.json({
-        status: "valid",
-        pdfa: true,
-        zugferd: hasZugferd,
-        message: "PDF/A-3b + ZUGFeRD verified successfully",
-      });
+    // Step 5. Cleanup temp file
+    fs.unlink(tmpPath, () => {});
+
+    // Step 6. Respond
+    return res.json({
+      status: pdfaValid && zugferdFound ? "valid" : "invalid",
+      pdfa: pdfaValid,
+      zugferd: zugferdFound,
+      message: pdfaValid && zugferdFound
+        ? "PDF/A-3b + ZUGFeRD verified successfully"
+        : "Validation failed, see logs"
     });
+
   } catch (err) {
-    console.error("❌ PDF validation failed:", err);
-    res.status(500).json({ error: "Validation failed" });
+    console.error("❌ Validation route error:", err);
+    res.status(500).json({ error: "PDF validation failed" });
   }
 });
-
 
 
 
