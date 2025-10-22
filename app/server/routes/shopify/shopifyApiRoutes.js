@@ -334,20 +334,28 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
     for (let i = 0; i < orders.length; i += 20) {
       const batch = orders.slice(i, i + 20);
 
-      const pdfPromises = batch.map(async (order) => {
-        let orderData = order;
-        if (!orderData.line_items) {
-         
-          const fullOrderResp = await axios.get(`https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`, {
-            headers: { "X-Shopify-Access-Token": token },
-          });
-          orderData = fullOrderResp.data.order;
-        }
 
-        // Generate PDF (merchant version)
-        const pdfBuffer = await createShopifyInvoiceZugferd(orderData);
-        zip.file(`Invoice_${orderData.name}.pdf`, pdfBuffer);
-      });
+const pdfPromises = batch.map(async (order) => {
+  let orderData = order;
+
+  // Fetch full order if line_items missing
+  if (!orderData.line_items) {
+    const fullOrderResp = await axios.get(
+      `https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`,
+      { headers: { "X-Shopify-Access-Token": token } }
+    );
+    orderData = fullOrderResp.data.order;
+  }
+
+  
+  const pdfBuffer = await createShopifyInvoiceZugferd(
+    orderData,
+    {}, 
+    req.invoiceSource || "shopify"
+  );
+
+  zip.file(`Invoice_${orderData.name}.pdf`, pdfBuffer);
+});
 
       await Promise.all(pdfPromises);
     }

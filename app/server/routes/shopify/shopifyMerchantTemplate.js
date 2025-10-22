@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { embedIccProfile, embedXmp, embedXmlIntoPdf, generateZugferdXML, makePdfA3b } = require("../../Helpers/pdf-helpers");
+const { embedXmp, embedXmlIntoPdf, generateZugferdXML, makePdfA3b } = require("../../Helpers/pdf-helpers");
 
 /**
  * Safely parse numbers
@@ -132,14 +132,22 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}, invoiceSource
     drawCell(page, totalValues[i].toFixed(2), 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right" });
   });
 
-  // Embed PDF/A-3b + ZUGFeRD
+  // Embed XMP metadata before PDF/A conversion
   await embedXmp(pdfDoc);
-  const xmlContent = generateZugferdXML(data);
-  embedXmlIntoPdf(pdfDoc, xmlContent);
 
-  const pdfBytes = await pdfDoc.save();
-  const pdfBuffer = await makePdfA3b(Buffer.from(pdfBytes)); 
-  return pdfBuffer;
+  // Save PDF to bytes
+  let pdfBytes = await pdfDoc.save();
+
+  // Convert to PDF/A-3b via Ghostscript
+  pdfBytes = await makePdfA3b(Buffer.from(pdfBytes));
+
+  // Reload PDF after Ghostscript and embed ZUGFeRD XML
+  const pdfDocFinal = await PDFDocument.load(pdfBytes);
+  const xmlContent = generateZugferdXML(data);
+  embedXmlIntoPdf(pdfDocFinal, xmlContent);
+
+  const finalPdfBuffer = await pdfDocFinal.save();
+  return finalPdfBuffer;
 }
 
 module.exports = { createShopifyInvoiceZugferd };
