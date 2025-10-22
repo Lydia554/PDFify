@@ -10,7 +10,7 @@ const execFileAsync = util.promisify(execFile);
 const { PDFName, PDFString } = require("pdf-lib");
 
 /**
- * Embed XMP metadata into PDF (placeholder)
+ * Embed XMP metadata into PDF (PDF-lib compatible)
  * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
@@ -24,13 +24,22 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  pdfDoc.setMetadata(xmp);
+  const pdfLib = require("pdf-lib");
+  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
+    Type: pdfLib.PDFName.of("Metadata"),
+    Subtype: pdfLib.PDFName.of("XML"),
+    Filter: pdfLib.PDFName.of("FlateDecode"),
+  });
+
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
+
   return pdfDoc;
 }
 
 
 /**
- * Embed ZUGFeRD XML into PDF (placeholder)
+ * Embed ZUGFeRD XML into PDF 
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
