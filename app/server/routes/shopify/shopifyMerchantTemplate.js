@@ -133,13 +133,13 @@ const boldFont = await pdfDoc.embedFont(boldFontBytes);
   });
 
   // Embed PDF/A-3b + ZUGFeRD
-  await embedIccProfile(pdfDoc);
   await embedXmp(pdfDoc);
   const xmlContent = generateZugferdXML(data);
   embedXmlIntoPdf(pdfDoc, xmlContent);
 
-  const pdfBytes = await pdfDoc.save();
-  return Buffer.from(pdfBytes);
+const pdfBytes = await pdfDoc.save();
+const pdfBuffer = await makePdfA3b(Buffer.from(pdfBytes)); 
+return pdfBuffer;
 }
 
 module.exports = { createShopifyInvoiceZugferd };
