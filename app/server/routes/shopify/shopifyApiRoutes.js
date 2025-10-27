@@ -329,7 +329,6 @@ router.get("/orders", authenticate, dualAuth, async (req, res) => {
   }
 });
 
-
 router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
   try {
     const { shopDomain, from, to } = req.body;
@@ -338,7 +337,7 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
     const token = await resolveShopifyToken(req, shopDomain);
     if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
 
-    // Fetch all orders in the date range
+    // Fetch orders
     let shopifyOrdersUrl = `https://${shopDomain}/admin/api/2023-10/orders.json?limit=50&status=any&fields=id,name,created_at`;
     const params = [];
     if (from) params.push(`created_at_min=${encodeURIComponent(from + "T00:00:00Z")}`);
@@ -347,58 +346,44 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
 
     const response = await axios.get(shopifyOrdersUrl, { headers: { "X-Shopify-Access-Token": token } });
     const orders = response.data.orders;
-
     if (!orders.length) return res.status(404).json({ error: "No orders found in this range" });
 
     const zip = new JSZip();
     const user = req.fullUser;
 
-    // Process orders in batches of 20
-    for (let i = 0; i < orders.length; i += 20) {
-      const batch = orders.slice(i, i + 20);
-
-      const pdfPromises = batch.map(async (order) => {
-        let orderData = order;
-
-        // Fetch full order if line_items missing
-        if (!orderData.line_items) {
-          const fullOrderResp = await axios.get(
-            `https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`,
-            { headers: { "X-Shopify-Access-Token": token } }
-          );
-          orderData = fullOrderResp.data.order;
-        }
-
-        // Generate PDF + XML
-        const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(
-          orderData,
-          {}, 
-          req.invoiceSource || "shopify"
+    // Process orders
+    for (const order of orders) {
+      let fullOrder = order;
+      if (!fullOrder.line_items) {
+        const fullOrderResp = await axios.get(
+          `https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`,
+          { headers: { "X-Shopify-Access-Token": token } }
         );
+        fullOrder = fullOrderResp.data.order;
+      }
 
-        // Add PDF and XML to ZIP
-        const safeOrderId = (orderData.name || orderData.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-        zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
-        zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
+      // 1️⃣ Generate PDF + XML
+      const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(fullOrder, {}, "shopify");
 
-        console.log(`✅ PDF + XML added to ZIP for order ${safeOrderId}`);
-      });
+      // 2️⃣ Safe filenames
+      const safeOrderId = (fullOrder.name || fullOrder.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
 
-      await Promise.all(pdfPromises);
+      // 3️⃣ Add to ZIP
+      zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
+      zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
     }
 
-    // Increment usage count by number of orders
+    // Increment usage
     await incrementUsage(user, orders.length, false);
 
-    // Generate ZIP
+    // Generate ZIP buffer
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
     res.set({
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename=Invoices_${from || "start"}_to_${to || "end"}.zip`,
-      "Content-Length": zipBuffer.length,
     });
-    return res.send(zipBuffer);
+    res.send(zipBuffer);
 
   } catch (err) {
     console.error("Failed to generate ZIP:", err);

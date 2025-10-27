@@ -129,28 +129,28 @@ async function attachZugferdAfterPdfA3b(pdfBuffer, xmlContent) {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text#2Fxml"),
   });
+  const xmlStreamRef = pdfDoc.context.register(xmlStream);
 
   const fileSpecDict = pdfDoc.context.obj({
-    Type: "Filespec",
+    Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
-    EF: { F: xmlStream },
+    EF: pdfDoc.context.obj({ F: xmlStreamRef }), 
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
-  const catalog = pdfDoc.catalog;
-  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  const namesDict = pdfDoc.context.obj({
-    EmbeddedFiles: pdfDoc.context.obj({
-      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
-    }),
+  pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+
+  const embeddedFilesDict = pdfDoc.context.obj({
+    Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
   });
-  catalog.set(PDFName.of("Names"), namesDict);
+  pdfDoc.catalog.set(PDFName.of("Names"), pdfDoc.context.obj({ EmbeddedFiles: embeddedFilesDict }));
 
   return Buffer.from(await pdfDoc.save());
 }
+
 
 /** Generate Shopify invoice PDF with Amazon-style layout and ZUGFeRD 2.3 Comfort */
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
