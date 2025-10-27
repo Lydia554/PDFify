@@ -14,7 +14,7 @@ const { PDFName, PDFString } = require("pdf-lib");
  * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
-  // ✅ Removed UTF-8 BOM from begin=""
+  
   const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
@@ -337,5 +337,5 @@ module.exports = {
   embedXmp,
   embedXmlIntoPdf,
   makePdfA3b,
-  saveZugferdXmlForInspection,
+ 
 };
