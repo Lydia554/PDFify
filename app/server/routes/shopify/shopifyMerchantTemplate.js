@@ -324,7 +324,8 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   fs.writeFileSync(pdfOutputPath, finalBuffer);
   console.log(`✅ Final PDF saved at: ${pdfOutputPath}`);
 
-  return finalBuffer;
+ return { pdfBuffer: finalBuffer, xmlContent }; 
+
 }
 
 module.exports = { createShopifyInvoiceZugferd };
