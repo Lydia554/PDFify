@@ -243,9 +243,17 @@ function generateShopifyXML(data) {
   const items = Array.isArray(data.items) ? data.items : [];
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
-  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
-  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
+<rsm:CrossIndustryInvoice
+  xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p3"
+  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:ferd:CrossIndustryDocument:invoice:2p3:comfort</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+
   <rsm:ExchangedDocument>
     <ram:ID>${orderId}</ram:ID>
     <ram:TypeCode>380</ram:TypeCode>
@@ -253,6 +261,7 @@ function generateShopifyXML(data) {
       <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
     </ram:IssueDateTime>
   </rsm:ExchangedDocument>
+
   <rsm:SupplyChainTradeTransaction>
     ${items.map((item, i) => `
       <ram:IncludedSupplyChainTradeLineItem>
@@ -262,6 +271,15 @@ function generateShopifyXML(data) {
         <ram:SpecifiedTradeProduct>
           <ram:Name>${item.name || item.description || ""}</ram:Name>
         </ram:SpecifiedTradeProduct>
+        <ram:SpecifiedLineTradeSettlement>
+          <ram:ApplicableTradeTax>
+            <ram:TypeCode>VAT</ram:TypeCode>
+            <ram:RateApplicablePercent>${item.taxRate ?? 0}</ram:RateApplicablePercent>
+          </ram:ApplicableTradeTax>
+          <ram:SpecifiedTradeSettlementLineMonetarySummation>
+            <ram:LineTotalAmount>${(item.total || 0).toFixed(2)}</ram:LineTotalAmount>
+          </ram:SpecifiedTradeSettlementLineMonetarySummation>
+        </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>
     `).join("")}
   </rsm:SupplyChainTradeTransaction>
