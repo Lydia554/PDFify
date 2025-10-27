@@ -241,6 +241,12 @@ function generateShopifyXML(data) {
   const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
   const date = data.date || new Date().toISOString().split("T")[0];
   const items = Array.isArray(data.items) ? data.items : [];
+  const currency = data.currency || "EUR";
+
+  // calculate totals
+  const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
+  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
+  const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice
@@ -263,6 +269,7 @@ function generateShopifyXML(data) {
   </rsm:ExchangedDocument>
 
   <rsm:SupplyChainTradeTransaction>
+
     ${items.map((item, i) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
@@ -275,13 +282,24 @@ function generateShopifyXML(data) {
           <ram:ApplicableTradeTax>
             <ram:TypeCode>VAT</ram:TypeCode>
             <ram:RateApplicablePercent>${item.taxRate ?? 0}</ram:RateApplicablePercent>
+            <ram:CalculatedAmount currencyID="${currency}">${(item.tax || 0).toFixed(2)}</ram:CalculatedAmount>
           </ram:ApplicableTradeTax>
           <ram:SpecifiedTradeSettlementLineMonetarySummation>
-            <ram:LineTotalAmount>${(item.total || 0).toFixed(2)}</ram:LineTotalAmount>
+            <ram:LineTotalAmount currencyID="${currency}">${(item.total || 0).toFixed(2)}</ram:LineTotalAmount>
           </ram:SpecifiedTradeSettlementLineMonetarySummation>
         </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>
     `).join("")}
+
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount currencyID="${currency}">${totalNet.toFixed(2)}</ram:LineTotalAmount>
+        <ram:TaxTotalAmount currencyID="${currency}">${totalTax.toFixed(2)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount currencyID="${currency}">${totalGross.toFixed(2)}</ram:GrandTotalAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
