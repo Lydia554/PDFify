@@ -52,15 +52,17 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 /** Draw table cell with optional background */
-function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left", backgroundColor } = {}) {
+function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left", backgroundColor = null, textColor = rgb(0,0,0) } = {}) {
   if (backgroundColor) {
     page.drawRectangle({ x, y, width, height, color: backgroundColor });
   }
   page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5 });
+  
   let textX = x + 2;
   if (align === "right") textX = x + width - (text.length * size * 0.5) - 2;
-  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
+  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: textColor });
 }
+
 
 /** Attach ZUGFeRD XML after PDF/A-3b conversion */
 async function attachZugferdAfterPdfA3b(pdfBuffer, xmlContent) {

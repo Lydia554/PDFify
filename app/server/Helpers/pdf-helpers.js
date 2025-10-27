@@ -44,11 +44,12 @@ async function embedXmp(pdfDoc) {
  * @param {string} xml
  */
 
-
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  const xmlBytes = Buffer.from(xml, "utf8");
+ 
+  const xmlBytes = Buffer.from(xml.trim(), "utf8");
+
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text#2Fxml"),
@@ -64,14 +65,9 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   const catalog = pdfDoc.catalog;
+  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // Register AF entry
-  catalog.set(
-    PDFName.of("AF"),
-    pdfDoc.context.obj([fileSpecRef])
-  );
-
-  // Register EmbeddedFiles name tree (optional but recommended)
+  // Optional: EmbeddedFiles name tree
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
