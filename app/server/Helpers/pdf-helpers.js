@@ -14,8 +14,7 @@ const { PDFName, PDFString } = require("pdf-lib");
  * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
-  
-  const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
@@ -38,47 +37,47 @@ async function embedXmp(pdfDoc) {
   return pdfDoc;
 }
 
+
 /**
- * Optionally save ZUGFeRD XML to disk for inspection (used in dev mode)
- * @param {string} xmlContent
- * @param {string} orderId
+ * Embed ZUGFeRD XML into PDF 
+ * @param {PDFDocument} pdfDoc
+ * @param {string} xml
  */
-
-
 
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
+ 
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
+
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text#2Fxml"),
   });
 
-  const xmlStreamRef = pdfDoc.context.register(xmlStream);
   const fileSpecDict = pdfDoc.context.obj({
-    Type: PDFName.of("Filespec"),
+    Type: "Filespec",
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
-    EF: pdfDoc.context.obj({ F: xmlStreamRef }),
+    EF: { F: xmlStream },
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   const catalog = pdfDoc.catalog;
-
-  // Associate the file
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // Also add EmbeddedFiles name tree
-  const embeddedFilesDict = pdfDoc.context.obj({
-    Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+  // Optional: EmbeddedFiles name tree
+  const namesDict = pdfDoc.context.obj({
+    EmbeddedFiles: pdfDoc.context.obj({
+      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+    }),
   });
-  const namesDict = pdfDoc.context.obj({ EmbeddedFiles: embeddedFilesDict });
   catalog.set(PDFName.of("Names"), namesDict);
 
   return pdfDoc;
 }
+
 
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
@@ -86,7 +85,7 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
 
@@ -94,6 +93,7 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
+  // Pre-checks
   if (!fs.existsSync(iccPath)) {
     const msg = `[makePdfA3b] ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
@@ -133,6 +133,7 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
     return finalBuffer;
+
   } catch (err) {
     const logContent = `
 [makePdfA3b] Ghostscript conversion failed
@@ -148,7 +149,7 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
     await fs.promises.writeFile(logFile, logContent);
     console.error(logContent);
     console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-    return pdfBuffer;
+    return pdfBuffer; // fallback
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
@@ -173,15 +174,13 @@ function generateZugferdXML(invoiceData) {
     <ram:IssueDateTime>${date}</ram:IssueDateTime>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
-    ${items
-      .map(
-        (item, idx) => `
+    ${items.map((item, idx) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
           <ram:LineID>${idx + 1}</ram:LineID>
         </ram:AssociatedDocumentLineDocument>
         <ram:SpecifiedTradeProduct>
-          <ram:Name>${item.name || item.description || ""}</ram:Name>
+          <ram:Name>${item.name || item.description || ''}</ram:Name>
         </ram:SpecifiedTradeProduct>
         <ram:SpecifiedLineTradeSettlement>
           <ram:ApplicableTradeTax>
@@ -192,9 +191,8 @@ function generateZugferdXML(invoiceData) {
           <ram:TradeSettlementLineAmount>${item.total || 0}</ram:TradeSettlementLineAmount>
           <ram:NetLineAmount>${item.net || 0}</ram:NetLineAmount>
         </ram:SpecifiedLineTradeSettlement>
-      </ram:IncludedSupplyChainTradeLineItem>`
-      )
-      .join("")}
+      </ram:IncludedSupplyChainTradeLineItem>
+    `).join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
   }
@@ -207,19 +205,18 @@ function generateZugferdXML(invoiceData) {
     <ram:IssueDateTime>${date}</ram:IssueDateTime>
   </rsm:ExchangedDocument>
   <rsm:SupplyChainTradeTransaction>
-    ${items
-      .map((item, idx) => {
-        const qty = Number(item.quantity) || 0;
-        const unitPrice = Number(item.unitPrice) || 0;
-        const total = qty * unitPrice;
-        const tax = total * ((Number(item.taxRate ?? data.taxRate) || 0) / 100);
-        return `
+    ${items.map((item, idx) => {
+      const qty = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      const total = qty * unitPrice;
+      const tax = total * ((Number(item.taxRate ?? data.taxRate) || 0) / 100);
+      return `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
           <ram:LineID>${idx + 1}</ram:LineID>
         </ram:AssociatedDocumentLineDocument>
         <ram:SpecifiedTradeProduct>
-          <ram:Name>${item.description || ""}</ram:Name>
+          <ram:Name>${item.description || ''}</ram:Name>
         </ram:SpecifiedTradeProduct>
         <ram:SpecifiedLineTradeSettlement>
           <ram:ApplicableTradeTax>
@@ -231,23 +228,23 @@ function generateZugferdXML(invoiceData) {
           <ram:NetLineAmount>${(total - tax).toFixed(2)}</ram:NetLineAmount>
         </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>`;
-      })
-      .join("")}
+    }).join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
   }
 
-  function generateShopifyXML(data) {
-    const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
-    const date = data.date || new Date().toISOString().split("T")[0];
-    const items = Array.isArray(data.items) ? data.items : [];
-    const currency = data.currency || "EUR";
+function generateShopifyXML(data) {
+  const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
+  const date = data.date || new Date().toISOString().split("T")[0];
+  const items = Array.isArray(data.items) ? data.items : [];
+  const currency = data.currency || "EUR";
 
-    const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
-    const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
-    const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
+  // calculate totals
+  const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
+  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
+  const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
 
-    return `<?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice
   xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p3"
   xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
@@ -269,9 +266,7 @@ function generateZugferdXML(invoiceData) {
 
   <rsm:SupplyChainTradeTransaction>
 
-    ${items
-      .map(
-        (item, i) => `
+    ${items.map((item, i) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
           <ram:LineID>${i + 1}</ram:LineID>
@@ -289,9 +284,8 @@ function generateZugferdXML(invoiceData) {
             <ram:LineTotalAmount currencyID="${currency}">${(item.total || 0).toFixed(2)}</ram:LineTotalAmount>
           </ram:SpecifiedTradeSettlementLineMonetarySummation>
         </ram:SpecifiedLineTradeSettlement>
-      </ram:IncludedSupplyChainTradeLineItem>`
-      )
-      .join("")}
+      </ram:IncludedSupplyChainTradeLineItem>
+    `).join("")}
 
     <ram:ApplicableHeaderTradeSettlement>
       <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>
@@ -304,7 +298,8 @@ function generateZugferdXML(invoiceData) {
 
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
-  }
+}
+
 
   function generateWooCommerceXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>
@@ -336,6 +331,5 @@ module.exports = {
   generateZugferdXML,
   embedXmp,
   embedXmlIntoPdf,
-  makePdfA3b,
- 
+  makePdfA3b
 };
