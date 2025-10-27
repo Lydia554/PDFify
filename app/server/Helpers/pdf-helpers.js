@@ -45,10 +45,10 @@ async function embedXmp(pdfDoc) {
  */
 function saveZugferdXmlForInspection(xmlContent, orderId) {
   try {
-    if (process.env.NODE_ENV === "production") return; // skip in prod
-    const generatedDir = path.resolve(__dirname, "../Generated");
+    if (process.env.NODE_ENV === "production") return; 
+    const generatedDir = path.resolve(process.cwd(), "Generated");
     if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
-    const safeOrderId = orderId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const safeOrderId = (orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     const filePath = path.join(generatedDir, `ZUGFeRD-${safeOrderId}.xml`);
     fs.writeFileSync(filePath, xmlContent, "utf8");
     console.log(`✅ ZUGFeRD XML saved for inspection: ${filePath}`);
@@ -61,36 +61,37 @@ function saveZugferdXmlForInspection(xmlContent, orderId) {
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
- 
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
-
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text#2Fxml"),
   });
 
+  const xmlStreamRef = pdfDoc.context.register(xmlStream);
   const fileSpecDict = pdfDoc.context.obj({
-    Type: "Filespec",
+    Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
-    EF: { F: xmlStream },
+    EF: pdfDoc.context.obj({ F: xmlStreamRef }),
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   const catalog = pdfDoc.catalog;
+
+  // Associate the file
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // Optional: EmbeddedFiles name tree
-  const namesDict = pdfDoc.context.obj({
-    EmbeddedFiles: pdfDoc.context.obj({
-      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
-    }),
+  // Also add EmbeddedFiles name tree
+  const embeddedFilesDict = pdfDoc.context.obj({
+    Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
   });
+  const namesDict = pdfDoc.context.obj({ EmbeddedFiles: embeddedFilesDict });
   catalog.set(PDFName.of("Names"), namesDict);
 
   return pdfDoc;
 }
+
 
 
 /**
