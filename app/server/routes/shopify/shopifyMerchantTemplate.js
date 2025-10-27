@@ -48,11 +48,13 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     iban: shopConfig.iban || "DE89370400440532013000",
     bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
+    logoPath: shopConfig.logoPath, // optional logo
+    companyName: shopConfig.companyName || "YOUR COMPANY GMBH",
   };
 }
 
-/** Draw table cell with background */
-function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left", bgColor = null } = {}) {
+/** Draw table cell */
+function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left", bgColor } = {}) {
   if (bgColor) page.drawRectangle({ x, y, width, height, color: bgColor });
   page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5 });
   let textX = x + 2;
@@ -93,7 +95,7 @@ async function attachZugferdAfterPdfA3b(pdfBuffer, xmlContent) {
   return Buffer.from(await pdfDoc.save());
 }
 
-/** Generate Shopify invoice PDF with ZUGFeRD 2.3 Comfort XML and Amazon-style look */
+/** Generate Shopify invoice PDF with ZUGFeRD 2.3 Comfort XML, colors, and logo */
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
   const pdfDoc = await PDFDocument.create();
@@ -113,20 +115,19 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const colWidths = [180, 60, 80, 80, 80];
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];
 
-  // Embed logo
-  try {
-    const logoBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/logo.png"));
+  // Logo
+  if (data.logoPath && fs.existsSync(data.logoPath)) {
+    const logoBytes = fs.readFileSync(data.logoPath);
     const logoImage = await pdfDoc.embedPng(logoBytes);
-    const { width, height } = logoImage.scale(0.25);
-    page.drawImage(logoImage, { x: 50, y: 780, width, height });
-  } catch (err) {
-    page.drawText("LOGO", { x: 50, y: 780, size: 24, font: boldFont });
+    const logoDims = logoImage.scale(0.25);
+    page.drawImage(logoImage, { x: 50, y: y - logoDims.height, width: logoDims.width, height: logoDims.height });
   }
-
-  y -= 80;
+  // Company name
+  page.drawText(data.companyName, { x: 400, y, size: 16, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
+  y -= lineHeight + 40;
 
   // Header info
-  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font: boldFont });
+  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
   y -= lineHeight;
   page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font: regularFont });
   y -= lineHeight;
@@ -139,19 +140,17 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font: regularFont });
   y -= lineHeight * 2;
 
-  // Table headers with Amazon-style gray
+  // Table headers with background color
   let x = 50;
-  const headerColor = rgb(0.9, 0.9, 0.9);
   headers.forEach((header, i) => {
-    drawCell(page, header, x, y, colWidths[i], rowHeight, boldFont, { size: 10, align: i > 1 ? "right" : "left", bgColor: headerColor });
+    drawCell(page, header, x, y, colWidths[i], rowHeight, boldFont, { size: 10, align: i > 1 ? "right" : "left", bgColor: rgb(0.85, 0.85, 0.95) });
     x += colWidths[i];
   });
   y -= rowHeight;
 
-  // Table rows alternating colors
-  data.items.forEach((item, idx) => {
+  // Table rows
+  data.items.forEach(item => {
     x = 50;
-    const rowColor = idx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95);
     const row = [
       item.name,
       String(item.quantity),
@@ -160,20 +159,19 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
       item.total.toFixed(2) + ` ${item.currency}`
     ];
     row.forEach((cell, i) => {
-      drawCell(page, cell, x, y, colWidths[i], rowHeight, regularFont, { size: 10, align: i > 1 ? "right" : "left", bgColor: rowColor });
+      drawCell(page, cell, x, y, colWidths[i], rowHeight, regularFont, { size: 10, align: i > 1 ? "right" : "left" });
       x += colWidths[i];
     });
     y -= rowHeight;
   });
 
-  // Totals with light gray background
+  // Totals
   const totalLabels = ["Subtotal", "Tax", "Total"];
   const totalValues = [data.subtotal, data.tax, data.total];
   totalLabels.forEach((label, i) => {
     y -= rowHeight;
-    const totalColor = rgb(0.9, 0.9, 0.9);
-    drawCell(page, label, 50, y, 400, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right", bgColor: totalColor });
-    drawCell(page, totalValues[i].toFixed(2) + ` ${data.currency}`, 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right", bgColor: totalColor });
+    drawCell(page, label, 50, y, 400, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right", bgColor: i === 2 ? rgb(0.95, 0.95, 1) : undefined });
+    drawCell(page, totalValues[i].toFixed(2) + ` ${data.currency}`, 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right" });
   });
 
   // Embed XMP
@@ -186,17 +184,18 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const pdfA3bBuffer = await makePdfA3b(Buffer.from(pdfBytes));
 
   // Generate ZUGFeRD 2.3 Comfort XML
-  const xmlContent = generateZugferdXML({
-    ...data,
-    source: "shopify",
-    currency: data.currency
-  });
+  const xmlContent = generateZugferdXML({ ...data, source: "shopify", currency: data.currency });
 
-  // Attach ZUGFeRD XML
+  // -----------------------
+  // Save XML separately for inspection
+  // -----------------------
+  const generatedDir = path.resolve(__dirname, "../../Generated");
+  if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
+  const safeOrderId = data.orderId.replace(/[^a-zA-Z0-9_-]/g, "_");
+  fs.writeFileSync(path.join(generatedDir, `ZUGFeRD-${safeOrderId}.xml`), xmlContent, "utf8");
+
+  // Attach ZUGFeRD XML after PDF/A-3b conversion
   const finalBuffer = await attachZugferdAfterPdfA3b(pdfA3bBuffer, xmlContent);
-
-  // Also save XML separately for inspection
-  fs.writeFileSync(path.resolve(__dirname, `../../Generated/ZUGFeRD-${data.orderId}.xml`), xmlContent, "utf8");
 
   return finalBuffer;
 }
