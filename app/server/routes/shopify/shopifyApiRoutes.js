@@ -104,36 +104,29 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    const pdfBuffer = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
+
+    const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(
+      order,
+      shopConfig,
+      req.invoiceSource || "shopify"
+    );
 
     console.log("✅ [Shopify] PDF generated:", pdfBuffer?.length, "bytes");
 
-    // Locate corresponding ZUGFeRD XML in /tmp/Generated
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const xmlPath = `/tmp/Generated/ZUGFeRD-${safeOrderId}.xml`;
 
     const JSZip = require("jszip");
-    const fs = require("fs");
-
-
-    if (req.query.preview === "true") {
-      // For preview, just return PDF inline
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "inline",
-      });
-      return res.send(pdfBuffer);
-    }
-
-    // Otherwise, return ZIP with both PDF and XML
     const zip = new JSZip();
+
+    // Add PDF
     zip.file(`${safeOrderId}.pdf`, pdfBuffer);
-    if (fs.existsSync(xmlPath)) {
-      const xmlContent = fs.readFileSync(xmlPath, "utf8");
+
+    // Add XML
+    if (xmlContent) {
       zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
-      console.log(`✅ XML included in ZIP: ${xmlPath}`);
+      console.log(`✅ XML included in ZIP for order ${safeOrderId}`);
     } else {
-      console.warn(`⚠️ XML not found at: ${xmlPath}`);
+      console.warn(`⚠️ XML content missing for order ${safeOrderId}`);
     }
 
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
@@ -145,6 +138,7 @@ if (isMerchant) {
       "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}.zip`,
     });
     return res.send(zipBuffer);
+
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
     return res.status(500).json({
