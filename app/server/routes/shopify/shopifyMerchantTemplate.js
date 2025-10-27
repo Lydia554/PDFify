@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { PDFDocument, rgb, PDFName, PDFString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { embedXmp, generateZugferdXML, makePdfA3b } = require("../../Helpers/pdf-helpers");
+const { generateZugferdXML, embedXmp, makePdfA3b, saveZugferdXmlForInspection } = require("../../Helpers/pdf-helpers");
 
 /** Safely parse numbers */
 function parseNumber(value, fallback = 0) {
@@ -184,15 +184,10 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const pdfA3bBuffer = await makePdfA3b(Buffer.from(pdfBytes));
 
   // Generate ZUGFeRD 2.3 Comfort XML
-  const xmlContent = generateZugferdXML({ ...data, source: "shopify", currency: data.currency });
+const xmlContent = generateZugferdXML({ ...data, source: "shopify", currency: data.currency });
+saveZugferdXmlForInspection(xmlContent, data.orderId);
 
-  // -----------------------
-  // Save XML separately for inspection
-  // -----------------------
-  const generatedDir = path.resolve(__dirname, "../../Generated");
-  if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
-  const safeOrderId = data.orderId.replace(/[^a-zA-Z0-9_-]/g, "_");
-  fs.writeFileSync(path.join(generatedDir, `ZUGFeRD-${safeOrderId}.xml`), xmlContent, "utf8");
+
 
   // Attach ZUGFeRD XML after PDF/A-3b conversion
   const finalBuffer = await attachZugferdAfterPdfA3b(pdfA3bBuffer, xmlContent);

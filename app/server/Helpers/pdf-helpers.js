@@ -39,10 +39,24 @@ async function embedXmp(pdfDoc) {
 
 
 /**
- * Embed ZUGFeRD XML into PDF 
- * @param {PDFDocument} pdfDoc
- * @param {string} xml
+ * Optionally save ZUGFeRD XML to disk for inspection (used in dev mode)
+ * @param {string} xmlContent
+ * @param {string} orderId
  */
+function saveZugferdXmlForInspection(xmlContent, orderId) {
+  try {
+    if (process.env.NODE_ENV === "production") return; // skip in prod
+    const generatedDir = path.resolve(__dirname, "../Generated");
+    if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
+    const safeOrderId = orderId.replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filePath = path.join(generatedDir, `ZUGFeRD-${safeOrderId}.xml`);
+    fs.writeFileSync(filePath, xmlContent, "utf8");
+    console.log(`✅ ZUGFeRD XML saved for inspection: ${filePath}`);
+  } catch (err) {
+    console.error("⚠️ Failed to save ZUGFeRD XML for inspection:", err.message);
+  }
+}
+
 
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
@@ -331,5 +345,6 @@ module.exports = {
   generateZugferdXML,
   embedXmp,
   embedXmlIntoPdf,
-  makePdfA3b
+  makePdfA3b,
+  saveZugferdXmlForInspection
 };
