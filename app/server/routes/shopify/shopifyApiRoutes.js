@@ -104,28 +104,53 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-pdfBuffer = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
+    // Generate PDF + XML
+    const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
 
+    console.log("✅ [Shopify] PDF generated:", pdfBuffer.length, "bytes");
+    console.log("✅ XML generated:", xmlContent ? xmlContent.length : 0, "bytes");
 
-    console.log("✅ [Shopify] PDF generated:", pdfBuffer?.length, "bytes");
+    if (req.query.preview === "true") {
+      // Preview: just show PDF inline
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "inline",
+      });
+      return res.send(pdfBuffer);
+    }
+
+    // Otherwise, return ZIP with both PDF and XML
+    const JSZip = require("jszip");
+    const zip = new JSZip();
+    const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+
+    zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
+    zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
+    console.log(`✅ PDF + XML added to ZIP`);
+
+    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+    // Increment usage
+    await incrementUsage(user, 1, false);
+
+    // Send ZIP
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.zip`,
+    });
+    return res.send(zipBuffer);
+
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
     return res.status(500).json({
       error: "Merchant PDF generation failed",
       details: err.message,
-      stack: err.stack
+      stack: err.stack,
     });
   }
-
-  await incrementUsage(user, 1, isPreview);
-  res.set({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": isPreview
-      ? "inline"
-      : `attachment; filename=${invoiceData.orderId}.pdf`,
-  });
-  return res.send(pdfBuffer);
 }
+
+
 
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
@@ -305,8 +330,6 @@ router.get("/orders", authenticate, dualAuth, async (req, res) => {
 });
 
 
-
-
 router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
   try {
     const { shopDomain, from, to } = req.body;
@@ -334,28 +357,32 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
     for (let i = 0; i < orders.length; i += 20) {
       const batch = orders.slice(i, i + 20);
 
+      const pdfPromises = batch.map(async (order) => {
+        let orderData = order;
 
-const pdfPromises = batch.map(async (order) => {
-  let orderData = order;
+        // Fetch full order if line_items missing
+        if (!orderData.line_items) {
+          const fullOrderResp = await axios.get(
+            `https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`,
+            { headers: { "X-Shopify-Access-Token": token } }
+          );
+          orderData = fullOrderResp.data.order;
+        }
 
-  // Fetch full order if line_items missing
-  if (!orderData.line_items) {
-    const fullOrderResp = await axios.get(
-      `https://${shopDomain}/admin/api/2023-10/orders/${order.id}.json`,
-      { headers: { "X-Shopify-Access-Token": token } }
-    );
-    orderData = fullOrderResp.data.order;
-  }
+        // Generate PDF + XML
+        const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(
+          orderData,
+          {}, 
+          req.invoiceSource || "shopify"
+        );
 
-  
-  const pdfBuffer = await createShopifyInvoiceZugferd(
-    orderData,
-    {}, 
-    req.invoiceSource || "shopify"
-  );
+        // Add PDF and XML to ZIP
+        const safeOrderId = (orderData.name || orderData.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+        zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
+        zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
 
-  zip.file(`Invoice_${orderData.name}.pdf`, pdfBuffer);
-});
+        console.log(`✅ PDF + XML added to ZIP for order ${safeOrderId}`);
+      });
 
       await Promise.all(pdfPromises);
     }
@@ -369,14 +396,16 @@ const pdfPromises = batch.map(async (order) => {
     res.set({
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename=Invoices_${from || "start"}_to_${to || "end"}.zip`,
+      "Content-Length": zipBuffer.length,
     });
-    res.send(zipBuffer);
+    return res.send(zipBuffer);
 
   } catch (err) {
     console.error("Failed to generate ZIP:", err);
     res.status(500).json({ error: "Failed to generate ZIP" });
   }
 });
+
 
 
 // ----------------------------
