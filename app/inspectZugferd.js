@@ -1,5 +1,4 @@
 const fs = require("fs");
-const zlib = require("zlib");
 const { PDFDocument, PDFName } = require("pdf-lib");
 
 async function inspectPdf(filePath) {
@@ -18,19 +17,22 @@ async function inspectPdf(filePath) {
   const afArray = pdfDoc.context.lookup(af);
   for (const ref of afArray.array) {
     const fileSpec = pdfDoc.context.lookup(ref);
-    const fname = fileSpec.get(PDFName.of("F"));
-    console.log("- Embedded file:", fname.value);
+    const fname = fileSpec.get(PDFName.of("F"))?.value || "unknown.xml";
+    console.log("- Embedded file:", fname);
 
     const ef = fileSpec.get(PDFName.of("EF"));
     const fStream = pdfDoc.context.lookup(ef.get(PDFName.of("F")));
+    const xmlBytes = fStream.getContents(); // already decoded
 
-    // Extract compressed bytes
-    const compressedBytes = fStream.getContents();
-    const xmlBytes = zlib.inflateSync(compressedBytes); // decompress
+    // Optionally save to disk
+    const outputPath = `./extracted-${fname}`;
+    fs.writeFileSync(outputPath, xmlBytes);
+    console.log(`✅ XML extracted to: ${outputPath}`);
 
-    console.log("  --- XML content preview ---");
+    console.log("  --- XML preview ---");
     console.log(xmlBytes.toString("utf8").slice(0, 500)); // first 500 chars
   }
 }
 
+// Usage
 inspectPdf("./Order_10348230934851.pdf");

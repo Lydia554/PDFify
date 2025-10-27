@@ -47,16 +47,16 @@ async function embedXmp(pdfDoc) {
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
- 
-  const xmlBytes = Buffer.from(xml.trim(), "utf8");
+  const xmlBytes = Buffer.from(xml.trim(), "utf8"); 
 
+  // Flate stream for embedded file
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text#2Fxml"),
+    Subtype: PDFName.of("text/xml"), 
   });
 
   const fileSpecDict = pdfDoc.context.obj({
-    Type: "Filespec",
+    Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
@@ -67,7 +67,6 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   const catalog = pdfDoc.catalog;
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // Optional: EmbeddedFiles name tree
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
