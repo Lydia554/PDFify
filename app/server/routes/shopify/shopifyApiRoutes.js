@@ -104,12 +104,14 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig);
+    // Generate PDF + XML
+    const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
 
-    console.log("✅ [Shopify] PDF generated:", pdfBuffer?.length, "bytes");
+    console.log("✅ [Shopify] PDF generated:", pdfBuffer.length, "bytes");
+    console.log("✅ XML generated:", xmlContent ? xmlContent.length : 0, "bytes");
 
-    // For preview, just return PDF inline
     if (req.query.preview === "true") {
+      // Preview: just show PDF inline
       res.set({
         "Content-Type": "application/pdf",
         "Content-Disposition": "inline",
@@ -117,26 +119,25 @@ if (isMerchant) {
       return res.send(pdfBuffer);
     }
 
-    // Otherwise, create ZIP with PDF + XML
+    // Otherwise, return ZIP with both PDF and XML
     const JSZip = require("jszip");
     const zip = new JSZip();
-
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
 
-    zip.file(`Invoice_${safeOrderId}.pdf`, pdfBuffer);
-    zip.file(`ZUGFeRD_${safeOrderId}.xml`, xmlContent);
+    zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
+    zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
+    console.log(`✅ PDF + XML added to ZIP`);
 
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-    console.log(`✅ XML included in ZIP for order ${safeOrderId}`);
-
+    // Increment usage
     await incrementUsage(user, 1, false);
 
+    // Send ZIP
     res.set({
       "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename=Invoice_${safeOrderId}.zip`,
+      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.zip`,
     });
-
     return res.send(zipBuffer);
 
   } catch (err) {
