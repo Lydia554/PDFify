@@ -43,35 +43,22 @@ async function embedXmp(pdfDoc) {
  * @param {string} xmlContent
  * @param {string} orderId
  */
-function saveZugferdXmlForInspection(xmlContent, orderId, pdfOutputPath) {
+function saveZugferdXmlForInspection(xmlContent, orderId) {
   try {
-    if (!xmlContent) {
-      console.warn("⚠️ No XML content provided for inspection.");
-      return;
-    }
-
-    const safeOrderId = (orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const xmlFileName = `ZUGFeRD-${safeOrderId}.xml`;
-
-    // 1️⃣ Always save in server's Generated folder (for reference/logging)
+  
     const generatedDir = path.resolve(__dirname, "../Generated");
     if (!fs.existsSync(generatedDir)) fs.mkdirSync(generatedDir, { recursive: true });
-    const serverFilePath = path.join(generatedDir, xmlFileName);
-    fs.writeFileSync(serverFilePath, xmlContent, "utf8");
-    console.log(`✅ ZUGFeRD XML saved for inspection: ${serverFilePath}`);
 
-    // 2️⃣ If a PDF output path is given, save XML right next to the PDF for download
-    if (pdfOutputPath) {
-      const pdfDir = path.dirname(pdfOutputPath);
-      const clientXmlPath = path.join(pdfDir, xmlFileName);
-      fs.writeFileSync(clientXmlPath, xmlContent, "utf8");
-      console.log(`✅ ZUGFeRD XML saved next to downloaded PDF: ${clientXmlPath}`);
-    }
+    const safeOrderId = (orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const filePath = path.join(generatedDir, `ZUGFeRD-${safeOrderId}.xml`);
 
+    fs.writeFileSync(filePath, xmlContent, "utf8");
+    console.log(`✅ ZUGFeRD XML saved for inspection: ${filePath}`);
   } catch (err) {
-    console.error("⚠️ Failed to save ZUGFeRD XML:", err.message);
+    console.error("⚠️ Failed to save ZUGFeRD XML for inspection:", err.message);
   }
 }
+
 
 
 function embedXmlIntoPdf(pdfDoc, xml) {
