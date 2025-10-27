@@ -51,18 +51,14 @@ function mapOrderToPdfData(order, shopConfig = {}) {
   };
 }
 
-/** Draw table cell with optional background */
-function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left", backgroundColor = null, textColor = rgb(0,0,0) } = {}) {
-  if (backgroundColor) {
-    page.drawRectangle({ x, y, width, height, color: backgroundColor });
-  }
+/** Draw table cell with background */
+function drawCell(page, text, x, y, width, height, font, { size = 10, align = "left", bgColor = null } = {}) {
+  if (bgColor) page.drawRectangle({ x, y, width, height, color: bgColor });
   page.drawRectangle({ x, y, width, height, borderColor: rgb(0, 0, 0), borderWidth: 0.5 });
-  
   let textX = x + 2;
   if (align === "right") textX = x + width - (text.length * size * 0.5) - 2;
-  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: textColor });
+  page.drawText(text, { x: textX, y: y + height / 4, size, font, color: rgb(0, 0, 0) });
 }
-
 
 /** Attach ZUGFeRD XML after PDF/A-3b conversion */
 async function attachZugferdAfterPdfA3b(pdfBuffer, xmlContent) {
@@ -86,6 +82,7 @@ async function attachZugferdAfterPdfA3b(pdfBuffer, xmlContent) {
   const catalog = pdfDoc.catalog;
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
+  // Optional: EmbeddedFiles name tree
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
@@ -96,17 +93,19 @@ async function attachZugferdAfterPdfA3b(pdfBuffer, xmlContent) {
   return Buffer.from(await pdfDoc.save());
 }
 
-/** Generate Shopify invoice PDF with ZUGFeRD 2.3 Comfort XML and styled colors */
+/** Generate Shopify invoice PDF with ZUGFeRD 2.3 Comfort XML and Amazon-style look */
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
+  // Load fonts
   const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
   const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf"));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
+  // Add page
   const page = pdfDoc.addPage([595, 842]);
   let y = 780;
   const lineHeight = 24;
@@ -114,48 +113,45 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const colWidths = [180, 60, 80, 80, 80];
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];
 
-  // -------------------------------
-  // Header block (like Amazon/Shopify)
-  // -------------------------------
-  // Draw colored banner
-  page.drawRectangle({ x: 0, y: y - 6, width: 595, height: 90, color: rgb(0.0, 0.2, 0.5) });
+  // Embed logo
+  try {
+    const logoBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/logo.png"));
+    const logoImage = await pdfDoc.embedPng(logoBytes);
+    const { width, height } = logoImage.scale(0.25);
+    page.drawImage(logoImage, { x: 50, y: 780, width, height });
+  } catch (err) {
+    page.drawText("LOGO", { x: 50, y: 780, size: 24, font: boldFont });
+  }
 
-  // Company logo placeholder (replace with image embedding if needed)
-  page.drawRectangle({ x: 50, y: y - 60, width: 100, height: 50, color: rgb(1, 1, 1) });
-  page.drawText("LOGO", { x: 75, y: y - 35, size: 14, font: boldFont, color: rgb(0, 0, 0) });
+  y -= 80;
 
-  // Company info
-  const companyName = shopConfig.companyName || "Your Company GmbH";
-  const companyAddress = shopConfig.address || "Street 12, 12345 City, Country";
-  const companyContact = shopConfig.contact || "email@example.com | +49 123 456789";
+  // Header info
+  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y, size: 18, font: boldFont });
+  y -= lineHeight;
+  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font: regularFont });
+  y -= lineHeight;
+  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font: regularFont });
+  y -= lineHeight;
+  page.drawText(`IBAN: ${data.iban}`, { x: 50, y, size: 12, font: regularFont });
+  y -= lineHeight;
+  page.drawText(`BIC: ${data.bic}`, { x: 50, y, size: 12, font: regularFont });
+  y -= lineHeight;
+  page.drawText(`Payment terms: ${data.paymentTerms}`, { x: 50, y, size: 12, font: regularFont });
+  y -= lineHeight * 2;
 
-  page.drawText(companyName, { x: 200, y, size: 18, font: boldFont, color: rgb(1, 1, 1) });
-  page.drawText(companyAddress, { x: 200, y: y - 20, size: 12, font: regularFont, color: rgb(1, 1, 1) });
-  page.drawText(companyContact, { x: 200, y: y - 40, size: 12, font: regularFont, color: rgb(1, 1, 1) });
-
-  // Invoice info
-  page.drawText(`INVOICE: ${data.orderId}`, { x: 50, y: y - 70, size: 16, font: boldFont, color: rgb(1, 1, 1) });
-  page.drawText(`Date: ${data.date}`, { x: 200, y: y - 70, size: 12, font: regularFont, color: rgb(1, 1, 1) });
-  page.drawText(`Customer: ${data.customerName}`, { x: 50, y: y - 90, size: 12, font: regularFont, color: rgb(1, 1, 1) });
-
-  y -= 120; // Move down below header
-
-  // -------------------------------
-  // Table headers with light gray
-  // -------------------------------
+  // Table headers with Amazon-style gray
   let x = 50;
+  const headerColor = rgb(0.9, 0.9, 0.9);
   headers.forEach((header, i) => {
-    drawCell(page, header, x, y, colWidths[i], rowHeight, boldFont, { size: 10, align: i > 1 ? "right" : "left", backgroundColor: rgb(0.9, 0.9, 0.9) });
+    drawCell(page, header, x, y, colWidths[i], rowHeight, boldFont, { size: 10, align: i > 1 ? "right" : "left", bgColor: headerColor });
     x += colWidths[i];
   });
   y -= rowHeight;
 
-  // -------------------------------
-  // Table rows with alternating colors
-  // -------------------------------
-  data.items.forEach((item, rowIndex) => {
-    const bgColor = rowIndex % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95);
+  // Table rows alternating colors
+  data.items.forEach((item, idx) => {
     x = 50;
+    const rowColor = idx % 2 === 0 ? rgb(1, 1, 1) : rgb(0.95, 0.95, 0.95);
     const row = [
       item.name,
       String(item.quantity),
@@ -164,42 +160,45 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
       item.total.toFixed(2) + ` ${item.currency}`
     ];
     row.forEach((cell, i) => {
-      drawCell(page, cell, x, y, colWidths[i], rowHeight, regularFont, { size: 10, align: i > 1 ? "right" : "left", backgroundColor: bgColor });
+      drawCell(page, cell, x, y, colWidths[i], rowHeight, regularFont, { size: 10, align: i > 1 ? "right" : "left", bgColor: rowColor });
       x += colWidths[i];
     });
     y -= rowHeight;
   });
 
-  // -------------------------------
-  // Totals section with highlight
-  // -------------------------------
+  // Totals with light gray background
   const totalLabels = ["Subtotal", "Tax", "Total"];
   const totalValues = [data.subtotal, data.tax, data.total];
   totalLabels.forEach((label, i) => {
     y -= rowHeight;
-    drawCell(page, label, 50, y, 400, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right", backgroundColor: rgb(1, 1, 0.8) });
-    drawCell(page, totalValues[i].toFixed(2) + ` ${data.currency}`, 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right", backgroundColor: rgb(1, 1, 0.8) });
+    const totalColor = rgb(0.9, 0.9, 0.9);
+    drawCell(page, label, 50, y, 400, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right", bgColor: totalColor });
+    drawCell(page, totalValues[i].toFixed(2) + ` ${data.currency}`, 450, y, 80, rowHeight, boldFont, { size: label === "Total" ? 12 : 10, align: "right", bgColor: totalColor });
   });
 
-  // -------------------------------
-  // Embed XMP and PDF/A-3b conversion
-  // -------------------------------
+  // Embed XMP
   await embedXmp(pdfDoc);
+
+  // Save intermediate PDF
   const pdfBytes = await pdfDoc.save();
+
+  // Convert to PDF/A-3b
   const pdfA3bBuffer = await makePdfA3b(Buffer.from(pdfBytes));
 
-  // -------------------------------
-  // Generate ZUGFeRD XML 2.3 Comfort
-  // -------------------------------
+  // Generate ZUGFeRD 2.3 Comfort XML
   const xmlContent = generateZugferdXML({
     ...data,
     source: "shopify",
     currency: data.currency
   });
 
+  // Attach ZUGFeRD XML
   const finalBuffer = await attachZugferdAfterPdfA3b(pdfA3bBuffer, xmlContent);
+
+  // Also save XML separately for inspection
+  fs.writeFileSync(path.resolve(__dirname, `../../Generated/ZUGFeRD-${data.orderId}.xml`), xmlContent, "utf8");
+
   return finalBuffer;
 }
-
 
 module.exports = { createShopifyInvoiceZugferd };
