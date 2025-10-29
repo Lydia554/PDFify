@@ -102,54 +102,73 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 
   if (!pdfBuffer || pdfBuffer.length === 0) return pdfBuffer;
 
+  // Ensure ICC exists
+  if (!fs.existsSync(iccPath)) {
+    throw new Error(`[makePdfA3b] ICC file not found: ${iccPath}`);
+  }
+  console.log(`[makePdfA3b] Using ICC profile: ${iccPath}`);
+
   // Load PDF
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Embed metadata and XML
+  // Clear DOCINFO metadata to avoid Ghostscript errors
+  pdfDoc.setTitle('');
+  pdfDoc.setAuthor('');
+  pdfDoc.setSubject('');
+  pdfDoc.setKeywords('');
+  pdfDoc.setProducer('');
+  pdfDoc.setCreator('');
+
+  // Embed XMP metadata and ZUGFeRD XML
   await embedXmp(pdfDoc);
   embedXmlIntoPdf(pdfDoc, xml);
 
-  // Embed ICC (pdf-lib)
+  // Embed ICC profile
   await embedIccProfile(pdfDoc, iccPath);
-console.log(`[embedIccProfile] ICC embedded from: ${iccPath}`);
+  console.log("[makePdfA3b] ICC embedded into pdf-lib PDF");
 
-  // Save intermediate PDF
+  // Save intermediate PDF to tmp
   const tmpIn = path.join(os.tmpdir(), `tmp-${uuidv4()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `tmp-${uuidv4()}-a3b.pdf`);
   fs.writeFileSync(tmpIn, await pdfDoc.save({ useObjectStreams: false }));
+  console.log(`[makePdfA3b] Intermediate PDF saved: ${tmpIn}`);
+
+  // Ensure tmp files are writable
+  fs.chmodSync(tmpIn, 0o644);
 
   // Ghostscript command
-// Ghostscript command
-const gsCmd = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-dNOOUTERSAVE",
-  "-sProcessColorModel=DeviceRGB",
-  "-sDEVICE=pdfwrite",
-  "-sPDFACompatibilityPolicy=1",
-  `-sOutputICCProfile=${iccPath}`,  
-  `-sOutputFile=${tmpOut}`,
-  tmpIn,
-];
-
+  const gsCmd = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-dNOOUTERSAVE",
+    "-sProcessColorModel=DeviceRGB",
+    "-sDEVICE=pdfwrite",
+    "-sPDFACompatibilityPolicy=1",
+    `-sOutputICCProfile=${iccPath}`,
+    `-sOutputFile=${tmpOut}`,
+    tmpIn,
+  ];
+  console.log("[makePdfA3b] Running Ghostscript:", gsCmd.join(" "));
 
   try {
-    await execFileAsync("gs", gsCmd);
+    await execFileAsync("gs", gsCmd, { stdio: "inherit" });
+    console.log(`[makePdfA3b] Ghostscript completed successfully: ${tmpOut}`);
   } catch (err) {
-    console.error("[makePdfA3b] Ghostscript error:", err);
+    console.error("[makePdfA3b] Ghostscript error:", err.stderr || err);
     throw err;
   }
 
   const finalBuffer = fs.readFileSync(tmpOut);
 
   // Cleanup
-  fs.unlinkSync(tmpIn);
-  fs.unlinkSync(tmpOut);
+  try { fs.unlinkSync(tmpIn); } catch {}
+  try { fs.unlinkSync(tmpOut); } catch {}
 
-  console.log("[makePdfA3b] Ghostscript PDF/A-3b buffer size:", finalBuffer.length);
+  console.log("[makePdfA3b] PDF/A-3b buffer size:", finalBuffer.length);
   return finalBuffer;
 }
+
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
