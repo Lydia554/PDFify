@@ -118,13 +118,13 @@ const gsArgs = [
   "-dBATCH",
   "-dNOPAUSE",
   "-sDEVICE=pdfwrite",
-  `-sOutputFile="${tmpOut}"`,
+  `-sOutputFile=${tmpOut}`,
   "-sPDFACompatibilityPolicy=1",
   "-dEmbedAllFonts=true",
   "-dUseCIEColor=true",
   "-dColorConversionStrategy=/UseDeviceIndependentColor",
-  `-sOutputICCProfile="${iccPath}"`,
-  `"${tmpIn}"`,
+  `-sOutputICCProfile=${iccPath}`,
+  tmpIn,
 ];
 
 
