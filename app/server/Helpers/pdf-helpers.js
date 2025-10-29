@@ -260,27 +260,23 @@ function generateZugferdXML(invoiceData) {
 
 
 
-/**
- * Finalize PDF:
- * 1️⃣ Convert to PDF/A-3b via Ghostscript
- * 2️⃣ Embed ZUGFeRD XML afterward
- */
 async function finalizePdfWithXml(originalPdfBuffer, zugferdXml, options = {}) {
-  // 1️⃣ Convert to PDF/A-3b
-  const pdfA3bBuffer = await makePdfA3b(originalPdfBuffer, options);
-  fs.writeFileSync("check_after_gs.pdf", pdfA3bBuffer); // optional inspection
+  let pdfBuffer = originalPdfBuffer;
 
-  // 2️⃣ Load PDF/A-3b and embed ZUGFeRD XML
-  const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
+  if (!options.skipGs) {
+    pdfBuffer = await makePdfA3b(originalPdfBuffer, options);
+    fs.writeFileSync("check_after_gs.pdf", pdfBuffer);
+  }
+
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
   embedXmlIntoPdf(pdfDoc, zugferdXml);
-
-  // 3️⃣ Save final PDF
   const finalBuffer = await pdfDoc.save();
   fs.writeFileSync("final_with_xml.pdf", finalBuffer);
 
-  console.log("✅ PDF/A-3b with embedded XML created: final_with_xml.pdf");
+  console.log("✅ PDF finalized with embedded XML");
   return finalBuffer;
 }
+
 
 
 module.exports = {
