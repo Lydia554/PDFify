@@ -79,7 +79,7 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 
 
 /**
- * Post-process PDF for PDF/A-3b compliance with correct ICC embedding
+ * Post-process PDF for PDF/A-3b compliance using Ghostscript
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
@@ -97,6 +97,7 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     console.error(msg);
     return pdfBuffer;
   }
+
   if (!pdfBuffer || pdfBuffer.length === 0) {
     const msg = `[makePdfA3b] Input PDF buffer is empty`;
     await fs.promises.writeFile(logFile, msg);
@@ -104,35 +105,8 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     return pdfBuffer;
   }
 
-  const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  // --- Proper ICC OutputIntent embedding ---
-  const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.stream(iccBytes, {
-    Type: PDFName.of("OutputIntent"),
-    Subtype: PDFName.of("ICCProfile"),
-    N: 3,
-    Filter: PDFName.of("FlateDecode"),
-  });
-  const iccRef = pdfDoc.context.register(iccStream);
-
-  const outputIntent = pdfDoc.context.obj({
-    Type: PDFName.of("OutputIntent"),
-    S: PDFName.of("GTS_PDFA1"),
-    OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
-    Info: PDFString.of("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
-    RegistryName: PDFString.of("http://www.color.org"),
-  });
-
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntent)]));
-
-  // Save PDF with ICC embedded
-  const bufferWithICC = await pdfDoc.save();
-  await fs.promises.writeFile(tmpIn, bufferWithICC);
-
-  // --- Ghostscript PDF/A-3b validation step (optional, extra strictness) ---
   const gsArgs = [
     "-dPDFA=3",
     "-dBATCH",
@@ -168,8 +142,7 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
 `;
     await fs.promises.writeFile(logFile, logContent);
     console.error(logContent);
-    console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-    return bufferWithICC; 
+    return pdfBuffer;
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});

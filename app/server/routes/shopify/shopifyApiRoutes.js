@@ -107,6 +107,7 @@ if (isMerchant) {
     // Generate PDF + XML
     const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
 
+
     console.log("✅ [Shopify] PDF generated:", pdfBuffer.length, "bytes");
     console.log("✅ XML generated:", xmlContent ? xmlContent.length : 0, "bytes");
 
