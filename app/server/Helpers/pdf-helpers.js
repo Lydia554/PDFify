@@ -37,13 +37,11 @@ async function embedXmp(pdfDoc) {
   return pdfDoc;
 }
 
-
 /**
  * Embed ZUGFeRD XML into PDF 
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
-
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
@@ -77,14 +75,12 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   return pdfDoc;
 }
 
-
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  // Resolve ICC profile path relative to Helpers folder (portable)
   const iccPath =
     options.iccProfilePath ||
     path.resolve(__dirname, "sRGB_v4_ICC_preference.icc");
@@ -95,7 +91,6 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
-  // 🔍 Pre-checks
   if (!fs.existsSync(iccPath)) {
     const msg = `[makePdfA3b] ❌ ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
@@ -112,37 +107,33 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  // Ghostscript arguments for PDF/A-3b + ICC embedding
-const gsArgs = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-sDEVICE=pdfwrite",
-  `-sOutputFile=${tmpOut}`,
-  "-sPDFACompatibilityPolicy=1",
-  "-dEmbedAllFonts=true",
-  "-dUseCIEColor=true",
-  "-dColorConversionStrategy=/UseDeviceIndependentColor",
-  `-sOutputICCProfile=${iccPath}`,
-  tmpIn,
-];
-
+  const gsArgs = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-sDEVICE=pdfwrite",
+    `-sOutputFile=${tmpOut}`,
+    "-sPDFACompatibilityPolicy=1",
+    "-dEmbedAllFonts=true",
+    "-dUseCIEColor=true",
+    "-dColorConversionStrategy=/UseDeviceIndependentColor",
+    `-sOutputICCProfile=${iccPath}`,
+    tmpIn,
+  ];
 
   try {
     console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
     await execFileAsync("gs", gsArgs, {
-  encoding: "utf8",
-  cwd: path.dirname(iccPath),
-  env: { ...process.env },
-});
-
+      encoding: "utf8",
+      cwd: path.dirname(iccPath),
+      env: { ...process.env },
+    });
 
     console.log("✅ PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
 
-    // Optionally save an inspection copy
     const finalPath = path.join(__dirname, "../Generated", `phase5_final_${Date.now()}.pdf`);
     await fs.promises.writeFile(finalPath, finalBuffer);
     console.log(`✅ Saved inspection copy: ${finalPath}`);
@@ -247,18 +238,13 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-function generateShopifyXML(data) {
-  const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
-  const date = data.date || new Date().toISOString().split("T")[0];
-  const items = Array.isArray(data.items) ? data.items : [];
-  const currency = data.currency || "EUR";
+  function generateShopifyXML(data) {
+    const currency = data.currency || "EUR";
+    const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
+    const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
+    const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
 
-  // calculate totals
-  const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
-  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
-  const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
+    return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice
   xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p3"
   xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
@@ -279,7 +265,6 @@ function generateShopifyXML(data) {
   </rsm:ExchangedDocument>
 
   <rsm:SupplyChainTradeTransaction>
-
     ${items.map((item, i) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
@@ -309,11 +294,9 @@ function generateShopifyXML(data) {
         <ram:GrandTotalAmount currencyID="${currency}">${totalGross.toFixed(2)}</ram:GrandTotalAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
-
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
-}
-
+  }
 
   function generateWooCommerceXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>
