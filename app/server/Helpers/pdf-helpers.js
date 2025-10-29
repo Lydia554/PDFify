@@ -39,51 +39,49 @@ async function embedXmp(pdfDoc) {
   return pdfDoc;
 }
 
-
 /**
- * Embed ZUGFeRD XML into PDF 
+ * Embed ZUGFeRD XML into PDF (old working version)
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
-
-
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  const xmlBytes = Buffer.from(xml, "utf8");
+  // Convert XML to UTF-8 bytes
+  const xmlBytes = Buffer.from(xml.trim(), "utf8");
+
+  // Create Flate-compressed stream for XML
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text#2Fxml"),
   });
 
+  const xmlStreamRef = pdfDoc.context.register(xmlStream);
+
+  // File specification dictionary
   const fileSpecDict = pdfDoc.context.obj({
-    Type: "Filespec",
+    Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
-    EF: { F: xmlStream },
+    EF: pdfDoc.context.obj({ F: xmlStreamRef }),
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   const catalog = pdfDoc.catalog;
 
-  // Register AF entry
-  catalog.set(
-    PDFName.of("AF"),
-    pdfDoc.context.obj([fileSpecRef])
-  );
+  // Associate the file in AF array
+  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // Register EmbeddedFiles name tree (optional but recommended)
-  const namesDict = pdfDoc.context.obj({
-    EmbeddedFiles: pdfDoc.context.obj({
-      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
-    }),
+  // Also add EmbeddedFiles name tree
+  const embeddedFilesDict = pdfDoc.context.obj({
+    Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
   });
+  const namesDict = pdfDoc.context.obj({ EmbeddedFiles: embeddedFilesDict });
   catalog.set(PDFName.of("Names"), namesDict);
 
   return pdfDoc;
 }
-
 
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
@@ -234,18 +232,18 @@ function generateZugferdXML(invoiceData) {
           <ram:TradeSettlementLineAmount>${total.toFixed(2)}</ram:TradeSettlementLineAmount>
           <ram:NetLineAmount>${(total - tax).toFixed(2)}</ram:NetLineAmount>
         </ram:SpecifiedLineTradeSettlement>
-      </ram:IncludedSupplyChainTradeLineItem>`;
+      </ram:IncludedSupplyChainTradeLineItem>`; 
     }).join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
   }
 
-function generateShopifyXML(data) {
-  const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
-  const date = data.date || new Date().toISOString().split("T")[0];
-  const items = Array.isArray(data.items) ? data.items : [];
+  function generateShopifyXML(data) {
+    const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
+    const date = data.date || new Date().toISOString().split("T")[0];
+    const items = Array.isArray(data.items) ? data.items : [];
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+    return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
   xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
   xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
@@ -269,8 +267,7 @@ function generateShopifyXML(data) {
     `).join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
-}
-
+  }
 
   function generateWooCommerceXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>

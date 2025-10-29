@@ -1,6 +1,6 @@
 const fs = require("fs");
+const zlib = require("zlib");
 const { PDFDocument, PDFName } = require("pdf-lib");
-const pako = require("pako");
 
 async function inspectPdf(filePath) {
   const pdfBytes = fs.readFileSync(filePath);
@@ -18,25 +18,19 @@ async function inspectPdf(filePath) {
   const afArray = pdfDoc.context.lookup(af);
   for (const ref of afArray.array) {
     const fileSpec = pdfDoc.context.lookup(ref);
-    const fname = fileSpec.get(PDFName.of("F"))?.value || "unknown.xml";
-    console.log("- Embedded file:", fname);
+    const fname = fileSpec.get(PDFName.of("F"));
+    console.log("- Embedded file:", fname.value);
 
     const ef = fileSpec.get(PDFName.of("EF"));
     const fStream = pdfDoc.context.lookup(ef.get(PDFName.of("F")));
-    
-    // Decode Flate stream
+
+    // Extract compressed bytes
     const compressedBytes = fStream.getContents();
-    const xmlBytes = Buffer.from(pako.inflate(compressedBytes));
+    const xmlBytes = zlib.inflateSync(compressedBytes); // decompress
 
-    // Save to disk
-    const outputPath = `./extracted-${fname}`;
-    fs.writeFileSync(outputPath, xmlBytes);
-    console.log(`✅ XML extracted to: ${outputPath}`);
-
-    console.log("  --- XML preview ---");
+    console.log("  --- XML content preview ---");
     console.log(xmlBytes.toString("utf8").slice(0, 500)); // first 500 chars
   }
 }
 
-// Usage
 inspectPdf("./Order_10348230934851.pdf");
