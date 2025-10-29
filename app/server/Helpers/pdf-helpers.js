@@ -301,10 +301,6 @@ function generateZugferdXML(invoiceData) {
 
 
 
-/**
- * FINAL HELPER: Convert PDF to PDF/A-3b and embed ZUGFeRD XML
- * XML is embedded before Ghostscript to survive PDF/A conversion
- */
 async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
   // 1️⃣ Run Ghostscript first for PDF/A-3b compliance
   const pdfA3bBuffer = await makePdfA3b(pdfBuffer, options);
@@ -313,13 +309,14 @@ async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
   const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
 
   // 3️⃣ Embed ZUGFeRD XML now, AFTER Ghostscript
-  embedXmlIntoPdf(pdfDoc, zugferdXml);
+  const pdfWithXml = embedXmlIntoPdf(pdfDoc, zugferdXml); 
 
   // 4️⃣ Save final PDF — XML now safely included
-  const finalBuffer = await pdfDoc.save();
+  const finalBuffer = await pdfWithXml.save();
 
   return finalBuffer;
 }
+
 
 
 
