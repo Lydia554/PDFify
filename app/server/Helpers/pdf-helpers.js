@@ -45,24 +45,20 @@ async function embedXmp(pdfDoc) {
   return pdfDoc;
 }
 
+
 /**
- * Embed ZUGFeRD XML into PDF
- * @param {PDFDocument} pdfDoc
- * @param {string} xml
+ * Embed ZUGFeRD XML into a PDFDocument
  */
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
-
-  // Flate stream
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text#2Fxml"), // PDF escaped
+    Subtype: PDFName.of("text#2Fxml"),
   });
   const xmlRef = pdfDoc.context.register(xmlStream);
 
-  // FileSpec dictionary
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
@@ -72,11 +68,11 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   });
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
 
-  // Associate AF (array of indirect references)
+  // Attach to AF array
   const afArray = pdfDoc.context.obj([fileSpecRef]);
   pdfDoc.catalog.set(PDFName.of("AF"), afArray);
 
-  // EmbeddedFiles name tree (optional but recommended)
+  // EmbeddedFiles name tree
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
@@ -88,32 +84,12 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
- * @param {Buffer} pdfBuffer
- * @param {Object} options
+ * Run Ghostscript to convert PDF to PDF/A-3b while trying to preserve embedded files
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
   const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
-
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-
-  const logDir = path.join(__dirname, "../logs");
-  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
-  const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
-
-  if (!fs.existsSync(iccPath)) {
-    const msg = `[makePdfA3b] ICC profile missing: ${iccPath}`;
-    await fs.promises.writeFile(logFile, msg);
-    console.error(msg);
-    return pdfBuffer;
-  }
-  if (!pdfBuffer || pdfBuffer.length === 0) {
-    const msg = `[makePdfA3b] Input PDF buffer is empty`;
-    await fs.promises.writeFile(logFile, msg);
-    console.error(msg);
-    return pdfBuffer;
-  }
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
@@ -129,41 +105,19 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     "-dAutoRotatePages=/None",
     "-dColorConversionStrategy=/sRGB",
     `-sOutputICCProfile=${iccPath}`,
+    // This flag is important: allows preserving attached files in PDF/A-3b
+    "-dPassThroughAF=true",
     tmpIn,
   ];
 
   try {
-    console.log("[makePdfA3b] Running Ghostscript command:", "gs", gsArgs.join(" "));
     await execFileAsync("gs", gsArgs, { encoding: "utf8" });
-
-    console.log("[makePdfA3b] PDF/A-3b conversion successful");
-    await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
-
-    const finalBuffer = await fs.promises.readFile(tmpOut);
-    return finalBuffer;
-
-  } catch (err) {
-    const logContent = `
-[makePdfA3b] Ghostscript conversion failed
-Tmp Input: ${tmpIn}
-Tmp Output: ${tmpOut}
-ICC Path: ${iccPath}
-GS Command: gs ${gsArgs.join(" ")}
-Error: ${err.message}
-Stdout: ${err.stdout || ""}
-Stderr: ${err.stderr || ""}
-PDF Buffer Size: ${pdfBuffer.length} bytes
-`;
-    await fs.promises.writeFile(logFile, logContent);
-    console.error(logContent);
-    console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-    return pdfBuffer;
+    return await fs.promises.readFile(tmpOut);
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
   }
 }
-
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
@@ -301,24 +255,24 @@ function generateZugferdXML(invoiceData) {
 
 
 
+/**
+ * Final helper: embed XML first, then Ghostscript PDF/A-3b conversion
+ */
 async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
-  // 1️⃣ Run Ghostscript first for PDF/A-3b compliance
-  const pdfA3bBuffer = await makePdfA3b(pdfBuffer, options);
+  // 1️⃣ Load PDF into pdf-lib
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // 2️⃣ Load the PDF/A-3b PDF
-  const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
+  // 2️⃣ Embed ZUGFeRD XML **before** Ghostscript
+  embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  // 3️⃣ Embed ZUGFeRD XML now, AFTER Ghostscript
-  const pdfWithXml = embedXmlIntoPdf(pdfDoc, zugferdXml); 
+  // 3️⃣ Save temporary PDF with embedded XML
+  const tmpBuffer = await pdfDoc.save();
 
-  // 4️⃣ Save final PDF — XML now safely included
-  const finalBuffer = await pdfWithXml.save();
+  // 4️⃣ Run Ghostscript to PDF/A-3b
+  const finalBuffer = await makePdfA3b(tmpBuffer, options);
 
   return finalBuffer;
 }
-
-
-
 
 module.exports = {
   generateZugferdXML,
