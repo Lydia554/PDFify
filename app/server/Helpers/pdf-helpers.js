@@ -7,9 +7,10 @@ const os = require("os");
 const { execFile } = require("child_process");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
-
 const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
-const { embedIccProfile } = require("./iccEmbed");
+const { v4: uuidv4 } = require("uuid");
+
+const DEFAULT_ICC = path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
 /**
  * Embed XMP metadata
@@ -68,65 +69,89 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Make PDF/A-3b with XMP + ZUGFeRD XML + ICC + Ghostscript
+ * Embed ICC OutputIntent (pdf-lib in-place)
+ */
+async function embedIccProfile(pdfDoc, iccPath) {
+  if (!fs.existsSync(iccPath)) {
+    throw new Error(`ICC profile not found at ${iccPath}`);
+  }
+
+  const iccBytes = fs.readFileSync(iccPath);
+  const iccStream = pdfDoc.context.stream(iccBytes);
+  const iccRef = pdfDoc.context.register(iccStream);
+
+  const outputIntent = pdfDoc.context.obj({
+    Type: PDFName.of("OutputIntent"),
+    S: PDFName.of("GTS_PDFA1"),
+    OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+    Info: PDFString.of("sRGB IEC61966-2.1"),
+    DestOutputProfile: iccRef,
+    RegistryName: PDFString.of("http://www.color.org"),
+  });
+
+  const outputIntentRef = pdfDoc.context.register(outputIntent);
+  const arrRef = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), arrRef);
+}
+
+/**
+ * Make PDF/A-3b: XMP + XML + ICC, via Ghostscript to fix startxref issues
  */
 async function makePdfA3b(pdfBuffer, xml, options = {}) {
   const iccPath =
-    options.iccProfilePath ||
-    process.env.ICC_PROFILE_PATH ||
-    process.env.PDFA_ICC_PROFILE ||
-    path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+    options.iccProfilePath || process.env.ICC_PROFILE_PATH || process.env.PDFA_ICC_PROFILE || DEFAULT_ICC;
 
   if (!pdfBuffer || pdfBuffer.length === 0) {
     console.warn("[makePdfA3b] Empty PDF buffer — skipping");
     return pdfBuffer;
   }
 
-  // Load PDF
+  // Load PDF with pdf-lib
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Embed XMP metadata
+  // Embed XMP and ZUGFeRD XML
   await embedXmp(pdfDoc);
-
-  // Embed ZUGFeRD XML
   embedXmlIntoPdf(pdfDoc, xml);
 
-  // Embed ICC OutputIntent
+  // Embed ICC in pdf-lib (optional, but Ghostscript will finalize)
   await embedIccProfile(pdfDoc, iccPath);
 
-  // Save intermediate PDF
-  const intermediateBuffer = await pdfDoc.save({ useObjectStreams: false });
+  // Save intermediate PDF to a temp file
+  const tmpIn = path.join(os.tmpdir(), `tmp-${uuidv4()}.pdf`);
+  const tmpOut = path.join(os.tmpdir(), `tmp-${uuidv4()}-a3b.pdf`);
+  fs.writeFileSync(tmpIn, await pdfDoc.save({ useObjectStreams: false }));
 
-  // Use Ghostscript to finalize PDF/A-3b compliance
-  const tmpInput = path.join(os.tmpdir(), `temp_input_${Date.now()}.pdf`);
-  const tmpOutput = path.join(os.tmpdir(), `temp_output_${Date.now()}.pdf`);
-  fs.writeFileSync(tmpInput, intermediateBuffer);
+  // Ghostscript command to produce PDF/A-3b
+  const gsCmd = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-dNOOUTERSAVE",
+    "-sProcessColorModel=DeviceRGB",
+    `-sDEVICE=pdfwrite`,
+    `-sPDFACompatibilityPolicy=1`,
+    `-sOutputFile=${tmpOut}`,
+    tmpIn,
+  ];
 
   try {
-    await execFileAsync("gs", [
-      "-dPDFA=3",
-      "-dBATCH",
-      "-dNOPAUSE",
-      "-sDEVICE=pdfwrite",
-      `-sOutputFile=${tmpOutput}`,
-      "-dUseCIEColor",
-      tmpInput,
-    ]);
-
-    const finalBuffer = fs.readFileSync(tmpOutput);
-    console.log("[makePdfA3b] Ghostscript PDF/A-3b buffer size:", finalBuffer.length);
-
-    return finalBuffer;
+    await execFileAsync("gs", gsCmd);
   } catch (err) {
-    console.error("[makePdfA3b] Ghostscript conversion failed:", err);
-    return intermediateBuffer; // fallback to pdf-lib version
-  } finally {
-    // Cleanup temp files
-    if (fs.existsSync(tmpInput)) fs.unlinkSync(tmpInput);
-    if (fs.existsSync(tmpOutput)) fs.unlinkSync(tmpOutput);
+    console.error("[makePdfA3b] Ghostscript error:", err);
+    throw err;
   }
-}
 
+  // Read final Ghostscript PDF
+  const finalBuffer = fs.readFileSync(tmpOut);
+
+  // Cleanup temp files
+  fs.unlinkSync(tmpIn);
+  fs.unlinkSync(tmpOut);
+
+  console.log("[makePdfA3b] Ghostscript PDF/A-3b buffer size:", finalBuffer.length);
+
+  return finalBuffer;
+}
 
 
 /**
