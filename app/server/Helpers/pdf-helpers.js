@@ -124,16 +124,15 @@ const gsArgs = [
   "-dEmbedAllFonts=true",
   "-dUseCIEColor=true",
   "-dColorConversionStrategy=/UseDeviceIndependentColor",
-  `-sOutputICCProfile=${iccPath}`,
+  `-sOutputICCProfile="${iccPath}"`,
   tmpIn,
 ];
 
+console.log("[makePdfA3b] Ghostscript command:", "gs", gsArgs.join(" "));
 
-  try {
-    console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
-    await execFileAsync("gs", gsArgs, {
+await execFileAsync("gs", gsArgs, {
   encoding: "utf8",
-  cwd: path.dirname(iccPath),
+  cwd: os.tmpdir(), 
   env: { ...process.env },
 });
 
