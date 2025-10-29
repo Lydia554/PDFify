@@ -115,9 +115,11 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 pdfDoc.setTitle('');
 pdfDoc.setAuthor('');
 pdfDoc.setSubject('');
-pdfDoc.setKeywords([]); 
+pdfDoc.setKeywords([]);
 pdfDoc.setProducer('');
 pdfDoc.setCreator('');
+pdfDoc.setCreationDate(undefined);
+pdfDoc.setModificationDate(undefined);
 
 
   // Embed XMP metadata and ZUGFeRD XML
