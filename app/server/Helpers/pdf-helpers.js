@@ -85,24 +85,44 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * @param {Buffer} pdfBuffer
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
- require("dotenv").config();
-const iccPath =
-  options.iccProfilePath ||
-  process.env.PDFA_ICC_PROFILE ||
-  path.join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
+  require("dotenv").config();
 
+  const iccPath =
+    options.iccProfilePath ||
+    process.env.PDFA_ICC_PROFILE ||
+    path.join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
 
-  if (!pdfBuffer || pdfBuffer.length === 0) return pdfBuffer;
+  if (!pdfBuffer || pdfBuffer.length === 0) {
+    console.warn("[makePdfA3b] Empty PDF buffer received — skipping ICC embedding");
+    return pdfBuffer;
+  }
+
+  console.log("[makePdfA3b] Embedding ICC...");
+  console.log("[makePdfA3b] ICC profile path:", iccPath);
+  console.log("[makePdfA3b] Input buffer size:", pdfBuffer.length);
 
   try {
     const finalBuffer = await embedIccProfile(pdfBuffer, iccPath);
     console.log("[makePdfA3b] ICC embedded successfully");
+    console.log("[makePdfA3b] Final buffer size:", finalBuffer.length);
+
+    // Optional debug: verify ICC OutputIntent presence
+    try {
+      const { PDFDocument, PDFName } = require("pdf-lib");
+      const doc = await PDFDocument.load(finalBuffer);
+      const outputIntent = doc.catalog.get(PDFName.of("OutputIntents"));
+      console.log("[makePdfA3b] OutputIntent present?", !!outputIntent);
+    } catch (metaErr) {
+      console.warn("[makePdfA3b] Could not inspect OutputIntent:", metaErr.message);
+    }
+
     return finalBuffer;
   } catch (err) {
     console.error("[makePdfA3b] ICC embedding failed:", err);
     return pdfBuffer;
   }
 }
+
 
 
 

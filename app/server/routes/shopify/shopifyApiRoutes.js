@@ -105,11 +105,19 @@ if (isMerchant) {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
     // Generate PDF + XML
-    const { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
+    let { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
 
 
-    console.log("✅ [Shopify] PDF generated:", pdfBuffer.length, "bytes");
-    console.log("✅ XML generated:", xmlContent ? xmlContent.length : 0, "bytes");
+
+    // 🧩 Log before ICC embedding
+    console.log("[/invoice] Before makePdfA3b:", pdfBuffer.length);
+
+    //  Embed ICC / PDF/A-3b
+    const { makePdfA3b } = require("../../Helpers/pdf-helpers");
+    pdfBuffer = await makePdfA3b(pdfBuffer);
+
+    //  Log after ICC embedding
+    console.log("[/invoice] After makePdfA3b:", pdfBuffer.length);
 
     if (req.query.preview === "true") {
       // Preview: just show PDF inline
@@ -150,8 +158,6 @@ if (isMerchant) {
     });
   }
 }
-
-
 
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
