@@ -7,9 +7,9 @@ const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
-const { embedIccProfile } = require("./iccEmbed");
+const { embedIccProfile } = require("./iccEmbed"); 
 
-const { PDFName, PDFString } = require("pdf-lib");
+const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
 
 /**
  * Embed XMP metadata
@@ -71,34 +71,6 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Embed ICC profile (OutputIntent)
- */
-async function embedIccProfile(pdfDoc, iccPath) {
-  if (!fs.existsSync(iccPath)) {
-    throw new Error(`ICC profile not found at ${iccPath}`);
-  }
-
-  const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.stream(iccBytes);
-  const iccRef = pdfDoc.context.register(iccStream);
-
-  const outputIntent = pdfDoc.context.obj({
-    Type: PDFName.of("OutputIntent"),
-    S: PDFName.of("GTS_PDFA1"),
-    OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
-    Info: PDFString.of("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
-    RegistryName: PDFString.of("http://www.color.org"),
-  });
-
-  const outputIntentRef = pdfDoc.context.register(outputIntent);
-  const arrRef = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"), arrRef);
-
-  return pdfDoc;
-}
-
-/**
  * Make PDF/A-3b with XML + ICC + XMP in a single pass
  */
 async function makePdfA3b(pdfBuffer, xml, options = {}) {
@@ -121,10 +93,10 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 
   // embed everything in one pass
   await embedXmp(pdfDoc);
-  await embedIccProfile(pdfDoc, iccPath);
+  await embedIccProfile(pdfDoc, iccPath); 
   embedXmlIntoPdf(pdfDoc, xml);
 
-  // important: disable object streams to avoid startxref errors in VeraPDF
+  
   const finalBuffer = await pdfDoc.save({ useObjectStreams: false });
 
   console.log("[makePdfA3b] Final buffer size:", finalBuffer.length);
@@ -136,7 +108,6 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 
   return finalBuffer;
 }
-
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
