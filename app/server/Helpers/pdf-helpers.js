@@ -1,24 +1,13 @@
+// -----------------------------
+// pdf-helpers.js
+// -----------------------------
 const fs = require("fs");
 const path = require("path");
 const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
-
-const TEMPLATE_PATH = path.resolve(__dirname, "templates/template_pdfa3b.pdf");
-
-/**
- * Load PDF/A-3b template
- * @returns {Promise<PDFDocument>}
- */
-async function loadTemplate() {
-  if (!fs.existsSync(TEMPLATE_PATH)) {
-    throw new Error(`[loadTemplate] ❌ Template not found: ${TEMPLATE_PATH}`);
-  }
-  const templateBytes = await fs.promises.readFile(TEMPLATE_PATH);
-  return PDFDocument.load(templateBytes);
-}
+const { PDFName, PDFString } = require("pdf-lib");
 
 /**
  * Embed XMP metadata into PDF (PDF-lib compatible)
@@ -35,35 +24,38 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
+  const pdfLib = require("pdf-lib");
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-    Filter: PDFName.of("FlateDecode"),
+    Type: pdfLib.PDFName.of("Metadata"),
+    Subtype: pdfLib.PDFName.of("XML"),
+    Filter: pdfLib.PDFName.of("FlateDecode"),
   });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
-  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
+  pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
 
   return pdfDoc;
 }
+
 
 /**
  * Embed ZUGFeRD XML into PDF 
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
+
+
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  const xmlBytes = Buffer.from(xml.trim(), "utf8"); 
-
+  const xmlBytes = Buffer.from(xml, "utf8");
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text/xml"), 
+    Subtype: PDFName.of("text#2Fxml"),
   });
 
   const fileSpecDict = pdfDoc.context.obj({
-    Type: PDFName.of("Filespec"),
+    Type: "Filespec",
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
@@ -72,8 +64,14 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   const catalog = pdfDoc.catalog;
-  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
+  // Register AF entry
+  catalog.set(
+    PDFName.of("AF"),
+    pdfDoc.context.obj([fileSpecRef])
+  );
+
+  // Register EmbeddedFiles name tree (optional but recommended)
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
@@ -84,31 +82,30 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   return pdfDoc;
 }
 
+
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  const iccPath =
-    options.iccProfilePath ||
-    path.resolve(__dirname, "sRGB_v4_ICC_preference.icc");
-
+  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
+
   const logDir = path.join(__dirname, "../logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
+  // Pre-checks
   if (!fs.existsSync(iccPath)) {
-    const msg = `[makePdfA3b] ❌ ICC profile missing: ${iccPath}`;
+    const msg = `[makePdfA3b] ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
     console.error(msg);
     return pdfBuffer;
   }
-
   if (!pdfBuffer || pdfBuffer.length === 0) {
-    const msg = `[makePdfA3b] ❌ Input PDF buffer is empty`;
+    const msg = `[makePdfA3b] Input PDF buffer is empty`;
     await fs.promises.writeFile(logFile, msg);
     console.error(msg);
     return pdfBuffer;
@@ -117,39 +114,33 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
   const gsArgs = [
-    "-dPDFA=3",
+    "-dPDFA",
     "-dBATCH",
     "-dNOPAUSE",
+    "-sProcessColorModel=DeviceRGB",
     "-sDEVICE=pdfwrite",
     `-sOutputFile=${tmpOut}`,
     "-sPDFACompatibilityPolicy=1",
     "-dEmbedAllFonts=true",
-    "-dUseCIEColor=true",
-    "-dColorConversionStrategy=/UseDeviceIndependentColor",
+    "-dAutoRotatePages=/None",
+    "-dColorConversionStrategy=/sRGB",
     `-sOutputICCProfile=${iccPath}`,
     tmpIn,
   ];
 
   try {
-    console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
-    await execFileAsync("gs", gsArgs, {
-      encoding: "utf8",
-      cwd: path.dirname(iccPath),
-      env: { ...process.env },
-    });
+    console.log("[makePdfA3b] Running Ghostscript command:", "gs", gsArgs.join(" "));
+    await execFileAsync("gs", gsArgs, { encoding: "utf8" });
 
-    console.log("✅ PDF/A-3b conversion successful");
+    console.log("[makePdfA3b] PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
-
-    const finalPath = path.join(__dirname, "../Generated", `phase5_final_${Date.now()}.pdf`);
-    await fs.promises.writeFile(finalPath, finalBuffer);
-    console.log(`✅ Saved inspection copy: ${finalPath}`);
-
     return finalBuffer;
+
   } catch (err) {
-    const logContent = `❌ [makePdfA3b] Ghostscript conversion failed
+    const logContent = `
+[makePdfA3b] Ghostscript conversion failed
 Tmp Input: ${tmpIn}
 Tmp Output: ${tmpOut}
 ICC Path: ${iccPath}
@@ -162,13 +153,12 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
     await fs.promises.writeFile(logFile, logContent);
     console.error(logContent);
     console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-    return pdfBuffer;
+    return pdfBuffer; // fallback
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
   }
 }
-
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
@@ -251,25 +241,11 @@ function generateShopifyXML(data) {
   const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
   const date = data.date || new Date().toISOString().split("T")[0];
   const items = Array.isArray(data.items) ? data.items : [];
-  const currency = data.currency || "EUR";
-
-  // calculate totals
-  const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
-  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
-  const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice
-  xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p3"
-  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
-  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
-
-  <rsm:ExchangedDocumentContext>
-    <ram:GuidelineSpecifiedDocumentContextParameter>
-      <ram:ID>urn:ferd:CrossIndustryDocument:invoice:2p3:comfort</ram:ID>
-    </ram:GuidelineSpecifiedDocumentContextParameter>
-  </rsm:ExchangedDocumentContext>
-
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
+  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
+  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
   <rsm:ExchangedDocument>
     <ram:ID>${orderId}</ram:ID>
     <ram:TypeCode>380</ram:TypeCode>
@@ -277,9 +253,7 @@ function generateShopifyXML(data) {
       <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
     </ram:IssueDateTime>
   </rsm:ExchangedDocument>
-
   <rsm:SupplyChainTradeTransaction>
-
     ${items.map((item, i) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
@@ -288,28 +262,8 @@ function generateShopifyXML(data) {
         <ram:SpecifiedTradeProduct>
           <ram:Name>${item.name || item.description || ""}</ram:Name>
         </ram:SpecifiedTradeProduct>
-        <ram:SpecifiedLineTradeSettlement>
-          <ram:ApplicableTradeTax>
-            <ram:TypeCode>VAT</ram:TypeCode>
-            <ram:RateApplicablePercent>${item.taxRate ?? 0}</ram:RateApplicablePercent>
-            <ram:CalculatedAmount currencyID="${currency}">${(item.tax || 0).toFixed(2)}</ram:CalculatedAmount>
-          </ram:ApplicableTradeTax>
-          <ram:SpecifiedTradeSettlementLineMonetarySummation>
-            <ram:LineTotalAmount currencyID="${currency}">${(item.total || 0).toFixed(2)}</ram:LineTotalAmount>
-          </ram:SpecifiedTradeSettlementLineMonetarySummation>
-        </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>
     `).join("")}
-
-    <ram:ApplicableHeaderTradeSettlement>
-      <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>
-      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-        <ram:LineTotalAmount currencyID="${currency}">${totalNet.toFixed(2)}</ram:LineTotalAmount>
-        <ram:TaxTotalAmount currencyID="${currency}">${totalTax.toFixed(2)}</ram:TaxTotalAmount>
-        <ram:GrandTotalAmount currencyID="${currency}">${totalGross.toFixed(2)}</ram:GrandTotalAmount>
-      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
-    </ram:ApplicableHeaderTradeSettlement>
-
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
