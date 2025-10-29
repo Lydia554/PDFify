@@ -302,7 +302,8 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
 
   await embedXmp(pdfDoc);
   const pdfBytes = await pdfDoc.save();
-const pdfA3bBuffer = await makePdfA3b(Buffer.from(pdfBytes));
+const pdfA3bBuffer = Buffer.from(pdfBytes);
+
 
 
   // Generate and save XML (ZUGFeRD 2.3 Comfort)
