@@ -108,20 +108,20 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  const gsArgs = [
-    "-dPDFA",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-sProcessColorModel=DeviceRGB",
-    "-sDEVICE=pdfwrite",
-    `-sOutputFile=${tmpOut}`,
-    "-sPDFACompatibilityPolicy=1",
-    "-dEmbedAllFonts=true",
-    "-dAutoRotatePages=/None",
-    "-dColorConversionStrategy=/sRGB",
-    `-sOutputICCProfile=${iccPath}`,
-    tmpIn,
-  ];
+const gsArgs = [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-sDEVICE=pdfwrite",
+  `-sOutputFile=${tmpOut}`,
+  "-sPDFACompatibilityPolicy=1",
+  "-dEmbedAllFonts=true",
+  "-dColorConversionStrategy=/UseDeviceIndependentColor",
+  "-dUseCIEColor=true",
+  `-sOutputICCProfile=${iccPath}`,
+  tmpIn,
+];
+
 
   try {
     console.log("[makePdfA3b] Running Ghostscript command:", "gs", gsArgs.join(" "));

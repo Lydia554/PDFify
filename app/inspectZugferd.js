@@ -1,5 +1,6 @@
 const fs = require("fs");
 const { PDFDocument, PDFName } = require("pdf-lib");
+const pako = require("pako");
 
 async function inspectPdf(filePath) {
   const pdfBytes = fs.readFileSync(filePath);
@@ -22,9 +23,12 @@ async function inspectPdf(filePath) {
 
     const ef = fileSpec.get(PDFName.of("EF"));
     const fStream = pdfDoc.context.lookup(ef.get(PDFName.of("F")));
-    const xmlBytes = fStream.getContents(); // already decoded
+    
+    // Decode Flate stream
+    const compressedBytes = fStream.getContents();
+    const xmlBytes = Buffer.from(pako.inflate(compressedBytes));
 
-    // Optionally save to disk
+    // Save to disk
     const outputPath = `./extracted-${fname}`;
     fs.writeFileSync(outputPath, xmlBytes);
     console.log(`✅ XML extracted to: ${outputPath}`);
