@@ -8,6 +8,9 @@ const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
 const { PDFName, PDFString } = require("pdf-lib");
+const { PDFDocument } = require("pdf-lib");
+const { makePdfA3b, embedXmlIntoPdf } = require("./pdf-helpers");
+
 
 const ICC_PROFILE_PATH = process.env.ICC_PROFILE_PATH || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
@@ -303,20 +306,21 @@ function generateZugferdXML(invoiceData) {
  * XML is embedded before Ghostscript to survive PDF/A conversion
  */
 async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
-  // 1️⃣ Load the PDF into PDF-lib
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  // 1️⃣ Run Ghostscript first for PDF/A-3b compliance
+  const pdfA3bBuffer = await makePdfA3b(pdfBuffer, options);
 
-  // 2️⃣ Embed ZUGFeRD XML immediately
+  // 2️⃣ Load the PDF/A-3b PDF
+  const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
+
+  // 3️⃣ Embed ZUGFeRD XML now, AFTER Ghostscript
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  // 3️⃣ Save buffer with XML embedded
-  const bufferWithXml = await pdfDoc.save();
+  // 4️⃣ Save final PDF — XML now safely included
+  const finalBuffer = await pdfDoc.save();
 
-  // 4️⃣ Pass buffer with XML to Ghostscript for PDF/A-3b conversion
-  const pdfA3bBuffer = await makePdfA3b(bufferWithXml, options);
-
-  return pdfA3bBuffer;
+  return finalBuffer;
 }
+
 
 
 module.exports = {
