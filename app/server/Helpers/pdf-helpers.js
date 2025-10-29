@@ -43,6 +43,11 @@ async function embedXmp(pdfDoc) {
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
   pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
 
+  // Clear DOCINFO to avoid Ghostscript XMP issues
+  pdfDoc.setTitle("");
+  pdfDoc.setAuthor("");
+  pdfDoc.setSubject("");
+
   return pdfDoc;
 }
 
@@ -91,19 +96,19 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  let gsExecutable = "gs"; 
+  let gsExecutable = "gs";
   if (process.platform === "win32") gsExecutable = "gswin64c";
 
-  // Minimal Ghostscript args first
   const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
   const gsArgs = [
-    "-dPDFA",
+    "-dPDFA=3",
     "-dBATCH",
     "-dNOPAUSE",
     "-sDEVICE=pdfwrite",
     `-sOutputFile=${tmpOut}`,
     `-sOutputICCProfile=${iccPath}`,
     "-dEmbedAllFonts=true",
+    "-dPassThroughAF=true",
     tmpIn,
   ];
 
@@ -115,6 +120,20 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     fs.unlink(tmpOut, () => {});
   }
 }
+
+/**
+ * Step 4 – Finalize PDF: embed XML + XMP + convert to PDF/A-3b
+ */
+async function finalizePdfWithXml(pdfBuffer, xml, options = {}) {
+  let pdfDoc = await PDFDocument.load(pdfBuffer);
+  pdfDoc = embedXmlIntoPdf(pdfDoc, xml);
+  pdfDoc = await embedXmp(pdfDoc);
+  const finalBuffer = await pdfDoc.save();
+  return await makePdfA3b(finalBuffer, options);
+}
+
+
+
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
  * @param {Object} invoiceData
@@ -247,18 +266,6 @@ function generateZugferdXML(invoiceData) {
     default:
       throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
   }
-}
-
-
-/**
- * Step 4 – Finalize PDF: embed XML + XMP + convert to PDF/A-3b
- */
-async function finalizePdfWithXml(pdfBuffer, xml, options = {}) {
-  let pdfDoc = await PDFDocument.load(pdfBuffer);
-  pdfDoc = embedXmlIntoPdf(pdfDoc, xml);
-  pdfDoc = await embedXmp(pdfDoc);
-  const finalBuffer = await pdfDoc.save();
-  return await makePdfA3b(finalBuffer, options);
 }
 
 
