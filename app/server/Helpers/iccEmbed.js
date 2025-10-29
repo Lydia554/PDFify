@@ -18,7 +18,6 @@ async function embedIccProfile(pdfBuffer, iccPath) {
   // Create ICC OutputIntent stream
   const iccStream = pdfDoc.context.flateStream(iccBytes, {
     N: 3,
-    Filter: PDFName.of("FlateDecode"),
   });
   const iccRef = pdfDoc.context.register(iccStream);
 
