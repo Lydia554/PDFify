@@ -135,7 +135,7 @@ if (isMerchant) {
 
     zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
     zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
-    console.log(`✅ PDF + XML added to ZIP`);
+
 
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 

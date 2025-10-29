@@ -111,6 +111,7 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 
   // Embed ICC (pdf-lib)
   await embedIccProfile(pdfDoc, iccPath);
+console.log(`[embedIccProfile] ICC embedded from: ${iccPath}`);
 
   // Save intermediate PDF
   const tmpIn = path.join(os.tmpdir(), `tmp-${uuidv4()}.pdf`);
@@ -118,17 +119,20 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   fs.writeFileSync(tmpIn, await pdfDoc.save({ useObjectStreams: false }));
 
   // Ghostscript command
-  const gsCmd = [
-    "-dPDFA=3",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-dNOOUTERSAVE",
-    "-sProcessColorModel=DeviceRGB",
-    "-sDEVICE=pdfwrite",
-    "-sPDFACompatibilityPolicy=1",
-    `-sOutputFile=${tmpOut}`,
-    tmpIn,
-  ];
+// Ghostscript command
+const gsCmd = [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-dNOOUTERSAVE",
+  "-sProcessColorModel=DeviceRGB",
+  "-sDEVICE=pdfwrite",
+  "-sPDFACompatibilityPolicy=1",
+  `-sOutputICCProfile=${iccPath}`,  
+  `-sOutputFile=${tmpOut}`,
+  tmpIn,
+];
+
 
   try {
     await execFileAsync("gs", gsCmd);
