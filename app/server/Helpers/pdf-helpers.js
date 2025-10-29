@@ -232,6 +232,5 @@ module.exports = {
   generateZugferdXML,
   embedXmp,
   embedXmlIntoPdf,
-  makePdfA3b,
   finalizePdfWithXml
 };

@@ -1,48 +1,95 @@
+// -----------------------------
+// inspectZugferd.js
+// -----------------------------
 const fs = require("fs");
 const path = require("path");
-const { generateZugferdXML, finalizePdfWithXml, makePdfA3b } = require("./server/Helpers/pdf-helpers"); // adjust path
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 
-async function testFinalize() {
-  // 1️⃣ Load sample PDF
-  const originalPdfPath = path.join(__dirname, "Order_10348230934851.pdf");
-  const originalPdfBuffer = fs.readFileSync(originalPdfPath);
+/**
+ * Inspect a PDF for embedded ZUGFeRD XML and extract it.
+ *
+ * @param {string|Buffer} input - Path to PDF or a Buffer
+ * @returns {Promise<{ xml?: string, attachments: string[] }>}
+ */
+async function inspectZugferd(input) {
+  let pdfBytes;
 
-  // 2️⃣ Generate ZUGFeRD XML
-  const zugferdXml = generateZugferdXML({
-    invoiceNumber: "1129",
-    date: "2025-10-29",
-    source: "shopify",
-    items: [
-      { name: "Item A", quantity: 1, unitPrice: 100, taxRate: 21 },
-      { name: "Item B", quantity: 2, unitPrice: 50, taxRate: 21 }
-    ]
-  });
-
-  // 3️⃣ Save PDF with XML BEFORE Ghostscript
-  const preGsPath = path.join(__dirname, "check_before_gs.pdf");
-  const preGsPdf = await finalizePdfWithXml(originalPdfBuffer, zugferdXml, { skipGs: true });
-  fs.writeFileSync(preGsPath, preGsPdf);
-  console.log("✅ Saved check_before_gs.pdf");
-
-  // 4️⃣ Inspect embedded XML
-  console.log("📄 Inspecting embedded XML in pre-GS PDF...");
-  const { PDFDocument, PDFName } = require("pdf-lib");
-  const pdfDoc = await PDFDocument.load(preGsPdf);
-  const af = pdfDoc.catalog.get(PDFName.of("AF"));
-  if (!af) return console.log("❌ No AF found.");
-
-  const afArray = pdfDoc.context.lookup(af);
-  for (const ref of afArray.array) {
-    const fileSpec = pdfDoc.context.lookup(ref);
-    const fname = fileSpec.get(PDFName.of("F")).value;
-    console.log(`- Embedded file: ${fname}`);
+  if (Buffer.isBuffer(input)) {
+    pdfBytes = input;
+  } else if (typeof input === "string") {
+    pdfBytes = fs.readFileSync(path.resolve(input));
+  } else {
+    throw new Error("Invalid input: must be a Buffer or a file path");
   }
 
-  // 5️⃣ Run Ghostscript on the saved PDF file
-  console.log("📄 Converting to PDF/A-3b with Ghostscript...");
-  const finalBuffer = await makePdfA3b(fs.readFileSync(preGsPath));
-  fs.writeFileSync(path.join(__dirname, "final_with_xml.pdf"), finalBuffer);
-  console.log("✅ Final PDF/A-3b saved: final_with_xml.pdf");
+  const pdfDoc = await PDFDocument.load(pdfBytes);
+  const context = pdfDoc.context;
+  const catalog = pdfDoc.catalog;
+
+  let extractedXml = null;
+  let attachmentNames = [];
+
+  try {
+    const namesDict = catalog.lookup(PDFName.of("Names"));
+    if (namesDict) {
+      const embeddedFiles = namesDict.lookup(PDFName.of("EmbeddedFiles"));
+      if (embeddedFiles) {
+        const namesArray = embeddedFiles.lookup(PDFName.of("Names"));
+        if (namesArray) {
+          const arr = namesArray.asArray();
+          for (let i = 0; i < arr.length; i += 2) {
+            const name = arr[i].decodeText ? arr[i].decodeText() : arr[i].toString();
+            const fileSpec = arr[i + 1];
+            attachmentNames.push(name);
+
+            const efDict = fileSpec.lookup(PDFName.of("EF"));
+            if (efDict) {
+              const xmlStream = efDict.lookup(PDFName.of("F"));
+              if (xmlStream) {
+                const streamContent = xmlStream.lookup(PDFName.of("Filter"))
+                  ? xmlStream.getUncompressedContents()
+                  : xmlStream.getContents();
+
+                const xml = streamContent.toString("utf8");
+                if (name.endsWith(".xml") && xml.includes("<CrossIndustryInvoice")) {
+                  extractedXml = xml;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error("❌ Error inspecting PDF:", err);
+  }
+
+  if (extractedXml) {
+    console.log("✅ Found embedded ZUGFeRD XML!");
+    const outPath = path.join(
+      path.dirname(path.resolve(input)),
+      "extracted_zugferd.xml"
+    );
+    fs.writeFileSync(outPath, extractedXml, "utf8");
+    console.log(`📄 Extracted XML written to: ${outPath}`);
+  } else {
+    console.warn("⚠️ No ZUGFeRD XML found in PDF.");
+  }
+
+  return { xml: extractedXml, attachments: attachmentNames };
 }
 
-testFinalize().catch(console.error);
+
+if (require.main === module) {
+  const file = process.argv[2];
+  if (!file) {
+    console.error("Usage: node inspectZugferd.js <path-to-pdf>");
+    process.exit(1);
+  }
+  inspectZugferd(file).then((res) => {
+    console.log("Attachments:", res.attachments);
+    if (res.xml) console.log("First 300 chars of XML:\n", res.xml.slice(0, 300));
+  });
+}
+
+module.exports = { inspectZugferd };
