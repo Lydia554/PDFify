@@ -9,6 +9,12 @@ const dotenv = require("dotenv");
 
 dotenv.config();
 
+if (!fs.existsSync(process.env.PDFA_ICC_PROFILE)) {
+  console.warn("[WARN] ICC profile not found at path:", process.env.PDFA_ICC_PROFILE);
+} else {
+  console.log("[OK] ICC profile loaded from:", process.env.PDFA_ICC_PROFILE);
+}
+
 const User = require("./models/User");
 const authenticate = require("./middleware/authenticate");
 

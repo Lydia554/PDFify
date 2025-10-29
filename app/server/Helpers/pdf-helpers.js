@@ -7,6 +7,8 @@ const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
+const { embedIccProfile } = require("./iccEmbed");
+
 const { PDFName, PDFString } = require("pdf-lib");
 
 /**
@@ -82,52 +84,26 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * Post-process PDF for PDF/A-3b compliance using Ghostscript
  * @param {Buffer} pdfBuffer
  */
-async function makePdfA3b(pdfBuffer) {
-  const iccPath = "C:\\Users\\goldb\\Pro\\PDF-API\\app\\server\\Helpers\\sRGB_v4_ICC_preference.icc";
+async function makePdfA3b(pdfBuffer, options = {}) {
+ require("dotenv").config();
+const iccPath =
+  options.iccProfilePath ||
+  process.env.PDFA_ICC_PROFILE ||
+  path.join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
 
-  if (!fs.existsSync(iccPath)) {
-    console.error(`[makePdfA3b] ICC profile missing: ${iccPath}`);
-    return pdfBuffer;
-  }
 
-  if (!pdfBuffer || pdfBuffer.length === 0) {
-    console.error("[makePdfA3b] Input PDF buffer is empty");
-    return pdfBuffer;
-  }
-
-  const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
-  const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-
-  await fs.promises.writeFile(tmpIn, pdfBuffer);
-
-  const gsArgs = [
-    "-dPDFA=3",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-sDEVICE=pdfwrite",
-    "-sProcessColorModel=DeviceRGB",
-    `-sOutputICCProfile=${iccPath}`,
-    "-dPDFACompatibilityPolicy=1",
-    "-dEmbedAllFonts=true",
-    `-sOutputFile=${tmpOut}`,
-    tmpIn,
-  ];
+  if (!pdfBuffer || pdfBuffer.length === 0) return pdfBuffer;
 
   try {
-    console.log("[makePdfA3b] Running Ghostscript...");
-    await execFileAsync("gs", gsArgs, { encoding: "utf8" });
-    console.log("[makePdfA3b] PDF/A-3b conversion successful");
-
-    const finalBuffer = await fs.promises.readFile(tmpOut);
+    const finalBuffer = await embedIccProfile(pdfBuffer, iccPath);
+    console.log("[makePdfA3b] ICC embedded successfully");
     return finalBuffer;
   } catch (err) {
-    console.error("[makePdfA3b] Ghostscript conversion failed:", err.message);
+    console.error("[makePdfA3b] ICC embedding failed:", err);
     return pdfBuffer;
-  } finally {
-    fs.unlink(tmpIn, () => {});
-    fs.unlink(tmpOut, () => {});
   }
 }
+
 
 
 /**
