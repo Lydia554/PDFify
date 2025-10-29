@@ -301,16 +301,21 @@ function generateZugferdXML(invoiceData) {
  * FINAL HELPER: Convert PDF to PDF/A-3b and embed ZUGFeRD XML
  */
 async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
-  const pdfA3bBuffer = await makePdfA3b(pdfBuffer, options);
-
   const { PDFDocument } = require("pdf-lib");
-  const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
+  // Embed ZUGFeRD XML first
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  const finalBuffer = await pdfDoc.save();
-  return finalBuffer;
+  // Save PDF with XML
+  const xmlBuffer = await pdfDoc.save();
+
+  // Convert to PDF/A-3b with Ghostscript
+  const pdfA3bBuffer = await makePdfA3b(xmlBuffer, options);
+
+  return pdfA3bBuffer;
 }
+
 
 
 module.exports = {
