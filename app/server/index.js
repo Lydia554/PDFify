@@ -6,6 +6,7 @@ const cron = require("node-cron");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 const dotenv = require("dotenv");
+const fs = require("fs");
 
 dotenv.config();
 
@@ -23,7 +24,7 @@ const recipeRoutes = require("./routes/recipeRoutes");
 const shopOrderRoutes = require("./routes/shopOrderRoutes");
 const therapyReportRoutes = require("./routes/therapyReportRoutes");
 const authRoutes = require("./routes/authRoutes");
-const userRoutes = require("./routes/userRoutes"); // your current routes
+const userRoutes = require("./routes/userRoutes"); 
 const stripeRoutes = require("./routes/stripeRoutes");
 const invoiceRoutes = require("./routes/invoiceRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
