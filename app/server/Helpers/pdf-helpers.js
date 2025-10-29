@@ -12,8 +12,7 @@ const { embedIccProfile } = require("./iccEmbed");
 const { PDFName, PDFString } = require("pdf-lib");
 
 /**
- * Embed XMP metadata into PDF (PDF-lib compatible)
- * @param {PDFDocument} pdfDoc
+ * Embed XMP metadata
  */
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -26,35 +25,28 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  const pdfLib = require("pdf-lib");
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
-    Type: pdfLib.PDFName.of("Metadata"),
-    Subtype: pdfLib.PDFName.of("XML"),
-    Filter: pdfLib.PDFName.of("FlateDecode"),
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
   });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
-  pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
+  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
 
   return pdfDoc;
 }
 
-
 /**
- * Embed ZUGFeRD XML into PDF 
- * @param {PDFDocument} pdfDoc
- * @param {string} xml
+ * Embed ZUGFeRD XML
  */
-
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  const xmlBytes = Buffer.from(xml.trim(), "utf8"); 
-
-  // Flate stream for embedded file
+  const xmlBytes = Buffer.from(xml.trim(), "utf8");
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text/xml"), 
+    Subtype: PDFName.of("text/xml"),
   });
 
   const fileSpecDict = pdfDoc.context.obj({
@@ -66,62 +58,84 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
-  const catalog = pdfDoc.catalog;
-  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+  pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
     }),
   });
-  catalog.set(PDFName.of("Names"), namesDict);
+  pdfDoc.catalog.set(PDFName.of("Names"), namesDict);
 
   return pdfDoc;
 }
 
+/**
+ * Embed ICC profile (OutputIntent)
+ */
+async function embedIccProfile(pdfDoc, iccPath) {
+  if (!fs.existsSync(iccPath)) {
+    throw new Error(`ICC profile not found at ${iccPath}`);
+  }
 
-async function makePdfA3b(pdfBuffer, options = {}) {
-  require("dotenv").config();
-const iccPath =
-  options.iccProfilePath ||
-  process.env.ICC_PROFILE_PATH ||             
-  process.env.PDFA_ICC_PROFILE ||               
-  path.join(__dirname, "sRGB_v4_ICC_preference.icc");  
+  const iccBytes = fs.readFileSync(iccPath);
+  const iccStream = pdfDoc.context.stream(iccBytes);
+  const iccRef = pdfDoc.context.register(iccStream);
 
+  const outputIntent = pdfDoc.context.obj({
+    Type: PDFName.of("OutputIntent"),
+    S: PDFName.of("GTS_PDFA1"),
+    OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+    Info: PDFString.of("sRGB IEC61966-2.1"),
+    DestOutputProfile: iccRef,
+    RegistryName: PDFString.of("http://www.color.org"),
+  });
 
+  const outputIntentRef = pdfDoc.context.register(outputIntent);
+  const arrRef = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), arrRef);
 
-console.log("[makePdfA3b] ICC profile path:", iccPath);
+  return pdfDoc;
+}
+
+/**
+ * Make PDF/A-3b with XML + ICC + XMP in a single pass
+ */
+async function makePdfA3b(pdfBuffer, xml, options = {}) {
+  const iccPath =
+    options.iccProfilePath ||
+    process.env.ICC_PROFILE_PATH ||
+    process.env.PDFA_ICC_PROFILE ||
+    path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+
+  console.log("[makePdfA3b] ICC profile path:", iccPath);
 
   if (!pdfBuffer || pdfBuffer.length === 0) {
-    console.warn("[makePdfA3b] Empty PDF buffer received — skipping ICC embedding");
+    console.warn("[makePdfA3b] Empty PDF buffer received — skipping");
     return pdfBuffer;
   }
 
   console.log("[makePdfA3b] Input buffer size:", pdfBuffer.length);
-  console.log("[makePdfA3b] Embedding ICC...");
 
-  try {
-    const finalBuffer = await embedIccProfile(pdfBuffer, iccPath);
-    console.log("[makePdfA3b] ICC embedded successfully");
-    console.log("[makePdfA3b] Final buffer size:", finalBuffer.length);
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-    // Optional: verify OutputIntent presence
-    try {
-      const { PDFDocument, PDFName } = require("pdf-lib");
-      const doc = await PDFDocument.load(finalBuffer);
-      const outputIntent = doc.catalog.get(PDFName.of("OutputIntents"));
-      console.log("[makePdfA3b] OutputIntent present?", !!outputIntent);
-    } catch (metaErr) {
-      console.warn("[makePdfA3b] Could not inspect OutputIntent:", metaErr.message);
-    }
+  // embed everything in one pass
+  await embedXmp(pdfDoc);
+  await embedIccProfile(pdfDoc, iccPath);
+  embedXmlIntoPdf(pdfDoc, xml);
 
-    return finalBuffer;
-  } catch (err) {
-    console.error("[makePdfA3b] ICC embedding failed:", err);
-    return pdfBuffer;
-  }
+  // important: disable object streams to avoid startxref errors in VeraPDF
+  const finalBuffer = await pdfDoc.save({ useObjectStreams: false });
+
+  console.log("[makePdfA3b] Final buffer size:", finalBuffer.length);
+
+  // optional check
+  const doc = await PDFDocument.load(finalBuffer);
+  const outputIntent = doc.catalog.get(PDFName.of("OutputIntents"));
+  console.log("[makePdfA3b] OutputIntent present?", !!outputIntent);
+
+  return finalBuffer;
 }
-
 
 
 /**
