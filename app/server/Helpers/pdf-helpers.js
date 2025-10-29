@@ -123,8 +123,6 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
 
 
-
-
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
  * @param {Object} invoiceData
