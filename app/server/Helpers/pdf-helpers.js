@@ -82,12 +82,12 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 
 async function makePdfA3b(pdfBuffer, options = {}) {
   require("dotenv").config();
+const iccPath =
+  options.iccProfilePath ||
+  process.env.ICC_PROFILE_PATH ||             
+  process.env.PDFA_ICC_PROFILE ||               
+  path.join(__dirname, "sRGB_v4_ICC_preference.icc");  
 
-  const iccPath =
-  options.iccProfilePath ||                   
-  process.env.ICC_PROFILE_PATH ||           
-  process.env.PDFA_ICC_PROFILE ||         
-  path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
 
 
 console.log("[makePdfA3b] ICC profile path:", iccPath);
