@@ -1,63 +1,33 @@
 const fs = require("fs");
-const { PDFDocument, PDFName, PDFArray, PDFString } = require("pdf-lib");
+const path = require("path");
+const {
+  generateZugferdXML,
+  finalizePdfWithXml,
+} = require("./server/Helpers/pdf-helpers"); // updated path
 
-async function extractZugferdXml(filePath) {
-  const pdfBytes = fs.readFileSync(filePath);
-  const pdfDoc = await PDFDocument.load(pdfBytes);
-
-  let found = false;
-
-  // 1️⃣ Check AF in catalog
-  const afRef = pdfDoc.catalog.get(PDFName.of("AF"));
-  if (afRef) {
-    const afArray = pdfDoc.context.lookup(afRef);
-    const refs = afArray instanceof PDFArray ? afArray.asArray() : [afArray];
-    for (const ref of refs) {
-      const fileSpec = pdfDoc.context.lookup(ref);
-      const efDict = fileSpec.get(PDFName.of("EF"));
-      if (!efDict) continue;
-      const fStream = pdfDoc.context.lookup(efDict.get(PDFName.of("F")));
-      const xmlBytes = fStream.getContents();
-      const fname = fileSpec.get(PDFName.of("F"))?.value || "zugferd.xml";
-      fs.writeFileSync(fname, xmlBytes);
-      console.log(`✅ Extracted from AF: ${fname}`);
-      found = true;
-    }
+async function testFinalize() {
+  // 1️⃣ Load a sample PDF
+  const originalPdfPath = path.join(__dirname, "Order_10348230934851.pdf");
+  if (!fs.existsSync(originalPdfPath)) {
+    console.error("❌ Original PDF not found!");
+    return;
   }
+  const originalPdfBuffer = fs.readFileSync(originalPdfPath);
 
-  // 2️⃣ Check Names → EmbeddedFiles
-  const namesRef = pdfDoc.catalog.get(PDFName.of("Names"));
-  if (namesRef) {
-    const namesDict = pdfDoc.context.lookup(namesRef);
-    const efRef = namesDict.get(PDFName.of("EmbeddedFiles"));
-    if (efRef) {
-      const efDict = pdfDoc.context.lookup(efRef);
-      const namesArray = efDict.get(PDFName.of("Names"));
-      if (namesArray && namesArray.length % 2 === 0) {
-        for (let i = 0; i < namesArray.length; i += 2) {
-          const nameObj = namesArray[i];
-          const fileSpecRef = namesArray[i + 1];
-          const fileSpec = pdfDoc.context.lookup(fileSpecRef);
-          const efDict = fileSpec.get(PDFName.of("EF"));
-          if (!efDict) continue;
-          const fStream = pdfDoc.context.lookup(efDict.get(PDFName.of("F")));
-          const xmlBytes = fStream.getContents();
-          const fname = fileSpec.get(PDFName.of("F"))?.value || "zugferd.xml";
-          fs.writeFileSync(fname, xmlBytes);
-          console.log(`✅ Extracted from Names: ${fname}`);
-          found = true;
-        }
-      }
-    }
-  }
+  // 2️⃣ Generate a small test ZUGFeRD XML
+  const zugXml = generateZugferdXML({
+    source: "shopify",
+    invoiceNumber: "1129",
+    date: "2025-10-29",
+    items: [
+      { name: "Test Product", quantity: 1, unitPrice: 100, taxRate: 21 },
+    ],
+  });
 
-  if (!found) {
-    console.log("❌ No embedded ZUGFeRD XML found.");
-  }
+  // 3️⃣ Finalize PDF (PDF/A-3b + XML)
+  const finalBuffer = await finalizePdfWithXml(originalPdfBuffer, zugXml);
+
+  console.log("✅ Test complete. Check 'final_with_xml.pdf'");
 }
 
-
-
-
-extractZugferdXml("./Order_10348230934851.pdf");
-
+testFinalize().catch(console.error);

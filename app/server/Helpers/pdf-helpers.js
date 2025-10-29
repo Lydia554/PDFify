@@ -87,12 +87,22 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * Run Ghostscript to convert PDF to PDF/A-3b while trying to preserve embedded files
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
+ 
+  let gsExecutable = "gs"; 
+  if (process.platform === "win32") {
+   
+    const gs64 = "C:\\Program Files\\gs\\gs10.03.0\\bin\\gswin64c.exe";
+    const gs32 = "C:\\Program Files (x86)\\gs\\gs9.56.1\\bin\\gswin32c.exe"; 
+    if (fs.existsSync(gs64)) gsExecutable = gs64;
+    else if (fs.existsSync(gs32)) gsExecutable = gs32;
+    else throw new Error("Ghostscript not found on Windows. Install it or adjust path.");
+  }
+
+  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
   const gsArgs = [
     "-dPDFA",
     "-dBATCH",
@@ -105,13 +115,12 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     "-dAutoRotatePages=/None",
     "-dColorConversionStrategy=/sRGB",
     `-sOutputICCProfile=${iccPath}`,
-    // This flag is important: allows preserving attached files in PDF/A-3b
     "-dPassThroughAF=true",
     tmpIn,
   ];
 
   try {
-    await execFileAsync("gs", gsArgs, { encoding: "utf8" });
+    await execFileAsync(gsExecutable, gsArgs, { encoding: "utf8" });
     return await fs.promises.readFile(tmpOut);
   } finally {
     fs.unlink(tmpIn, () => {});
