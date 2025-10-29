@@ -7,16 +7,21 @@ const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
-const { PDFName, PDFString } = require("pdf-lib");
-const { PDFDocument } = require("pdf-lib");
-
-
+const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
 
 const ICC_PROFILE_PATH = process.env.ICC_PROFILE_PATH || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
 /**
+ * Step 2 – Clean PDF buffer: remove any leading garbage before %PDF-
+ */
+function cleanPdfBuffer(buf) {
+  const pdfStart = buf.indexOf(Buffer.from("%PDF-"));
+  if (pdfStart > 0) return buf.slice(pdfStart);
+  return buf;
+}
+
+/**
  * Embed XMP metadata into PDF (PDF-lib compatible)
- * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -29,22 +34,19 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  const pdfLib = require("pdf-lib");
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
-    Type: pdfLib.PDFName.of("Metadata"),
-    Subtype: pdfLib.PDFName.of("XML"),
-    Filter: pdfLib.PDFName.of("FlateDecode"),
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
   });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
-  pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
+  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
 
-  // Ensure MarkInfo for PDF/A
   pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
 
   return pdfDoc;
 }
-
 
 /**
  * Embed ZUGFeRD XML into a PDFDocument
@@ -68,11 +70,9 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   });
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
 
-  // Attach to AF array
   const afArray = pdfDoc.context.obj([fileSpecRef]);
   pdfDoc.catalog.set(PDFName.of("AF"), afArray);
 
-  // EmbeddedFiles name tree
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
@@ -84,21 +84,21 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Run Ghostscript to convert PDF to PDF/A-3b while trying to preserve embedded files
+ * Step 3 + 4 – Run Ghostscript to convert PDF to PDF/A-3b while preserving XML
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
+  // Step 2: clean PDF buffer
+  pdfBuffer = cleanPdfBuffer(pdfBuffer);
+
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
- 
-let gsExecutable = "gs"; 
-if (process.platform === "win32") {
-  gsExecutable = "gswin64c"; 
-}
+  // Step 3: detect Ghostscript
+  let gsExecutable = "gs"; 
+  if (process.platform === "win32") gsExecutable = "gswin64c";
 
-
-  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+  const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
   const gsArgs = [
     "-dPDFA",
     "-dBATCH",
