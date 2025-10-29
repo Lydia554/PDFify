@@ -118,8 +118,9 @@ pdfDoc.setSubject('');
 pdfDoc.setKeywords([]);
 pdfDoc.setProducer('');
 pdfDoc.setCreator('');
-pdfDoc.setCreationDate(undefined);
-pdfDoc.setModificationDate(undefined);
+pdfDoc.setCreationDate(null);
+pdfDoc.setModificationDate(null);
+
 
 
   // Embed XMP metadata and ZUGFeRD XML
