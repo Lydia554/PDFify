@@ -111,15 +111,17 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   // Load PDF
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Clear DOCINFO metadata to avoid Ghostscript errors
+  
+// Clear DOCINFO metadata safely
+const neutralDate = new Date(0); 
 pdfDoc.setTitle('');
 pdfDoc.setAuthor('');
 pdfDoc.setSubject('');
 pdfDoc.setKeywords([]);
 pdfDoc.setProducer('');
 pdfDoc.setCreator('');
-pdfDoc.setCreationDate(null);
-pdfDoc.setModificationDate(null);
+pdfDoc.setCreationDate(neutralDate);
+pdfDoc.setModificationDate(neutralDate);
 
 
 
