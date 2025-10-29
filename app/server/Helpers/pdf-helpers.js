@@ -3,6 +3,7 @@
 // -----------------------------
 const fs = require("fs");
 const path = require("path");
+const os = require("os");
 const { execFile } = require("child_process");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
