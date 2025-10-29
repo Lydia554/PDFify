@@ -1,28 +1,22 @@
 // -----------------------------
-// pdf-helpers.js
+// pdf-helpers.js (no Ghostscript)
 // -----------------------------
 const fs = require("fs");
 const path = require("path");
-const { execFile } = require("child_process");
 const os = require("os");
-const util = require("util");
-const execFileAsync = util.promisify(execFile);
 const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
 
-const ICC_PROFILE_PATH = process.env.ICC_PROFILE_PATH || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+const ICC_PROFILE_PATH =
+  process.env.ICC_PROFILE_PATH ||
+  path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
-/**
- * Step 2 – Clean PDF buffer: remove any leading garbage before %PDF-
- */
+
 function cleanPdfBuffer(buf) {
   const pdfStart = buf.indexOf(Buffer.from("%PDF-"));
-  if (pdfStart > 0) return buf.slice(pdfStart);
-  return buf;
+  return pdfStart > 0 ? buf.slice(pdfStart) : buf;
 }
 
-/**
- * Embed XMP metadata into PDF (PDF-lib compatible)
- */
+
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
@@ -39,10 +33,8 @@ async function embedXmp(pdfDoc) {
     Subtype: PDFName.of("XML"),
     Filter: PDFName.of("FlateDecode"),
   });
-
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
-
   pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
 
   return pdfDoc;
@@ -81,47 +73,6 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   pdfDoc.catalog.set(PDFName.of("Names"), namesDict);
 
   return pdfDoc;
-}
-
-/**
- * Step 3 + 4 – Run Ghostscript to convert PDF to PDF/A-3b while preserving XML
- */
-async function makePdfA3b(pdfBuffer, options = {}) {
-  // Step 2: clean PDF buffer
-  pdfBuffer = cleanPdfBuffer(pdfBuffer);
-
-  const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
-  const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-  await fs.promises.writeFile(tmpIn, pdfBuffer);
-
-  // Step 3: detect Ghostscript
-  let gsExecutable = "gs"; 
-  if (process.platform === "win32") gsExecutable = "gswin64c";
-
-  const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
-  const gsArgs = [
-    "-dPDFA",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-sProcessColorModel=DeviceRGB",
-    "-sDEVICE=pdfwrite",
-    `-sOutputFile=${tmpOut}`,
-    "-sPDFACompatibilityPolicy=1",
-    "-dEmbedAllFonts=true",
-    "-dAutoRotatePages=/None",
-    "-dColorConversionStrategy=/sRGB",
-    `-sOutputICCProfile=${iccPath}`,
-    "-dPassThroughAF=true",
-    tmpIn,
-  ];
-
-  try {
-    await execFileAsync(gsExecutable, gsArgs, { encoding: "utf8" });
-    return await fs.promises.readFile(tmpOut);
-  } finally {
-    fs.unlink(tmpIn, () => {});
-    fs.unlink(tmpOut, () => {});
-  }
 }
 
 /**
@@ -260,20 +211,18 @@ function generateZugferdXML(invoiceData) {
 
 
 
-async function finalizePdfWithXml(originalPdfBuffer, zugferdXml, options = {}) {
-  let pdfBuffer = originalPdfBuffer;
 
-  if (!options.skipGs) {
-    pdfBuffer = await makePdfA3b(originalPdfBuffer, options);
-    fs.writeFileSync("check_after_gs.pdf", pdfBuffer);
-  }
+async function finalizePdfWithXml(originalPdfBuffer, zugferdXml) {
+  const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
+  const pdfDoc = await PDFDocument.load(cleanBuffer);
 
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  await embedXmp(pdfDoc);
   embedXmlIntoPdf(pdfDoc, zugferdXml);
-  const finalBuffer = await pdfDoc.save();
-  fs.writeFileSync("final_with_xml.pdf", finalBuffer);
 
-  console.log("✅ PDF finalized with embedded XML");
+  const finalBuffer = await pdfDoc.save({ useObjectStreams: false });
+  fs.writeFileSync(path.join(os.tmpdir(), "final_with_xml.pdf"), finalBuffer);
+
+  console.log("✅ PDF finalized with embedded XML (no Ghostscript)");
   return finalBuffer;
 }
 
