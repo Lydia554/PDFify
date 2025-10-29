@@ -15,12 +15,7 @@ const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice"
 
 const JSZip = require("jszip");
 
-
-
-
 const router = express.Router();
-
-
 
 require('dotenv').config();
 
@@ -107,17 +102,10 @@ if (isMerchant) {
     // Generate PDF + XML
     let { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
 
+console.log("[/invoice] PDF generated:", pdfBuffer.length);
 
 
-    // 🧩 Log before ICC embedding
-    console.log("[/invoice] Before makePdfA3b:", pdfBuffer.length);
 
-    //  Embed ICC / PDF/A-3b
-    const { makePdfA3b } = require("../../Helpers/pdf-helpers");
-    pdfBuffer = await makePdfA3b(pdfBuffer);
-
-    //  Log after ICC embedding
-    console.log("[/invoice] After makePdfA3b:", pdfBuffer.length);
 
     if (req.query.preview === "true") {
       // Preview: just show PDF inline
