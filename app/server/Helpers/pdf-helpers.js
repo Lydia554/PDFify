@@ -257,17 +257,18 @@ function generateZugferdXML(invoiceData) {
 async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // 1️⃣ Embed XMP metadata for PDF/A-3b
+  // 1️⃣ Embed XMP metadata (optional, for PDF/A)
   await embedXmp(pdfDoc);
 
   // 2️⃣ Embed ZUGFeRD XML
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  // 3️⃣ Save temporary PDF with XML + XMP
-  const tmpBuffer = await pdfDoc.save();
+  // 2a️⃣ TEMP CHECK: save PDF BEFORE Ghostscript to verify XML is present
+  const tmpBufferBeforeGs = await pdfDoc.save();
+  fs.writeFileSync("check_before_gs.pdf", tmpBufferBeforeGs); 
 
-  // 4️⃣ Convert to PDF/A-3b with Ghostscript
-  const finalBuffer = await makePdfA3b(tmpBuffer, options);
+  // 3️⃣ Convert to PDF/A-3b with Ghostscript
+  const finalBuffer = await makePdfA3b(tmpBufferBeforeGs, options);
 
   return finalBuffer;
 }
