@@ -254,22 +254,26 @@ function generateZugferdXML(invoiceData) {
 }
 
 
-async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // 1️⃣ Embed XMP metadata (optional, for PDF/A)
-  await embedXmp(pdfDoc);
+/**
+ * Finalize PDF:
+ * 1️⃣ Convert to PDF/A-3b via Ghostscript
+ * 2️⃣ Embed ZUGFeRD XML afterward
+ */
+async function finalizePdfWithXml(originalPdfBuffer, zugferdXml, options = {}) {
+  // 1️⃣ Convert to PDF/A-3b
+  const pdfA3bBuffer = await makePdfA3b(originalPdfBuffer, options);
+  fs.writeFileSync("check_after_gs.pdf", pdfA3bBuffer); // optional inspection
 
-  // 2️⃣ Embed ZUGFeRD XML
+  // 2️⃣ Load PDF/A-3b and embed ZUGFeRD XML
+  const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  // 2a️⃣ TEMP CHECK: save PDF BEFORE Ghostscript to verify XML is present
-  const tmpBufferBeforeGs = await pdfDoc.save();
-  fs.writeFileSync("check_before_gs.pdf", tmpBufferBeforeGs); 
+  // 3️⃣ Save final PDF
+  const finalBuffer = await pdfDoc.save();
+  fs.writeFileSync("final_with_xml.pdf", finalBuffer);
 
-  // 3️⃣ Convert to PDF/A-3b with Ghostscript
-  const finalBuffer = await makePdfA3b(tmpBufferBeforeGs, options);
-
+  console.log("✅ PDF/A-3b with embedded XML created: final_with_xml.pdf");
   return finalBuffer;
 }
 
