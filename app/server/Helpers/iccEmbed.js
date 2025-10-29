@@ -16,9 +16,8 @@ async function embedIccProfile(pdfBuffer, iccPath) {
   const iccBytes = fs.readFileSync(iccPath);
 
   // Create ICC OutputIntent stream
-  const iccStream = pdfDoc.context.flateStream(iccBytes, {
-    N: 3,
-  });
+ const iccStream = pdfDoc.context.stream(iccBytes); 
+
   const iccRef = pdfDoc.context.register(iccStream);
 
   const outputIntent = pdfDoc.context.obj({
