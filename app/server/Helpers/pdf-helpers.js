@@ -36,11 +36,14 @@ async function embedXmp(pdfDoc) {
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
 
+  // Ensure MarkInfo for PDF/A
+  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
+
   return pdfDoc;
 }
 
 /**
- * Embed ZUGFeRD XML into PDF (old working version)
+ * Embed ZUGFeRD XML into PDF
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
@@ -81,7 +84,6 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   return pdfDoc;
 }
 
-
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
  * @param {Buffer} pdfBuffer
@@ -97,7 +99,6 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
-  // Pre-checks
   if (!fs.existsSync(iccPath)) {
     const msg = `[makePdfA3b] ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
@@ -153,7 +154,7 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
     await fs.promises.writeFile(logFile, logContent);
     console.error(logContent);
     console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-    return pdfBuffer; // fallback
+    return pdfBuffer;
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
@@ -161,16 +162,14 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
 }
 
 /**
- * Generate ZUGFeRD XML based on invoice source (mode)
- * @param {Object} invoiceData
- * @returns {string} XML content
+ * Generate ZUGFeRD XML based on invoice source
  */
 function generateZugferdXML(invoiceData) {
   const items = Array.isArray(invoiceData.items) ? invoiceData.items : [];
   const orderId = invoiceData.invoiceNumber || invoiceData.orderId || "UNKNOWN";
   const date = invoiceData.date || new Date().toISOString().split("T")[0];
 
-  function generateDevXML(data) {
+  function generateDevXML() {
     return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1">
   <rsm:ExchangedDocument>
@@ -201,102 +200,36 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-  function generateFriendlyXML(data) {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1">
-  <rsm:ExchangedDocument>
-    <ram:ID>${orderId}</ram:ID>
-    <ram:IssueDateTime>${date}</ram:IssueDateTime>
-  </rsm:ExchangedDocument>
-  <rsm:SupplyChainTradeTransaction>
-    ${items.map((item, idx) => {
-      const qty = Number(item.quantity) || 0;
-      const unitPrice = Number(item.unitPrice) || 0;
-      const total = qty * unitPrice;
-      const tax = total * ((Number(item.taxRate ?? data.taxRate) || 0) / 100);
-      return `
-      <ram:IncludedSupplyChainTradeLineItem>
-        <ram:AssociatedDocumentLineDocument>
-          <ram:LineID>${idx + 1}</ram:LineID>
-        </ram:AssociatedDocumentLineDocument>
-        <ram:SpecifiedTradeProduct>
-          <ram:Name>${item.description || ''}</ram:Name>
-        </ram:SpecifiedTradeProduct>
-        <ram:SpecifiedLineTradeSettlement>
-          <ram:ApplicableTradeTax>
-            <ram:CalculatedAmount>${tax.toFixed(2)}</ram:CalculatedAmount>
-            <ram:TypeCode>VAT</ram:TypeCode>
-            <ram:RateApplicablePercent>${item.taxRate ?? data.taxRate ?? 0}</ram:RateApplicablePercent>
-          </ram:ApplicableTradeTax>
-          <ram:TradeSettlementLineAmount>${total.toFixed(2)}</ram:TradeSettlementLineAmount>
-          <ram:NetLineAmount>${(total - tax).toFixed(2)}</ram:NetLineAmount>
-        </ram:SpecifiedLineTradeSettlement>
-      </ram:IncludedSupplyChainTradeLineItem>`; 
-    }).join("")}
-  </rsm:SupplyChainTradeTransaction>
-</rsm:CrossIndustryInvoice>`;
-  }
-
-  function generateShopifyXML(data) {
-    const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
-    const date = data.date || new Date().toISOString().split("T")[0];
-    const items = Array.isArray(data.items) ? data.items : [];
-
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
-  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
-  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
-  <rsm:ExchangedDocument>
-    <ram:ID>${orderId}</ram:ID>
-    <ram:TypeCode>380</ram:TypeCode>
-    <ram:IssueDateTime>
-      <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
-    </ram:IssueDateTime>
-  </rsm:ExchangedDocument>
-  <rsm:SupplyChainTradeTransaction>
-    ${items.map((item, i) => `
-      <ram:IncludedSupplyChainTradeLineItem>
-        <ram:AssociatedDocumentLineDocument>
-          <ram:LineID>${i + 1}</ram:LineID>
-        </ram:AssociatedDocumentLineDocument>
-        <ram:SpecifiedTradeProduct>
-          <ram:Name>${item.name || item.description || ""}</ram:Name>
-        </ram:SpecifiedTradeProduct>
-      </ram:IncludedSupplyChainTradeLineItem>
-    `).join("")}
-  </rsm:SupplyChainTradeTransaction>
-</rsm:CrossIndustryInvoice>`;
-  }
-
-  function generateWooCommerceXML(data) {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<InvoiceSource>WooCommerce</InvoiceSource>
-<InvoiceNumber>${orderId}</InvoiceNumber>
-<Date>${date}</Date>`;
-  }
-
   const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
-
   switch (src) {
     case "dev":
     case "standard":
     case "pro":
-      return generateDevXML(invoiceData);
-    case "friendly":
-    case "premium":
-      return generateFriendlyXML(invoiceData);
-    case "shopify":
-      return generateShopifyXML(invoiceData);
-    case "woocommerce":
-      return generateWooCommerceXML(invoiceData);
+      return generateDevXML();
     default:
       throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
   }
+}
+
+/**
+ * FINAL HELPER: Convert PDF to PDF/A-3b and embed ZUGFeRD XML
+ */
+async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
+  const pdfA3bBuffer = await makePdfA3b(pdfBuffer, options);
+
+  const { PDFDocument } = require("pdf-lib");
+  const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
+
+  embedXmlIntoPdf(pdfDoc, zugferdXml);
+
+  const finalBuffer = await pdfDoc.save();
+  return finalBuffer;
 }
 
 module.exports = {
   generateZugferdXML,
   embedXmp,
   embedXmlIntoPdf,
-  makePdfA3b
+  makePdfA3b,
+  finalizePdfWithXml
 };
