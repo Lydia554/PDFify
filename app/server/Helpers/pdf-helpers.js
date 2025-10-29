@@ -13,7 +13,7 @@ const { v4: uuidv4 } = require("uuid");
 const DEFAULT_ICC = path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
 /**
- * Embed XMP metadata
+ * Embed XMP metadata into PDF
  */
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -43,7 +43,6 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return;
 
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
-
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text/xml"),
@@ -69,7 +68,7 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Embed ICC OutputIntent (pdf-lib in-place)
+ * Embed ICC OutputIntent (pdf-lib)
  */
 async function embedIccProfile(pdfDoc, iccPath) {
   if (!fs.existsSync(iccPath)) {
@@ -95,41 +94,38 @@ async function embedIccProfile(pdfDoc, iccPath) {
 }
 
 /**
- * Make PDF/A-3b: XMP + XML + ICC, via Ghostscript to fix startxref issues
+ * Make PDF/A-3b via Ghostscript after embedding XMP, XML, and ICC
  */
 async function makePdfA3b(pdfBuffer, xml, options = {}) {
   const iccPath =
     options.iccProfilePath || process.env.ICC_PROFILE_PATH || process.env.PDFA_ICC_PROFILE || DEFAULT_ICC;
 
-  if (!pdfBuffer || pdfBuffer.length === 0) {
-    console.warn("[makePdfA3b] Empty PDF buffer — skipping");
-    return pdfBuffer;
-  }
+  if (!pdfBuffer || pdfBuffer.length === 0) return pdfBuffer;
 
-  // Load PDF with pdf-lib
+  // Load PDF
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Embed XMP and ZUGFeRD XML
+  // Embed metadata and XML
   await embedXmp(pdfDoc);
   embedXmlIntoPdf(pdfDoc, xml);
 
-  // Embed ICC in pdf-lib (optional, but Ghostscript will finalize)
+  // Embed ICC (pdf-lib)
   await embedIccProfile(pdfDoc, iccPath);
 
-  // Save intermediate PDF to a temp file
+  // Save intermediate PDF
   const tmpIn = path.join(os.tmpdir(), `tmp-${uuidv4()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `tmp-${uuidv4()}-a3b.pdf`);
   fs.writeFileSync(tmpIn, await pdfDoc.save({ useObjectStreams: false }));
 
-  // Ghostscript command to produce PDF/A-3b
+  // Ghostscript command
   const gsCmd = [
     "-dPDFA=3",
     "-dBATCH",
     "-dNOPAUSE",
     "-dNOOUTERSAVE",
     "-sProcessColorModel=DeviceRGB",
-    `-sDEVICE=pdfwrite`,
-    `-sPDFACompatibilityPolicy=1`,
+    "-sDEVICE=pdfwrite",
+    "-sPDFACompatibilityPolicy=1",
     `-sOutputFile=${tmpOut}`,
     tmpIn,
   ];
@@ -141,18 +137,15 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
     throw err;
   }
 
-  // Read final Ghostscript PDF
   const finalBuffer = fs.readFileSync(tmpOut);
 
-  // Cleanup temp files
+  // Cleanup
   fs.unlinkSync(tmpIn);
   fs.unlinkSync(tmpOut);
 
   console.log("[makePdfA3b] Ghostscript PDF/A-3b buffer size:", finalBuffer.length);
-
   return finalBuffer;
 }
-
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
