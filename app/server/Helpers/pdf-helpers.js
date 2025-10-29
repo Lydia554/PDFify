@@ -84,23 +84,27 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
+  // Resolve ICC profile path relative to Helpers folder (portable)
+  const iccPath =
+    options.iccProfilePath ||
+    path.resolve(__dirname, "sRGB_v4_ICC_preference.icc");
+
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-
   const logDir = path.join(__dirname, "../logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
-  // Pre-checks
+  // 🔍 Pre-checks
   if (!fs.existsSync(iccPath)) {
-    const msg = `[makePdfA3b] ICC profile missing: ${iccPath}`;
+    const msg = `[makePdfA3b] ❌ ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
     console.error(msg);
     return pdfBuffer;
   }
+
   if (!pdfBuffer || pdfBuffer.length === 0) {
-    const msg = `[makePdfA3b] Input PDF buffer is empty`;
+    const msg = `[makePdfA3b] ❌ Input PDF buffer is empty`;
     await fs.promises.writeFile(logFile, msg);
     console.error(msg);
     return pdfBuffer;
@@ -108,34 +112,39 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-const gsArgs = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-sDEVICE=pdfwrite",
-  `-sOutputFile=${tmpOut}`,
-  "-sPDFACompatibilityPolicy=1",
-  "-dEmbedAllFonts=true",
-  "-dColorConversionStrategy=/UseDeviceIndependentColor",
-  "-dUseCIEColor=true",
-  `-sOutputICCProfile=${iccPath}`,
-  tmpIn,
-];
-
+  // ✅ Ghostscript arguments for PDF/A-3b + ICC embedding
+  const gsArgs = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-sDEVICE=pdfwrite",
+    `-sOutputFile=${tmpOut}`,
+    "-sPDFACompatibilityPolicy=1",
+    "-dEmbedAllFonts=true",
+    "-dUseCIEColor=true",
+    "-dColorConversionStrategy=/UseDeviceIndependentColor",
+    `-sOutputICCProfile=${iccPath}`,
+    tmpIn,
+  ];
 
   try {
-    console.log("[makePdfA3b] Running Ghostscript command:", "gs", gsArgs.join(" "));
+    console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
     await execFileAsync("gs", gsArgs, { encoding: "utf8" });
 
-    console.log("[makePdfA3b] PDF/A-3b conversion successful");
+    console.log("✅ PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
-    return finalBuffer;
 
+    // Optionally save an inspection copy
+    const finalPath = path.join(__dirname, "../Generated", `phase5_final_${Date.now()}.pdf`);
+    await fs.promises.writeFile(finalPath, finalBuffer);
+    console.log(`✅ Saved inspection copy: ${finalPath}`);
+
+    return finalBuffer;
   } catch (err) {
     const logContent = `
-[makePdfA3b] Ghostscript conversion failed
+❌ [makePdfA3b] Ghostscript conversion failed
 Tmp Input: ${tmpIn}
 Tmp Output: ${tmpOut}
 ICC Path: ${iccPath}
@@ -148,7 +157,7 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
     await fs.promises.writeFile(logFile, logContent);
     console.error(logContent);
     console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-    return pdfBuffer; // fallback
+    return pdfBuffer;
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
