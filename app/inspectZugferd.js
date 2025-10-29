@@ -1,36 +1,55 @@
 const fs = require("fs");
-const zlib = require("zlib");
-const { PDFDocument, PDFName } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFArray } = require("pdf-lib");
 
 async function inspectPdf(filePath) {
   const pdfBytes = fs.readFileSync(filePath);
   const pdfDoc = await PDFDocument.load(pdfBytes);
 
   const catalog = pdfDoc.catalog;
-  const af = catalog.get(PDFName.of("AF"));
-  if (!af) {
+  const afRef = catalog.get(PDFName.of("AF"));
+  if (!afRef) {
     console.log("❌ No Associated Files (AF) found. ZUGFeRD XML missing.");
     return;
   }
 
+  // Lookup AF array
+  const afArray = pdfDoc.context.lookup(afRef);
+  let refs = [];
+  if (afArray instanceof PDFArray) {
+    refs = afArray.asArray();
+  } else if (Array.isArray(afArray)) {
+    refs = afArray;
+  } else {
+    refs = [afArray];
+  }
+
   console.log("✅ Associated Files (AF) found. Checking names...");
 
-  const afArray = pdfDoc.context.lookup(af);
-  for (const ref of afArray.array) {
+  for (const ref of refs) {
     const fileSpec = pdfDoc.context.lookup(ref);
-    const fname = fileSpec.get(PDFName.of("F"));
-    console.log("- Embedded file:", fname.value);
+    const fname = fileSpec.get(PDFName.of("F"))?.value || "unknown.xml";
+    console.log("- Embedded file:", fname);
 
-    const ef = fileSpec.get(PDFName.of("EF"));
-    const fStream = pdfDoc.context.lookup(ef.get(PDFName.of("F")));
+    const efDict = fileSpec.get(PDFName.of("EF"));
+    if (!efDict) {
+      console.log("  ❌ EF dictionary missing for this file");
+      continue;
+    }
 
-    // Extract compressed bytes
-    const compressedBytes = fStream.getContents();
-    const xmlBytes = zlib.inflateSync(compressedBytes); // decompress
+    const fStreamRef = efDict.get(PDFName.of("F"));
+    const fStream = pdfDoc.context.lookup(fStreamRef);
 
-    console.log("  --- XML content preview ---");
+    const xmlBytes = fStream.getContents(); // pdf-lib automatically decompresses
+
+    // Save to disk
+    const outputPath = `./extracted-${fname}`;
+    fs.writeFileSync(outputPath, xmlBytes);
+    console.log(`✅ XML extracted to: ${outputPath}`);
+
+    console.log("  --- XML preview ---");
     console.log(xmlBytes.toString("utf8").slice(0, 500)); // first 500 chars
   }
 }
 
+// Usage
 inspectPdf("./Order_10348230934851.pdf");

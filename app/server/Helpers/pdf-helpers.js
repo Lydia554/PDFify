@@ -47,41 +47,40 @@ async function embedXmp(pdfDoc) {
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  // Convert XML to UTF-8 bytes
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
 
-  // Create Flate-compressed stream for XML
+  // Flate stream
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text#2Fxml"),
+    Subtype: PDFName.of("text#2Fxml"), // PDF escaped
   });
+  const xmlRef = pdfDoc.context.register(xmlStream);
 
-  const xmlStreamRef = pdfDoc.context.register(xmlStream);
-
-  // File specification dictionary
+  // FileSpec dictionary
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
-    EF: pdfDoc.context.obj({ F: xmlStreamRef }),
+    EF: { F: xmlRef },
   });
-
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
-  const catalog = pdfDoc.catalog;
 
-  // Associate the file in AF array
-  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+  // Associate AF (array of indirect references)
+  const afArray = pdfDoc.context.obj([fileSpecRef]);
+  pdfDoc.catalog.set(PDFName.of("AF"), afArray);
 
-  // Also add EmbeddedFiles name tree
-  const embeddedFilesDict = pdfDoc.context.obj({
-    Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+  // EmbeddedFiles name tree (optional but recommended)
+  const namesDict = pdfDoc.context.obj({
+    EmbeddedFiles: pdfDoc.context.obj({
+      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+    }),
   });
-  const namesDict = pdfDoc.context.obj({ EmbeddedFiles: embeddedFilesDict });
-  catalog.set(PDFName.of("Names"), namesDict);
+  pdfDoc.catalog.set(PDFName.of("Names"), namesDict);
 
   return pdfDoc;
 }
+
 
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
