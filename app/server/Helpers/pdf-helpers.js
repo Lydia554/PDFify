@@ -200,7 +200,8 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-  const src = (invoiceData.source || invoiceData.invoiceSource || "").toLowerCase();
+const src = (invoiceData.source || invoiceData.invoiceSource || "").trim().toLowerCase();
+
   switch (src) {
     case "dev":
     case "standard":
