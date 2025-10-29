@@ -112,12 +112,13 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
   // Clear DOCINFO metadata to avoid Ghostscript errors
-  pdfDoc.setTitle('');
-  pdfDoc.setAuthor('');
-  pdfDoc.setSubject('');
-  pdfDoc.setKeywords('');
-  pdfDoc.setProducer('');
-  pdfDoc.setCreator('');
+pdfDoc.setTitle('');
+pdfDoc.setAuthor('');
+pdfDoc.setSubject('');
+pdfDoc.setKeywords([]); 
+pdfDoc.setProducer('');
+pdfDoc.setCreator('');
+
 
   // Embed XMP metadata and ZUGFeRD XML
   await embedXmp(pdfDoc);
