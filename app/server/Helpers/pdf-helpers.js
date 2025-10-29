@@ -1,3 +1,6 @@
+// -----------------------------
+// pdf-helpers.js
+// -----------------------------
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -91,7 +94,7 @@ async function embedIccProfile(pdfDoc, iccPath) {
 }
 
 // -----------------------------
-// Make PDF/A-3b with Ghostscript
+// Make PDF/A-3b + ZUGFeRD
 // -----------------------------
 async function makePdfA3b(pdfBuffer, xml, options = {}) {
   const iccPath =
@@ -103,9 +106,23 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Embed XMP, ZUGFeRD XML, and ICC
+  // -----------------------------
+  // IMPORTANT: clear DOCINFO to avoid Ghostscript XMP issues
+  // -----------------------------
+  pdfDoc.setTitle("");
+  pdfDoc.setAuthor("");
+  pdfDoc.setSubject("");
+  pdfDoc.setKeywords([]);
+  pdfDoc.setProducer("");
+  pdfDoc.setCreator("");
+  pdfDoc.setCreationDate(new Date());
+  pdfDoc.setModificationDate(new Date());
+
+  // Embed XMP and XML
   await embedXmp(pdfDoc);
   embedXmlIntoPdf(pdfDoc, xml);
+
+  // Embed ICC profile
   await embedIccProfile(pdfDoc, iccPath);
   console.log("[makePdfA3b] XMP, ICC, and XML embedded into pdf-lib PDF");
 
@@ -128,7 +145,6 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
     `-sOutputFile=${tmpOut}`,
     tmpIn,
   ];
-  console.log("[makePdfA3b] Running Ghostscript:", gsCmd.join(" "));
 
   try {
     await execFileAsync("gs", gsCmd);
@@ -147,6 +163,8 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   console.log("[makePdfA3b] PDF/A-3b buffer size:", finalBuffer.length);
   return finalBuffer;
 }
+
+
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
