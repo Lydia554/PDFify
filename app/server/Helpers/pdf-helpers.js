@@ -14,7 +14,7 @@ const { PDFName, PDFString } = require("pdf-lib");
  * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
-  const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
@@ -34,50 +34,49 @@ async function embedXmp(pdfDoc) {
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
 
-  // Ensure MarkInfo is present for PDF/A
-  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
-
   return pdfDoc;
 }
 
+
 /**
- * Embed ZUGFeRD XML into PDF
+ * Embed ZUGFeRD XML into PDF 
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
+
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  const xmlBytes = Buffer.from(xml.trim(), "utf8");
+  const xmlBytes = Buffer.from(xml.trim(), "utf8"); 
 
   // Flate stream for embedded file
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text/xml"),
+    Subtype: PDFName.of("text/xml"), 
   });
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
-    Desc: PDFString.of("ZUGFeRD XML Invoice"),
     AFRelationship: PDFName.of("Alternative"),
     EF: { F: xmlStream },
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
-
   const catalog = pdfDoc.catalog;
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  const embeddedFiles = pdfDoc.context.obj({
-    Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+  const namesDict = pdfDoc.context.obj({
+    EmbeddedFiles: pdfDoc.context.obj({
+      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+    }),
   });
-
-  catalog.set(PDFName.of("Names"), pdfDoc.context.obj({ EmbeddedFiles: embeddedFiles }));
+  catalog.set(PDFName.of("Names"), namesDict);
 
   return pdfDoc;
 }
+
 
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
@@ -85,9 +84,11 @@ function embedXmlIntoPdf(pdfDoc, xml) {
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  const iccPath =
-    options.iccProfilePath ||
-    path.resolve(__dirname, "sRGB_v4_ICC_preference.icc");
+// Use absolute ICC path for testing
+const iccPath =
+  options.iccProfilePath ||
+  "C:\\Users\\goldb\\Pro\\PDF-API\\app\\server\\Helpers\\sRGB_v4_ICC_preference.icc";
+
 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
@@ -95,6 +96,7 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
+  // 🔍 Pre-checks
   if (!fs.existsSync(iccPath)) {
     const msg = `[makePdfA3b] ❌ ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
@@ -111,29 +113,37 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  const gsArgs = [
-    "-dPDFA=3",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-sDEVICE=pdfwrite",
-    `-sOutputFile=${tmpOut}`,
-    "-sPDFACompatibilityPolicy=1",
-    "-dEmbedAllFonts=true",
-    "-dUseCIEColor=true",
-    "-dColorConversionStrategy=/UseDeviceIndependentColor",
-    `-sOutputICCProfile=${iccPath}`,
-    tmpIn,
-  ];
+  // Ghostscript arguments for PDF/A-3b + ICC embedding
+const gsArgs = [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-sDEVICE=pdfwrite",
+  `-sOutputFile=${tmpOut}`,
+  "-sPDFACompatibilityPolicy=1",
+  "-dEmbedAllFonts=true",
+  "-dUseCIEColor=true",
+  "-dColorConversionStrategy=/UseDeviceIndependentColor",
+  `-sOutputICCProfile=${iccPath}`,
+  tmpIn,
+];
+
 
   try {
     console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
-    await execFileAsync("gs", gsArgs, { encoding: "utf8", cwd: path.dirname(iccPath), env: { ...process.env } });
+    await execFileAsync("gs", gsArgs, {
+  encoding: "utf8",
+  cwd: path.dirname(iccPath),
+  env: { ...process.env },
+});
+
 
     console.log("✅ PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
 
+    // Optionally save an inspection copy
     const finalPath = path.join(__dirname, "../Generated", `phase5_final_${Date.now()}.pdf`);
     await fs.promises.writeFile(finalPath, finalBuffer);
     console.log(`✅ Saved inspection copy: ${finalPath}`);
@@ -238,13 +248,18 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-  function generateShopifyXML(data) {
-    const currency = data.currency || "EUR";
-    const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
-    const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
-    const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
+function generateShopifyXML(data) {
+  const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
+  const date = data.date || new Date().toISOString().split("T")[0];
+  const items = Array.isArray(data.items) ? data.items : [];
+  const currency = data.currency || "EUR";
 
-    return `<?xml version="1.0" encoding="UTF-8"?>
+  // calculate totals
+  const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
+  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
+  const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice
   xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p3"
   xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
@@ -265,6 +280,7 @@ function generateZugferdXML(invoiceData) {
   </rsm:ExchangedDocument>
 
   <rsm:SupplyChainTradeTransaction>
+
     ${items.map((item, i) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
@@ -294,9 +310,11 @@ function generateZugferdXML(invoiceData) {
         <ram:GrandTotalAmount currencyID="${currency}">${totalGross.toFixed(2)}</ram:GrandTotalAmount>
       </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
     </ram:ApplicableHeaderTradeSettlement>
+
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
-  }
+}
+
 
   function generateWooCommerceXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>
