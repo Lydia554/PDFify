@@ -77,18 +77,16 @@ function embedXmlIntoPdf(pdfDoc, xml) {
   return pdfDoc;
 }
 
-
 /**
  * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-// Use absolute ICC path for testing
-const iccPath =
-  options.iccProfilePath ||
-  "C:\\Users\\goldb\\Pro\\PDF-API\\app\\server\\Helpers\\sRGB_v4_ICC_preference.icc";
-
+  // Use absolute ICC path for testing
+  const iccPath =
+    options.iccProfilePath ||
+    "C:\\Users\\goldb\\Pro\\PDF-API\\app\\server\\Helpers\\sRGB_v4_ICC_preference.icc";
 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
@@ -96,7 +94,7 @@ const iccPath =
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
-  // 🔍 Pre-checks
+  // Pre-checks
   if (!fs.existsSync(iccPath)) {
     const msg = `[makePdfA3b] ❌ ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
@@ -113,45 +111,42 @@ const iccPath =
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  // Ghostscript arguments for PDF/A-3b + ICC embedding
-const gsArgs = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-sDEVICE=pdfwrite",
-  `-sOutputFile=${tmpOut}`,
-  "-sPDFACompatibilityPolicy=1",
-  "-dEmbedAllFonts=true",
-  "-dUseCIEColor=true",
-  "-dColorConversionStrategy=/UseDeviceIndependentColor",
-  `-sOutputICCProfile=${iccPath}`,
-  tmpIn,
-];
-
+  // Ghostscript arguments
+  const gsArgs = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-sDEVICE=pdfwrite",
+    `-sOutputFile=${tmpOut}`,
+    "-sPDFACompatibilityPolicy=1",
+    "-dEmbedAllFonts=true",
+    "-dUseCIEColor=true",
+    "-dColorConversionStrategy=/UseDeviceIndependentColor",
+    `-sOutputICCProfile=${iccPath}`,
+    tmpIn,
+  ];
 
   try {
     console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
     await execFileAsync("gs", gsArgs, {
-  encoding: "utf8",
-  cwd: path.dirname(iccPath),
-  env: { ...process.env },
-});
-
+      encoding: "utf8",
+      cwd: path.dirname(iccPath),
+      env: { ...process.env },
+    });
 
     console.log("✅ PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
 
     const finalBuffer = await fs.promises.readFile(tmpOut);
 
-    // Optionally save an inspection copy
+    // Save optional inspection copy
     const finalPath = path.join(__dirname, "../Generated", `phase5_final_${Date.now()}.pdf`);
     await fs.promises.writeFile(finalPath, finalBuffer);
     console.log(`✅ Saved inspection copy: ${finalPath}`);
 
     return finalBuffer;
   } catch (err) {
-    const logContent = `
-❌ [makePdfA3b] Ghostscript conversion failed
+    const logContent = `❌ [makePdfA3b] Ghostscript conversion failed
 Tmp Input: ${tmpIn}
 Tmp Output: ${tmpOut}
 ICC Path: ${iccPath}
@@ -170,6 +165,7 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
     fs.unlink(tmpOut, () => {});
   }
 }
+
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
