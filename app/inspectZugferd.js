@@ -1,17 +1,13 @@
-// inspectZugferd.js
 const fs = require("fs");
 const path = require("path");
-const {
-  generateZugferdXML,
-  finalizePdfWithXml
-} = require("./server/Helpers/pdf-helpers"); // adjust path to your helpers
+const { generateZugferdXML, finalizePdfWithXml, makePdfA3b } = require("./server/Helpers/pdf-helpers"); // adjust path
 
 async function testFinalize() {
-  // 1️⃣ Load a sample PDF
+  // 1️⃣ Load sample PDF
   const originalPdfPath = path.join(__dirname, "Order_10348230934851.pdf");
   const originalPdfBuffer = fs.readFileSync(originalPdfPath);
 
-  // 2️⃣ Generate a ZUGFeRD XML
+  // 2️⃣ Generate ZUGFeRD XML
   const zugferdXml = generateZugferdXML({
     invoiceNumber: "1129",
     date: "2025-10-29",
@@ -42,8 +38,9 @@ async function testFinalize() {
     console.log(`- Embedded file: ${fname}`);
   }
 
-  // 5️⃣ Final PDF/A-3b with Ghostscript
-  const finalBuffer = await finalizePdfWithXml(originalPdfBuffer, zugferdXml);
+  // 5️⃣ Run Ghostscript on the saved PDF file
+  console.log("📄 Converting to PDF/A-3b with Ghostscript...");
+  const finalBuffer = await makePdfA3b(fs.readFileSync(preGsPath));
   fs.writeFileSync(path.join(__dirname, "final_with_xml.pdf"), finalBuffer);
   console.log("✅ Final PDF/A-3b saved: final_with_xml.pdf");
 }

@@ -3,16 +3,16 @@
 // -----------------------------
 const fs = require("fs");
 const path = require("path");
-const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
+const { execFile } = require("child_process");
 const execFileAsync = util.promisify(execFile);
-const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 
 const ICC_PROFILE_PATH = process.env.ICC_PROFILE_PATH || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
 /**
- * Step 1 – Clean PDF buffer: remove any leading garbage before %PDF-
+ * Step 1 – Clean PDF buffer (remove any garbage before %PDF-)
  */
 function cleanPdfBuffer(buf) {
   const pdfStart = buf.indexOf(Buffer.from("%PDF-"));
@@ -21,7 +21,7 @@ function cleanPdfBuffer(buf) {
 }
 
 /**
- * Step 2 – Embed XMP metadata
+ * Embed XMP metadata
  */
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -34,10 +34,9 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
+  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
-    Filter: PDFName.of("FlateDecode"),
   });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
@@ -48,13 +47,13 @@ async function embedXmp(pdfDoc) {
 }
 
 /**
- * Step 3 – Embed ZUGFeRD XML into PDFDocument
+ * Step 2 – Embed ZUGFeRD XML without compression
  */
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
-  const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
+  const xmlStream = pdfDoc.context.stream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text#2Fxml"),
   });
@@ -83,34 +82,28 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Step 4 – Convert to PDF/A-3b with Ghostscript while preserving XML
+ * Step 3 – Convert PDF to PDF/A-3b using Ghostscript
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  // Clean PDF first
   pdfBuffer = cleanPdfBuffer(pdfBuffer);
 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  // Ghostscript executable detection
-  let gsExecutable = "gs";
+  let gsExecutable = "gs"; 
   if (process.platform === "win32") gsExecutable = "gswin64c";
 
+  // Minimal Ghostscript args first
   const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
   const gsArgs = [
     "-dPDFA",
     "-dBATCH",
     "-dNOPAUSE",
-    "-sProcessColorModel=DeviceRGB",
     "-sDEVICE=pdfwrite",
     `-sOutputFile=${tmpOut}`,
-    "-sPDFACompatibilityPolicy=1",
-    "-dEmbedAllFonts=true",
-    "-dAutoRotatePages=/None",
-    "-dColorConversionStrategy=/sRGB",
     `-sOutputICCProfile=${iccPath}`,
-    "-dPassThroughAF=true",
+    "-dEmbedAllFonts=true",
     tmpIn,
   ];
 
@@ -122,7 +115,6 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     fs.unlink(tmpOut, () => {});
   }
 }
-
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
  * @param {Object} invoiceData
@@ -259,26 +251,14 @@ function generateZugferdXML(invoiceData) {
 
 
 /**
- * Finalize PDF: embed XML, embed XMP, and convert to PDF/A-3b
+ * Step 4 – Finalize PDF: embed XML + XMP + convert to PDF/A-3b
  */
-async function finalizePdfWithXml(originalBuffer, xml, options = {}) {
-  let pdfDoc = await PDFDocument.load(originalBuffer);
-
-  // Embed XML
+async function finalizePdfWithXml(pdfBuffer, xml, options = {}) {
+  let pdfDoc = await PDFDocument.load(pdfBuffer);
   pdfDoc = embedXmlIntoPdf(pdfDoc, xml);
-
-  // Embed XMP metadata
   pdfDoc = await embedXmp(pdfDoc);
-
-  // Write intermediate buffer
-  const intermediateBuffer = await pdfDoc.save();
-
-  // Skip Ghostscript if requested
-  if (options.skipGs) return intermediateBuffer;
-
-  // Convert to PDF/A-3b with XML preserved
-  const pdfA3bBuffer = await makePdfA3b(intermediateBuffer, options);
-  return pdfA3bBuffer;
+  const finalBuffer = await pdfDoc.save();
+  return await makePdfA3b(finalBuffer, options);
 }
 
 
