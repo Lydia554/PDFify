@@ -79,12 +79,12 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 
 
 /**
- * Post-process PDF for PDF/A-3b compliance and ICC embedding
+ * Post-process PDF for PDF/A-3b compliance with correct ICC embedding
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
+  const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
   const logDir = path.join(__dirname, "../logs");
@@ -107,11 +107,13 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // --- Embed ICC OutputIntent automatically ---
+  // --- Proper ICC OutputIntent embedding ---
   const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.flateStream(iccBytes, {
+  const iccStream = pdfDoc.context.stream(iccBytes, {
+    Type: PDFName.of("OutputIntent"),
+    Subtype: PDFName.of("ICCProfile"),
     N: 3,
-    Filter: PDFName.of("FlateDecode")
+    Filter: PDFName.of("FlateDecode"),
   });
   const iccRef = pdfDoc.context.register(iccStream);
 
@@ -121,10 +123,10 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
     Info: PDFString.of("sRGB IEC61966-2.1"),
     DestOutputProfile: iccRef,
-    RegistryName: PDFString.of("http://www.color.org")
+    RegistryName: PDFString.of("http://www.color.org"),
   });
-  const outputIntentRef = pdfDoc.context.register(outputIntent);
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([pdfDoc.context.register(outputIntent)]));
 
   // Save PDF with ICC embedded
   const bufferWithICC = await pdfDoc.save();
