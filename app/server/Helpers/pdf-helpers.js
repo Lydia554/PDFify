@@ -1,14 +1,24 @@
-// -----------------------------
-// pdf-helpers.js
-// -----------------------------
 const fs = require("fs");
 const path = require("path");
 const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
-const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 
+const TEMPLATE_PATH = path.resolve(__dirname, "templates/template_pdfa3b.pdf");
+
+/**
+ * Load PDF/A-3b template
+ * @returns {Promise<PDFDocument>}
+ */
+async function loadTemplate() {
+  if (!fs.existsSync(TEMPLATE_PATH)) {
+    throw new Error(`[loadTemplate] ❌ Template not found: ${TEMPLATE_PATH}`);
+  }
+  const templateBytes = await fs.promises.readFile(TEMPLATE_PATH);
+  return PDFDocument.load(templateBytes);
+}
 
 /**
  * Embed XMP metadata into PDF (PDF-lib compatible)
@@ -25,32 +35,28 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  const pdfLib = require("pdf-lib");
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
-    Type: pdfLib.PDFName.of("Metadata"),
-    Subtype: pdfLib.PDFName.of("XML"),
-    Filter: pdfLib.PDFName.of("FlateDecode"),
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
   });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
-  pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
+  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
 
   return pdfDoc;
 }
-
 
 /**
  * Embed ZUGFeRD XML into PDF 
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
-
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
   const xmlBytes = Buffer.from(xml.trim(), "utf8"); 
 
-  // Flate stream for embedded file
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text/xml"), 
@@ -79,7 +85,7 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Post-process PDF for PDF/A-3b compliance with **direct ICC embedding**
+ * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
@@ -88,58 +94,79 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     options.iccProfilePath ||
     path.resolve(__dirname, "sRGB_v4_ICC_preference.icc");
 
+  const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
+  const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
+  const logDir = path.join(__dirname, "../logs");
+  if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
+  const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
+
   if (!fs.existsSync(iccPath)) {
-    console.error(`[makePdfA3b] ❌ ICC profile missing: ${iccPath}`);
+    const msg = `[makePdfA3b] ❌ ICC profile missing: ${iccPath}`;
+    await fs.promises.writeFile(logFile, msg);
+    console.error(msg);
     return pdfBuffer;
   }
 
   if (!pdfBuffer || pdfBuffer.length === 0) {
-    console.error(`[makePdfA3b] ❌ Input PDF buffer is empty`);
+    const msg = `[makePdfA3b] ❌ Input PDF buffer is empty`;
+    await fs.promises.writeFile(logFile, msg);
+    console.error(msg);
     return pdfBuffer;
   }
 
-  // Load PDF in PDF-lib
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  // Embed ICC profile as OutputIntent
-  const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.flateStream(iccBytes, {
-    N: 3, // RGB profile
-  });
-  const iccRef = pdfDoc.context.register(iccStream);
+  const gsArgs = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-sDEVICE=pdfwrite",
+    `-sOutputFile=${tmpOut}`,
+    "-sPDFACompatibilityPolicy=1",
+    "-dEmbedAllFonts=true",
+    "-dUseCIEColor=true",
+    "-dColorConversionStrategy=/UseDeviceIndependentColor",
+    `-sOutputICCProfile=${iccPath}`,
+    tmpIn,
+  ];
 
-  const outputIntentDict = pdfDoc.context.obj({
-    Type: PDFName.of("OutputIntent"),
-    S: PDFName.of("GTS_PDFA1"),
-    OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
-  });
-  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+  try {
+    console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
+    await execFileAsync("gs", gsArgs, {
+      encoding: "utf8",
+      cwd: path.dirname(iccPath),
+      env: { ...process.env },
+    });
 
-  pdfDoc.catalog.set(
-    PDFName.of("OutputIntents"),
-    pdfDoc.context.obj([outputIntentRef])
-  );
+    console.log("✅ PDF/A-3b conversion successful");
+    await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
 
-  // Optional: embed XMP
-  if (options.embedXmp) await embedXmp(pdfDoc);
+    const finalBuffer = await fs.promises.readFile(tmpOut);
 
-  const finalBuffer = await pdfDoc.save();
-
-  // Optional: save inspection copy
-  if (options.saveInspectionCopy) {
-    const finalPath = path.join(
-      __dirname,
-      "../Generated",
-      `phase5_final_${Date.now()}.pdf`
-    );
-    fs.writeFileSync(finalPath, finalBuffer);
+    const finalPath = path.join(__dirname, "../Generated", `phase5_final_${Date.now()}.pdf`);
+    await fs.promises.writeFile(finalPath, finalBuffer);
     console.log(`✅ Saved inspection copy: ${finalPath}`);
+
+    return finalBuffer;
+  } catch (err) {
+    const logContent = `❌ [makePdfA3b] Ghostscript conversion failed
+Tmp Input: ${tmpIn}
+Tmp Output: ${tmpOut}
+ICC Path: ${iccPath}
+GS Command: gs ${gsArgs.join(" ")}
+Error: ${err.message}
+Stdout: ${err.stdout || ""}
+Stderr: ${err.stderr || ""}
+PDF Buffer Size: ${pdfBuffer.length} bytes
+`;
+    await fs.promises.writeFile(logFile, logContent);
+    console.error(logContent);
+    console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
+    return pdfBuffer;
+  } finally {
+    fs.unlink(tmpIn, () => {});
+    fs.unlink(tmpOut, () => {});
   }
-
-  console.log("✅ ICC embedded directly with PDF-lib; ready for VeraPDF");
-
-  return finalBuffer;
 }
 
 
