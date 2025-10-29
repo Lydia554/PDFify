@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-# Puppeteer dependencies + fonts
+# Puppeteer dependencies + fonts + Ghostscript
 RUN apt-get update && apt-get install -y \
     wget \
     ca-certificates \
@@ -29,16 +29,19 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Only copy package.json and package-lock.json first to cache layers
+# Copy package.json first for caching
 COPY ./app/package*.json ./
 
 # Install dependencies
 RUN npm install
 
-# Copy the rest of your app
-COPY ./app .
+# Copy the rest of the app
+COPY ./app ./
 
-# 👇 Add this to include your pdfa_def.ps file explicitly
+# Copy the ICC profile into Helpers
+COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
+
+# Copy PDF/A definition file
 COPY ./app/server/routes/pdfa_def.ps /app/pdfa_def.ps
 
 CMD ["node", "server/index.js"]

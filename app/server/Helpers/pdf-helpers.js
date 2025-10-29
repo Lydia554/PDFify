@@ -84,12 +84,13 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   require("dotenv").config();
 
   const iccPath =
-    options.iccProfilePath ||
-    process.env.ICC_PROFILE_PATH ||      
-    process.env.PDFA_ICC_PROFILE ||      
-    path.join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
+  options.iccProfilePath ||                   
+  process.env.ICC_PROFILE_PATH ||           
+  process.env.PDFA_ICC_PROFILE ||         
+  path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
 
-  console.log("[makePdfA3b] ICC profile path:", iccPath);
+
+console.log("[makePdfA3b] ICC profile path:", iccPath);
 
   if (!pdfBuffer || pdfBuffer.length === 0) {
     console.warn("[makePdfA3b] Empty PDF buffer received — skipping ICC embedding");
