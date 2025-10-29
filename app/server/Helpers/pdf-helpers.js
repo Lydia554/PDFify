@@ -7,7 +7,8 @@ const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
 const execFileAsync = util.promisify(execFile);
-const { PDFName, PDFString } = require("pdf-lib");
+const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
+
 
 /**
  * Embed XMP metadata into PDF (PDF-lib compatible)
