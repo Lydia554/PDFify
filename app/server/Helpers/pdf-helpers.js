@@ -152,12 +152,21 @@ function generateZugferdXML(invoiceData) {
 </rsm:CrossIndustryInvoice>`;
   }
 
-  function generateShopifyXML(data) {
-    const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
-    const date = data.date || new Date().toISOString().split("T")[0];
-    const items = Array.isArray(data.items) ? data.items : [];
+function generateShopifyXML(data) {
+  const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
+  const date = data.date || new Date().toISOString().split("T")[0];
+  const items = Array.isArray(data.items) ? data.items : [];
+  const currency = data.currency || "EUR";
+  const buyerName = data.customerName || "Valued Customer";
+  const sellerName = data.companyName || "YOUR COMPANY GMBH";
+  const iban = data.iban || "DE89370400440532013000";
+  const bic = data.bic || "COBADEFFXXX";
 
-    return `<?xml version="1.0" encoding="UTF-8"?>
+  const totalAmount = items.reduce((sum, i) => sum + (i.total || 0), 0);
+  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
+  const totalNet = totalAmount - totalTax;
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
   xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
   xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
@@ -168,8 +177,50 @@ function generateZugferdXML(invoiceData) {
       <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
     </ram:IssueDateTime>
   </rsm:ExchangedDocument>
+
+  <rsm:ApplicableHeaderTradeAgreement>
+    <ram:SellerTradeParty>
+      <ram:Name>${sellerName}</ram:Name>
+      <ram:SpecifiedTaxRegistration>
+        <ram:ID schemeID="VAT">DE123456789</ram:ID>
+      </ram:SpecifiedTaxRegistration>
+    </ram:SellerTradeParty>
+    <ram:BuyerTradeParty>
+      <ram:Name>${buyerName}</ram:Name>
+    </ram:BuyerTradeParty>
+  </rsm:ApplicableHeaderTradeAgreement>
+
+  <rsm:ApplicableHeaderTradeDelivery>
+    <ram:ActualDeliverySupplyChainEvent>
+      <ram:OccurrenceDateTime>
+        <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
+      </ram:OccurrenceDateTime>
+    </ram:ActualDeliverySupplyChainEvent>
+  </rsm:ApplicableHeaderTradeDelivery>
+
+  <rsm:ApplicableHeaderTradeSettlement>
+    <ram:PaymentReference>${orderId}</ram:PaymentReference>
+    <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>
+    <ram:InvoiceTotalAmount>${totalAmount.toFixed(2)}</ram:InvoiceTotalAmount>
+    <ram:TaxTotalAmount>${totalTax.toFixed(2)}</ram:TaxTotalAmount>
+    <ram:LineTotalAmount>${totalNet.toFixed(2)}</ram:LineTotalAmount>
+    <ram:SpecifiedTradeSettlementPaymentMeans>
+      <ram:TypeCode>31</ram:TypeCode>
+      <ram:PayeeFinancialAccount>
+        <ram:IBANID>${iban}</ram:IBANID>
+        <ram:BICID>${bic}</ram:BICID>
+      </ram:PayeeFinancialAccount>
+    </ram:SpecifiedTradeSettlementPaymentMeans>
+  </rsm:ApplicableHeaderTradeSettlement>
+
   <rsm:SupplyChainTradeTransaction>
-    ${items.map((item, i) => `
+    ${items.map((item, i) => {
+      const qty = Number(item.quantity || 1);
+      const unitPrice = Number(item.price || 0);
+      const total = Number(item.total || qty * unitPrice);
+      const tax = Number(item.tax || 0);
+      const net = total - tax;
+      return `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
           <ram:LineID>${i + 1}</ram:LineID>
@@ -177,11 +228,30 @@ function generateZugferdXML(invoiceData) {
         <ram:SpecifiedTradeProduct>
           <ram:Name>${item.name || item.description || ""}</ram:Name>
         </ram:SpecifiedTradeProduct>
-      </ram:IncludedSupplyChainTradeLineItem>
-    `).join("")}
+        <ram:SpecifiedLineTradeAgreement>
+          <ram:GrossPriceProductTradePrice>
+            <ram:ChargeAmount>${unitPrice.toFixed(2)}</ram:ChargeAmount>
+            <ram:BasisQuantity unitCode="C62">${qty}</ram:BasisQuantity>
+          </ram:GrossPriceProductTradePrice>
+        </ram:SpecifiedLineTradeAgreement>
+        <ram:SpecifiedLineTradeDelivery>
+          <ram:BilledQuantity unitCode="C62">${qty}</ram:BilledQuantity>
+        </ram:SpecifiedLineTradeDelivery>
+        <ram:SpecifiedLineTradeSettlement>
+          <ram:ApplicableTradeTax>
+            <ram:CalculatedAmount>${tax.toFixed(2)}</ram:CalculatedAmount>
+            <ram:TypeCode>VAT</ram:TypeCode>
+            <ram:RateApplicablePercent>${item.taxRate ?? 21}</ram:RateApplicablePercent>
+          </ram:ApplicableTradeTax>
+          <ram:TradeSettlementLineAmount>${total.toFixed(2)}</ram:TradeSettlementLineAmount>
+          <ram:NetLineAmount>${net.toFixed(2)}</ram:NetLineAmount>
+        </ram:SpecifiedLineTradeSettlement>
+      </ram:IncludedSupplyChainTradeLineItem>`;
+    }).join("")}
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
-  }
+}
+
 
   function generateWooCommerceXML(data) {
     return `<?xml version="1.0" encoding="UTF-8"?>
