@@ -89,19 +89,27 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 
   console.log("[makePdfA3b] Input buffer size:", pdfBuffer.length);
 
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const { PDFDocument, PDFName } = require("pdf-lib");
+  const { embedXmp, embedXmlIntoPdf } = require("./pdf-helpers"); 
 
-  // embed everything in one pass
+  // Load PDF once
+  let pdfDoc = await PDFDocument.load(pdfBuffer);
+
+  // Embed XMP
   await embedXmp(pdfDoc);
-  await embedIccProfile(pdfDoc, iccPath); 
+
+  // Embed ZUGFeRD XML
   embedXmlIntoPdf(pdfDoc, xml);
 
-  
-  const finalBuffer = await pdfDoc.save({ useObjectStreams: false });
+  // Save intermediate PDF
+  let intermediateBuffer = await pdfDoc.save({ useObjectStreams: false });
+
+  // Now embed ICC via imported function which returns a Buffer
+  const finalBuffer = await require("./iccEmbed").embedIccProfile(intermediateBuffer, iccPath);
 
   console.log("[makePdfA3b] Final buffer size:", finalBuffer.length);
 
-  // optional check
+  // Optional check
   const doc = await PDFDocument.load(finalBuffer);
   const outputIntent = doc.catalog.get(PDFName.of("OutputIntents"));
   console.log("[makePdfA3b] OutputIntent present?", !!outputIntent);
