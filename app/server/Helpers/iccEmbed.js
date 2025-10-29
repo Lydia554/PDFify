@@ -1,5 +1,8 @@
+// -----------------------------
+// iccEmbed.js
+// -----------------------------
 const fs = require("fs");
-const { PDFName, PDFString } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 
 /**
  * Embed ICC profile into an existing PDFDocument (in-place)
@@ -12,21 +15,19 @@ async function embedIccProfile(pdfDoc, iccPath) {
   }
 
   const iccBytes = fs.readFileSync(iccPath);
-  const iccStream = pdfDoc.context.stream(iccBytes);
-  const iccRef = pdfDoc.context.register(iccStream);
 
-  const outputIntent = pdfDoc.context.obj({
+  // Create OutputIntent dictionary correctly
+  const outputIntentDict = pdfDoc.context.obj({
     Type: PDFName.of("OutputIntent"),
     S: PDFName.of("GTS_PDFA1"),
     OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
     Info: PDFString.of("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
+    DestOutputProfile: pdfDoc.context.stream(iccBytes, { Filter: PDFName.of("FlateDecode") }),
     RegistryName: PDFString.of("http://www.color.org"),
   });
 
-  const outputIntentRef = pdfDoc.context.register(outputIntent);
-  const arrRef = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"), arrRef);
+  const outputIntentRef = pdfDoc.context.register(outputIntentDict);
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
 }
 
 module.exports = { embedIccProfile };

@@ -3,13 +3,8 @@
 // -----------------------------
 const fs = require("fs");
 const path = require("path");
-const { execFile } = require("child_process");
-const os = require("os");
-const util = require("util");
-const execFileAsync = util.promisify(execFile);
-const { embedIccProfile } = require("./iccEmbed"); 
-
-const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+const { embedIccProfile } = require("./iccEmbed");
 
 /**
  * Embed XMP metadata
@@ -33,17 +28,16 @@ async function embedXmp(pdfDoc) {
 
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
-
-  return pdfDoc;
 }
 
 /**
  * Embed ZUGFeRD XML
  */
 function embedXmlIntoPdf(pdfDoc, xml) {
-  if (!xml) return pdfDoc;
+  if (!xml) return;
 
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
+
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text/xml"),
@@ -66,12 +60,10 @@ function embedXmlIntoPdf(pdfDoc, xml) {
     }),
   });
   pdfDoc.catalog.set(PDFName.of("Names"), namesDict);
-
-  return pdfDoc;
 }
 
 /**
- * Make PDF/A-3b with XML + ICC + XMP in a single pass
+ * Make PDF/A-3b with XMP + ZUGFeRD XML + ICC in a single pass
  */
 async function makePdfA3b(pdfBuffer, xml, options = {}) {
   const iccPath =
@@ -80,34 +72,34 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
     process.env.PDFA_ICC_PROFILE ||
     path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
-  console.log("[makePdfA3b] ICC profile path:", iccPath);
-
   if (!pdfBuffer || pdfBuffer.length === 0) {
-    console.warn("[makePdfA3b] Empty PDF buffer received — skipping");
+    console.warn("[makePdfA3b] Empty PDF buffer — skipping");
     return pdfBuffer;
   }
 
-  console.log("[makePdfA3b] Input buffer size:", pdfBuffer.length);
-
-  // Load PDF once
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Embed everything in-place
+  // Embed XMP metadata
   await embedXmp(pdfDoc);
-  embedXmlIntoPdf(pdfDoc, xml);
-  await embedIccProfile(pdfDoc, iccPath); 
 
-  // Save once
+  // Embed ZUGFeRD XML
+  embedXmlIntoPdf(pdfDoc, xml);
+
+  // Embed ICC OutputIntent
+  await embedIccProfile(pdfDoc, iccPath);
+
+  // Save PDF once, disabling object streams to avoid startxref errors
   const finalBuffer = await pdfDoc.save({ useObjectStreams: false });
-  console.log("[makePdfA3b] Final buffer size:", finalBuffer.length);
 
   // Optional verification
-  const doc = await PDFDocument.load(finalBuffer);
-  const outputIntent = doc.catalog.get(PDFName.of("OutputIntents"));
+  const docCheck = await PDFDocument.load(finalBuffer);
+  const outputIntent = docCheck.catalog.get(PDFName.of("OutputIntents"));
   console.log("[makePdfA3b] OutputIntent present?", !!outputIntent);
 
   return finalBuffer;
 }
+
+
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
