@@ -1,6 +1,3 @@
-// -----------------------------
-// pdf-helpers.js
-// -----------------------------
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
@@ -106,23 +103,11 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
 
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Clear DOCINFO metadata to avoid Ghostscript XMP issues
-  pdfDoc.setTitle('');
-  pdfDoc.setAuthor('');
-  pdfDoc.setSubject('');
-  pdfDoc.setKeywords([]);
-  pdfDoc.setProducer('');
-  pdfDoc.setCreator('');
-  pdfDoc.setCreationDate(new Date());
-  pdfDoc.setModificationDate(new Date());
-
-  // Embed XMP and ZUGFeRD XML
+  // Embed XMP, ZUGFeRD XML, and ICC
   await embedXmp(pdfDoc);
   embedXmlIntoPdf(pdfDoc, xml);
-
-  // Embed ICC
   await embedIccProfile(pdfDoc, iccPath);
-  console.log("[makePdfA3b] ICC embedded into pdf-lib PDF");
+  console.log("[makePdfA3b] XMP, ICC, and XML embedded into pdf-lib PDF");
 
   // Save intermediate PDF
   const tmpIn = path.join(os.tmpdir(), `tmp-${uuidv4()}.pdf`);
@@ -162,7 +147,6 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   console.log("[makePdfA3b] PDF/A-3b buffer size:", finalBuffer.length);
   return finalBuffer;
 }
-
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
