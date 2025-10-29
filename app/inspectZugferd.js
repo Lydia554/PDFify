@@ -1,33 +1,51 @@
+// inspectZugferd.js
 const fs = require("fs");
 const path = require("path");
 const {
   generateZugferdXML,
-  finalizePdfWithXml,
-} = require("./server/Helpers/pdf-helpers"); // updated path
+  finalizePdfWithXml
+} = require("./server/Helpers/pdf-helpers"); // adjust path to your helpers
 
 async function testFinalize() {
   // 1️⃣ Load a sample PDF
   const originalPdfPath = path.join(__dirname, "Order_10348230934851.pdf");
-  if (!fs.existsSync(originalPdfPath)) {
-    console.error("❌ Original PDF not found!");
-    return;
-  }
   const originalPdfBuffer = fs.readFileSync(originalPdfPath);
 
-  // 2️⃣ Generate a small test ZUGFeRD XML
-  const zugXml = generateZugferdXML({
-    source: "shopify",
+  // 2️⃣ Generate a ZUGFeRD XML
+  const zugferdXml = generateZugferdXML({
     invoiceNumber: "1129",
     date: "2025-10-29",
+    source: "shopify",
     items: [
-      { name: "Test Product", quantity: 1, unitPrice: 100, taxRate: 21 },
-    ],
+      { name: "Item A", quantity: 1, unitPrice: 100, taxRate: 21 },
+      { name: "Item B", quantity: 2, unitPrice: 50, taxRate: 21 }
+    ]
   });
 
-  // 3️⃣ Finalize PDF (PDF/A-3b + XML)
-  const finalBuffer = await finalizePdfWithXml(originalPdfBuffer, zugXml);
+  // 3️⃣ Save PDF with XML BEFORE Ghostscript
+  const preGsPath = path.join(__dirname, "check_before_gs.pdf");
+  const preGsPdf = await finalizePdfWithXml(originalPdfBuffer, zugferdXml, { skipGs: true });
+  fs.writeFileSync(preGsPath, preGsPdf);
+  console.log("✅ Saved check_before_gs.pdf");
 
-  console.log("✅ Test complete. Check 'final_with_xml.pdf'");
+  // 4️⃣ Inspect embedded XML
+  console.log("📄 Inspecting embedded XML in pre-GS PDF...");
+  const { PDFDocument, PDFName } = require("pdf-lib");
+  const pdfDoc = await PDFDocument.load(preGsPdf);
+  const af = pdfDoc.catalog.get(PDFName.of("AF"));
+  if (!af) return console.log("❌ No AF found.");
+
+  const afArray = pdfDoc.context.lookup(af);
+  for (const ref of afArray.array) {
+    const fileSpec = pdfDoc.context.lookup(ref);
+    const fname = fileSpec.get(PDFName.of("F")).value;
+    console.log(`- Embedded file: ${fname}`);
+  }
+
+  // 5️⃣ Final PDF/A-3b with Ghostscript
+  const finalBuffer = await finalizePdfWithXml(originalPdfBuffer, zugferdXml);
+  fs.writeFileSync(path.join(__dirname, "final_with_xml.pdf"), finalBuffer);
+  console.log("✅ Final PDF/A-3b saved: final_with_xml.pdf");
 }
 
 testFinalize().catch(console.error);

@@ -92,15 +92,11 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
  
-  let gsExecutable = "gs"; 
-  if (process.platform === "win32") {
-   
-    const gs64 = "C:\\Program Files\\gs\\gs10.03.0\\bin\\gswin64c.exe";
-    const gs32 = "C:\\Program Files (x86)\\gs\\gs9.56.1\\bin\\gswin32c.exe"; 
-    if (fs.existsSync(gs64)) gsExecutable = gs64;
-    else if (fs.existsSync(gs32)) gsExecutable = gs32;
-    else throw new Error("Ghostscript not found on Windows. Install it or adjust path.");
-  }
+let gsExecutable = "gs"; 
+if (process.platform === "win32") {
+  gsExecutable = "gswin64c"; 
+}
+
 
   const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
   const gsArgs = [
