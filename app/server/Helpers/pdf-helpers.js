@@ -3,6 +3,10 @@
 // -----------------------------
 const fs = require("fs");
 const path = require("path");
+const { execFile } = require("child_process");
+const util = require("util");
+const execFileAsync = util.promisify(execFile);
+
 const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 const { embedIccProfile } = require("./iccEmbed");
 
@@ -63,7 +67,7 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Make PDF/A-3b with XMP + ZUGFeRD XML + ICC in a single pass
+ * Make PDF/A-3b with XMP + ZUGFeRD XML + ICC + Ghostscript
  */
 async function makePdfA3b(pdfBuffer, xml, options = {}) {
   const iccPath =
@@ -77,6 +81,7 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
     return pdfBuffer;
   }
 
+  // Load PDF
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
   // Embed XMP metadata
@@ -88,15 +93,37 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   // Embed ICC OutputIntent
   await embedIccProfile(pdfDoc, iccPath);
 
-  // Save PDF once, disabling object streams to avoid startxref errors
-  const finalBuffer = await pdfDoc.save({ useObjectStreams: false });
+  // Save intermediate PDF
+  const intermediateBuffer = await pdfDoc.save({ useObjectStreams: false });
 
-  // Optional verification
-  const docCheck = await PDFDocument.load(finalBuffer);
-  const outputIntent = docCheck.catalog.get(PDFName.of("OutputIntents"));
-  console.log("[makePdfA3b] OutputIntent present?", !!outputIntent);
+  // Use Ghostscript to finalize PDF/A-3b compliance
+  const tmpInput = path.join(os.tmpdir(), `temp_input_${Date.now()}.pdf`);
+  const tmpOutput = path.join(os.tmpdir(), `temp_output_${Date.now()}.pdf`);
+  fs.writeFileSync(tmpInput, intermediateBuffer);
 
-  return finalBuffer;
+  try {
+    await execFileAsync("gs", [
+      "-dPDFA=3",
+      "-dBATCH",
+      "-dNOPAUSE",
+      "-sDEVICE=pdfwrite",
+      `-sOutputFile=${tmpOutput}`,
+      "-dUseCIEColor",
+      tmpInput,
+    ]);
+
+    const finalBuffer = fs.readFileSync(tmpOutput);
+    console.log("[makePdfA3b] Ghostscript PDF/A-3b buffer size:", finalBuffer.length);
+
+    return finalBuffer;
+  } catch (err) {
+    console.error("[makePdfA3b] Ghostscript conversion failed:", err);
+    return intermediateBuffer; // fallback to pdf-lib version
+  } finally {
+    // Cleanup temp files
+    if (fs.existsSync(tmpInput)) fs.unlinkSync(tmpInput);
+    if (fs.existsSync(tmpOutput)) fs.unlinkSync(tmpOutput);
+  }
 }
 
 
