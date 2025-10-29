@@ -3,16 +3,16 @@
 // -----------------------------
 const fs = require("fs");
 const path = require("path");
+const { execFile } = require("child_process");
 const os = require("os");
 const util = require("util");
-const { execFile } = require("child_process");
 const execFileAsync = util.promisify(execFile);
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
 
 const ICC_PROFILE_PATH = process.env.ICC_PROFILE_PATH || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
 /**
- * Step 1 – Clean PDF buffer (remove any garbage before %PDF-)
+ * Step 2 – Clean PDF buffer: remove any leading garbage before %PDF-
  */
 function cleanPdfBuffer(buf) {
   const pdfStart = buf.indexOf(Buffer.from("%PDF-"));
@@ -21,7 +21,7 @@ function cleanPdfBuffer(buf) {
 }
 
 /**
- * Embed XMP metadata
+ * Embed XMP metadata into PDF (PDF-lib compatible)
  */
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -34,31 +34,28 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
+  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
+    Filter: PDFName.of("FlateDecode"),
   });
 
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
-  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
 
-  // Clear DOCINFO to avoid Ghostscript XMP issues
-  pdfDoc.setTitle("");
-  pdfDoc.setAuthor("");
-  pdfDoc.setSubject("");
+  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
 
   return pdfDoc;
 }
 
 /**
- * Step 2 – Embed ZUGFeRD XML without compression
+ * Embed ZUGFeRD XML into a PDFDocument
  */
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
   const xmlBytes = Buffer.from(xml.trim(), "utf8");
-  const xmlStream = pdfDoc.context.stream(xmlBytes, {
+  const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
     Subtype: PDFName.of("text#2Fxml"),
   });
@@ -87,27 +84,33 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Step 3 – Convert PDF to PDF/A-3b using Ghostscript
+ * Step 3 + 4 – Run Ghostscript to convert PDF to PDF/A-3b while preserving XML
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
+  // Step 2: clean PDF buffer
   pdfBuffer = cleanPdfBuffer(pdfBuffer);
 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  let gsExecutable = "gs";
+  // Step 3: detect Ghostscript
+  let gsExecutable = "gs"; 
   if (process.platform === "win32") gsExecutable = "gswin64c";
 
   const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
   const gsArgs = [
-    "-dPDFA=3",
+    "-dPDFA",
     "-dBATCH",
     "-dNOPAUSE",
+    "-sProcessColorModel=DeviceRGB",
     "-sDEVICE=pdfwrite",
     `-sOutputFile=${tmpOut}`,
-    `-sOutputICCProfile=${iccPath}`,
+    "-sPDFACompatibilityPolicy=1",
     "-dEmbedAllFonts=true",
+    "-dAutoRotatePages=/None",
+    "-dColorConversionStrategy=/sRGB",
+    `-sOutputICCProfile=${iccPath}`,
     "-dPassThroughAF=true",
     tmpIn,
   ];
@@ -120,19 +123,6 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     fs.unlink(tmpOut, () => {});
   }
 }
-
-/**
- * Step 4 – Finalize PDF: embed XML + XMP + convert to PDF/A-3b
- */
-async function finalizePdfWithXml(pdfBuffer, xml, options = {}) {
-  let pdfDoc = await PDFDocument.load(pdfBuffer);
-  pdfDoc = embedXmlIntoPdf(pdfDoc, xml);
-  pdfDoc = await embedXmp(pdfDoc);
-  const finalBuffer = await pdfDoc.save();
-  return await makePdfA3b(finalBuffer, options);
-}
-
-
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
@@ -266,6 +256,25 @@ function generateZugferdXML(invoiceData) {
     default:
       throw new Error(`Unknown invoice source for ZUGFeRD XML: "${src}"`);
   }
+}
+
+
+
+async function finalizePdfWithXml(originalPdfBuffer, zugferdXml, options = {}) {
+  let pdfBuffer = originalPdfBuffer;
+
+  if (!options.skipGs) {
+    pdfBuffer = await makePdfA3b(originalPdfBuffer, options);
+    fs.writeFileSync("check_after_gs.pdf", pdfBuffer);
+  }
+
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  embedXmlIntoPdf(pdfDoc, zugferdXml);
+  const finalBuffer = await pdfDoc.save();
+  fs.writeFileSync("final_with_xml.pdf", finalBuffer);
+
+  console.log("✅ PDF finalized with embedded XML");
+  return finalBuffer;
 }
 
 
