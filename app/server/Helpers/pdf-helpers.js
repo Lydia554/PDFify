@@ -4,50 +4,22 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const util = require("util");
 const { execFile } = require("child_process");
+const util = require("util");
 const execFileAsync = util.promisify(execFile);
 const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 const { v4: uuidv4 } = require("uuid");
 
 const DEFAULT_ICC = path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
-async function makePdfA3b(pdfBuffer, xml, options = {}) {
-  const iccPath =
-    options.iccProfilePath || process.env.ICC_PROFILE_PATH || process.env.PDFA_ICC_PROFILE || DEFAULT_ICC;
-
-  if (!pdfBuffer || pdfBuffer.length === 0) return pdfBuffer;
-
-  // Ensure ICC exists
-  if (!fs.existsSync(iccPath)) {
-    throw new Error(`[makePdfA3b] ICC file not found: ${iccPath}`);
-  }
-  console.log(`[makePdfA3b] Using ICC profile: ${iccPath}`);
-
-  // Load PDF
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-  // -------------------------
-  // Strip DOCINFO safely
-  // -------------------------
-  const infoRef = pdfDoc.context.trailer.get(PDFName.of("Info"));
-  if (infoRef) {
-    const infoDict = pdfDoc.context.lookup(infoRef);
-    if (infoDict && infoDict.dict) {
-      Object.keys(infoDict.dict).forEach((key) => {
-        infoDict.dict.delete(PDFName.of(key));
-      });
-    }
-  }
-
-  // -------------------------
-  // Embed clean XMP for PDF/A-3b
-  // -------------------------
+// -----------------------------
+// Embed XMP metadata into PDF
+// -----------------------------
+async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about=""
-      xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+    <rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
       pdfaid:part="3"
       pdfaid:conformance="B"/>
   </rdf:RDF>
@@ -59,40 +31,50 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
     Subtype: PDFName.of("XML"),
     Filter: PDFName.of("FlateDecode"),
   });
-  pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
 
-  // -------------------------
-  // Embed ZUGFeRD XML if present
-  // -------------------------
-  if (xml) {
-    const xmlBytes = Buffer.from(xml.trim(), "utf8");
-    const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
-      Type: PDFName.of("EmbeddedFile"),
-      Subtype: PDFName.of("text/xml"),
-    });
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
+}
 
-    const fileSpecDict = pdfDoc.context.obj({
-      Type: PDFName.of("Filespec"),
-      F: PDFString.of("ZUGFeRD-invoice.xml"),
-      UF: PDFString.of("ZUGFeRD-invoice.xml"),
-      AFRelationship: PDFName.of("Alternative"),
-      EF: { F: xmlStream },
-    });
+// -----------------------------
+// Embed ZUGFeRD XML into PDF
+// -----------------------------
+function embedXmlIntoPdf(pdfDoc, xml) {
+  if (!xml) return;
 
-    const fileSpecRef = pdfDoc.context.register(fileSpecDict);
-    pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+  const xmlBytes = Buffer.from(xml.trim(), "utf8");
+  const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
+    Type: PDFName.of("EmbeddedFile"),
+    Subtype: PDFName.of("text/xml"),
+  });
 
-    const namesDict = pdfDoc.context.obj({
-      EmbeddedFiles: pdfDoc.context.obj({
-        Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
-      }),
-    });
-    pdfDoc.catalog.set(PDFName.of("Names"), namesDict);
+  const fileSpecDict = pdfDoc.context.obj({
+    Type: PDFName.of("Filespec"),
+    F: PDFString.of("ZUGFeRD-invoice.xml"),
+    UF: PDFString.of("ZUGFeRD-invoice.xml"),
+    AFRelationship: PDFName.of("Alternative"),
+    EF: { F: xmlStream },
+  });
+
+  const fileSpecRef = pdfDoc.context.register(fileSpecDict);
+  pdfDoc.catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
+
+  const namesDict = pdfDoc.context.obj({
+    EmbeddedFiles: pdfDoc.context.obj({
+      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
+    }),
+  });
+  pdfDoc.catalog.set(PDFName.of("Names"), namesDict);
+}
+
+// -----------------------------
+// Embed ICC OutputIntent
+// -----------------------------
+async function embedIccProfile(pdfDoc, iccPath) {
+  if (!fs.existsSync(iccPath)) {
+    throw new Error(`ICC profile not found at ${iccPath}`);
   }
 
-  // -------------------------
-  // Embed ICC profile
-  // -------------------------
   const iccBytes = fs.readFileSync(iccPath);
   const iccStream = pdfDoc.context.stream(iccBytes);
   const iccRef = pdfDoc.context.register(iccStream);
@@ -109,20 +91,46 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   const outputIntentRef = pdfDoc.context.register(outputIntent);
   const arrRef = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
   pdfDoc.catalog.set(PDFName.of("OutputIntents"), arrRef);
+}
 
-  // -------------------------
+// -----------------------------
+// Make PDF/A-3b with Ghostscript
+// -----------------------------
+async function makePdfA3b(pdfBuffer, xml, options = {}) {
+  const iccPath =
+    options.iccProfilePath || process.env.ICC_PROFILE_PATH || process.env.PDFA_ICC_PROFILE || DEFAULT_ICC;
+
+  if (!pdfBuffer || pdfBuffer.length === 0) return pdfBuffer;
+  if (!fs.existsSync(iccPath)) throw new Error(`[makePdfA3b] ICC file not found: ${iccPath}`);
+  console.log(`[makePdfA3b] Using ICC profile: ${iccPath}`);
+
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+
+  // Clear DOCINFO metadata to avoid Ghostscript XMP issues
+  pdfDoc.setTitle('');
+  pdfDoc.setAuthor('');
+  pdfDoc.setSubject('');
+  pdfDoc.setKeywords([]);
+  pdfDoc.setProducer('');
+  pdfDoc.setCreator('');
+  pdfDoc.setCreationDate(new Date());
+  pdfDoc.setModificationDate(new Date());
+
+  // Embed XMP and ZUGFeRD XML
+  await embedXmp(pdfDoc);
+  embedXmlIntoPdf(pdfDoc, xml);
+
+  // Embed ICC
+  await embedIccProfile(pdfDoc, iccPath);
+  console.log("[makePdfA3b] ICC embedded into pdf-lib PDF");
+
   // Save intermediate PDF
-  // -------------------------
   const tmpIn = path.join(os.tmpdir(), `tmp-${uuidv4()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `tmp-${uuidv4()}-a3b.pdf`);
   fs.writeFileSync(tmpIn, await pdfDoc.save({ useObjectStreams: false }));
-
-  // Ensure tmp file is writable
   fs.chmodSync(tmpIn, 0o644);
 
-  // -------------------------
   // Ghostscript command
-  // -------------------------
   const gsCmd = [
     "-dPDFA=3",
     "-dBATCH",
@@ -135,11 +143,10 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
     `-sOutputFile=${tmpOut}`,
     tmpIn,
   ];
-
   console.log("[makePdfA3b] Running Ghostscript:", gsCmd.join(" "));
 
   try {
-    await execFileAsync("gs", gsCmd, { stdio: "inherit" });
+    await execFileAsync("gs", gsCmd);
     console.log(`[makePdfA3b] Ghostscript completed successfully: ${tmpOut}`);
   } catch (err) {
     console.error("[makePdfA3b] Ghostscript error:", err.stderr || err);
@@ -155,7 +162,6 @@ async function makePdfA3b(pdfBuffer, xml, options = {}) {
   console.log("[makePdfA3b] PDF/A-3b buffer size:", finalBuffer.length);
   return finalBuffer;
 }
-
 
 
 /**
