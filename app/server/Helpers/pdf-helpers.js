@@ -14,7 +14,7 @@ const { PDFName, PDFString } = require("pdf-lib");
  * @param {PDFDocument} pdfDoc
  */
 async function embedXmp(pdfDoc) {
-  const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
@@ -34,43 +34,47 @@ async function embedXmp(pdfDoc) {
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(pdfLib.PDFName.of("Metadata"), metadataRef);
 
+  // Ensure MarkInfo is present for PDF/A
+  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
+
   return pdfDoc;
 }
 
 /**
- * Embed ZUGFeRD XML into PDF 
+ * Embed ZUGFeRD XML into PDF
  * @param {PDFDocument} pdfDoc
  * @param {string} xml
  */
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  const xmlBytes = Buffer.from(xml.trim(), "utf8"); 
+  const xmlBytes = Buffer.from(xml.trim(), "utf8");
 
   // Flate stream for embedded file
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text/xml"), 
+    Subtype: PDFName.of("text/xml"),
   });
 
   const fileSpecDict = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
+    Desc: PDFString.of("ZUGFeRD XML Invoice"),
     AFRelationship: PDFName.of("Alternative"),
     EF: { F: xmlStream },
   });
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
+
   const catalog = pdfDoc.catalog;
   catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  const namesDict = pdfDoc.context.obj({
-    EmbeddedFiles: pdfDoc.context.obj({
-      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
-    }),
+  const embeddedFiles = pdfDoc.context.obj({
+    Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
   });
-  catalog.set(PDFName.of("Names"), namesDict);
+
+  catalog.set(PDFName.of("Names"), pdfDoc.context.obj({ EmbeddedFiles: embeddedFiles }));
 
   return pdfDoc;
 }
@@ -123,11 +127,7 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
   try {
     console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
-    await execFileAsync("gs", gsArgs, {
-      encoding: "utf8",
-      cwd: path.dirname(iccPath),
-      env: { ...process.env },
-    });
+    await execFileAsync("gs", gsArgs, { encoding: "utf8", cwd: path.dirname(iccPath), env: { ...process.env } });
 
     console.log("✅ PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
