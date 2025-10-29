@@ -1,15 +1,12 @@
 const fs = require("fs");
-const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+const { PDFName, PDFString } = require("pdf-lib");
 
 /**
- * Embed ICC profile into an existing PDF buffer (VeraPDF-compliant)
- * @param {Buffer} pdfBuffer
+ * Embed ICC profile into an existing PDFDocument (in-place)
+ * @param {PDFDocument} pdfDoc
  * @param {string} iccPath
- * @returns {Promise<Buffer>}
  */
-async function embedIccProfile(pdfBuffer, iccPath) {
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-
+async function embedIccProfile(pdfDoc, iccPath) {
   if (!fs.existsSync(iccPath)) {
     throw new Error(`ICC profile not found at ${iccPath}`);
   }
@@ -30,9 +27,6 @@ async function embedIccProfile(pdfBuffer, iccPath) {
   const outputIntentRef = pdfDoc.context.register(outputIntent);
   const arrRef = pdfDoc.context.register(pdfDoc.context.obj([outputIntentRef]));
   pdfDoc.catalog.set(PDFName.of("OutputIntents"), arrRef);
-
-  // return saved buffer, not PDFDocument
-  return await pdfDoc.save({ useObjectStreams: false });
 }
 
 module.exports = { embedIccProfile };
