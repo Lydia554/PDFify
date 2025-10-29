@@ -80,33 +80,31 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 
-/**
- * Post-process PDF for PDF/A-3b compliance using Ghostscript
- * @param {Buffer} pdfBuffer
- */
 async function makePdfA3b(pdfBuffer, options = {}) {
   require("dotenv").config();
 
   const iccPath =
     options.iccProfilePath ||
-    process.env.PDFA_ICC_PROFILE ||
+    process.env.ICC_PROFILE_PATH ||      
+    process.env.PDFA_ICC_PROFILE ||      
     path.join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
+
+  console.log("[makePdfA3b] ICC profile path:", iccPath);
 
   if (!pdfBuffer || pdfBuffer.length === 0) {
     console.warn("[makePdfA3b] Empty PDF buffer received — skipping ICC embedding");
     return pdfBuffer;
   }
 
-  console.log("[makePdfA3b] Embedding ICC...");
-  console.log("[makePdfA3b] ICC profile path:", iccPath);
   console.log("[makePdfA3b] Input buffer size:", pdfBuffer.length);
+  console.log("[makePdfA3b] Embedding ICC...");
 
   try {
     const finalBuffer = await embedIccProfile(pdfBuffer, iccPath);
     console.log("[makePdfA3b] ICC embedded successfully");
     console.log("[makePdfA3b] Final buffer size:", finalBuffer.length);
 
-    // Optional debug: verify ICC OutputIntent presence
+    // Optional: verify OutputIntent presence
     try {
       const { PDFDocument, PDFName } = require("pdf-lib");
       const doc = await PDFDocument.load(finalBuffer);
@@ -122,6 +120,7 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     return pdfBuffer;
   }
 }
+
 
 
 
