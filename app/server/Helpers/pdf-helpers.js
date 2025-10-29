@@ -79,7 +79,7 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 
 
 /**
- * Post-process PDF for PDF/A-3b compliance and ICC embedding using Ghostscript
+ * Post-process PDF for PDF/A-3b compliance and ICC embedding
  * @param {Buffer} pdfBuffer
  * @param {Object} options
  */
@@ -87,12 +87,10 @@ async function makePdfA3b(pdfBuffer, options = {}) {
   const iccPath = options.iccProfilePath || path.join(__dirname, "sRGB_v4_ICC_preference.icc"); 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
-
   const logDir = path.join(__dirname, "../logs");
   if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
   const logFile = path.join(logDir, `gs_log_${Date.now()}.txt`);
 
-  // Pre-checks
   if (!fs.existsSync(iccPath)) {
     const msg = `[makePdfA3b] ICC profile missing: ${iccPath}`;
     await fs.promises.writeFile(logFile, msg);
@@ -106,33 +104,54 @@ async function makePdfA3b(pdfBuffer, options = {}) {
     return pdfBuffer;
   }
 
-  await fs.promises.writeFile(tmpIn, pdfBuffer);
+  const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-const gsArgs = [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-sDEVICE=pdfwrite",
-  `-sOutputFile=${tmpOut}`,
-  "-sPDFACompatibilityPolicy=1",
-  "-dEmbedAllFonts=true",
-  "-dColorConversionStrategy=/UseDeviceIndependentColor",
-  "-dUseCIEColor=true",
-  `-sOutputICCProfile=${iccPath}`,
-  tmpIn,
-];
+  // --- Embed ICC OutputIntent automatically ---
+  const iccBytes = fs.readFileSync(iccPath);
+  const iccStream = pdfDoc.context.flateStream(iccBytes, {
+    N: 3,
+    Filter: PDFName.of("FlateDecode")
+  });
+  const iccRef = pdfDoc.context.register(iccStream);
 
+  const outputIntent = pdfDoc.context.obj({
+    Type: PDFName.of("OutputIntent"),
+    S: PDFName.of("GTS_PDFA1"),
+    OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+    Info: PDFString.of("sRGB IEC61966-2.1"),
+    DestOutputProfile: iccRef,
+    RegistryName: PDFString.of("http://www.color.org")
+  });
+  const outputIntentRef = pdfDoc.context.register(outputIntent);
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntentRef]));
+
+  // Save PDF with ICC embedded
+  const bufferWithICC = await pdfDoc.save();
+  await fs.promises.writeFile(tmpIn, bufferWithICC);
+
+  // --- Ghostscript PDF/A-3b validation step (optional, extra strictness) ---
+  const gsArgs = [
+    "-dPDFA=3",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-sDEVICE=pdfwrite",
+    `-sOutputFile=${tmpOut}`,
+    "-sPDFACompatibilityPolicy=1",
+    "-dEmbedAllFonts=true",
+    "-dColorConversionStrategy=/UseDeviceIndependentColor",
+    "-dUseCIEColor=true",
+    `-sOutputICCProfile=${iccPath}`,
+    tmpIn,
+  ];
 
   try {
     console.log("[makePdfA3b] Running Ghostscript command:", "gs", gsArgs.join(" "));
     await execFileAsync("gs", gsArgs, { encoding: "utf8" });
-
     console.log("[makePdfA3b] PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
-
     const finalBuffer = await fs.promises.readFile(tmpOut);
     return finalBuffer;
-
   } catch (err) {
     const logContent = `
 [makePdfA3b] Ghostscript conversion failed
@@ -148,12 +167,13 @@ PDF Buffer Size: ${pdfBuffer.length} bytes
     await fs.promises.writeFile(logFile, logContent);
     console.error(logContent);
     console.error(`[makePdfA3b] Ghostscript error logged to: ${logFile}`);
-    return pdfBuffer; // fallback
+    return bufferWithICC; 
   } finally {
     fs.unlink(tmpIn, () => {});
     fs.unlink(tmpOut, () => {});
   }
 }
+
 
 /**
  * Generate ZUGFeRD XML based on invoice source (mode)
