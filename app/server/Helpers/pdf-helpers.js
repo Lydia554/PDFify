@@ -12,7 +12,7 @@ const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
 const ICC_PROFILE_PATH = process.env.ICC_PROFILE_PATH || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
 
 /**
- * Step 2 – Clean PDF buffer: remove any leading garbage before %PDF-
+ * Step 1 – Clean PDF buffer: remove any leading garbage before %PDF-
  */
 function cleanPdfBuffer(buf) {
   const pdfStart = buf.indexOf(Buffer.from("%PDF-"));
@@ -21,7 +21,7 @@ function cleanPdfBuffer(buf) {
 }
 
 /**
- * Embed XMP metadata into PDF (PDF-lib compatible)
+ * Step 2 – Embed XMP metadata
  */
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
@@ -42,14 +42,13 @@ async function embedXmp(pdfDoc) {
 
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
-
   pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
 
   return pdfDoc;
 }
 
 /**
- * Embed ZUGFeRD XML into a PDFDocument
+ * Step 3 – Embed ZUGFeRD XML into PDFDocument
  */
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
@@ -84,18 +83,18 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 }
 
 /**
- * Step 3 + 4 – Run Ghostscript to convert PDF to PDF/A-3b while preserving XML
+ * Step 4 – Convert to PDF/A-3b with Ghostscript while preserving XML
  */
 async function makePdfA3b(pdfBuffer, options = {}) {
-  // Step 2: clean PDF buffer
+  // Clean PDF first
   pdfBuffer = cleanPdfBuffer(pdfBuffer);
 
   const tmpIn = path.join(os.tmpdir(), `input_${Date.now()}.pdf`);
   const tmpOut = path.join(os.tmpdir(), `output_${Date.now()}.pdf`);
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  // Step 3: detect Ghostscript
-  let gsExecutable = "gs"; 
+  // Ghostscript executable detection
+  let gsExecutable = "gs";
   if (process.platform === "win32") gsExecutable = "gswin64c";
 
   const iccPath = options.iccProfilePath || ICC_PROFILE_PATH;
@@ -259,22 +258,27 @@ function generateZugferdXML(invoiceData) {
 }
 
 
+/**
+ * Finalize PDF: embed XML, embed XMP, and convert to PDF/A-3b
+ */
+async function finalizePdfWithXml(originalBuffer, xml, options = {}) {
+  let pdfDoc = await PDFDocument.load(originalBuffer);
 
-async function finalizePdfWithXml(originalPdfBuffer, zugferdXml, options = {}) {
-  let pdfBuffer = originalPdfBuffer;
+  // Embed XML
+  pdfDoc = embedXmlIntoPdf(pdfDoc, xml);
 
-  if (!options.skipGs) {
-    pdfBuffer = await makePdfA3b(originalPdfBuffer, options);
-    fs.writeFileSync("check_after_gs.pdf", pdfBuffer);
-  }
+  // Embed XMP metadata
+  pdfDoc = await embedXmp(pdfDoc);
 
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
-  embedXmlIntoPdf(pdfDoc, zugferdXml);
-  const finalBuffer = await pdfDoc.save();
-  fs.writeFileSync("final_with_xml.pdf", finalBuffer);
+  // Write intermediate buffer
+  const intermediateBuffer = await pdfDoc.save();
 
-  console.log("✅ PDF finalized with embedded XML");
-  return finalBuffer;
+  // Skip Ghostscript if requested
+  if (options.skipGs) return intermediateBuffer;
+
+  // Convert to PDF/A-3b with XML preserved
+  const pdfA3bBuffer = await makePdfA3b(intermediateBuffer, options);
+  return pdfA3bBuffer;
 }
 
 
