@@ -44,18 +44,19 @@ async function embedXmp(pdfDoc) {
  * @param {string} xml
  */
 
-
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
-  const xmlBytes = Buffer.from(xml, "utf8");
+  const xmlBytes = Buffer.from(xml.trim(), "utf8"); 
+
+  // Flate stream for embedded file
   const xmlStream = pdfDoc.context.flateStream(xmlBytes, {
     Type: PDFName.of("EmbeddedFile"),
-    Subtype: PDFName.of("text#2Fxml"),
+    Subtype: PDFName.of("text/xml"), 
   });
 
   const fileSpecDict = pdfDoc.context.obj({
-    Type: "Filespec",
+    Type: PDFName.of("Filespec"),
     F: PDFString.of("ZUGFeRD-invoice.xml"),
     UF: PDFString.of("ZUGFeRD-invoice.xml"),
     AFRelationship: PDFName.of("Alternative"),
@@ -64,14 +65,8 @@ function embedXmlIntoPdf(pdfDoc, xml) {
 
   const fileSpecRef = pdfDoc.context.register(fileSpecDict);
   const catalog = pdfDoc.catalog;
+  catalog.set(PDFName.of("AF"), pdfDoc.context.obj([fileSpecRef]));
 
-  // Register AF entry
-  catalog.set(
-    PDFName.of("AF"),
-    pdfDoc.context.obj([fileSpecRef])
-  );
-
-  // Register EmbeddedFiles name tree (optional but recommended)
   const namesDict = pdfDoc.context.obj({
     EmbeddedFiles: pdfDoc.context.obj({
       Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
@@ -113,20 +108,20 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  const gsArgs = [
-    "-dPDFA",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-sProcessColorModel=DeviceRGB",
-    "-sDEVICE=pdfwrite",
-    `-sOutputFile=${tmpOut}`,
-    "-sPDFACompatibilityPolicy=1",
-    "-dEmbedAllFonts=true",
-    "-dAutoRotatePages=/None",
-    "-dColorConversionStrategy=/sRGB",
-    `-sOutputICCProfile=${iccPath}`,
-    tmpIn,
-  ];
+const gsArgs = [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-sDEVICE=pdfwrite",
+  `-sOutputFile=${tmpOut}`,
+  "-sPDFACompatibilityPolicy=1",
+  "-dEmbedAllFonts=true",
+  "-dColorConversionStrategy=/UseDeviceIndependentColor",
+  "-dUseCIEColor=true",
+  `-sOutputICCProfile=${iccPath}`,
+  tmpIn,
+];
+
 
   try {
     console.log("[makePdfA3b] Running Ghostscript command:", "gs", gsArgs.join(" "));
@@ -241,11 +236,25 @@ function generateShopifyXML(data) {
   const orderId = data.invoiceNumber || data.orderId || "UNKNOWN";
   const date = data.date || new Date().toISOString().split("T")[0];
   const items = Array.isArray(data.items) ? data.items : [];
+  const currency = data.currency || "EUR";
+
+  // calculate totals
+  const totalNet = items.reduce((sum, i) => sum + (i.net || 0), 0);
+  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
+  const totalGross = items.reduce((sum, i) => sum + (i.total || 0), 0);
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
-  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
-  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
+<rsm:CrossIndustryInvoice
+  xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p3"
+  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
+  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:ferd:CrossIndustryDocument:invoice:2p3:comfort</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+
   <rsm:ExchangedDocument>
     <ram:ID>${orderId}</ram:ID>
     <ram:TypeCode>380</ram:TypeCode>
@@ -253,7 +262,9 @@ function generateShopifyXML(data) {
       <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
     </ram:IssueDateTime>
   </rsm:ExchangedDocument>
+
   <rsm:SupplyChainTradeTransaction>
+
     ${items.map((item, i) => `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
@@ -262,8 +273,28 @@ function generateShopifyXML(data) {
         <ram:SpecifiedTradeProduct>
           <ram:Name>${item.name || item.description || ""}</ram:Name>
         </ram:SpecifiedTradeProduct>
+        <ram:SpecifiedLineTradeSettlement>
+          <ram:ApplicableTradeTax>
+            <ram:TypeCode>VAT</ram:TypeCode>
+            <ram:RateApplicablePercent>${item.taxRate ?? 0}</ram:RateApplicablePercent>
+            <ram:CalculatedAmount currencyID="${currency}">${(item.tax || 0).toFixed(2)}</ram:CalculatedAmount>
+          </ram:ApplicableTradeTax>
+          <ram:SpecifiedTradeSettlementLineMonetarySummation>
+            <ram:LineTotalAmount currencyID="${currency}">${(item.total || 0).toFixed(2)}</ram:LineTotalAmount>
+          </ram:SpecifiedTradeSettlementLineMonetarySummation>
+        </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>
     `).join("")}
+
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>${currency}</ram:InvoiceCurrencyCode>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount currencyID="${currency}">${totalNet.toFixed(2)}</ram:LineTotalAmount>
+        <ram:TaxTotalAmount currencyID="${currency}">${totalTax.toFixed(2)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount currencyID="${currency}">${totalGross.toFixed(2)}</ram:GrandTotalAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
