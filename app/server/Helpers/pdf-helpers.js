@@ -9,7 +9,7 @@ const util = require("util");
 const execFileAsync = util.promisify(execFile);
 const { PDFName, PDFString } = require("pdf-lib");
 const { PDFDocument } = require("pdf-lib");
-const { makePdfA3b, embedXmlIntoPdf } = require("./pdf-helpers");
+
 
 
 const ICC_PROFILE_PATH = process.env.ICC_PROFILE_PATH || path.join(__dirname, "sRGB_v4_ICC_preference.icc");
