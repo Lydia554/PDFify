@@ -300,22 +300,25 @@ function generateZugferdXML(invoiceData) {
 /**
  * FINAL HELPER: Convert PDF to PDF/A-3b and embed ZUGFeRD XML
  */
+
 async function finalizePdfWithXml(pdfBuffer, zugferdXml, options = {}) {
   const { PDFDocument } = require("pdf-lib");
-  const pdfDoc = await PDFDocument.load(pdfBuffer);
 
-  // Embed ZUGFeRD XML first
+  // 1️⃣ Run Ghostscript first for PDF/A-3b compliance
+  //    XML is NOT embedded yet — avoids GS stripping it
+  const pdfA3bBuffer = await makePdfA3b(pdfBuffer, options);
+
+  // 2️⃣ Load the PDF/A-3b PDF
+  const pdfDoc = await PDFDocument.load(pdfA3bBuffer);
+
+  // 3️⃣ Embed ZUGFeRD XML now, AFTER GS
   embedXmlIntoPdf(pdfDoc, zugferdXml);
 
-  // Save PDF with XML
-  const xmlBuffer = await pdfDoc.save();
+  // 4️⃣ Save final PDF — XML now safely included
+  const finalBuffer = await pdfDoc.save();
 
-  // Convert to PDF/A-3b with Ghostscript
-  const pdfA3bBuffer = await makePdfA3b(xmlBuffer, options);
-
-  return pdfA3bBuffer;
+  return finalBuffer;
 }
-
 
 
 module.exports = {
