@@ -112,24 +112,30 @@ async function makePdfA3b(pdfBuffer, options = {}) {
 
   await fs.promises.writeFile(tmpIn, pdfBuffer);
 
-  // ✅ Ghostscript arguments for PDF/A-3b + ICC embedding
-  const gsArgs = [
-    "-dPDFA=3",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-sDEVICE=pdfwrite",
-    `-sOutputFile=${tmpOut}`,
-    "-sPDFACompatibilityPolicy=1",
-    "-dEmbedAllFonts=true",
-    "-dUseCIEColor=true",
-    "-dColorConversionStrategy=/UseDeviceIndependentColor",
-    `-sOutputICCProfile=${iccPath}`,
-    tmpIn,
-  ];
+  // Ghostscript arguments for PDF/A-3b + ICC embedding
+const gsArgs = [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-sDEVICE=pdfwrite",
+  `-sOutputFile="${tmpOut}"`,
+  "-sPDFACompatibilityPolicy=1",
+  "-dEmbedAllFonts=true",
+  "-dUseCIEColor=true",
+  "-dColorConversionStrategy=/UseDeviceIndependentColor",
+  `-sOutputICCProfile="${iccPath}"`,
+  `"${tmpIn}"`,
+];
+
 
   try {
     console.log("[makePdfA3b] 🧩 Running Ghostscript with ICC:", iccPath);
-    await execFileAsync("gs", gsArgs, { encoding: "utf8" });
+    await execFileAsync("gs", gsArgs, {
+  encoding: "utf8",
+  cwd: path.dirname(iccPath),
+  env: { ...process.env },
+});
+
 
     console.log("✅ PDF/A-3b conversion successful");
     await fs.promises.appendFile(logFile, `[SUCCESS] Converted PDF: ${tmpOut}\n`);
