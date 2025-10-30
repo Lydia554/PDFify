@@ -18,7 +18,7 @@ services:
       - mongo
       - python-service
     volumes:
-      - .:/app
+      - ./app:/app
 
   mongo:
     image: mongo:5.0
