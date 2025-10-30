@@ -17,14 +17,16 @@ services:
     depends_on:
       - mongo
       - python-service
-
-
+    networks:
+      - pdfnet
 
   mongo:
     image: mongo:5.0
     container_name: pdf-api-mongo
     volumes:
       - ./mongo-data:/data/db
+    networks:
+      - pdfnet
 
   python-service:
     build:
@@ -33,7 +35,12 @@ services:
     volumes:
       - ./python-service:/app
     restart: unless-stopped
-   
+    networks:
+      - pdfnet
 
 volumes:
   mongo-data:
+
+networks:
+  pdfnet:
+    driver: bridge
