@@ -2,16 +2,33 @@ from flask import Flask, request, send_file, jsonify
 from facturx import generate_facturx_from_file
 from io import BytesIO
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfbase.pdfdoc import PDFInfo
+from reportlab.pdfbase.pdfmetrics import registerFont
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase import pdfdoc
 import tempfile
 
 app = Flask(__name__)
 
+ICC_PROFILE_PATH = r"C:\Users\goldb\Pro\PDF-API\app\server\Helpers\sRGB_v4_ICC_preference.icc"
+
 def create_pdf_bytes(invoice_data):
     pdf_buffer = BytesIO()
-    c = canvas.Canvas(pdf_buffer)
+    
+    # Create PDF with ReportLab
+    c = canvas.Canvas(pdf_buffer, pagesize=A4, bottomup=1)
+
+    # Embed ICC profile for PDF/A-3b compliance
+    c.setICCProfile(ICC_PROFILE_PATH)
+
+    # Simple invoice layout
     c.drawString(50, 800, f"Invoice ID: {invoice_data.get('orderId')}")
     c.drawString(50, 780, f"Customer: {invoice_data.get('customerName')}")
     c.drawString(50, 760, f"Total: {invoice_data.get('total')}")
+
     c.showPage()
     c.save()
     pdf_buffer.seek(0)
@@ -36,7 +53,6 @@ def generate_zugferd():
     pdf_bytes = create_pdf_bytes(data)
     xml_bytes = create_zugferd_xml_bytes(data)
 
-    # facturx requires file paths, so we use temp files
     with tempfile.NamedTemporaryFile(suffix=".pdf") as pdf_file, \
          tempfile.NamedTemporaryFile(suffix=".xml") as xml_file, \
          tempfile.NamedTemporaryFile(suffix=".pdf") as output_file:
@@ -47,7 +63,7 @@ def generate_zugferd():
         xml_file.write(xml_bytes.read())
         xml_file.flush()
 
-        # Embed XML into PDF (ZUGFeRD / Factur-X)
+        # Embed ZUGFeRD XML into PDF
         generate_facturx_from_file(pdf_file.name, xml_file.name, output_file.name)
 
         output_file.seek(0)

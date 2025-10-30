@@ -96,7 +96,8 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
+   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
+
     
     // Send invoiceData to Python and get back PDF buffer
     const response = await axios.post(pythonUrl, { invoiceData }, { responseType: "arraybuffer" });
