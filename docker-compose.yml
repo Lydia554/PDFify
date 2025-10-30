@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   app:
     build:
@@ -5,7 +7,7 @@ services:
       dockerfile: Dockerfile
     image: pdf-api
     ports:
-      - "3002:3000"
+      - "3002:3000"         
     env_file:
       - .env
     environment:
@@ -14,7 +16,7 @@ services:
       - SYS_ADMIN
     depends_on:
       - mongo
-      - python-service   # <-- Node will wait for Python service
+      - python-service
     volumes:
       - .:/app
 
@@ -26,13 +28,12 @@ services:
 
   python-service:
     build:
-      context: ./python-service  # folder with Dockerfile, app.py, requirements.txt
+      context: ./python-service
     image: pdf-api-python
-    ports:
-      - "5000:5000"
     volumes:
       - ./python-service:/app
     restart: unless-stopped
+   
 
 volumes:
   mongo-data:
