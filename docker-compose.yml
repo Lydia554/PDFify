@@ -2,16 +2,18 @@ version: "3.9"
 
 services:
   app:
+    container_name: pdf-api-app
     build:
       context: .
       dockerfile: Dockerfile
     image: pdf-api
     ports:
-      - "3002:3000"         
+      - "3002:3000"
     env_file:
       - .env
     environment:
       PUPPETEER_SKIP_DOWNLOAD: true
+      PYTHON_SERVICE_URL: http://python-service:5000/generate-zugferd
     cap_add:
       - SYS_ADMIN
     depends_on:
@@ -21,14 +23,15 @@ services:
       - pdfnet
 
   mongo:
-    image: mongo:5.0
     container_name: pdf-api-mongo
+    image: mongo:5.0
     volumes:
       - ./mongo-data:/data/db
     networks:
       - pdfnet
 
   python-service:
+    container_name: python-service
     build:
       context: ./python-service
     image: pdf-api-python
