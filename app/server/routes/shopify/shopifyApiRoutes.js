@@ -92,33 +92,25 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     let pdfBuffer;
 
-// ----------------------------
-// Merchant PDF (PDF-lib + ZUGFeRD / PDF/A-3b)
-// ----------------------------
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-  
     const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
-    const { data: xmlContent } = await axios.post(pythonUrl, { invoiceData });
+    
+    // Send invoiceData to Python and get back PDF buffer
+    const response = await axios.post(pythonUrl, { invoiceData }, { responseType: "arraybuffer" });
+    const pdfBuffer = Buffer.from(response.data);
 
-    let { pdfBuffer } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
-
-  
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const zip = new JSZip();
-    zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
-    zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
-    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
     await incrementUsage(user, 1, false);
 
     res.set({
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.zip`,
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
     });
-    return res.send(zipBuffer);
+    return res.send(pdfBuffer);
 
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
@@ -129,6 +121,7 @@ if (isMerchant) {
     });
   }
 }
+
 
 
     // ----------------------------
