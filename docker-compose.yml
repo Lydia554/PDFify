@@ -14,12 +14,25 @@ services:
       - SYS_ADMIN
     depends_on:
       - mongo
+      - python-service   # <-- Node will wait for Python service
+    volumes:
+      - .:/app
 
   mongo:
     image: mongo:5.0
     container_name: pdf-api-mongo
     volumes:
       - ./mongo-data:/data/db
+
+  python-service:
+    build:
+      context: ./python-service  # folder with Dockerfile, app.py, requirements.txt
+    image: pdf-api-python
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./python-service:/app
+    restart: unless-stopped
 
 volumes:
   mongo-data:

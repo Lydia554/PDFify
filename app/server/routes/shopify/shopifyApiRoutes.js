@@ -99,38 +99,21 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    // Generate PDF + XML
-    let { pdfBuffer, xmlContent } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
+  
+    const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
+    const { data: xmlContent } = await axios.post(pythonUrl, { invoiceData });
 
-console.log("[/invoice] PDF generated:", pdfBuffer.length);
+    let { pdfBuffer } = await createShopifyInvoiceZugferd(order, shopConfig, req.invoiceSource || "shopify");
 
-
-
-
-    if (req.query.preview === "true") {
-      // Preview: just show PDF inline
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "inline",
-      });
-      return res.send(pdfBuffer);
-    }
-
-    // Otherwise, return ZIP with both PDF and XML
-    const JSZip = require("jszip");
-    const zip = new JSZip();
+  
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-
+    const zip = new JSZip();
     zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
     zip.file(`ZUGFeRD-${safeOrderId}.xml`, xmlContent);
-
-
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-    // Increment usage
     await incrementUsage(user, 1, false);
 
-    // Send ZIP
     res.set({
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.zip`,
@@ -146,6 +129,7 @@ console.log("[/invoice] PDF generated:", pdfBuffer.length);
     });
   }
 }
+
 
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
