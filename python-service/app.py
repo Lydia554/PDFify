@@ -1,33 +1,44 @@
 from flask import Flask, request, send_file, jsonify
 from facturx import generate_facturx_from_file
-import tempfile, os, json
+import tempfile, os, json, logging
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB max upload
+
+# Logging setup
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ZUGFeRD")
 
 ICC_PROFILE_PATH = os.getenv("ICC_PROFILE_PATH")
 
 @app.route("/generate-zugferd", methods=["POST"])
 def generate_zugferd():
-    print("=== Incoming Request ===")
-    print("Content-Type:", request.content_type)
-    print("Form keys:", list(request.form.keys()))
-    print("Files keys:", list(request.files.keys()))
+    logger.info("=== Incoming Request ===")
+    logger.info("Content-Type: %s", request.content_type)
+    logger.info("Form keys: %s", list(request.form.keys()))
+    logger.info("Files keys: %s", list(request.files.keys()))
 
     if 'pdfFile' not in request.files:
+        logger.error("Missing 'pdfFile' in request")
         return jsonify({"error": "Missing 'pdfFile' in request"}), 400
     if 'invoiceData' not in request.form:
+        logger.error("Missing 'invoiceData' in request")
         return jsonify({"error": "Missing 'invoiceData' in request"}), 400
 
     pdf_file = request.files['pdfFile']
     invoice_data_raw = request.form['invoiceData']
 
+    logger.info("Received PDF file: name=%s, size=%d bytes",
+                pdf_file.filename, len(pdf_file.read()))
+    pdf_file.seek(0)  # Reset pointer after reading for logging
+
     try:
         invoice_data = json.loads(invoice_data_raw)
     except Exception as e:
+        logger.error("Invalid invoiceData JSON: %s", e)
         return jsonify({"error": f"invoiceData JSON invalid: {str(e)}"}), 400
 
-    print("Invoice data keys:", list(invoice_data.keys()))
+    logger.info("Invoice data keys: %s", list(invoice_data.keys()))
 
     try:
         pdf_bytes = pdf_file.read()
@@ -53,11 +64,11 @@ def generate_zugferd():
             try:
                 generate_facturx_from_file(pdf_in.name, xml_in.name, pdf_out.name)
             except Exception as e:
-                print("❌ FacturX generation failed:", e)
+                logger.exception("❌ FacturX generation failed")
                 return jsonify({"error": f"Failed to generate ZUGFeRD PDF: {str(e)}"}), 500
 
             pdf_out.seek(0)
-            print("✅ ZUGFeRD PDF generated successfully")
+            logger.info("✅ ZUGFeRD PDF generated successfully")
             return send_file(
                 pdf_out,
                 mimetype="application/pdf",
@@ -66,7 +77,7 @@ def generate_zugferd():
             )
 
     except Exception as e:
-        print("❌ Unexpected error:", e)
+        logger.exception("❌ Unexpected error in /generate-zugferd")
         return jsonify({"error": f"Unexpected server error: {str(e)}"}), 500
 
 
