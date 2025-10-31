@@ -13,8 +13,6 @@ const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { createShopifyInvoiceZugferd } = require("./shopifyMerchantTemplate");
 
-const { generateShopifyXML } = require("./../../Helpers/pdf-helpers");
-
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 
 const JSZip = require("jszip");
@@ -95,25 +93,17 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     };
 
     let pdfBuffer;
-
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    // 1️⃣ Generate ZUGFeRD XML for Shopify
-    const zugferdXml = generateShopifyXML(invoiceData);
+    // Use your template-based PDF helper
+    const { pdfBuffer } = await createShopifyInvoiceZugferd(order, shopConfig);
 
-// 2️⃣ Use your template-based PDF
-const { pdfBuffer: templatePdfBuffer } = await createShopifyInvoiceZugferd(order, shopConfig);
-
-// 3️⃣ The PDF from createShopifyInvoiceZugferd already includes ZUGFeRD via Python service
-const pdfBuffer = templatePdfBuffer;
-
-
-    // 4️⃣ Safe filename
+    // Safe filename
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
 
-    // 5️⃣ Set headers and send PDF
+    // Set headers and send PDF
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
