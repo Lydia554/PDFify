@@ -9,7 +9,8 @@ const dualAuth = require("../../middleware/dualAuth");
 const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
-const { createBasePdf } = require("./shopifyMerchantTemplate");
+const { createShopifyInvoiceZugferd } = require("./shopifyMerchantTemplate");
+
 
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 
@@ -96,34 +97,17 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    // 1️⃣ Generate base PDF
-    const basePdfBuffer = await createBasePdf(invoiceData);
+    
+    const result = await createShopifyInvoiceZugferd(order, shopConfig);
 
-    // 2️⃣ Send PDF + invoiceData to Python via multipart/form-data
-    const form = new FormData();
-    form.append("invoiceData", JSON.stringify(invoiceData));
-    form.append("pdfFile", basePdfBuffer, {
-      filename: `Invoice-${invoiceData.orderId}.pdf`,
-      contentType: "application/pdf",
-    });
-
-    const response = await axios.post(pythonUrl, form, {
-      headers: form.getHeaders(),
-      responseType: "arraybuffer",
-      timeout: 20000,
-    });
-
-    // 3️⃣ Save or return ZUGFeRD PDF
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-    const outputPath = path.join(__dirname, `../Generated/Invoice-ZUGFeRD-${safeOrderId}.pdf`);
-    fs.writeFileSync(outputPath, response.data);
-
-    console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
     });
-    return res.send(response.data);
+
+    console.log(`✅ Final ZUGFeRD PDF sent for order: ${safeOrderId}`);
+    return res.send(result.pdfBuffer);
 
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
