@@ -114,9 +114,6 @@ async function createBasePdf(data) {
   return Buffer.from(await pdfDoc.save());
 }
 
-// ---------------------
-// Send base PDF to Python service
-// ---------------------
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
   const pdfBuffer = await createBasePdf(data);
@@ -126,7 +123,7 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   form.append("pdfFile", pdfBuffer, {
     filename: `Invoice-${data.orderId}.pdf`,
     contentType: "application/pdf",
-    knownLength: pdfBuffer.length, 
+    knownLength: pdfBuffer.length,
   });
 
   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
@@ -134,9 +131,19 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   try {
     const response = await axios.post(pythonUrl, form, {
       headers: form.getHeaders(),
-      responseType: "arraybuffer",
+      responseType: "arraybuffer", // still need PDF on success
       timeout: 20000,
+      validateStatus: () => true,  // do not throw on 500 automatically
     });
+
+    if (response.status !== 200) {
+      let text = "";
+      try {
+        text = response.data.toString("utf-8");
+      } catch {}
+      console.error("❌ Python service returned error:", response.status, text);
+      throw new Error(`Python ZUGFeRD service error: ${response.status}`);
+    }
 
     const outputDir = path.resolve(__dirname, "../Generated");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
@@ -145,7 +152,15 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
 
     console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
     return { pdfPath: outputPath, pdfBuffer: response.data };
+
   } catch (err) {
+    if (err.response) {
+      let text = "";
+      try {
+        text = err.response.data.toString("utf-8");
+      } catch {}
+      console.error("❌ Python error body:", text);
+    }
     console.error("❌ Failed to connect to Python ZUGFeRD service:", err.message);
     throw err;
   }
