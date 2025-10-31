@@ -6,7 +6,7 @@ const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 
 // ---------------------
-// Helper: map order -> PDF data
+// Map Shopify order → PDF data
 // ---------------------
 function parseNumber(value, fallback = 0) {
   const num = typeof value === "number" ? value : parseFloat(value);
@@ -49,7 +49,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Helper: create base PDF (pdf-lib)
+// Create base PDF (Node)
 // ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
@@ -109,7 +109,7 @@ async function createBasePdf(data) {
 }
 
 // ---------------------
-// ZUGFeRD PDF via Python microservice
+// Send base PDF to Python service
 // ---------------------
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);

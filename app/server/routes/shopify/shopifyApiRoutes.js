@@ -93,32 +93,26 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
     };
 
     let pdfBuffer;
+
+
+
+
+// Inside your /invoice route
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
-
-    // Use your template-based PDF helper
     const { pdfBuffer } = await createShopifyInvoiceZugferd(order, shopConfig);
 
-    // Safe filename
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-
-    // Set headers and send PDF
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
     });
-
-    console.log(`✅ Final ZUGFeRD PDF sent for order: ${safeOrderId}`);
     return res.send(pdfBuffer);
 
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
-    return res.status(500).json({
-      error: "Merchant PDF generation failed",
-      details: err.message,
-      stack: err.stack,
-    });
+    return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
   }
 }
 
