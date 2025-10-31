@@ -1,20 +1,22 @@
 // -----------------------------
-// pdf-helpers.js (no Ghostscript)
+// pdf-helpers.js
 // -----------------------------
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFString } = require("pdf-lib");
 
-
-
-
+// -----------------------------
+// Helper: Clean PDF buffer
+// -----------------------------
 function cleanPdfBuffer(buf) {
   const pdfStart = buf.indexOf(Buffer.from("%PDF-"));
   return pdfStart > 0 ? buf.slice(pdfStart) : buf;
 }
 
-
+// -----------------------------
+// Embed XMP metadata into PDF
+// -----------------------------
 async function embedXmp(pdfDoc) {
   const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
@@ -31,6 +33,7 @@ async function embedXmp(pdfDoc) {
     Subtype: PDFName.of("XML"),
     Filter: PDFName.of("FlateDecode"),
   });
+
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
   pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
@@ -38,9 +41,9 @@ async function embedXmp(pdfDoc) {
   return pdfDoc;
 }
 
-/**
- * Embed ZUGFeRD XML into a PDFDocument
- */
+// -----------------------------
+// Embed ZUGFeRD XML into PDF
+// -----------------------------
 function embedXmlIntoPdf(pdfDoc, xml) {
   if (!xml) return pdfDoc;
 
@@ -296,9 +299,9 @@ function generateShopifyXML(data) {
   }
 }
 
-
-
-
+// -----------------------------
+// Finalize PDF with embedded XML
+// -----------------------------
 async function finalizePdfWithXml(originalPdfBuffer, zugferdXml) {
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
@@ -313,7 +316,9 @@ async function finalizePdfWithXml(originalPdfBuffer, zugferdXml) {
   return finalBuffer;
 }
 
-
+// -----------------------------
+// Exports
+// -----------------------------
 module.exports = {
   generateShopifyXML,
   embedXmp,
