@@ -12,8 +12,8 @@ const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { createShopifyInvoiceZugferd } = require("./shopifyMerchantTemplate");
-const { PDFDocument } = require("pdf-lib");
-const { generateShopifyXML, finalizePdfWithXml } = require("./../../Helpers/pdf-helpers");
+
+const { generateShopifyXML } = require("./../../Helpers/pdf-helpers");
 
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 
@@ -103,13 +103,12 @@ if (isMerchant) {
     // 1️⃣ Generate ZUGFeRD XML for Shopify
     const zugferdXml = generateShopifyXML(invoiceData);
 
-// 2️⃣ Create a blank PDF instead of reading a template
-const pdfDoc = await PDFDocument.create();
-pdfDoc.addPage([595, 842]); // A4 page
-const originalPdfBuffer = await pdfDoc.save();
+// 2️⃣ Use your template-based PDF
+const { pdfBuffer: templatePdfBuffer } = await createShopifyInvoiceZugferd(order, shopConfig);
 
-// 3️⃣ Embed XML into PDF and finalize it
-const pdfBuffer = await finalizePdfWithXml(originalPdfBuffer, zugferdXml);
+// 3️⃣ The PDF from createShopifyInvoiceZugferd already includes ZUGFeRD via Python service
+const pdfBuffer = templatePdfBuffer;
+
 
     // 4️⃣ Safe filename
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
