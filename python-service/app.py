@@ -2,27 +2,25 @@ from flask import Flask, request, send_file, jsonify
 from facturx import generate_facturx_from_file
 from io import BytesIO
 from reportlab.pdfgen import canvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.pdfbase.pdfdoc import PDFInfo
-from reportlab.pdfbase.pdfmetrics import registerFont
-from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfdoc
+import os
 import tempfile
 
 app = Flask(__name__)
 
-ICC_PROFILE_PATH = r"C:\Users\goldb\Pro\PDF-API\app\server\Helpers\sRGB_v4_ICC_preference.icc"
+# Optional ICC profile path (can be omitted if not needed)
+ICC_PROFILE_PATH = os.getenv("ICC_PROFILE_PATH")
 
 def create_pdf_bytes(invoice_data):
     pdf_buffer = BytesIO()
-    
-    # Create PDF with ReportLab
     c = canvas.Canvas(pdf_buffer, pagesize=A4, bottomup=1)
 
-    # Embed ICC profile for PDF/A-3b compliance
-    c.setICCProfile(ICC_PROFILE_PATH)
+    # Embed ICC profile only if it exists
+    if ICC_PROFILE_PATH and os.path.exists(ICC_PROFILE_PATH):
+        try:
+            c.setICCProfile(ICC_PROFILE_PATH)
+        except Exception as e:
+            print(f"⚠️ Warning: Could not set ICC profile: {e}")
 
     # Simple invoice layout
     c.drawString(50, 800, f"Invoice ID: {invoice_data.get('orderId')}")
