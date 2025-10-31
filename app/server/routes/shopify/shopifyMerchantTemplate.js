@@ -8,22 +8,26 @@ const fontkit = require("@pdf-lib/fontkit");
 // ---------------------
 // Map Shopify order → PDF data
 // ---------------------
-function parseNumber(value, fallback = 0) {
-  const num = typeof value === "number" ? value : parseFloat(value);
-  return isNaN(num) ? fallback : num;
-}
-
 function mapOrderToPdfData(order, shopConfig = {}) {
-  const items = (order.line_items || []).map((item) => {
-    const price = parseNumber(item.price);
-    const quantity = parseNumber(item.quantity, 1);
-    const tax = (item.tax_lines || []).reduce(
-      (sum, t) => sum + parseNumber(t.price),
-      0
-    );
+  const items = (order.line_items || []).map((item, index) => {
+    const price = parseFloat(item.price || 0);
+    const quantity = parseFloat(item.quantity || 1);
+    const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
     const net = price * quantity;
     const total = net + tax;
-    return { name: item.title || item.name || "Item", quantity, price, net, tax, total, taxRate: 21, currency: order.currency || "EUR" };
+
+    return {
+      position: index + 1,         // required for Comfort profile
+      name: item.title || item.name || "Item",
+      quantity,
+      unitCode: "EA",              // required for line items
+      price,
+      net,
+      tax,
+      total,
+      taxRate: 21,
+      currency: order.currency || "EUR",
+    };
   });
 
   const subtotal = items.reduce((sum, i) => sum + i.net, 0);
@@ -43,10 +47,12 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     iban: shopConfig.iban || "DE89370400440532013000",
     bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
-    logoPath: shopConfig.logoPath,
-    companyName: shopConfig.companyName || "YOUR COMPANY GMBH",
+    creator: "PDFify",
+    companyName: shopConfig.companyName || "YOUR COMPANY GMBH", // required
+    locale: { language: order.locale || "en" },
   };
 }
+
 
 // ---------------------
 // Create base PDF (Node)
