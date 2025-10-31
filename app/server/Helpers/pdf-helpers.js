@@ -6,9 +6,7 @@ const path = require("path");
 const os = require("os");
 const { PDFName, PDFString, PDFDocument } = require("pdf-lib");
 
-const ICC_PROFILE_PATH =
-  process.env.ICC_PROFILE_PATH ||
-  path.join(__dirname, "sRGB_v4_ICC_preference.icc");
+
 
 
 function cleanPdfBuffer(buf) {
@@ -162,17 +160,34 @@ function generateShopifyXML(data) {
   const iban = data.iban || "DE89370400440532013000";
   const bic = data.bic || "COBADEFFXXX";
 
-  const totalAmount = items.reduce((sum, i) => sum + (i.total || 0), 0);
-  const totalTax = items.reduce((sum, i) => sum + (i.tax || 0), 0);
-  const totalNet = totalAmount - totalTax;
+  // Calculate totals properly
+  let totalAmount = 0;
+  let totalTax = 0;
+  let totalNet = 0;
+  items.forEach(i => {
+    const qty = Number(i.quantity || 1);
+    const unitPrice = Number(i.price || 0);
+    const lineTotal = Number(i.total || qty * unitPrice);
+    const tax = Number(i.tax || 0);
+    const net = lineTotal - tax;
+    totalAmount += lineTotal;
+    totalTax += tax;
+    totalNet += net;
+  });
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <rsm:CrossIndustryInvoice xmlns:rsm="urn:ferd:CrossIndustryDocument:invoice:2p1"
-  xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
-  xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15">
+                          xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:12"
+                          xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:15"
+                          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                          xsi:schemaLocation="urn:ferd:CrossIndustryDocument:invoice:2p1 FacturX_basic_1p0p1.xsd">
+
   <rsm:ExchangedDocument>
     <ram:ID>${orderId}</ram:ID>
     <ram:TypeCode>380</ram:TypeCode>
+    <ram:IncludedNote>
+      <ram:Content>PROFILE: BASIC</ram:Content>
+    </ram:IncludedNote>
     <ram:IssueDateTime>
       <udt:DateTimeString format="102">${date.replace(/-/g, "")}</udt:DateTimeString>
     </ram:IssueDateTime>
@@ -217,9 +232,10 @@ function generateShopifyXML(data) {
     ${items.map((item, i) => {
       const qty = Number(item.quantity || 1);
       const unitPrice = Number(item.price || 0);
-      const total = Number(item.total || qty * unitPrice);
+      const lineTotal = Number(item.total || qty * unitPrice);
       const tax = Number(item.tax || 0);
-      const net = total - tax;
+      const net = lineTotal - tax;
+
       return `
       <ram:IncludedSupplyChainTradeLineItem>
         <ram:AssociatedDocumentLineDocument>
@@ -243,7 +259,7 @@ function generateShopifyXML(data) {
             <ram:TypeCode>VAT</ram:TypeCode>
             <ram:RateApplicablePercent>${item.taxRate ?? 21}</ram:RateApplicablePercent>
           </ram:ApplicableTradeTax>
-          <ram:TradeSettlementLineAmount>${total.toFixed(2)}</ram:TradeSettlementLineAmount>
+          <ram:TradeSettlementLineAmount>${lineTotal.toFixed(2)}</ram:TradeSettlementLineAmount>
           <ram:NetLineAmount>${net.toFixed(2)}</ram:NetLineAmount>
         </ram:SpecifiedLineTradeSettlement>
       </ram:IncludedSupplyChainTradeLineItem>`;
@@ -251,6 +267,7 @@ function generateShopifyXML(data) {
   </rsm:SupplyChainTradeTransaction>
 </rsm:CrossIndustryInvoice>`;
 }
+
 
 
   function generateWooCommerceXML(data) {
@@ -297,9 +314,8 @@ async function finalizePdfWithXml(originalPdfBuffer, zugferdXml) {
 }
 
 
-
 module.exports = {
-  generateZugferdXML,
+  generateShopifyXML,
   embedXmp,
   embedXmlIntoPdf,
   finalizePdfWithXml
