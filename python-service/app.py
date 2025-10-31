@@ -8,7 +8,6 @@ app = Flask(__name__)
 @app.route("/generate-zugferd", methods=["POST"])
 def generate_zugferd():
     try:
-        # --- Get uploaded PDF and invoice data ---
         pdf_file = request.files.get("pdfFile")
         if pdf_file is None:
             return {"error": "Missing pdfFile"}, 400
@@ -19,31 +18,27 @@ def generate_zugferd():
 
         invoice_data = json.loads(invoice_data_json)
 
-        # --- Load PDF into BytesIO ---
-        pdf_bytes = pdf_file.read()
-        pdf_buffer = BytesIO(pdf_bytes)
+        input_pdf_io = BytesIO(pdf_file.read())
+        output_pdf_io = BytesIO()
 
-        # --- Generate ZUGFeRD 2.3 Comfort in-place ---
-      generate_facturx_from_file(
-    pdf_buffer,
-    invoice_data,
-    output_pdf=final_pdf_io,
-    facturx_level="EN16931",  # ZUGFeRD 2.3
-    comfort=True,             # instead of profile="comfort"
-    include_attachment=False
-)
+        generate_facturx_from_file(
+            input_pdf_io,
+            invoice_data,
+            output_pdf=output_pdf_io,
+            facturx_level="EN16931",
+            comfort=True,
+            include_attachment=False
+        )
 
-        # --- Return PDF to client ---
-        pdf_buffer.seek(0)
+        output_pdf_io.seek(0)
         return send_file(
-            pdf_buffer,
+            output_pdf_io,
             mimetype="application/pdf",
             as_attachment=True,
             download_name=f"Invoice-ZUGFeRD-2.3-{invoice_data.get('orderId', 'unknown')}.pdf"
         )
 
     except Exception as e:
-        # Catch-all error logging
         print("❌ Python ZUGFeRD service error:", e)
         return {"error": "ZUGFeRD generation failed", "details": str(e)}, 500
 

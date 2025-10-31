@@ -1,2 +1,2 @@
-flask
-factur-x
+Flask>=2.3
+factur-x>=3.13
