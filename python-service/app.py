@@ -24,12 +24,14 @@ def generate_zugferd():
         pdf_buffer = BytesIO(pdf_bytes)
 
         # --- Generate ZUGFeRD 2.3 Comfort in-place ---
-        generate_facturx_from_file(
-            pdf_buffer,
-            invoice_data,
-            facturx_level="EN16931",  # ZUGFeRD 2.3
-            profile="comfort"
-        )
+      generate_facturx_from_file(
+    pdf_buffer,
+    invoice_data,
+    output_pdf=final_pdf_io,
+    facturx_level="EN16931",  # ZUGFeRD 2.3
+    comfort=True,             # instead of profile="comfort"
+    include_attachment=False
+)
 
         # --- Return PDF to client ---
         pdf_buffer.seek(0)
