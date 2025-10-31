@@ -225,22 +225,27 @@ async function createBasePdf(data) {
 }
 
 /** Generate PDF and send to Python microservice for ZUGFeRD embedding */
+
+
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
   const pdfBuffer = await createBasePdf(data);
 
-  const base64Pdf = pdfBuffer.toString("base64");
+  const form = new FormData();
+  form.append("invoiceData", JSON.stringify(data));
+  form.append("pdfFile", pdfBuffer, {
+    filename: `Invoice-${data.orderId}.pdf`,
+    contentType: "application/pdf",
+  });
+
   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
 
   try {
-    const response = await axios.post(
-      pythonUrl,
-      {
-        pdf_base64: base64Pdf,
-        invoiceData: data,
-      },
-      { responseType: "arraybuffer", timeout: 20000 }
-    );
+    const response = await axios.post(pythonUrl, form, {
+      headers: form.getHeaders(),
+      responseType: "arraybuffer",
+      timeout: 20000,
+    });
 
     const outputDir = path.resolve(__dirname, "../Generated");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
