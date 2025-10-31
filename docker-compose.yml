@@ -1,5 +1,4 @@
 version: "3.9"
-
 services:
   app:
     build:
@@ -17,15 +16,17 @@ services:
     depends_on:
       - mongo
       - python-service
-
-
-
+    networks:
+      - pdf-api-network
+      
   mongo:
     image: mongo:5.0
     container_name: pdf-api-mongo
     volumes:
       - ./mongo-data:/data/db
-
+    networks:
+      - pdf-api-network
+      
   python-service:
     build:
       context: ./python-service
@@ -33,7 +34,12 @@ services:
     volumes:
       - ./python-service:/app
     restart: unless-stopped
+    networks:
+      - pdf-api-network
    
-
 volumes:
   mongo-data:
+
+networks:
+  pdf-api-network:
+    driver: bridge
