@@ -96,13 +96,29 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
+    const FormData = require("form-data");
+    const form = new FormData();
 
-    
-    // Send invoiceData to Python and get back PDF buffer
-    const response = await axios.post(pythonUrl, { invoiceData }, { responseType: "arraybuffer" });
+    // Append invoice data as JSON string
+    form.append("invoiceData", JSON.stringify(invoiceData));
+
+    // Append PDF buffer as a file
+    const basePdfBuffer = await createBasePdf(invoiceData); 
+    form.append("pdfFile", basePdfBuffer, {
+      filename: `Invoice-${invoiceData.orderId}.pdf`,
+      contentType: "application/pdf",
+    });
+
+    const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
+
+    // Send multipart/form-data to Python microservice
+    const response = await axios.post(pythonUrl, form, {
+      headers: form.getHeaders(),
+      responseType: "arraybuffer",
+      timeout: 20000,
+    });
+
     const pdfBuffer = Buffer.from(response.data);
-
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
 
     await incrementUsage(user, 1, false);
