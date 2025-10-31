@@ -9,8 +9,8 @@ const dualAuth = require("../../middleware/dualAuth");
 const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
+const { createBasePdf } = require("./shopifyMerchantTemplate");
 
-const { createShopifyInvoiceZugferd } = require("./shopifyMerchantTemplate");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 
 const JSZip = require("jszip");
@@ -96,38 +96,34 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    const FormData = require("form-data");
+    // 1️⃣ Generate base PDF
+    const basePdfBuffer = await createBasePdf(invoiceData);
+
+    // 2️⃣ Send PDF + invoiceData to Python via multipart/form-data
     const form = new FormData();
-
-    // Append invoice data as JSON string
     form.append("invoiceData", JSON.stringify(invoiceData));
-
-    // Append PDF buffer as a file
-    const basePdfBuffer = await createBasePdf(invoiceData); 
     form.append("pdfFile", basePdfBuffer, {
       filename: `Invoice-${invoiceData.orderId}.pdf`,
       contentType: "application/pdf",
     });
 
-    const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
-
-    // Send multipart/form-data to Python microservice
     const response = await axios.post(pythonUrl, form, {
       headers: form.getHeaders(),
       responseType: "arraybuffer",
       timeout: 20000,
     });
 
-    const pdfBuffer = Buffer.from(response.data);
+    // 3️⃣ Save or return ZUGFeRD PDF
     const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const outputPath = path.join(__dirname, `../Generated/Invoice-ZUGFeRD-${safeOrderId}.pdf`);
+    fs.writeFileSync(outputPath, response.data);
 
-    await incrementUsage(user, 1, false);
-
+    console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
     });
-    return res.send(pdfBuffer);
+    return res.send(response.data);
 
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
@@ -138,6 +134,7 @@ if (isMerchant) {
     });
   }
 }
+
 
 
     // ----------------------------
