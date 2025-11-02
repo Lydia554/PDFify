@@ -10,7 +10,7 @@ services:
     env_file:
       - .env
     environment:
-      PUPPETEER_SKIP_DOWNLOAD: true
+      PUPPETEER_SKIP_DOWNLOAD: "true"
     cap_add:
       - SYS_ADMIN
     depends_on:
@@ -23,7 +23,7 @@ services:
     image: mongo:5.0
     container_name: pdf-api-mongo
     volumes:
-      - ./mongo-data:/data/db
+      - mongo-data:/data/db
     networks:
       - pdf-api-network
       

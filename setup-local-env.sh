@@ -41,7 +41,7 @@ fi
 print_success "Docker is installed"
 
 # Check if Docker Compose is installed
-if ! command -v docker compose &> /dev/null; then
+if ! command -v docker-compose &> /dev/null; then
     print_error "Docker Compose is not installed"
     exit 1
 fi
@@ -158,7 +158,7 @@ echo ""
 echo "🐳 Step 4: Pulling Docker images..."
 echo ""
 
-docker compose pull || print_warning "Could not pull some images (will build instead)"
+docker-compose pull || print_warning "Could not pull some images (will build instead)"
 
 echo ""
 
@@ -166,7 +166,7 @@ echo ""
 echo "🔨 Step 5: Building Docker containers..."
 echo ""
 
-docker compose build
+docker-compose build
 
 print_success "Docker containers built successfully"
 
@@ -176,14 +176,14 @@ echo ""
 echo "🚀 Step 6: Starting services..."
 echo ""
 
-docker compose up -d
+docker-compose up -d
 
 # Wait for services to be ready
 echo "Waiting for services to start..."
 sleep 10
 
 # Check if services are running
-if docker compose ps | grep -q "running"; then
+if docker-compose ps | grep -q "running"; then
     print_success "Services started successfully"
 else
     print_error "Some services failed to start"
