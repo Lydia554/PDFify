@@ -106,76 +106,37 @@ if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    // 1️⃣ Node: generate base PDF
+    // 1️⃣ Node: generate base PDF with sanitized ASCII content & empty metadata
     let pdfBuffer = await createBasePdf(invoiceData);
 
-    // 2️⃣ Sanitize metadata to avoid Ghostscript XMP errors
-    const { PDFDocument } = require("pdf-lib");
-    const pdfDoc = await PDFDocument.load(pdfBuffer);
-    pdfDoc.setTitle("Invoice");
-    pdfDoc.setAuthor("PDFify");
-    pdfDoc.setSubject("");
-    pdfDoc.setCreator("PDFify Node PDF Generator");
-    pdfDoc.setProducer("pdf-lib");
-    pdfBuffer = Buffer.from(await pdfDoc.save());
+    const tmpInput = "/tmp/input.pdf";
+    const tmpOutput = "/tmp/output.pdf";
 
+    // Write PDF to disk
+    fs.writeFileSync(tmpInput, pdfBuffer);
 
-const tmpInput = "/tmp/input.pdf";
-const tmpFlattened = "/tmp/flattened.pdf";
-const tmpOutput = "/tmp/output.pdf";
+    // 2️⃣ Convert to PDF/A-3b in one step
+    const gsPDFa = spawnSync("gs", [
+      "-sDEVICE=pdfwrite",
+      "-dNOPAUSE",
+      "-dBATCH",
+      "-dSAFER",
+      "-dPDFA=3",
+      "-dPDFACompatibilityPolicy=2",
+      "-dProcessColorModel=/DeviceRGB",
+      "-dEmbedAllFonts=true",
+      "-dSubsetFonts=true",
+      `-sOutputICCProfile=${iccProfilePath}`,
+      `-sOutputFile=${tmpOutput}`,
+      tmpInput
+    ]);
 
-// Write initial PDF
-fs.writeFileSync(tmpInput, pdfBuffer);
-
-// 1️⃣ Flatten PDF (fonts/content) first
-let gsFlatten = spawnSync("gs", [
-  "-sDEVICE=pdfwrite",
-  "-dNOPAUSE",
-  "-dBATCH",
-  "-dSAFER",
-  "-dEmbedAllFonts=true",
-  "-dSubsetFonts=true",
-  `-sOutputFile=${tmpFlattened}`,
-  tmpInput
-]);
-if (gsFlatten.error || gsFlatten.status !== 0) {
-  console.error("❌ Ghostscript flattening error:", gsFlatten.stderr?.toString());
-  throw new Error("Ghostscript failed to flatten PDF");
-}
-
-// 2️⃣ Convert flattened PDF to PDF/A-3b
-const gsPDFa = spawnSync("gs", [
-  "-sDEVICE=pdfwrite",
-  "-dNOPAUSE",
-  "-dBATCH",
-  "-dSAFER",
-  "-dPDFA=3",
-  "-dPDFACompatibilityPolicy=2",
-  "-dProcessColorModel=/DeviceRGB",
-  "-dEmbedAllFonts=true",
-  "-dSubsetFonts=true",
-  `-sOutputICCProfile=${iccProfilePath}`,
-  `-sOutputFile=${tmpOutput}`,
-  tmpFlattened 
-]);
-
-if (gsPDFa.error || gsPDFa.status !== 0) {
-  console.error("❌ Ghostscript PDF/A-3b error:", gsPDFa.stderr?.toString());
-  throw new Error("Ghostscript failed to generate PDF/A-3b");
-}
-
-
-// Read final PDF/A-3b
-pdfBuffer = fs.readFileSync(tmpOutput);
-
-
-
-
-    if (gs.error || gs.status !== 0) {
-      console.error("❌ Ghostscript error:", gs.stderr?.toString());
+    if (gsPDFa.error || gsPDFa.status !== 0) {
+      console.error("❌ Ghostscript PDF/A-3b error:", gsPDFa.stderr?.toString());
       throw new Error("Ghostscript failed to generate PDF/A-3b");
     }
 
+    // 3️⃣ Read final PDF/A-3b
     pdfBuffer = fs.readFileSync(tmpOutput);
 
     // 4️⃣ Python: embed ZUGFeRD XML
@@ -212,6 +173,7 @@ pdfBuffer = fs.readFileSync(tmpOutput);
 
     console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
 
+    // 6️⃣ Send PDF to client
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
