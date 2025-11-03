@@ -99,15 +99,17 @@ async function createBasePdf(data) {
     x += colWidths[i];
   });
   y -= rowHeight;
+
+  
 // Table rows
 data.items.forEach((item) => {
   let x = 50;
   const row = [
-    item.name || "Item",
-    String(item.quantity ?? 0),
-    String(item.price?.toFixed(2) ?? "0.00"),
-    String(item.tax?.toFixed(2) ?? "0.00"),
-    String(item.total?.toFixed(2) ?? "0.00")
+    item.name != null ? String(item.name) : "Item",
+    item.quantity != null ? String(item.quantity) : "0",
+    item.price != null ? item.price.toFixed(2) : "0.00",
+    item.tax != null ? item.tax.toFixed(2) : "0.00",
+    item.total != null ? item.total.toFixed(2) : "0.00"
   ];
 
   row.forEach((cell, i) => {
@@ -117,6 +119,7 @@ data.items.forEach((item) => {
 
   y -= rowHeight;
 });
+
 
 
   return Buffer.from(await pdfDoc.save());
