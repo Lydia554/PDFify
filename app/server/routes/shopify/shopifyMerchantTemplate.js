@@ -48,7 +48,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
     creator: "PDFify",
-    companyName: shopConfig.companyName || "YOUR COMPANY GMBH", // required
+    companyName: shopConfig.companyName || "YOUR COMPANY GMBH", 
     locale: { language: order.locale || "en" },
   };
 }
@@ -67,19 +67,20 @@ async function createBasePdf(data) {
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-  // --- SET METADATA ---
-  pdfDoc.setTitle(String(data.companyName || "Invoice"));
-  pdfDoc.setAuthor("PDFify");
-  pdfDoc.setSubject("Invoice");
-  pdfDoc.setCreator("PDFify Node PDF Generator");
-  pdfDoc.setProducer("pdf-lib");
-  pdfDoc.setCreationDate(new Date());
-  pdfDoc.setModificationDate(new Date());
-  // -------------------------
+function asciiSafe(str) {
+  if (!str) return "";
+  return str.replace(/[^\x20-\x7E]/g, "");
+}
+
+pdfDoc.setTitle(asciiSafe("Invoice"));
+pdfDoc.setAuthor(asciiSafe("PDFify"));
+pdfDoc.setSubject(asciiSafe(""));
+pdfDoc.setCreator(asciiSafe("PDFify Node PDF Generator"));
+pdfDoc.setProducer(asciiSafe("pdf-lib"));
+
 
   const page = pdfDoc.addPage([595, 842]);
   let y = 780;
-  const lineHeight = 24;
   const rowHeight = 24;
   const colWidths = [180, 60, 80, 80, 80];
   const headers = ["Item", "Qty", "Price", "Tax", "Total"];

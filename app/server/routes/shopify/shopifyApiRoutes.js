@@ -96,7 +96,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
 
 const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
-console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath));
+console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath), fs.statSync(iccProfilePath).mode);
 
 
 // ----------------------
@@ -124,18 +124,20 @@ if (isMerchant) {
     const tmpOutput = "/tmp/output.pdf";
     fs.writeFileSync(tmpInput, pdfBuffer);
 
-    const gs = spawnSync("gs", [
-      "-dPDFA=3",
-      "-dBATCH",
-      "-dNOPAUSE",
-      "-dNOOUTERSAVE",
-      "-dPDFACompatibilityPolicy=1",
-      "-sProcessColorModel=DeviceRGB",
-      "-sDEVICE=pdfwrite",
-      `-sOutputICCProfile=${iccProfilePath}`,
-      "-sOutputFile=" + tmpOutput,
-      tmpInput
-    ]);
+const gs = spawnSync("gs", [
+  "-dPDFA=3",
+  "-dBATCH",
+  "-dNOPAUSE",
+  "-dNOOUTERSAVE",
+  "-dPDFACompatibilityPolicy=1",
+  "-sProcessColorModel=DeviceRGB",
+  "-sDEVICE=pdfwrite",
+  `-sOutputICCProfile=${iccProfilePath}`,
+  "-sOutputFile=" + tmpOutput,
+  "-dUseCIEColor=true",  
+  tmpInput             
+]);
+
 
     if (gs.error || gs.status !== 0) {
       console.error("❌ Ghostscript error:", gs.stderr?.toString());
