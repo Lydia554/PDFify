@@ -10,44 +10,41 @@ app = Flask(__name__)
 # Convert Shopify invoice JSON → EN16931 XML
 # -----------------------------
 def shopify_invoice_to_en16931(invoice):
-    nsmap = {
-        "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",
-        "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100"
-    }
-
-    root = etree.Element("rsm:CrossIndustryInvoice", nsmap=nsmap)
+    # Root element, no prefixes
+    root = etree.Element("CrossIndustryInvoice")
 
     # Invoice header
-    exchanged_document = etree.SubElement(root, "rsm:ExchangedDocument")
-    etree.SubElement(exchanged_document, "ram:ID").text = str(invoice.get("orderId"))
-    etree.SubElement(exchanged_document, "ram:IssueDateTime").text = invoice.get("date", "")
+    exchanged_document = etree.SubElement(root, "ExchangedDocument")
+    etree.SubElement(exchanged_document, "ID").text = str(invoice.get("orderId"))
+    etree.SubElement(exchanged_document, "IssueDateTime").text = invoice.get("date", "")
 
     # Seller / Company
-    seller = etree.SubElement(root, "ram:SupplyChainTradeParty")
-    etree.SubElement(seller, "ram:Name").text = invoice.get("companyName", "YOUR COMPANY GMBH")
+    seller = etree.SubElement(root, "SupplyChainTradeParty")
+    etree.SubElement(seller, "Name").text = invoice.get("companyName", "YOUR COMPANY GMBH")
 
     # Buyer
-    buyer = etree.SubElement(root, "ram:BuyerTradeParty")
-    etree.SubElement(buyer, "ram:Name").text = invoice.get("customerName", "Valued Customer")
+    buyer = etree.SubElement(root, "BuyerTradeParty")
+    etree.SubElement(buyer, "Name").text = invoice.get("customerName", "Valued Customer")
 
     # Items
-    trade_transaction = etree.SubElement(root, "rsm:SupplyChainTradeTransaction")
+    trade_transaction = etree.SubElement(root, "SupplyChainTradeTransaction")
     for item in invoice.get("items", []):
-        line_item = etree.SubElement(trade_transaction, "ram:IncludedSupplyChainTradeLineItem")
-        etree.SubElement(line_item, "ram:LineID").text = str(item.get("position", 1))
-        product = etree.SubElement(line_item, "ram:SpecifiedTradeProduct")
-        etree.SubElement(product, "ram:Name").text = item.get("name", "")
-        trade_agreement = etree.SubElement(line_item, "ram:SpecifiedLineTradeAgreement")
-        price_elem = etree.SubElement(trade_agreement, "ram:NetPriceProductTradePrice")
-        etree.SubElement(price_elem, "ram:ChargeAmount").text = str(item.get("price", 0))
-        trade_delivery = etree.SubElement(line_item, "ram:SpecifiedLineTradeDelivery")
-        etree.SubElement(trade_delivery, "ram:BilledQuantity").text = str(item.get("quantity", 1))
-        trade_settlement = etree.SubElement(line_item, "ram:SpecifiedLineTradeSettlement")
-        tax_elem = etree.SubElement(trade_settlement, "ram:ApplicableTradeTax")
-        etree.SubElement(tax_elem, "ram:CalculatedAmount").text = str(item.get("tax", 0))
-        etree.SubElement(tax_elem, "ram:RateApplicablePercent").text = str(item.get("taxRate", 0))
+        line_item = etree.SubElement(trade_transaction, "IncludedSupplyChainTradeLineItem")
+        etree.SubElement(line_item, "LineID").text = str(item.get("position", 1))
+        product = etree.SubElement(line_item, "SpecifiedTradeProduct")
+        etree.SubElement(product, "Name").text = item.get("name", "")
+        trade_agreement = etree.SubElement(line_item, "SpecifiedLineTradeAgreement")
+        price_elem = etree.SubElement(trade_agreement, "NetPriceProductTradePrice")
+        etree.SubElement(price_elem, "ChargeAmount").text = str(item.get("price", 0))
+        trade_delivery = etree.SubElement(line_item, "SpecifiedLineTradeDelivery")
+        etree.SubElement(trade_delivery, "BilledQuantity").text = str(item.get("quantity", 1))
+        trade_settlement = etree.SubElement(line_item, "SpecifiedLineTradeSettlement")
+        tax_elem = etree.SubElement(trade_settlement, "ApplicableTradeTax")
+        etree.SubElement(tax_elem, "CalculatedAmount").text = str(item.get("tax", 0))
+        etree.SubElement(tax_elem, "RateApplicablePercent").text = str(item.get("taxRate", 0))
 
     return root
+
 
 # -----------------------------
 # Flask route
