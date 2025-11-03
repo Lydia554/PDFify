@@ -122,7 +122,7 @@ if (isMerchant) {
       "-dBATCH",
       "-dSAFER",
       "-dPDFA=3",
-      "-dPDFACompatibilityPolicy=2",
+      "-dPDFACompatibilityPolicy=3",
       "-dProcessColorModel=/DeviceRGB",
       "-dEmbedAllFonts=true",
       "-dSubsetFonts=true",
