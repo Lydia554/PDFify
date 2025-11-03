@@ -15,6 +15,7 @@ const { spawnSync } = require("child_process");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 const { createShopifyInvoiceZugferd, createBasePdf } = require("./shopifyMerchantTemplate");
 const { PDFDocument, PDFName } = require("pdf-lib");
+const tmp = require("tmp");
 
 const JSZip = require("jszip");
 
