@@ -53,10 +53,6 @@ function mapOrderToPdfData(order, shopConfig = {}) {
   };
 }
 
-
-// ---------------------
-// Base PDF (Node)
-// ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
@@ -67,18 +63,24 @@ async function createBasePdf(data) {
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-function asciiSafe(str) {
-  if (!str) return "";
-  return str.replace(/[^\x20-\x7E]/g, "");
-}
+  function asciiSafe(str) {
+    if (!str) return " ";
+    return str.replace(/[^\x20-\x7E]/g, ""); 
+  }
 
-pdfDoc.setTitle(asciiSafe(data.companyName || "Invoice"));
-pdfDoc.setAuthor(asciiSafe("PDFify"));
-pdfDoc.setSubject(" ");    
-pdfDoc.setCreator(asciiSafe("PDFify"));
-pdfDoc.setProducer(asciiSafe("pdf-lib"));
+  // sanitize metadata
+  pdfDoc.setTitle(asciiSafe(data.companyName || "Invoice"));
+  pdfDoc.setAuthor(asciiSafe("PDFify"));
+  pdfDoc.setSubject(" ");
+  pdfDoc.setCreator(asciiSafe("PDFify"));
+  pdfDoc.setProducer(asciiSafe("pdf-lib"));
 
-
+  // sanitize table & page content
+  data.customerName = asciiSafe(data.customerName);
+  data.companyName = asciiSafe(data.companyName);
+  data.items.forEach(item => {
+    item.name = asciiSafe(item.name);
+  });
 
   const page = pdfDoc.addPage([595, 842]);
   let y = 780;
@@ -104,7 +106,7 @@ pdfDoc.setProducer(asciiSafe("pdf-lib"));
   // Table headers
   let x = 50;
   headers.forEach((header, i) => {
-    page.drawText(header, { x, y, size: 10, font: boldFont, color: rgb(0, 0, 0) });
+    page.drawText(asciiSafe(header), { x, y, size: 10, font: boldFont, color: rgb(0, 0, 0) });
     x += colWidths[i];
   });
   y -= rowHeight;
@@ -113,7 +115,7 @@ pdfDoc.setProducer(asciiSafe("pdf-lib"));
   data.items.forEach((item) => {
     let x = 50;
     const row = [
-      item.name != null ? String(item.name) : "Item",
+      item.name,
       item.quantity != null ? String(item.quantity) : "0",
       item.price != null ? item.price.toFixed(2) : "0.00",
       item.tax != null ? item.tax.toFixed(2) : "0.00",
@@ -121,7 +123,7 @@ pdfDoc.setProducer(asciiSafe("pdf-lib"));
     ];
 
     row.forEach((cell, i) => {
-      page.drawText(String(cell), { x, y, size: 10, font: regularFont, color: rgb(0, 0, 0) });
+      page.drawText(cell, { x, y, size: 10, font: regularFont, color: rgb(0, 0, 0) });
       x += colWidths[i];
     });
 

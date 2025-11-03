@@ -118,12 +118,24 @@ if (isMerchant) {
     pdfDoc.setCreator("PDFify Node PDF Generator");
     pdfDoc.setProducer("pdf-lib");
     pdfBuffer = Buffer.from(await pdfDoc.save());
+const tmpInput = "/tmp/input.pdf";
+const tmpFlattened = "/tmp/flattened.pdf";
+const tmpOutput = "/tmp/output.pdf";
 
-    // 3️⃣ Ghostscript: enforce PDF/A-3b
-    const tmpInput = "/tmp/input.pdf";
-    const tmpOutput = "/tmp/output.pdf";
-    fs.writeFileSync(tmpInput, pdfBuffer);
+// write initial PDF
+fs.writeFileSync(tmpInput, pdfBuffer);
 
+// 1️⃣ Flatten fonts/content
+spawnSync("gs", [
+  "-sDEVICE=pdfwrite",
+  "-dNOPAUSE",
+  "-dBATCH",
+  "-dSAFER",
+  `-sOutputFile=${tmpFlattened}`,
+  tmpInput
+]);
+
+// 2️⃣ PDF/A-3b conversion using flattened PDF
 const gs = spawnSync("gs", [
   "-dPDFA=3",
   "-dBATCH",
@@ -133,8 +145,8 @@ const gs = spawnSync("gs", [
   "-sProcessColorModel=DeviceRGB",
   "-sDEVICE=pdfwrite",
   `-sOutputICCProfile=${iccProfilePath}`,
-  "-sOutputFile=" + tmpOutput,
-  tmpInput
+  `-sOutputFile=${tmpOutput}`,
+  tmpFlattened
 ]);
 
 
