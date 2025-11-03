@@ -14,6 +14,7 @@ const { incrementUsage } = require("../../utils/usageUtils");
 const { spawnSync } = require("child_process");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 const { createShopifyInvoiceZugferd, createBasePdf } = require("./shopifyMerchantTemplate");
+const { PDFDocument, PDFName } = require("pdf-lib");
 
 const JSZip = require("jszip");
 
