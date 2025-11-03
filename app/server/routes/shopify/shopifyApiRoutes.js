@@ -151,7 +151,7 @@ const gsFlatten = spawnSync("gs", [
   "-sDEVICE=pdfwrite",
   "-dNOPAUSE",
   "-dBATCH",
-  "-dSAFER",
+  "-dNOSAFER",
   "-dEmbedAllFonts=true",
   "-dSubsetFonts=true",
   "-dCompressFonts=true",
