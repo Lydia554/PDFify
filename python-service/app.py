@@ -1,38 +1,88 @@
 from flask import Flask, request, send_file
 from io import BytesIO
 from facturx import generate_facturx_from_file
+from lxml import etree
 import json
 
 app = Flask(__name__)
 
+# -----------------------------
+# Convert Shopify invoice JSON → EN16931 XML (ZUGFeRD 2.3)
+# -----------------------------
+def shopify_invoice_to_en16931(invoice):
+    """
+    Converts the invoice JSON into a minimal EN16931 XML tree.
+    Only elements required by ZUGFeRD 2.3 / Factur-X.
+    """
+    root = etree.Element("CrossIndustryInvoice")
+
+    # Invoice header
+    exchanged_document = etree.SubElement(root, "ExchangedDocument")
+    etree.SubElement(exchanged_document, "ID").text = str(invoice.get("orderId", "UNKNOWN"))
+    etree.SubElement(exchanged_document, "IssueDateTime").text = invoice.get("date", "")
+
+    # Seller / Company
+    seller = etree.SubElement(root, "SupplyChainTradeParty")
+    etree.SubElement(seller, "Name").text = invoice.get("companyName", "YOUR COMPANY GMBH")
+
+    # Buyer
+    buyer = etree.SubElement(root, "BuyerTradeParty")
+    etree.SubElement(buyer, "Name").text = invoice.get("customerName", "Valued Customer")
+
+    # Items
+    trade_transaction = etree.SubElement(root, "SupplyChainTradeTransaction")
+    for item in invoice.get("items", []):
+        line_item = etree.SubElement(trade_transaction, "IncludedSupplyChainTradeLineItem")
+        etree.SubElement(line_item, "LineID").text = str(item.get("position", 1))
+
+        product = etree.SubElement(line_item, "SpecifiedTradeProduct")
+        etree.SubElement(product, "Name").text = str(item.get("name", ""))
+
+        trade_agreement = etree.SubElement(line_item, "SpecifiedLineTradeAgreement")
+        price_elem = etree.SubElement(trade_agreement, "NetPriceProductTradePrice")
+        etree.SubElement(price_elem, "ChargeAmount").text = str(item.get("price", 0))
+
+        trade_delivery = etree.SubElement(line_item, "SpecifiedLineTradeDelivery")
+        etree.SubElement(trade_delivery, "BilledQuantity").text = str(item.get("quantity", 1))
+
+        trade_settlement = etree.SubElement(line_item, "SpecifiedLineTradeSettlement")
+        tax_elem = etree.SubElement(trade_settlement, "ApplicableTradeTax")
+        etree.SubElement(tax_elem, "CalculatedAmount").text = str(item.get("tax", 0))
+        etree.SubElement(tax_elem, "RateApplicablePercent").text = str(item.get("taxRate", 0))
+
+    return root
+
+
+# -----------------------------
+# Flask route
+# -----------------------------
 @app.route("/generate-zugferd", methods=["POST"])
 def generate_zugferd():
     try:
-        # 1️⃣ Get uploaded PDF
         pdf_file = request.files.get("pdfFile")
         if not pdf_file:
             return {"error": "Missing pdfFile"}, 400
 
-        # 2️⃣ Get invoice JSON
         invoice_data_json = request.form.get("invoiceData")
         if not invoice_data_json:
             return {"error": "Missing invoiceData"}, 400
-        invoice_data = json.loads(invoice_data_json)
 
-        # 3️⃣ Wrap PDF in BytesIO
+        invoice_data = json.loads(invoice_data_json)
         input_pdf_io = BytesIO(pdf_file.read())
 
-        # 4️⃣ Generate ZUGFeRD 2.3 (EN16931 full structured XML)
+        # Convert JSON → XML for Factur-X / ZUGFeRD
+        xml_root = shopify_invoice_to_en16931(invoice_data)
+
+        # Generate PDF/A-3b ZUGFeRD PDF (EN16931 full structured XML)
         output_pdf_bytes = generate_facturx_from_file(
             input_pdf_io,
-            invoice_data,
-            facturx_level="EN16931"  # full structured XML
-            # Optional: add `comfort_level="BASIC"` if you want the old comfort subset
+            xml_root,
+            facturx_level="EN16931"  # ZUGFeRD 2.3
         )
 
-        # 5️⃣ Wrap output in BytesIO and send
         output_pdf_io = BytesIO(output_pdf_bytes)
         output_pdf_io.seek(0)
+
         return send_file(
             output_pdf_io,
             mimetype="application/pdf",
@@ -43,6 +93,7 @@ def generate_zugferd():
     except Exception as e:
         print("❌ Python ZUGFeRD service error:", e)
         return {"error": "ZUGFeRD generation failed", "details": str(e)}, 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
