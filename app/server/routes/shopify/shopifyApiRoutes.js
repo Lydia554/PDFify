@@ -103,11 +103,13 @@ function enforcePdfA3b(inputBuffer) {
   const tmpInput = "/tmp/input.pdf";
   const tmpOutput = "/tmp/output.pdf";
   fs.writeFileSync(tmpInput, inputBuffer);
-
+  
 const gs = spawnSync("gs", [
   "-dPDFA=3",
   "-dBATCH",
   "-dNOPAUSE",
+  "-dNOOUTERSAVE",
+  "-dPDFACompatibilityPolicy=1",
   "-sProcessColorModel=DeviceRGB",
   "-sDEVICE=pdfwrite",
   `-sOutputICCProfile=${iccProfilePath}`,

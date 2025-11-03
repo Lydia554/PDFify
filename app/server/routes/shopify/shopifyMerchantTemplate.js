@@ -55,16 +55,27 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 
 
 // ---------------------
-// Create base PDF (Node)
+// Base PDF (Node)
 // ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
 
+  // Embed fonts
   const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
   const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf"));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
+
+  // --- SET METADATA ---
+  pdfDoc.setTitle(String(data.companyName || "Invoice"));
+  pdfDoc.setAuthor("PDFify");
+  pdfDoc.setSubject("Invoice");
+  pdfDoc.setCreator("PDFify Node PDF Generator");
+  pdfDoc.setProducer("pdf-lib");
+  pdfDoc.setCreationDate(new Date());
+  pdfDoc.setModificationDate(new Date());
+  // -------------------------
 
   const page = pdfDoc.addPage([595, 842]);
   let y = 780;
@@ -83,11 +94,10 @@ async function createBasePdf(data) {
     page.drawImage(logoImage, { x: 40, y: 784 - logoDims.height / 2, width: logoDims.width, height: logoDims.height });
   }
 
- page.drawText(String(data.companyName || "YOUR COMPANY GMBH"), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1,1,1) });
-page.drawText(`INVOICE #${String(data.orderId || "UNKNOWN")}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2,0.2,0.7) });
-page.drawText(`Date: ${String(data.date || new Date().toISOString().slice(0,10))}`, { x: 50, y, size: 12, font: regularFont });
-page.drawText(`Customer: ${String(data.customerName || "Valued Customer")}`, { x: 50, y, size: 12, font: regularFont });
-
+  page.drawText(String(data.companyName || "YOUR COMPANY GMBH"), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1,1,1) });
+  page.drawText(`INVOICE #${String(data.orderId || "UNKNOWN")}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2,0.2,0.7) });
+  page.drawText(`Date: ${String(data.date || new Date().toISOString().slice(0,10))}`, { x: 50, y, size: 12, font: regularFont });
+  page.drawText(`Customer: ${String(data.customerName || "Valued Customer")}`, { x: 50, y, size: 12, font: regularFont });
 
   // Table headers
   let x = 50;
@@ -97,30 +107,28 @@ page.drawText(`Customer: ${String(data.customerName || "Valued Customer")}`, { x
   });
   y -= rowHeight;
 
+  // Table rows
+  data.items.forEach((item) => {
+    let x = 50;
+    const row = [
+      item.name != null ? String(item.name) : "Item",
+      item.quantity != null ? String(item.quantity) : "0",
+      item.price != null ? item.price.toFixed(2) : "0.00",
+      item.tax != null ? item.tax.toFixed(2) : "0.00",
+      item.total != null ? item.total.toFixed(2) : "0.00"
+    ];
 
-// Table rows
-data.items.forEach((item) => {
-  let x = 50;
-  const row = [
-    item.name != null ? String(item.name) : "Item",
-    item.quantity != null ? String(item.quantity) : "0",
-    item.price != null ? item.price.toFixed(2) : "0.00",
-    item.tax != null ? item.tax.toFixed(2) : "0.00",
-    item.total != null ? item.total.toFixed(2) : "0.00"
-  ];
+    row.forEach((cell, i) => {
+      page.drawText(String(cell), { x, y, size: 10, font: regularFont, color: rgb(0, 0, 0) });
+      x += colWidths[i];
+    });
 
-  row.forEach((cell, i) => {
-    page.drawText(String(cell), { x, y, size: 10, font: regularFont, color: rgb(0, 0, 0) });
-    x += colWidths[i];
+    y -= rowHeight;
   });
-
-  y -= rowHeight;
-});
-
-
 
   return Buffer.from(await pdfDoc.save());
 }
+
 
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
