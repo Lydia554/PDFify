@@ -97,54 +97,56 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
 const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
 
-
-// Helper: convert Node PDF buffer → PDF/A-3b via Ghostscript
-function enforcePdfA3b(inputBuffer) {
-  const tmpInput = "/tmp/input.pdf";
-  const tmpOutput = "/tmp/output.pdf";
-  fs.writeFileSync(tmpInput, inputBuffer);
-  
-const gs = spawnSync("gs", [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-dNOOUTERSAVE",
-  "-dPDFACompatibilityPolicy=1",
-  "-sProcessColorModel=DeviceRGB",
-  "-sDEVICE=pdfwrite",
-  `-sOutputICCProfile=${iccProfilePath}`,
-  "-sOutputFile=" + tmpOutput,
-  tmpInput
-]);
-
-
-  if (gs.error || gs.status !== 0) {
-    console.error("❌ Ghostscript error:", gs.stderr?.toString());
-    throw new Error("Ghostscript failed to generate PDF/A-3b");
-  }
-
-  return fs.readFileSync(tmpOutput);
-}
-
 // ----------------------
-// Merchant 
+// Merchant PDF generation
 // ----------------------
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    //  Node: generate base PDF
+    // 1️⃣ Node: generate base PDF
     let pdfBuffer = await createBasePdf(invoiceData);
 
-    //  Ghostscript: enforce PDF/A-3b
-    pdfBuffer = enforcePdfA3b(pdfBuffer);
+    // 2️⃣ Sanitize metadata to avoid Ghostscript XMP errors
+    const { PDFDocument } = require("pdf-lib");
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    pdfDoc.setTitle("Invoice");
+    pdfDoc.setAuthor("PDFify");
+    pdfDoc.setSubject("");
+    pdfDoc.setCreator("PDFify Node PDF Generator");
+    pdfDoc.setProducer("pdf-lib");
+    pdfBuffer = Buffer.from(await pdfDoc.save());
 
-    //  Python: embed ZUGFeRD XML
+    // 3️⃣ Ghostscript: enforce PDF/A-3b
+    const tmpInput = "/tmp/input.pdf";
+    const tmpOutput = "/tmp/output.pdf";
+    fs.writeFileSync(tmpInput, pdfBuffer);
+
+    const gs = spawnSync("gs", [
+      "-dPDFA=3",
+      "-dBATCH",
+      "-dNOPAUSE",
+      "-dNOOUTERSAVE",
+      "-dPDFACompatibilityPolicy=1",
+      "-sProcessColorModel=DeviceRGB",
+      "-sDEVICE=pdfwrite",
+      `-sOutputICCProfile=${iccProfilePath}`,
+      "-sOutputFile=" + tmpOutput,
+      tmpInput
+    ]);
+
+    if (gs.error || gs.status !== 0) {
+      console.error("❌ Ghostscript error:", gs.stderr?.toString());
+      throw new Error("Ghostscript failed to generate PDF/A-3b");
+    }
+
+    pdfBuffer = fs.readFileSync(tmpOutput);
+
+    // 4️⃣ Python: embed ZUGFeRD XML
     const form = new FormData();
- const { Blob } = require("buffer");
-
-form.append("pdfFile", new Blob([pdfBuffer], { type: "application/pdf" }), {
-  name: `Invoice-${invoiceData.orderId}.pdf`,
+    form.append("invoiceData", JSON.stringify(invoiceData));
+    form.append("pdfFile", pdfBuffer, {
+      filename: `Invoice-${invoiceData.orderId}.pdf`,
       contentType: "application/pdf",
       knownLength: pdfBuffer.length,
     });
@@ -164,9 +166,9 @@ form.append("pdfFile", new Blob([pdfBuffer], { type: "application/pdf" }), {
       throw new Error(`Python ZUGFeRD service error: ${response.status}`);
     }
 
-    pdfBuffer = response.data; 
+    pdfBuffer = response.data;
 
-
+    // 5️⃣ Save to disk
     const outputDir = path.resolve(__dirname, "../Generated");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
     const outputPath = path.join(outputDir, `Invoice-ZUGFeRD-${invoiceData.orderId}.pdf`);
@@ -174,7 +176,6 @@ form.append("pdfFile", new Blob([pdfBuffer], { type: "application/pdf" }), {
 
     console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
 
-   
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
@@ -187,6 +188,7 @@ form.append("pdfFile", new Blob([pdfBuffer], { type: "application/pdf" }), {
     return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
   }
 }
+
 
 
     // ----------------------------

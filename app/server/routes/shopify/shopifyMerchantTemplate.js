@@ -17,10 +17,10 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     const total = net + tax;
 
     return {
-      position: index + 1,         // required for Comfort profile
+      position: index + 1,         
       name: item.title || item.name || "Item",
       quantity,
-      unitCode: "EA",              // required for line items
+      unitCode: "EA",            
       price,
       net,
       tax,
