@@ -10,33 +10,50 @@ app = Flask(__name__)
 # -----------------------------
 
 
+
 def shopify_invoice_to_en16931(invoice):
-    # Namespace mapping
     nsmap = {
-        "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",
+        "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",  # Root namespace
         "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
         "qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
         "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
     }
 
-    # Root element with rsm prefix
+    # Root element
     root = etree.Element("{urn:ferd:CrossIndustryInvoice:invoice:1p0}CrossIndustryInvoice", nsmap=nsmap)
 
-    # ExchangedDocument (Invoice header)
+    # -------------------------
+    # ExchangedDocument
+    # -------------------------
     exchanged_document = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocument")
     etree.SubElement(exchanged_document, "{%s}ID" % nsmap["ram"]).text = str(invoice.get("orderId", "UNKNOWN"))
+    etree.SubElement(exchanged_document, "{%s}TypeCode" % nsmap["ram"]).text = "380"  # Standard invoice code
     etree.SubElement(exchanged_document, "{%s}IssueDateTime" % nsmap["ram"]).text = invoice.get("date", "")
 
-    # Seller
-    seller = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeParty")
+    # -------------------------
+    # ExchangedDocumentContext (mandatory in EN16931)
+    # -------------------------
+    doc_context = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocumentContext")
+    business_process = etree.SubElement(doc_context, "{%s}GuidelineSpecifiedDocumentContextParameter" % nsmap["ram"])
+    etree.SubElement(business_process, "{%s}ID" % nsmap["ram"]).text = "urn:ferd:CrossIndustryDocument:invoice:1p0:basic"
+
+    # -------------------------
+    # SupplyChainTradeTransaction
+    # -------------------------
+    trade_transaction = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeTransaction")
+
+    # -------------------------
+    # Buyer / Seller
+    # -------------------------
+    seller = etree.SubElement(trade_transaction, "{%s}SellerTradeParty" % nsmap["ram"])
     etree.SubElement(seller, "{%s}Name" % nsmap["ram"]).text = invoice.get("companyName", "YOUR COMPANY GMBH")
 
-    # Buyer
-    buyer = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}BuyerTradeParty")
+    buyer = etree.SubElement(trade_transaction, "{%s}BuyerTradeParty" % nsmap["ram"])
     etree.SubElement(buyer, "{%s}Name" % nsmap["ram"]).text = invoice.get("customerName", "Valued Customer")
 
-    # Trade transaction (line items)
-    trade_transaction = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeTransaction")
+    # -------------------------
+    # Line items
+    # -------------------------
     for idx, item in enumerate(invoice.get("items", []), start=1):
         line_item = etree.SubElement(trade_transaction, "{%s}IncludedSupplyChainTradeLineItem" % nsmap["ram"])
         etree.SubElement(line_item, "{%s}LineID" % nsmap["ram"]).text = str(item.get("position", idx))
@@ -54,9 +71,11 @@ def shopify_invoice_to_en16931(invoice):
         trade_settlement = etree.SubElement(line_item, "{%s}SpecifiedLineTradeSettlement" % nsmap["ram"])
         tax_elem = etree.SubElement(trade_settlement, "{%s}ApplicableTradeTax" % nsmap["ram"])
         etree.SubElement(tax_elem, "{%s}CalculatedAmount" % nsmap["ram"]).text = str(item.get("tax", 0))
+        etree.SubElement(tax_elem, "{%s}TypeCode" % nsmap["ram"]).text = "VAT"
         etree.SubElement(tax_elem, "{%s}RateApplicablePercent" % nsmap["ram"]).text = str(item.get("taxRate", 0))
 
     return root
+
 
 
 # -----------------------------
