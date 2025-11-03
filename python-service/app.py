@@ -8,20 +8,23 @@ app = Flask(__name__)
 @app.route("/generate-zugferd", methods=["POST"])
 def generate_zugferd():
     try:
+        # 1️⃣ Get uploaded PDF
         pdf_file = request.files.get("pdfFile")
         if pdf_file is None:
             return {"error": "Missing pdfFile"}, 400
 
+        # 2️⃣ Get invoice data
         invoice_data_json = request.form.get("invoiceData")
         if not invoice_data_json:
             return {"error": "Missing invoiceData"}, 400
-
         invoice_data = json.loads(invoice_data_json)
 
+        # 3️⃣ Wrap PDF in BytesIO
         input_pdf_io = BytesIO(pdf_file.read())
 
-   
-        output_pdf_io = generate_facturx_from_file(
+        # 4️⃣ Generate ZUGFeRD PDF
+        # This returns either a BytesIO or raw bytes
+        output = generate_facturx_from_file(
             input_pdf_io,
             invoice_data,
             facturx_level="EN16931",
@@ -29,11 +32,15 @@ def generate_zugferd():
             include_attachment=False
         )
 
-        if not hasattr(output_pdf_io, "seek"):
-        
-            output_pdf_io = BytesIO(output_pdf_io)
+        # 5️⃣ Ensure we have a BytesIO
+        if isinstance(output, BytesIO):
+            output_pdf_io = output
+        else:
+            output_pdf_io = BytesIO(output)
 
         output_pdf_io.seek(0)
+
+        # 6️⃣ Send back PDF
         return send_file(
             output_pdf_io,
             mimetype="application/pdf",
