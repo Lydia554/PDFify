@@ -108,8 +108,7 @@ if (isMerchant) {
 
     // 1️⃣ Node: generate base PDF
  const pdfBuffer = await createBasePdf(invoiceData);
-fs.writeFileSync("/tmp/debug-base.pdf", pdfBuffer);
-console.log("✅ Base PDF saved for inspection");
+
 
 
     // 2️⃣ Strip DOCINFO / metadata to prevent Ghostscript XMP errors
