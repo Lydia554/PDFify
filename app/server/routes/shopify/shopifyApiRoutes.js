@@ -146,6 +146,7 @@ if (isMerchant) {
 
     // ---- FLATTEN STEP ----
     console.log("🔹 Flattening PDF before PDF/A conversion...");
+    const { spawnSync } = require("child_process");
     const gsFlatten = spawnSync("gs", [
       "-sDEVICE=pdfwrite",
       "-dNOPAUSE",
@@ -201,22 +202,28 @@ if (isMerchant) {
       throw new Error("Ghostscript failed to generate PDF/A-3b");
     }
 
-// ---- FINAL OUTPUT ----
-pdfBuffer = fs.readFileSync(tmpOutput);
-console.log("✅ PDF/A-3b successfully created.");
+    // ---- FINAL OUTPUT ----
+    pdfBuffer = fs.readFileSync(tmpOutput);
+    console.log("✅ PDF/A-3b successfully created.");
 
-
-
-    // 6️⃣ Python: embed ZUGFeRD XML
+    // 3️⃣ Python: embed ZUGFeRD XML
+    const FormData = require("form-data");
     const form = new FormData();
+
     form.append("invoiceData", JSON.stringify(invoiceData));
-    form.append("pdfFile", pdfBuffer, {
-      filename: `Invoice-${invoiceData.orderId}.pdf`,
-      contentType: "application/pdf",
-      knownLength: pdfBuffer.length,
+
+    // ⚡ Proper wrapping for Buffer
+    form.append("pdfFile", {
+      value: pdfBuffer,
+      options: {
+        filename: `Invoice-${invoiceData.orderId}.pdf`,
+        contentType: "application/pdf",
+        knownLength: pdfBuffer.length,
+      },
     });
 
     const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
+    const axios = require("axios");
     const response = await axios.post(pythonUrl, form, {
       headers: form.getHeaders(),
       responseType: "arraybuffer",
@@ -233,7 +240,7 @@ console.log("✅ PDF/A-3b successfully created.");
 
     pdfBuffer = response.data;
 
-    // 7️⃣ Save to disk
+    // 4️⃣ Save final PDF
     const outputDir = path.resolve(__dirname, "../Generated");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
     const outputPath = path.join(outputDir, `Invoice-ZUGFeRD-${invoiceData.orderId}.pdf`);
@@ -241,7 +248,7 @@ console.log("✅ PDF/A-3b successfully created.");
 
     console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
 
-    // 8️⃣ Send PDF to client
+    // 5️⃣ Return PDF to client
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
