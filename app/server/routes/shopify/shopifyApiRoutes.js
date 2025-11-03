@@ -144,20 +144,21 @@ if (gsFlatten.error || gsFlatten.status !== 0) {
 }
 
 // 2️⃣ Convert flattened PDF to PDF/A-3b
-let gsPDFa = spawnSync("gs", [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-dNOOUTERSAVE",
-  "-dPDFACompatibilityPolicy=2",   
+spawnSync("gs", [
   "-sDEVICE=pdfwrite",
+  "-dNOPAUSE",
+  "-dBATCH",
+  "-dSAFER",
+  "-dPDFA=3",
+  "-dPDFACompatibilityPolicy=2",
   "-dProcessColorModel=/DeviceRGB",
   "-dEmbedAllFonts=true",
   "-dSubsetFonts=true",
   `-sOutputICCProfile=${iccProfilePath}`,
   `-sOutputFile=${tmpOutput}`,
-  tmpFlattened
+  tmpInput
 ]);
+
 
 if (gsPDFa.error || gsPDFa.status !== 0) {
   console.error("❌ Ghostscript PDF/A error:", gsPDFa.stderr?.toString());
