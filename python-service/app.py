@@ -22,25 +22,20 @@ def generate_zugferd():
         # 3️⃣ Wrap PDF in BytesIO
         input_pdf_io = BytesIO(pdf_file.read())
 
-        # 4️⃣ Generate ZUGFeRD PDF
-        # This returns either a BytesIO or raw bytes
-        output = generate_facturx_from_file(
+        # 4️⃣ Generate ZUGFeRD / Factur-X PDF
+        # Use EN16931 profile (replaces old "comfort")
+        output_pdf_bytes = generate_facturx_from_file(
             input_pdf_io,
             invoice_data,
-            facturx_level="EN16931",
-            comfort=True,
-            include_attachment=False
+            facturx_level="EN16931",  # Full structured XML
+            include_attachment=False   # Optional: attach original PDF if needed
         )
 
-        # 5️⃣ Ensure we have a BytesIO
-        if isinstance(output, BytesIO):
-            output_pdf_io = output
-        else:
-            output_pdf_io = BytesIO(output)
-
+        # 5️⃣ Ensure BytesIO
+        output_pdf_io = BytesIO(output_pdf_bytes)
         output_pdf_io.seek(0)
 
-        # 6️⃣ Send back PDF
+        # 6️⃣ Send PDF back
         return send_file(
             output_pdf_io,
             mimetype="application/pdf",
