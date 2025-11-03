@@ -4,6 +4,7 @@ const axios = require("axios");
 const FormData = require("form-data");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
+const { Blob } = require("buffer");
 
 // ---------------------
 // Map Shopify order → PDF data
@@ -130,27 +131,25 @@ async function createBasePdf(data) {
   return Buffer.from(await pdfDoc.save());
 }
 
-
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
   const pdfBuffer = await createBasePdf(data);
 
+ 
+  const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
+
   const form = new FormData();
   form.append("invoiceData", JSON.stringify(data));
-  form.append("pdfFile", pdfBuffer, {
-    filename: `Invoice-${data.orderId}.pdf`,
-    contentType: "application/pdf",
-    knownLength: pdfBuffer.length,
-  });
+  form.append("pdfFile", pdfBlob, `Invoice-${data.orderId}.pdf`);
 
   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
 
   try {
     const response = await axios.post(pythonUrl, form, {
       headers: form.getHeaders(),
-      responseType: "arraybuffer", // still need PDF on success
+      responseType: "arraybuffer", 
       timeout: 20000,
-      validateStatus: () => true,  // do not throw on 500 automatically
+      validateStatus: () => true,
     });
 
     if (response.status !== 200) {
