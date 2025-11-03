@@ -166,4 +166,4 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   }
 }
 
-module.exports = { createShopifyInvoiceZugferd };
+module.exports = { createShopifyInvoiceZugferd, createBasePdf };
