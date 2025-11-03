@@ -5,55 +5,34 @@ from lxml import etree
 import json
 
 app = Flask(__name__)
-# -----------------------------
-# Convert Shopify invoice JSON → EN16931 XML (ZUGFeRD 2.3)
-# -----------------------------
-
-
 
 def shopify_invoice_to_en16931(invoice):
     nsmap = {
-        "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",  # Root namespace
+        "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",
         "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
         "qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
         "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
     }
 
-    # Root element
     root = etree.Element("{urn:ferd:CrossIndustryInvoice:invoice:1p0}CrossIndustryInvoice", nsmap=nsmap)
 
-    # -------------------------
-    # ExchangedDocument
-    # -------------------------
     exchanged_document = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocument")
     etree.SubElement(exchanged_document, "{%s}ID" % nsmap["ram"]).text = str(invoice.get("orderId", "UNKNOWN"))
-    etree.SubElement(exchanged_document, "{%s}TypeCode" % nsmap["ram"]).text = "380"  # Standard invoice code
+    etree.SubElement(exchanged_document, "{%s}TypeCode" % nsmap["ram"]).text = "380"
     etree.SubElement(exchanged_document, "{%s}IssueDateTime" % nsmap["ram"]).text = invoice.get("date", "")
 
-    # -------------------------
-    # ExchangedDocumentContext (mandatory in EN16931)
-    # -------------------------
     doc_context = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocumentContext")
     business_process = etree.SubElement(doc_context, "{%s}GuidelineSpecifiedDocumentContextParameter" % nsmap["ram"])
     etree.SubElement(business_process, "{%s}ID" % nsmap["ram"]).text = "urn:ferd:CrossIndustryDocument:invoice:1p0:basic"
 
-    # -------------------------
-    # SupplyChainTradeTransaction
-    # -------------------------
     trade_transaction = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeTransaction")
 
-    # -------------------------
-    # Buyer / Seller
-    # -------------------------
     seller = etree.SubElement(trade_transaction, "{%s}SellerTradeParty" % nsmap["ram"])
     etree.SubElement(seller, "{%s}Name" % nsmap["ram"]).text = invoice.get("companyName", "YOUR COMPANY GMBH")
 
     buyer = etree.SubElement(trade_transaction, "{%s}BuyerTradeParty" % nsmap["ram"])
     etree.SubElement(buyer, "{%s}Name" % nsmap["ram"]).text = invoice.get("customerName", "Valued Customer")
 
-    # -------------------------
-    # Line items
-    # -------------------------
     for idx, item in enumerate(invoice.get("items", []), start=1):
         line_item = etree.SubElement(trade_transaction, "{%s}IncludedSupplyChainTradeLineItem" % nsmap["ram"])
         etree.SubElement(line_item, "{%s}LineID" % nsmap["ram"]).text = str(item.get("position", idx))
@@ -77,10 +56,6 @@ def shopify_invoice_to_en16931(invoice):
     return root
 
 
-
-# -----------------------------
-# Flask route
-# -----------------------------
 @app.route("/generate-zugferd", methods=["POST"])
 def generate_zugferd():
     try:
@@ -95,14 +70,12 @@ def generate_zugferd():
         invoice_data = json.loads(invoice_data_json)
         input_pdf_io = BytesIO(pdf_file.read())
 
-        # Convert JSON → XML for Factur-X / ZUGFeRD
         xml_root = shopify_invoice_to_en16931(invoice_data)
 
-        # Generate PDF/A-3b ZUGFeRD PDF (EN16931 full structured XML)
         output_pdf_bytes = generate_facturx_from_file(
             input_pdf_io,
             xml_root,
-            facturx_level="EN16931"  # ZUGFeRD 2.3
+            facturx_level="EN16931"
         )
 
         output_pdf_io = BytesIO(output_pdf_bytes)
