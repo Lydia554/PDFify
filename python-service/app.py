@@ -19,23 +19,26 @@ def generate_zugferd():
         invoice_data = json.loads(invoice_data_json)
 
         input_pdf_io = BytesIO(pdf_file.read())
-        output_pdf_io = BytesIO()
 
-        generate_facturx_from_file(
+   
+        output_pdf_io = generate_facturx_from_file(
             input_pdf_io,
             invoice_data,
-            output_pdf=output_pdf_io,
             facturx_level="EN16931",
             comfort=True,
             include_attachment=False
         )
+
+        if not hasattr(output_pdf_io, "seek"):
+        
+            output_pdf_io = BytesIO(output_pdf_io)
 
         output_pdf_io.seek(0)
         return send_file(
             output_pdf_io,
             mimetype="application/pdf",
             as_attachment=True,
-            download_name=f"Invoice-ZUGFeRD-2.3-{invoice_data.get('orderId', 'unknown')}.pdf"
+            download_name=f"Invoice-ZUGFeRD-{invoice_data.get('orderId', 'unknown')}.pdf"
         )
 
     except Exception as e:
