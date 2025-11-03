@@ -99,17 +99,25 @@ async function createBasePdf(data) {
     x += colWidths[i];
   });
   y -= rowHeight;
+// Table rows
+data.items.forEach((item) => {
+  let x = 50;
+  const row = [
+    item.name || "Item",
+    String(item.quantity ?? 0),
+    String(item.price?.toFixed(2) ?? "0.00"),
+    String(item.tax?.toFixed(2) ?? "0.00"),
+    String(item.total?.toFixed(2) ?? "0.00")
+  ];
 
-  // Table rows
-  data.items.forEach((item) => {
-    x = 50;
-    const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
-    row.forEach((cell, i) => {
-      page.drawText(cell, { x, y, size: 10, font: regularFont, color: rgb(0, 0, 0) });
-      x += colWidths[i];
-    });
-    y -= rowHeight;
+  row.forEach((cell, i) => {
+    page.drawText(String(cell), { x, y, size: 10, font: regularFont, color: rgb(0, 0, 0) });
+    x += colWidths[i];
   });
+
+  y -= rowHeight;
+});
+
 
   return Buffer.from(await pdfDoc.save());
 }
