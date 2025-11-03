@@ -3,6 +3,7 @@ const path = require("path");
 const axios = require("axios");
 const FormData = require("form-data");
 const puppeteer = require("puppeteer");
+const fontkit = require("@pdf-lib/fontkit");
 
 // ---------------------
 // Map Shopify order → PDF data
@@ -16,10 +17,10 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     const total = net + tax;
 
     return {
-      position: index + 1,
+      position: index + 1,         
       name: item.title || item.name || "Item",
       quantity,
-      unitCode: "EA",
+      unitCode: "EA",            
       price,
       net,
       tax,
@@ -47,69 +48,89 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
     creator: "PDFify",
-    companyName: shopConfig.companyName || "YOUR COMPANY GMBH",
+    companyName: shopConfig.companyName || "YOUR COMPANY GMBH", 
     locale: { language: order.locale || "en" },
   };
 }
 
-// ---------------------
-// Puppeteer PDF generation
-// ---------------------
 async function createBasePdf(data) {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
 
-  const html = `
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 40px; }
-          h1 { color: #123; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          th { background-color: #eee; }
-        </style>
-      </head>
-      <body>
-        <h1>Invoice #${data.orderId}</h1>
-        <p>Date: ${data.date}</p>
-        <p>Customer: ${data.customerName}</p>
-        <table>
-          <tr>
-            <th>Item</th><th>Qty</th><th>Price</th><th>Tax</th><th>Total</th>
-          </tr>
-          ${data.items.map(item => `
-            <tr>
-              <td>${item.name}</td>
-              <td>${item.quantity}</td>
-              <td>${item.price.toFixed(2)}</td>
-              <td>${item.tax.toFixed(2)}</td>
-              <td>${item.total.toFixed(2)}</td>
-            </tr>
-          `).join("")}
-        </table>
-        <p>Subtotal: ${data.subtotal.toFixed(2)}</p>
-        <p>Tax: ${data.tax.toFixed(2)}</p>
-        <p>Total: ${data.total.toFixed(2)}</p>
-      </body>
-    </html>
-  `;
+  // Embed fonts
+  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
+  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf"));
+  const regularFont = await pdfDoc.embedFont(regularFontBytes);
+  const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-  await page.setContent(html, { waitUntil: "networkidle0" });
+  function asciiSafe(str) {
+    if (!str) return " ";
+    return str.replace(/[^\x20-\x7E]/g, ""); 
+  }
 
-  const pdfBuffer = await page.pdf({
-    format: "A4",
-    printBackground: true,
-    margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" }
+  // sanitize metadata
+
+
+
+  // sanitize table & page content
+  data.customerName = asciiSafe(data.customerName);
+  data.companyName = asciiSafe(data.companyName);
+  data.items.forEach(item => {
+    item.name = asciiSafe(item.name);
   });
 
-  await browser.close();
-  return pdfBuffer;
+  const page = pdfDoc.addPage([595, 842]);
+  let y = 780;
+  const rowHeight = 24;
+  const colWidths = [180, 60, 80, 80, 80];
+  const headers = ["Item", "Qty", "Price", "Tax", "Total"];
+
+  // Header
+  page.drawRectangle({ x: 0, y: 780, width: 595, height: 40, color: rgb(0.18, 0.31, 0.61) });
+
+  if (data.logoPath && fs.existsSync(data.logoPath)) {
+    const logoBytes = fs.readFileSync(data.logoPath);
+    const logoImage = await pdfDoc.embedPng(logoBytes);
+    const logoDims = logoImage.scale(0.25);
+    page.drawImage(logoImage, { x: 40, y: 784 - logoDims.height / 2, width: logoDims.width, height: logoDims.height });
+  }
+
+  page.drawText(String(data.companyName || "YOUR COMPANY GMBH"), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1,1,1) });
+  page.drawText(`INVOICE #${String(data.orderId || "UNKNOWN")}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2,0.2,0.7) });
+  page.drawText(`Date: ${String(data.date || new Date().toISOString().slice(0,10))}`, { x: 50, y, size: 12, font: regularFont });
+  page.drawText(`Customer: ${String(data.customerName || "Valued Customer")}`, { x: 50, y, size: 12, font: regularFont });
+
+  // Table headers
+  let x = 50;
+  headers.forEach((header, i) => {
+    page.drawText(asciiSafe(header), { x, y, size: 10, font: boldFont, color: rgb(0, 0, 0) });
+    x += colWidths[i];
+  });
+  y -= rowHeight;
+
+  // Table rows
+  data.items.forEach((item) => {
+    let x = 50;
+    const row = [
+      item.name,
+      item.quantity != null ? String(item.quantity) : "0",
+      item.price != null ? item.price.toFixed(2) : "0.00",
+      item.tax != null ? item.tax.toFixed(2) : "0.00",
+      item.total != null ? item.total.toFixed(2) : "0.00"
+    ];
+
+    row.forEach((cell, i) => {
+      page.drawText(cell, { x, y, size: 10, font: regularFont, color: rgb(0, 0, 0) });
+      x += colWidths[i];
+    });
+
+    y -= rowHeight;
+  });
+
+  return Buffer.from(await pdfDoc.save());
 }
 
-// ---------------------
-// Generate ZUGFeRD PDF
-// ---------------------
+
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
   const pdfBuffer = await createBasePdf(data);
@@ -127,14 +148,16 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   try {
     const response = await axios.post(pythonUrl, form, {
       headers: form.getHeaders(),
-      responseType: "arraybuffer",
+      responseType: "arraybuffer", // still need PDF on success
       timeout: 20000,
-      validateStatus: () => true,
+      validateStatus: () => true,  // do not throw on 500 automatically
     });
 
     if (response.status !== 200) {
       let text = "";
-      try { text = response.data.toString("utf-8"); } catch {}
+      try {
+        text = response.data.toString("utf-8");
+      } catch {}
       console.error("❌ Python service returned error:", response.status, text);
       throw new Error(`Python ZUGFeRD service error: ${response.status}`);
     }
@@ -150,7 +173,9 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   } catch (err) {
     if (err.response) {
       let text = "";
-      try { text = err.response.data.toString("utf-8"); } catch {}
+      try {
+        text = err.response.data.toString("utf-8");
+      } catch {}
       console.error("❌ Python error body:", text);
     }
     console.error("❌ Failed to connect to Python ZUGFeRD service:", err.message);
@@ -158,4 +183,4 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   }
 }
 
-module.exports = { createShopifyInvoiceZugferd, createBasePdf, mapOrderToPdfData };
+module.exports = { createShopifyInvoiceZugferd, createBasePdf };
