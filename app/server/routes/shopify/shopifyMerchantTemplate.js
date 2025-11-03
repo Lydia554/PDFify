@@ -68,12 +68,7 @@ async function createBasePdf(data) {
     return str.replace(/[^\x20-\x7E]/g, ""); 
   }
 
-  // sanitize metadata
-  pdfDoc.setTitle(asciiSafe(data.companyName || "Invoice"));
-  pdfDoc.setAuthor(asciiSafe("PDFify"));
-  pdfDoc.setSubject(" ");
-  pdfDoc.setCreator(asciiSafe("PDFify"));
-  pdfDoc.setProducer(asciiSafe("pdf-lib"));
+
 
   // sanitize table & page content
   data.customerName = asciiSafe(data.customerName);
