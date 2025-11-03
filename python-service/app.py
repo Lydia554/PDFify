@@ -10,15 +10,8 @@ app = Flask(__name__)
 # Convert Shopify invoice JSON → EN16931 XML (ZUGFeRD 2.3)
 # -----------------------------
 def shopify_invoice_to_en16931(invoice):
-    nsmap = {
-        None: "urn:ferd:CrossIndustryInvoice:invoice:1p0",  # default namespace
-        "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
-        "qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
-        "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
-    }
-
-    # No prefix in root
-    root = etree.Element("CrossIndustryInvoice", nsmap=nsmap)
+    # Root without namespace
+    root = etree.Element("CrossIndustryInvoice")
 
     exchanged_document = etree.SubElement(root, "ExchangedDocument")
     etree.SubElement(exchanged_document, "ID").text = str(invoice.get("orderId", "UNKNOWN"))
