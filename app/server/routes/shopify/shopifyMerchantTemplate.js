@@ -83,14 +83,11 @@ async function createBasePdf(data) {
     page.drawImage(logoImage, { x: 40, y: 784 - logoDims.height / 2, width: logoDims.width, height: logoDims.height });
   }
 
-  page.drawText(data.companyName, { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1, 1, 1) });
-  y -= 80;
-  page.drawText(`INVOICE #${data.orderId}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
-  y -= lineHeight;
-  page.drawText(`Date: ${data.date}`, { x: 50, y, size: 12, font: regularFont });
-  y -= lineHeight;
-  page.drawText(`Customer: ${data.customerName}`, { x: 50, y, size: 12, font: regularFont });
-  y -= lineHeight * 2;
+ page.drawText(String(data.companyName || "YOUR COMPANY GMBH"), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1,1,1) });
+page.drawText(`INVOICE #${String(data.orderId || "UNKNOWN")}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2,0.2,0.7) });
+page.drawText(`Date: ${String(data.date || new Date().toISOString().slice(0,10))}`, { x: 50, y, size: 12, font: regularFont });
+page.drawText(`Customer: ${String(data.customerName || "Valued Customer")}`, { x: 50, y, size: 12, font: regularFont });
+
 
   // Table headers
   let x = 50;
@@ -100,7 +97,7 @@ async function createBasePdf(data) {
   });
   y -= rowHeight;
 
-  
+
 // Table rows
 data.items.forEach((item) => {
   let x = 50;
