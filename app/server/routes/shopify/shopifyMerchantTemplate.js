@@ -69,12 +69,7 @@ async function createBasePdf(data) {
   }
 
   // sanitize metadata
-pdfDoc.setTitle("");
-pdfDoc.setAuthor("");
-pdfDoc.setSubject("");
-pdfDoc.setCreator("");
-pdfDoc.setProducer("");
-pdfDoc.setKeywords([]);
+
 
 
   // sanitize table & page content
