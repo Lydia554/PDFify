@@ -10,10 +10,6 @@ app = Flask(__name__)
 # Convert Shopify invoice JSON → EN16931 XML (ZUGFeRD 2.3)
 # -----------------------------
 def shopify_invoice_to_en16931(invoice):
-    """
-    Converts the invoice JSON into a minimal EN16931 XML tree.
-    Proper namespaces for ZUGFeRD 2.3 / Factur-X.
-    """
     nsmap = {
         "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",
         "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
@@ -21,41 +17,38 @@ def shopify_invoice_to_en16931(invoice):
         "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
     }
 
-    root = etree.Element("{urn:ferd:CrossIndustryInvoice:invoice:1p0}CrossIndustryInvoice", nsmap=nsmap)
+    # Use prefix in tag names
+    root = etree.Element("rsm:CrossIndustryInvoice", nsmap=nsmap)
 
-    # Invoice header
-    exchanged_document = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocument")
-    etree.SubElement(exchanged_document, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ID").text = str(invoice.get("orderId", "UNKNOWN"))
-    etree.SubElement(exchanged_document, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}IssueDateTime").text = invoice.get("date", "")
+    exchanged_document = etree.SubElement(root, "rsm:ExchangedDocument")
+    etree.SubElement(exchanged_document, "ram:ID").text = str(invoice.get("orderId", "UNKNOWN"))
+    etree.SubElement(exchanged_document, "ram:IssueDateTime").text = invoice.get("date", "")
 
-    # Seller / Company
-    seller = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeParty")
-    etree.SubElement(seller, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}Name").text = invoice.get("companyName", "YOUR COMPANY GMBH")
+    seller = etree.SubElement(root, "ram:SupplyChainTradeParty")
+    etree.SubElement(seller, "ram:Name").text = invoice.get("companyName", "YOUR COMPANY GMBH")
 
-    # Buyer
-    buyer = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}BuyerTradeParty")
-    etree.SubElement(buyer, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}Name").text = invoice.get("customerName", "Valued Customer")
+    buyer = etree.SubElement(root, "ram:BuyerTradeParty")
+    etree.SubElement(buyer, "ram:Name").text = invoice.get("customerName", "Valued Customer")
 
-    # Items
-    trade_transaction = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeTransaction")
+    trade_transaction = etree.SubElement(root, "rsm:SupplyChainTradeTransaction")
     for item in invoice.get("items", []):
-        line_item = etree.SubElement(trade_transaction, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}IncludedSupplyChainTradeLineItem")
-        etree.SubElement(line_item, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}LineID").text = str(item.get("position", 1))
+        line_item = etree.SubElement(trade_transaction, "ram:IncludedSupplyChainTradeLineItem")
+        etree.SubElement(line_item, "ram:LineID").text = str(item.get("position", 1))
 
-        product = etree.SubElement(line_item, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SpecifiedTradeProduct")
-        etree.SubElement(product, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}Name").text = str(item.get("name", ""))
+        product = etree.SubElement(line_item, "ram:SpecifiedTradeProduct")
+        etree.SubElement(product, "ram:Name").text = str(item.get("name", ""))
 
-        trade_agreement = etree.SubElement(line_item, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SpecifiedLineTradeAgreement")
-        price_elem = etree.SubElement(trade_agreement, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}NetPriceProductTradePrice")
-        etree.SubElement(price_elem, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ChargeAmount").text = str(item.get("price", 0))
+        trade_agreement = etree.SubElement(line_item, "ram:SpecifiedLineTradeAgreement")
+        price_elem = etree.SubElement(trade_agreement, "ram:NetPriceProductTradePrice")
+        etree.SubElement(price_elem, "ram:ChargeAmount").text = str(item.get("price", 0))
 
-        trade_delivery = etree.SubElement(line_item, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SpecifiedLineTradeDelivery")
-        etree.SubElement(trade_delivery, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}BilledQuantity").text = str(item.get("quantity", 1))
+        trade_delivery = etree.SubElement(line_item, "ram:SpecifiedLineTradeDelivery")
+        etree.SubElement(trade_delivery, "ram:BilledQuantity").text = str(item.get("quantity", 1))
 
-        trade_settlement = etree.SubElement(line_item, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SpecifiedLineTradeSettlement")
-        tax_elem = etree.SubElement(trade_settlement, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ApplicableTradeTax")
-        etree.SubElement(tax_elem, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}CalculatedAmount").text = str(item.get("tax", 0))
-        etree.SubElement(tax_elem, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}RateApplicablePercent").text = str(item.get("taxRate", 0))
+        trade_settlement = etree.SubElement(line_item, "ram:SpecifiedLineTradeSettlement")
+        tax_elem = etree.SubElement(trade_settlement, "ram:ApplicableTradeTax")
+        etree.SubElement(tax_elem, "ram:CalculatedAmount").text = str(item.get("tax", 0))
+        etree.SubElement(tax_elem, "ram:RateApplicablePercent").text = str(item.get("taxRate", 0))
 
     return root
 
