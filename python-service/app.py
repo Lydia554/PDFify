@@ -5,28 +5,38 @@ from lxml import etree
 import json
 
 app = Flask(__name__)
-
 # -----------------------------
 # Convert Shopify invoice JSON → EN16931 XML (ZUGFeRD 2.3)
 # -----------------------------
 def shopify_invoice_to_en16931(invoice):
-    # Root without namespace
-    root = etree.Element("CrossIndustryInvoice")
+    nsmap = {
+        None: "urn:ferd:CrossIndustryInvoice:invoice:1p0",  # default namespace for root
+        "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
+        "qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
+        "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
+    }
 
+    # Root element in default namespace
+    root = etree.Element("CrossIndustryInvoice", nsmap=nsmap)
+
+    # ExchangedDocument (Invoice header)
     exchanged_document = etree.SubElement(root, "ExchangedDocument")
     etree.SubElement(exchanged_document, "ID").text = str(invoice.get("orderId", "UNKNOWN"))
     etree.SubElement(exchanged_document, "IssueDateTime").text = invoice.get("date", "")
 
+    # Seller / Company
     seller = etree.SubElement(root, "SupplyChainTradeParty")
     etree.SubElement(seller, "Name").text = invoice.get("companyName", "YOUR COMPANY GMBH")
 
+    # Buyer
     buyer = etree.SubElement(root, "BuyerTradeParty")
     etree.SubElement(buyer, "Name").text = invoice.get("customerName", "Valued Customer")
 
+    # Trade transaction / line items
     trade_transaction = etree.SubElement(root, "SupplyChainTradeTransaction")
-    for item in invoice.get("items", []):
+    for idx, item in enumerate(invoice.get("items", []), start=1):
         line_item = etree.SubElement(trade_transaction, "IncludedSupplyChainTradeLineItem")
-        etree.SubElement(line_item, "LineID").text = str(item.get("position", 1))
+        etree.SubElement(line_item, "LineID").text = str(item.get("position", idx))
 
         product = etree.SubElement(line_item, "SpecifiedTradeProduct")
         etree.SubElement(product, "Name").text = str(item.get("name", ""))
