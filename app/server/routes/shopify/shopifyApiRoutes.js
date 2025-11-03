@@ -96,6 +96,8 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
 
 const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
+console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath));
+
 
 // ----------------------
 // Merchant PDF generation
