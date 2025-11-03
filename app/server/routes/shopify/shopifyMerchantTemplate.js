@@ -131,23 +131,27 @@ async function createBasePdf(data) {
   return Buffer.from(await pdfDoc.save());
 }
 
+
+
+
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
   const pdfBuffer = await createBasePdf(data);
 
- 
-
 
   const form = new FormData();
 
+  
+  form.append("invoiceData", JSON.stringify(data));
 
-  form.append("pdfFile", pdfBuffer, {
-  filename: `Invoice-${data.orderId}.pdf`,
-  contentType: "application/pdf",
-  knownLength: pdfBuffer.length, 
-});
-
-
+ 
+  form.append("pdfFile", {
+    value: pdfBuffer,
+    options: {
+      filename: `Invoice-${data.orderId}.pdf`,
+      contentType: "application/pdf",
+      knownLength: pdfBuffer.length, 
+  });
 
   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
 
@@ -161,9 +165,7 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
 
     if (response.status !== 200) {
       let text = "";
-      try {
-        text = response.data.toString("utf-8");
-      } catch {}
+      try { text = response.data.toString("utf-8"); } catch {}
       console.error("❌ Python service returned error:", response.status, text);
       throw new Error(`Python ZUGFeRD service error: ${response.status}`);
     }
@@ -179,14 +181,13 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   } catch (err) {
     if (err.response) {
       let text = "";
-      try {
-        text = err.response.data.toString("utf-8");
-      } catch {}
+      try { text = err.response.data.toString("utf-8"); } catch {}
       console.error("❌ Python error body:", text);
     }
     console.error("❌ Failed to connect to Python ZUGFeRD service:", err.message);
     throw err;
   }
 }
+
 
 module.exports = { createShopifyInvoiceZugferd, createBasePdf };
