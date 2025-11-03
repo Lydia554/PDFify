@@ -8,50 +8,53 @@ app = Flask(__name__)
 # -----------------------------
 # Convert Shopify invoice JSON → EN16931 XML (ZUGFeRD 2.3)
 # -----------------------------
+
+
 def shopify_invoice_to_en16931(invoice):
+    # Namespace mapping
     nsmap = {
-        None: "urn:ferd:CrossIndustryInvoice:invoice:1p0",  # default namespace for root
+        "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",
         "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
         "qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
         "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
     }
 
-    # Root element in default namespace
-    root = etree.Element("CrossIndustryInvoice", nsmap=nsmap)
+    # Root element with rsm prefix
+    root = etree.Element("{urn:ferd:CrossIndustryInvoice:invoice:1p0}CrossIndustryInvoice", nsmap=nsmap)
 
     # ExchangedDocument (Invoice header)
-    exchanged_document = etree.SubElement(root, "ExchangedDocument")
-    etree.SubElement(exchanged_document, "ID").text = str(invoice.get("orderId", "UNKNOWN"))
-    etree.SubElement(exchanged_document, "IssueDateTime").text = invoice.get("date", "")
+    exchanged_document = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocument")
+    etree.SubElement(exchanged_document, "{%s}ID" % nsmap["ram"]).text = str(invoice.get("orderId", "UNKNOWN"))
+    etree.SubElement(exchanged_document, "{%s}IssueDateTime" % nsmap["ram"]).text = invoice.get("date", "")
 
-    # Seller / Company
-    seller = etree.SubElement(root, "SupplyChainTradeParty")
-    etree.SubElement(seller, "Name").text = invoice.get("companyName", "YOUR COMPANY GMBH")
+    # Seller
+    seller = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeParty")
+    etree.SubElement(seller, "{%s}Name" % nsmap["ram"]).text = invoice.get("companyName", "YOUR COMPANY GMBH")
 
     # Buyer
-    buyer = etree.SubElement(root, "BuyerTradeParty")
-    etree.SubElement(buyer, "Name").text = invoice.get("customerName", "Valued Customer")
+    buyer = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}BuyerTradeParty")
+    etree.SubElement(buyer, "{%s}Name" % nsmap["ram"]).text = invoice.get("customerName", "Valued Customer")
 
-    # Trade transaction / line items
-    trade_transaction = etree.SubElement(root, "SupplyChainTradeTransaction")
+    # Trade transaction (line items)
+    trade_transaction = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeTransaction")
     for idx, item in enumerate(invoice.get("items", []), start=1):
-        line_item = etree.SubElement(trade_transaction, "IncludedSupplyChainTradeLineItem")
-        etree.SubElement(line_item, "LineID").text = str(item.get("position", idx))
+        line_item = etree.SubElement(trade_transaction, "{%s}IncludedSupplyChainTradeLineItem" % nsmap["ram"])
+        etree.SubElement(line_item, "{%s}LineID" % nsmap["ram"]).text = str(item.get("position", idx))
 
-        product = etree.SubElement(line_item, "SpecifiedTradeProduct")
-        etree.SubElement(product, "Name").text = str(item.get("name", ""))
+        product = etree.SubElement(line_item, "{%s}SpecifiedTradeProduct" % nsmap["ram"])
+        etree.SubElement(product, "{%s}Name" % nsmap["ram"]).text = str(item.get("name", ""))
 
-        trade_agreement = etree.SubElement(line_item, "SpecifiedLineTradeAgreement")
-        price_elem = etree.SubElement(trade_agreement, "NetPriceProductTradePrice")
-        etree.SubElement(price_elem, "ChargeAmount").text = str(item.get("price", 0))
+        trade_agreement = etree.SubElement(line_item, "{%s}SpecifiedLineTradeAgreement" % nsmap["ram"])
+        price_elem = etree.SubElement(trade_agreement, "{%s}NetPriceProductTradePrice" % nsmap["ram"])
+        etree.SubElement(price_elem, "{%s}ChargeAmount" % nsmap["ram"]).text = str(item.get("price", 0))
 
-        trade_delivery = etree.SubElement(line_item, "SpecifiedLineTradeDelivery")
-        etree.SubElement(trade_delivery, "BilledQuantity").text = str(item.get("quantity", 1))
+        trade_delivery = etree.SubElement(line_item, "{%s}SpecifiedLineTradeDelivery" % nsmap["ram"])
+        etree.SubElement(trade_delivery, "{%s}BilledQuantity" % nsmap["ram"]).text = str(item.get("quantity", 1))
 
-        trade_settlement = etree.SubElement(line_item, "SpecifiedLineTradeSettlement")
-        tax_elem = etree.SubElement(trade_settlement, "ApplicableTradeTax")
-        etree.SubElement(tax_elem, "CalculatedAmount").text = str(item.get("tax", 0))
-        etree.SubElement(tax_elem, "RateApplicablePercent").text = str(item.get("taxRate", 0))
+        trade_settlement = etree.SubElement(line_item, "{%s}SpecifiedLineTradeSettlement" % nsmap["ram"])
+        tax_elem = etree.SubElement(trade_settlement, "{%s}ApplicableTradeTax" % nsmap["ram"])
+        etree.SubElement(tax_elem, "{%s}CalculatedAmount" % nsmap["ram"]).text = str(item.get("tax", 0))
+        etree.SubElement(tax_elem, "{%s}RateApplicablePercent" % nsmap["ram"]).text = str(item.get("taxRate", 0))
 
     return root
 
