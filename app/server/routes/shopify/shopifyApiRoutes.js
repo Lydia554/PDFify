@@ -107,7 +107,10 @@ if (isMerchant) {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
     // 1️⃣ Node: generate base PDF
-    let pdfBuffer = await createBasePdf(invoiceData);
+ const pdfBuffer = await createBasePdf(invoiceData);
+fs.writeFileSync("/tmp/debug-base.pdf", pdfBuffer);
+console.log("✅ Base PDF saved for inspection");
+
 
     // 2️⃣ Strip DOCINFO / metadata to prevent Ghostscript XMP errors
     const { PDFDocument } = require("pdf-lib");
