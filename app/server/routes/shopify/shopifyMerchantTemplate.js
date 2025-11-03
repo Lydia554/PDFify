@@ -4,7 +4,7 @@ const axios = require("axios");
 const FormData = require("form-data");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { Blob } = require("buffer");
+
 
 // ---------------------
 // Map Shopify order → PDF data
@@ -136,11 +136,16 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const pdfBuffer = await createBasePdf(data);
 
  
-  const pdfBlob = new Blob([pdfBuffer], { type: "application/pdf" });
+
 
   const form = new FormData();
   form.append("invoiceData", JSON.stringify(data));
-  form.append("pdfFile", pdfBlob, `Invoice-${data.orderId}.pdf`);
+  form.append("pdfFile", pdfBuffer, {
+  filename: `Invoice-${invoiceData.orderId}.pdf`,
+  contentType: "application/pdf",
+  knownLength: pdfBuffer.length, 
+});
+
 
   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
 
