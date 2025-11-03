@@ -141,16 +141,17 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
 
   const form = new FormData();
 
-  
+ 
   form.append("invoiceData", JSON.stringify(data));
 
- 
+
   form.append("pdfFile", {
     value: pdfBuffer,
     options: {
       filename: `Invoice-${data.orderId}.pdf`,
       contentType: "application/pdf",
       knownLength: pdfBuffer.length, 
+    },
   });
 
   const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
