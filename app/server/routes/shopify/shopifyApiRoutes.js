@@ -11,7 +11,7 @@ const dualAuth = require("../../middleware/dualAuth");
 const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
-const { spawnSync } = require("child_process");
+
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 const { createShopifyInvoiceZugferd, createBasePdf } = require("./shopifyMerchantTemplate");
 const { PDFDocument, PDFName } = require("pdf-lib");
@@ -185,17 +185,28 @@ const gsArgs = [
   tmpFlattened.name,
 ];
 
-const gsPDFa = spawnSync("gs", gsArgs, { encoding: "utf-8" });
+// ✅ replace spawnSync with async exec for detailed output
+const util = require("util");
+const execAsync = util.promisify(require("child_process").exec);
 
-if (gsPDFa.error || gsPDFa.status !== 0) {
-  console.error("❌ Ghostscript PDF/A-3b conversion failed:");
-  console.error(gsPDFa.stderr || gsPDFa.stdout);
+try {
+  const gsCommand = `gs ${gsArgs.map((a) => `"${a}"`).join(" ")}`;
+  console.log("🧩 [DEBUG] Running Ghostscript command:", gsCommand);
+
+  const { stdout, stderr } = await execAsync(gsCommand);
+  console.log("📄 [Ghostscript STDOUT]:", stdout);
+  console.log("📄 [Ghostscript STDERR]:", stderr);
+} catch (error) {
+  console.error("❌ [Ghostscript ERROR MESSAGE]:", error.message);
+  console.error("❌ [Ghostscript ERROR STDERR]:", error.stderr);
+  console.error("❌ [Ghostscript ERROR STDOUT]:", error.stdout);
   throw new Error("Ghostscript failed to generate PDF/A-3b");
 }
 
 // ---- FINAL OUTPUT ----
 pdfBuffer = fs.readFileSync(tmpOutput.name);
 console.log("✅ PDF/A-3b successfully created.");
+
 
     // 6️⃣ Python: embed ZUGFeRD XML
     const form = new FormData();
