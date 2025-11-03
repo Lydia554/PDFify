@@ -107,7 +107,7 @@ if (isMerchant) {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
     // 1️⃣ Node: generate base PDF
- const pdfBuffer = await createBasePdf(invoiceData);
+let pdfBuffer = await createBasePdf(invoiceData);
 
 
 
