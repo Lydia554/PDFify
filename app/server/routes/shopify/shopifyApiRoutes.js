@@ -98,48 +98,15 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
 
 
-// Helper: convert Node PDF buffer → PDF/A-3b via Ghostscript
-function enforcePdfA3b(inputBuffer) {
-  const tmpInput = "/tmp/input.pdf";
-  const tmpOutput = "/tmp/output.pdf";
-  fs.writeFileSync(tmpInput, inputBuffer);
-  
-const gs = spawnSync("gs", [
-  "-dPDFA=3",
-  "-dBATCH",
-  "-dNOPAUSE",
-  "-dNOOUTERSAVE",
-  "-dPDFACompatibilityPolicy=1",
-  "-sProcessColorModel=DeviceRGB",
-  "-sDEVICE=pdfwrite",
-  `-sOutputICCProfile=${iccProfilePath}`,
-  "-sOutputFile=" + tmpOutput,
-  tmpInput
-]);
 
-
-  if (gs.error || gs.status !== 0) {
-    console.error("❌ Ghostscript error:", gs.stderr?.toString());
-    throw new Error("Ghostscript failed to generate PDF/A-3b");
-  }
-
-  return fs.readFileSync(tmpOutput);
-}
-
-// ----------------------
-// Merchant 
-// ----------------------
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    //  Node: generate base PDF
-    let pdfBuffer = await createBasePdf(invoiceData);
+    // Node: create base PDF (pdf-lib)
+    const pdfBuffer = await createBasePdf(invoiceData);
 
-    //  Ghostscript: enforce PDF/A-3b
-    pdfBuffer = enforcePdfA3b(pdfBuffer);
-
-    //  Python: embed ZUGFeRD XML
+    // Python: embed ZUGFeRD and create PDF/A-3b
     const form = new FormData();
     form.append("invoiceData", JSON.stringify(invoiceData));
     form.append("pdfFile", pdfBuffer, {
@@ -163,23 +130,21 @@ if (isMerchant) {
       throw new Error(`Python ZUGFeRD service error: ${response.status}`);
     }
 
-    pdfBuffer = response.data; 
-
+    const finalPdfBuffer = response.data; 
 
     const outputDir = path.resolve(__dirname, "../Generated");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
     const outputPath = path.join(outputDir, `Invoice-ZUGFeRD-${invoiceData.orderId}.pdf`);
-    fs.writeFileSync(outputPath, pdfBuffer);
+    fs.writeFileSync(outputPath, finalPdfBuffer);
 
-    console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
+    console.log(`✅ Final ZUGFeRD PDF/A-3b saved: ${outputPath}`);
 
-   
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
     });
-    return res.send(pdfBuffer);
+    return res.send(finalPdfBuffer);
 
   } catch (err) {
     console.error("❌ [Shopify] Merchant PDF generation failed:", err);
