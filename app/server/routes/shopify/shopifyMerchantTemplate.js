@@ -68,6 +68,14 @@ async function createBasePdf(data) {
     return str.replace(/[^\x20-\x7E]/g, ""); 
   }
 
+  // sanitize metadata
+const empty = " ";
+pdfDoc.setTitle(empty);
+pdfDoc.setAuthor(empty);
+pdfDoc.setSubject(empty);
+pdfDoc.setCreator(empty);
+pdfDoc.setProducer(empty);
+pdfDoc.setKeywords(empty);
 
 
   // sanitize table & page content
