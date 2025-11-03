@@ -118,36 +118,54 @@ if (isMerchant) {
     pdfDoc.setCreator("PDFify Node PDF Generator");
     pdfDoc.setProducer("pdf-lib");
     pdfBuffer = Buffer.from(await pdfDoc.save());
+
+
 const tmpInput = "/tmp/input.pdf";
 const tmpFlattened = "/tmp/flattened.pdf";
 const tmpOutput = "/tmp/output.pdf";
 
-// write initial PDF
+// Write initial PDF
 fs.writeFileSync(tmpInput, pdfBuffer);
 
-// 1️⃣ Flatten fonts/content
-spawnSync("gs", [
+// 1️⃣ Flatten PDF (fonts/content) first
+let gsFlatten = spawnSync("gs", [
   "-sDEVICE=pdfwrite",
   "-dNOPAUSE",
   "-dBATCH",
   "-dSAFER",
+  "-dEmbedAllFonts=true",
+  "-dSubsetFonts=true",
   `-sOutputFile=${tmpFlattened}`,
   tmpInput
 ]);
+if (gsFlatten.error || gsFlatten.status !== 0) {
+  console.error("❌ Ghostscript flattening error:", gsFlatten.stderr?.toString());
+  throw new Error("Ghostscript failed to flatten PDF");
+}
 
-// 2️⃣ PDF/A-3b conversion using flattened PDF
-const gs = spawnSync("gs", [
+// 2️⃣ Convert flattened PDF to PDF/A-3b
+let gsPDFa = spawnSync("gs", [
   "-dPDFA=3",
   "-dBATCH",
   "-dNOPAUSE",
   "-dNOOUTERSAVE",
-  "-dPDFACompatibilityPolicy=1",
-  "-sProcessColorModel=DeviceRGB",
+  "-dPDFACompatibilityPolicy=2",   
   "-sDEVICE=pdfwrite",
+  "-dProcessColorModel=/DeviceRGB",
+  "-dEmbedAllFonts=true",
+  "-dSubsetFonts=true",
   `-sOutputICCProfile=${iccProfilePath}`,
   `-sOutputFile=${tmpOutput}`,
   tmpFlattened
 ]);
+
+if (gsPDFa.error || gsPDFa.status !== 0) {
+  console.error("❌ Ghostscript PDF/A error:", gsPDFa.stderr?.toString());
+  throw new Error("Ghostscript failed to generate PDF/A-3b");
+}
+
+// Read final PDF/A-3b
+pdfBuffer = fs.readFileSync(tmpOutput);
 
 
 
