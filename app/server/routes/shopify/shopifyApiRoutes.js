@@ -134,9 +134,9 @@ const gs = spawnSync("gs", [
   "-sDEVICE=pdfwrite",
   `-sOutputICCProfile=${iccProfilePath}`,
   "-sOutputFile=" + tmpOutput,
-  "-dUseCIEColor=true",  
-  tmpInput             
+  tmpInput
 ]);
+
 
 
     if (gs.error || gs.status !== 0) {
