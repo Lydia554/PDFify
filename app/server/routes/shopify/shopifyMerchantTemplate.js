@@ -69,13 +69,12 @@ async function createBasePdf(data) {
   }
 
   // sanitize metadata
-const empty = " ";
-pdfDoc.setTitle(empty);
-pdfDoc.setAuthor(empty);
-pdfDoc.setSubject(empty);
-pdfDoc.setCreator(empty);
-pdfDoc.setProducer(empty);
-pdfDoc.setKeywords(empty);
+pdfDoc.setTitle("");
+pdfDoc.setAuthor("");
+pdfDoc.setSubject("");
+pdfDoc.setCreator("");
+pdfDoc.setProducer("");
+pdfDoc.setKeywords([]);
 
 
   // sanitize table & page content
