@@ -139,6 +139,7 @@ const gs = spawnSync("gs", [
 
 
 
+
     if (gs.error || gs.status !== 0) {
       console.error("❌ Ghostscript error:", gs.stderr?.toString());
       throw new Error("Ghostscript failed to generate PDF/A-3b");

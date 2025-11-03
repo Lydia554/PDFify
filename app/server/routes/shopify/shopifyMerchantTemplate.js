@@ -72,11 +72,12 @@ function asciiSafe(str) {
   return str.replace(/[^\x20-\x7E]/g, "");
 }
 
-pdfDoc.setTitle(asciiSafe("Invoice"));
+pdfDoc.setTitle(asciiSafe(data.companyName || "Invoice"));
 pdfDoc.setAuthor(asciiSafe("PDFify"));
-pdfDoc.setSubject(asciiSafe(""));
-pdfDoc.setCreator(asciiSafe("PDFify Node PDF Generator"));
+pdfDoc.setSubject(" ");    
+pdfDoc.setCreator(asciiSafe("PDFify"));
 pdfDoc.setProducer(asciiSafe("pdf-lib"));
+
 
 
   const page = pdfDoc.addPage([595, 842]);
