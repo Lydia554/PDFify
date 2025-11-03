@@ -109,103 +109,102 @@ if (isMerchant) {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
     // 1️⃣ Node: generate base PDF
-let pdfBuffer = await createBasePdf(invoiceData);
-
-
+    let pdfBuffer = await createBasePdf(invoiceData);
 
     // 2️⃣ Strip DOCINFO / metadata to prevent Ghostscript XMP errors
-    // ---- SANITIZE METADATA ----
-let pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
 
-// remove Info dictionary & XMP metadata
-if (pdfDoc.context.trailerInfo.Info) {
-  pdfDoc.context.delete(pdfDoc.context.trailerInfo.Info);
-}
-const metadataStream = pdfDoc.catalog.get(PDFName.of("Metadata"));
-if (metadataStream) {
-  pdfDoc.catalog.delete(PDFName.of("Metadata"));
-}
+    if (pdfDoc.context.trailerInfo.Info) {
+      pdfDoc.context.delete(pdfDoc.context.trailerInfo.Info);
+    }
+    const metadataStream = pdfDoc.catalog.get(PDFName.of("Metadata"));
+    if (metadataStream) {
+      pdfDoc.catalog.delete(PDFName.of("Metadata"));
+    }
 
-// save cleaned PDF
-pdfBuffer = Buffer.from(await pdfDoc.save());
+    pdfBuffer = Buffer.from(await pdfDoc.save());
 
-// ---- TEMP FILES ----
-const tmpInput = tmp.fileSync({ postfix: ".pdf" });
-const tmpFlattened = tmp.fileSync({ postfix: ".pdf" });
-const tmpOutput = tmp.fileSync({ postfix: ".pdf" });
-fs.writeFileSync(tmpInput.name, pdfBuffer);
+    // ---- LOCAL TEMP DIRECTORY ----
+    const localTmpDir = path.join(__dirname, "../../tmp_gs");
+    fs.mkdirSync(localTmpDir, { recursive: true });
 
-// ---- ICC PROFILE ----
-let iccProfilePath = process.env.ICC_PROFILE_PATH
-  ? path.resolve(process.env.ICC_PROFILE_PATH)
-  : "/usr/share/color/icc/ghostscript/srgb.icc";
+    const tmpInput = path.join(localTmpDir, `input-${Date.now()}.pdf`);
+    const tmpFlattened = path.join(localTmpDir, `flat-${Date.now()}.pdf`);
+    const tmpOutput = path.join(localTmpDir, `out-${Date.now()}.pdf`);
 
-if (!fs.existsSync(iccProfilePath)) {
-  console.warn("⚠️ ICC profile missing, falling back to built-in Ghostscript sRGB profile.");
-  iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc";
-}
+    fs.writeFileSync(tmpInput, pdfBuffer);
 
-// ---- FLATTEN STEP ----
-console.log("🔹 Flattening PDF before PDF/A conversion...");
-const gsFlatten = spawnSync("gs", [
-  "-sDEVICE=pdfwrite",
-  "-dNOPAUSE",
-  "-dBATCH",
-  "-dNOSAFER",
-  "-dEmbedAllFonts=true",
-  "-dSubsetFonts=true",
-  "-dCompressFonts=true",
-  "-dDetectDuplicateImages=true",
-  "-dColorImageDownsampleType=/Bicubic",
-  "-dColorImageResolution=300",
-  `-sOutputFile=${tmpFlattened.name}`,
-  tmpInput.name,
-]);
+    // ---- ICC PROFILE ----
+    let iccProfilePath = process.env.ICC_PROFILE_PATH
+      ? path.resolve(process.env.ICC_PROFILE_PATH)
+      : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-if (gsFlatten.error || gsFlatten.status !== 0) {
-  console.error("❌ Ghostscript flattening failed:\n", gsFlatten.stderr?.toString());
-  throw new Error("Ghostscript flattening failed");
-}
+    if (!fs.existsSync(iccProfilePath)) {
+      console.warn("⚠️ ICC profile missing, falling back to built-in Ghostscript sRGB profile.");
+      iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc";
+    }
 
-// ---- PDF/A-3b CONVERSION ----
-console.log("🔹 Converting to PDF/A-3b...");
-const gsArgs = [
-  "-dPDFA=3",
-  "-dPDFACompatibilityPolicy=1",
-  "-sDEVICE=pdfwrite",
-  "-dNOPAUSE",
-  "-dBATCH",
-  "-dSAFER",
-  "-dEmbedAllFonts=true",
-  "-dSubsetFonts=true",
-  "-dCompressFonts=true",
-  "-dProcessColorModel=/DeviceRGB",
-  `-sOutputICCProfile=${iccProfilePath}`,
-  `-sOutputFile=${tmpOutput.name}`,
-  tmpFlattened.name,
-];
+    // ---- FLATTEN STEP ----
+    console.log("🔹 Flattening PDF before PDF/A conversion...");
+    const gsFlatten = spawnSync("gs", [
+      "-sDEVICE=pdfwrite",
+      "-dNOPAUSE",
+      "-dBATCH",
+      "-dNOSAFER",
+      "-dEmbedAllFonts=true",
+      "-dSubsetFonts=true",
+      "-dCompressFonts=true",
+      "-dDetectDuplicateImages=true",
+      "-dColorImageDownsampleType=/Bicubic",
+      "-dColorImageResolution=300",
+      `-sOutputFile=${tmpFlattened}`,
+      tmpInput,
+    ]);
 
-// ✅ replace spawnSync with async exec for detailed output
-const util = require("util");
-const execAsync = util.promisify(require("child_process").exec);
+    if (gsFlatten.error || gsFlatten.status !== 0) {
+      console.error("❌ Ghostscript flattening failed:\n", gsFlatten.stderr?.toString());
+      throw new Error("Ghostscript flattening failed");
+    }
 
-try {
-  const gsCommand = `gs ${gsArgs.map((a) => `"${a}"`).join(" ")}`;
-  console.log("🧩 [DEBUG] Running Ghostscript command:", gsCommand);
+    // ---- PDF/A-3b CONVERSION ----
+    console.log("🔹 Converting to PDF/A-3b...");
+    const gsArgs = [
+      "-dPDFA=3",
+      "-dPDFACompatibilityPolicy=1",
+      "-sDEVICE=pdfwrite",
+      "-dNOPAUSE",
+      "-dBATCH",
+      "-dNOSAFER",
+      "-dEmbedAllFonts=true",
+      "-dSubsetFonts=true",
+      "-dCompressFonts=true",
+      "-dProcessColorModel=/DeviceRGB",
+      `-sOutputICCProfile=${iccProfilePath}`,
+      `-sOutputFile=${tmpOutput}`,
+      tmpFlattened,
+    ];
 
-  const { stdout, stderr } = await execAsync(gsCommand);
-  console.log("📄 [Ghostscript STDOUT]:", stdout);
-  console.log("📄 [Ghostscript STDERR]:", stderr);
-} catch (error) {
-  console.error("❌ [Ghostscript ERROR MESSAGE]:", error.message);
-  console.error("❌ [Ghostscript ERROR STDERR]:", error.stderr);
-  console.error("❌ [Ghostscript ERROR STDOUT]:", error.stdout);
-  throw new Error("Ghostscript failed to generate PDF/A-3b");
-}
+    const util = require("util");
+    const execAsync = util.promisify(require("child_process").exec);
+
+    try {
+      const gsCommand = `gs ${gsArgs.map((a) => `"${a}"`).join(" ")}`;
+      console.log("🧩 [DEBUG] Running Ghostscript command:", gsCommand);
+
+      const { stdout, stderr } = await execAsync(gsCommand);
+      console.log("📄 [Ghostscript STDOUT]:", stdout);
+      console.log("📄 [Ghostscript STDERR]:", stderr);
+    } catch (error) {
+      console.error("❌ [Ghostscript ERROR MESSAGE]:", error.message);
+      console.error("❌ [Ghostscript ERROR STDERR]:", error.stderr);
+      console.error("❌ [Ghostscript ERROR STDOUT]:", error.stdout);
+      throw new Error("Ghostscript failed to generate PDF/A-3b");
+    }
 
 // ---- FINAL OUTPUT ----
-pdfBuffer = fs.readFileSync(tmpOutput.name);
+pdfBuffer = fs.readFileSync(tmpOutput);
 console.log("✅ PDF/A-3b successfully created.");
+
 
 
     // 6️⃣ Python: embed ZUGFeRD XML
