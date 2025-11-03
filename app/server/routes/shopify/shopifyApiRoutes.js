@@ -144,7 +144,7 @@ if (gsFlatten.error || gsFlatten.status !== 0) {
 }
 
 // 2️⃣ Convert flattened PDF to PDF/A-3b
-spawnSync("gs", [
+const gsPDFa = spawnSync("gs", [
   "-sDEVICE=pdfwrite",
   "-dNOPAUSE",
   "-dBATCH",
@@ -156,14 +156,14 @@ spawnSync("gs", [
   "-dSubsetFonts=true",
   `-sOutputICCProfile=${iccProfilePath}`,
   `-sOutputFile=${tmpOutput}`,
-  tmpInput
+  tmpFlattened 
 ]);
 
-
 if (gsPDFa.error || gsPDFa.status !== 0) {
-  console.error("❌ Ghostscript PDF/A error:", gsPDFa.stderr?.toString());
+  console.error("❌ Ghostscript PDF/A-3b error:", gsPDFa.stderr?.toString());
   throw new Error("Ghostscript failed to generate PDF/A-3b");
 }
+
 
 // Read final PDF/A-3b
 pdfBuffer = fs.readFileSync(tmpOutput);
