@@ -15,7 +15,7 @@ const { spawnSync } = require("child_process");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 const { createShopifyInvoiceZugferd, createBasePdf } = require("./shopifyMerchantTemplate");
 const { PDFDocument, PDFName } = require("pdf-lib");
-const tmp = require("tmp");
+const { Readable } = require('stream');
 
 const JSZip = require("jszip");
 
@@ -212,15 +212,12 @@ if (isMerchant) {
 
     form.append("invoiceData", JSON.stringify(invoiceData));
 
-    // ⚡ Proper wrapping for Buffer
-    form.append("pdfFile", {
-      value: pdfBuffer,
-      options: {
-        filename: `Invoice-${invoiceData.orderId}.pdf`,
-        contentType: "application/pdf",
-        knownLength: pdfBuffer.length,
-      },
-    });
+    //  Proper wrapping for Buffer
+form.append('pdfFile', Readable.from(pdfBuffer), {
+  filename: `Invoice-${invoiceData.orderId}.pdf`,
+  contentType: 'application/pdf',
+  knownLength: pdfBuffer.length,
+});
 
     const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
     const axios = require("axios");
