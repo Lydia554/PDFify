@@ -215,33 +215,39 @@ if (isMerchant) {
     pdfBuffer = fs.readFileSync(tmpOutput);
 
     // 6️⃣ Embed ZUGFeRD XML with debug
-    async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
-      console.log("🔹 [Debug] Starting finalizePdf...");
-      console.log(`📄 Input PDF buffer size: ${pdfBuffer?.length || 0}`);
+   async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
+  console.log("🔹 [Debug] Starting finalizePdf...");
+  console.log(`📄 Input PDF buffer size: ${pdfBuffer?.length || 0}`);
 
-      let finalPdf;
-      try {
-        finalPdf = await finalizePdf(pdfBuffer, invoiceData);
-        if (!finalPdf) console.error("❌ finalizePdf returned null/undefined");
-        else if (!(finalPdf instanceof Buffer)) {
-          console.warn(`⚠️ finalizePdf returned type ${typeof finalPdf}, converting to Buffer`);
-          finalPdf = Buffer.from(finalPdf);
-        }
-        console.log(`✅ finalizePdf returned buffer of size: ${finalPdf.length}`);
-      } catch (err) {
-        console.error("❌ finalizePdf threw error:", err);
-        throw err;
-      }
+  let finalPdf;
+  try {
+    finalPdf = await finalizePdf(pdfBuffer, invoiceData);
 
-      const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
-      try {
-        fs.writeFileSync(debugPath, finalPdf);
-        console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
-      } catch (err) {
-        console.error("❌ Could not save debug PDF:", err);
-      }
-      return finalPdf;
+    // If finalizePdf returned a PDFDocument (or object from pdf-lib), save to buffer
+    if (finalPdf && typeof finalPdf.save === "function") {
+      finalPdf = Buffer.from(await finalPdf.save());
+    } else if (!(finalPdf instanceof Buffer)) {
+      console.warn(`⚠️ finalizePdf returned type ${typeof finalPdf}, converting to Buffer`);
+      finalPdf = Buffer.from(finalPdf);
     }
+
+    console.log(`✅ finalizePdf returned buffer of size: ${finalPdf.length}`);
+  } catch (err) {
+    console.error("❌ finalizePdf threw error:", err);
+    throw err;
+  }
+
+  const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
+  try {
+    fs.writeFileSync(debugPath, finalPdf);
+    console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
+  } catch (err) {
+    console.error("❌ Could not save debug PDF:", err);
+  }
+
+  return finalPdf;
+}
+
 
     pdfBuffer = await finalizePdfDebug(pdfBuffer, invoiceData, tmpDir);
     console.log("✅ ZUGFeRD XML embedded.");

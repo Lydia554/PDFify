@@ -1,117 +1,71 @@
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
-const { spawnSync } = require("child_process");
-const { createBasePdf } = require("./server/routes/shopify/shopifyMerchantTemplate");
-const { finalizePdf } = require("./server/Helpers/pdf-helpers");
+const { PDFDocument, PDFName } = require("pdf-lib");
+const pako = require("pako"); // npm i pako
 
 (async () => {
   try {
+    const pdfPath = path.resolve("./debug_steps/step5_final_zugferd.pdf");
+    const pdfBuffer = fs.readFileSync(pdfPath);
     const tmpDir = path.join(__dirname, "debug_steps");
     fs.mkdirSync(tmpDir, { recursive: true });
 
-    const invoiceData = {
-      orderId: "DEBUG-TEST",
-      date: new Date().toISOString().slice(0, 10),
-      items: [{ name: "Test Item", quantity: 1, price: 10, net: 10, tax: 2, total: 12, taxRate: 21 }],
-      subtotal: 10,
-      tax: 2,
-      total: 12,
-      vatRate: 21,
-      customerName: "Test Customer",
-      iban: "DE89370400440532013000",
-      bic: "COBADEFFXXX",
-      paymentTerms: "Due within 14 days",
-      creator: "PDFify",
-      locale: { language: "en" },
-    };
-
-    // Step 1️⃣ Base PDF
-    let pdfBuffer = await createBasePdf(invoiceData);
-    const step1Path = path.join(tmpDir, "step1_base.pdf");
-    fs.writeFileSync(step1Path, pdfBuffer);
-    console.log("✅ Step 1: Base PDF saved:", step1Path, "size:", pdfBuffer.length);
-
-    // Step 2️⃣ Strip metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-    if (pdfDoc.context.trailerInfo.Info) pdfDoc.context.delete(pdfDoc.context.trailerInfo.Info);
-    const metadataStream = pdfDoc.catalog.get(PDFName.of("Metadata"));
-    if (metadataStream) pdfDoc.catalog.delete(PDFName.of("Metadata"));
-    pdfBuffer = Buffer.from(await pdfDoc.save());
-    const step2Path = path.join(tmpDir, "step2_metadata_stripped.pdf");
-    fs.writeFileSync(step2Path, pdfBuffer);
-    console.log("✅ Step 2: Metadata stripped:", step2Path, "size:", pdfBuffer.length);
+    console.log("✅ PDF loaded, pages:", pdfDoc.getPageCount());
 
-    // Step 3️⃣ Flatten via Ghostscript
-    const gsExe = "C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe"; // correct Windows path
-    const tmpFlattened = path.join(tmpDir, "step3_flattened.pdf");
-
-    const gsFlatten = spawnSync(gsExe, [
-      "-sDEVICE=pdfwrite",
-      "-dNOPAUSE",
-      "-dBATCH",
-      "-dNOSAFER",
-      "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
-      "-dCompressFonts=true",
-      "-dDetectDuplicateImages=true",
-      "-dColorImageDownsampleType=/Bicubic",
-      "-dColorImageResolution=300",
-      `-sOutputFile=${tmpFlattened}`,
-      step2Path
-    ], { encoding: "utf-8" });
-
-    console.log("🔹 Step 3 Ghostscript stdout:", gsFlatten.stdout);
-    console.log("🔹 Step 3 Ghostscript stderr:", gsFlatten.stderr);
-    console.log("🔹 Step 3 Ghostscript status:", gsFlatten.status);
-
-    if (gsFlatten.error || gsFlatten.status !== 0) {
-      console.error("❌ Step 3: Ghostscript flatten failed");
-    } else {
-      pdfBuffer = fs.readFileSync(tmpFlattened);
-      console.log("✅ Step 3: Flattened PDF saved:", tmpFlattened, "size:", pdfBuffer.length);
+    // --- Extract embedded ZUGFeRD XML ---
+    const embeddedFilesDict = pdfDoc.catalog.get(PDFName.of("Names"))?.lookup(PDFName.of("EmbeddedFiles"));
+    if (!embeddedFilesDict) {
+      console.log("⚠️ No embedded files found in PDF.");
+      return;
     }
 
-    // Step 4️⃣ Convert to PDF/A-3b
-    const tmpPdfa = path.join(tmpDir, "step4_pdfa3b.pdf");
-    const iccProfile = path.resolve("./server/Helpers/sRGB_v4_ICC_preference.icc");
-
-    const gsPdfa = spawnSync(gsExe, [
-      "-dPDFA=3",
-      "-dPDFACompatibilityPolicy=1",
-      "-sDEVICE=pdfwrite",
-      "-dNOPAUSE",
-      "-dBATCH",
-      "-dNOSAFER",
-      "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
-      "-dCompressFonts=true",
-      "-dProcessColorModel=/DeviceRGB",
-      `-sOutputICCProfile=${iccProfile}`,
-      `-sOutputFile=${tmpPdfa}`,
-      tmpFlattened
-    ], { encoding: "utf-8" });
-
-    console.log("🔹 Step 4 Ghostscript PDF/A-3b stdout:", gsPdfa.stdout);
-    console.log("🔹 Step 4 Ghostscript PDF/A-3b stderr:", gsPdfa.stderr);
-    console.log("🔹 Step 4 Ghostscript PDF/A-3b status:", gsPdfa.status);
-
-    if (gsPdfa.error || gsPdfa.status !== 0) {
-      console.error("❌ Step 4: PDF/A-3b conversion failed");
-    } else {
-      pdfBuffer = fs.readFileSync(tmpPdfa);
-      console.log("✅ Step 4: PDF/A-3b saved:", tmpPdfa, "size:", pdfBuffer.length);
+    const namesArray = embeddedFilesDict.lookup(PDFName.of("Names"));
+    if (!namesArray || !Array.isArray(namesArray)) {
+      console.log("⚠️ Embedded /Names array missing or not an array.");
+      return;
     }
 
-    // Step 5️⃣ Embed ZUGFeRD
-    const finalPdf = await finalizePdf(pdfBuffer, invoiceData);
-    const step5Path = path.join(tmpDir, "step5_final_zugferd.pdf");
-    fs.writeFileSync(step5Path, finalPdf);
-    console.log("✅ Step 5: ZUGFeRD embedded PDF saved:", step5Path, "size:", finalPdf.length);
+    for (let i = 0; i < namesArray.length; i += 2) {
+      const nameObj = namesArray[i];
+      const fileSpecRef = namesArray[i + 1];
+      const fileSpec = pdfDoc.context.lookup(fileSpecRef);
 
-    console.log("🎉 All steps completed. Check 'debug_steps' folder for intermediate PDFs.");
+      const efDict = fileSpec.get(PDFName.of("EF"));
+      if (!efDict) continue;
 
+      const fRef = efDict.get(PDFName.of("F"));
+      const fileStream = pdfDoc.context.lookup(fRef);
+      let fileData = fileStream.contents;
+
+      const filter = fileStream.dictionary.get(PDFName.of("Filter"))?.name;
+      if (filter === "FlateDecode") {
+        fileData = pako.inflate(fileData); // returns Uint8Array
+      }
+
+      // --- Correctly handle UTF-16 BOM ---
+      let xmlString;
+      if (fileData[0] === 0xFE && fileData[1] === 0xFF) {
+        // UTF-16BE
+        xmlString = Buffer.from(fileData).toString("utf16be");
+      } else if (fileData[0] === 0xFF && fileData[1] === 0xFE) {
+        // UTF-16LE
+        xmlString = Buffer.from(fileData).toString("utf16le");
+      } else {
+        // fallback UTF-8
+        xmlString = Buffer.from(fileData).toString("utf-8");
+      }
+
+      const fileNameObj = fileSpec.get(PDFName.of("F"));
+      const fileName = fileNameObj?.value || `zugferd_${i / 2}.xml`;
+      const filePath = path.join(tmpDir, fileName);
+
+      fs.writeFileSync(filePath, xmlString, { encoding: "utf-8" });
+      console.log("💾 Extracted embedded XML (UTF-16 decoded):", filePath);
+    }
+
+    console.log("🎯 Extraction complete. Check 'debug_steps' folder.");
   } catch (err) {
-    console.error("❌ Debug script failed:", err);
+    console.error("❌ PDF extraction failed:", err);
   }
 })();
