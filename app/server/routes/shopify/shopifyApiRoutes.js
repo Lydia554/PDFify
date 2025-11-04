@@ -12,9 +12,8 @@ const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
-const { createShopifyInvoiceZugferd} = require("./shopifyMerchantTemplate");
+const { createShopifyInvoiceZugferd, createBasePdf} = require("./shopifyMerchantTemplate");
 const { PDFDocument, PDFName } = require("pdf-lib");
-const { Readable } = require('stream');
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
 const JSZip = require("jszip");
@@ -211,34 +210,6 @@ if (isMerchant) {
 console.log("📦 Embedding ZUGFeRD XML in Node...");
 pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
 console.log("✅ ZUGFeRD XML successfully embedded in Node.");
-
-
-    form.append("invoiceData", JSON.stringify(invoiceData));
-
-    //  Proper wrapping for Buffer
-form.append('pdfFile', Readable.from(pdfBuffer), {
-  filename: `Invoice-${invoiceData.orderId}.pdf`,
-  contentType: 'application/pdf',
-  knownLength: pdfBuffer.length,
-});
-
-    const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
-    const axios = require("axios");
-    const response = await axios.post(pythonUrl, form, {
-      headers: form.getHeaders(),
-      responseType: "arraybuffer",
-      timeout: 20000,
-      validateStatus: () => true,
-    });
-
-    if (response.status !== 200) {
-      let text = "";
-      try { text = response.data.toString("utf-8"); } catch {}
-      console.error("❌ Python service returned error:", response.status, text);
-      throw new Error(`Python ZUGFeRD service error: ${response.status}`);
-    }
-
-    pdfBuffer = response.data;
 
     // 4️⃣ Save final PDF
     const outputDir = path.resolve(__dirname, "../Generated");
