@@ -214,38 +214,34 @@ if (isMerchant) {
     console.log(`📄 PDF/A-3b PDF size: ${fs.statSync(tmpOutput).size} bytes`);
     pdfBuffer = fs.readFileSync(tmpOutput);
 
-    // 6️⃣ Embed ZUGFeRD XML with debug
-   async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
+async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
   console.log("🔹 [Debug] Starting finalizePdf...");
   console.log(`📄 Input PDF buffer size: ${pdfBuffer?.length || 0}`);
 
-  let finalPdf;
+  let finalPdfBuffer;
   try {
-    finalPdf = await finalizePdf(pdfBuffer, invoiceData);
+    const finalPdf = await finalizePdf(pdfBuffer, invoiceData);
 
-    // If finalizePdf returned a PDFDocument (or object from pdf-lib), save to buffer
-    if (finalPdf && typeof finalPdf.save === "function") {
-      finalPdf = Buffer.from(await finalPdf.save());
-    } else if (!(finalPdf instanceof Buffer)) {
-      console.warn(`⚠️ finalizePdf returned type ${typeof finalPdf}, converting to Buffer`);
-      finalPdf = Buffer.from(finalPdf);
+    if (finalPdf?.save && typeof finalPdf.save === "function") {
+      // Save PDFDocument to buffer correctly
+      finalPdfBuffer = await finalPdf.save({ useObjectStreams: false });
+    } else if (finalPdf instanceof Buffer) {
+      finalPdfBuffer = finalPdf;
+    } else {
+      throw new Error("finalizePdf returned an invalid type, expected PDFDocument or Buffer");
     }
 
-    console.log(`✅ finalizePdf returned buffer of size: ${finalPdf.length}`);
+    console.log(`✅ finalizePdf returned buffer of size: ${finalPdfBuffer.length}`);
   } catch (err) {
     console.error("❌ finalizePdf threw error:", err);
     throw err;
   }
 
   const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
-  try {
-    fs.writeFileSync(debugPath, finalPdf);
-    console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
-  } catch (err) {
-    console.error("❌ Could not save debug PDF:", err);
-  }
+  fs.writeFileSync(debugPath, finalPdfBuffer);
+  console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
 
-  return finalPdf;
+  return finalPdfBuffer;
 }
 
 
