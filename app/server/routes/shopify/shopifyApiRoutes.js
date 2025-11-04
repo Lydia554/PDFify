@@ -11,11 +11,11 @@ const dualAuth = require("../../middleware/dualAuth");
 const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
-const { spawnSync } = require("child_process");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 const { createShopifyInvoiceZugferd, createBasePdf } = require("./shopifyMerchantTemplate");
 const { PDFDocument, PDFName } = require("pdf-lib");
 const { Readable } = require('stream');
+const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
 const JSZip = require("jszip");
 
@@ -206,9 +206,12 @@ if (isMerchant) {
     pdfBuffer = fs.readFileSync(tmpOutput);
     console.log("✅ PDF/A-3b successfully created.");
 
-    // 3️⃣ Python: embed ZUGFeRD XML
-    const FormData = require("form-data");
-    const form = new FormData();
+// 3️⃣ Node: Embed ZUGFeRD XML directly
+
+console.log("📦 Embedding ZUGFeRD XML in Node...");
+pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
+console.log("✅ ZUGFeRD XML successfully embedded in Node.");
+
 
     form.append("invoiceData", JSON.stringify(invoiceData));
 
