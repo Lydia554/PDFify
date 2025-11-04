@@ -115,30 +115,14 @@ if (isMerchant) {
     if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
     pdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 
-    // 3️⃣ Embed ZUGFeRD XML using finalizePdf
-    let zugferdData;
-    try {
-      zugferdData = await finalizePdf(pdfBuffer, invoiceData);
-      if (zugferdData?.xml) {
-        pdfDoc.attach(Buffer.from(zugferdData.xml, "utf-8"), "ZUGFeRD-invoice.xml", {
-          mimeType: "application/xml",
-          description: "ZUGFeRD invoice",
-        });
-        console.log("✅ ZUGFeRD XML embedded into PDFDocument");
-      }
-      pdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
-    } catch (err) {
-      console.warn("⚠️ finalizePdf failed, proceeding without XML:", err.message);
-    }
-
-    // 4️⃣ Save temporary file for Ghostscript
+    // 3️⃣ Save temporary file for Ghostscript PDF/A-3b conversion
     const tmpDir = path.join(__dirname, "../../tmp_gs");
     fs.mkdirSync(tmpDir, { recursive: true });
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     const tmpOutput = path.join(tmpDir, `output-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, pdfBuffer);
 
-    // 5️⃣ Convert to PDF/A-3b with Ghostscript (keeps XML intact)
+    // 4️⃣ Convert to PDF/A-3b with Ghostscript (no XML yet)
     let iccProfilePath = process.env.ICC_PROFILE_PATH
       ? path.resolve(process.env.ICC_PROFILE_PATH)
       : "/usr/share/color/icc/ghostscript/srgb.icc";
@@ -170,9 +154,29 @@ if (isMerchant) {
     }
 
     pdfBuffer = fs.readFileSync(tmpOutput);
-    console.log(`📄 Final PDF/A-3b with ZUGFeRD XML size: ${pdfBuffer.length} bytes`);
+    console.log(`📄 PDF/A-3b generated, size: ${pdfBuffer.length} bytes`);
 
-    // 6️⃣ Send PDF to client
+    // 5️⃣ Load PDF/A-3b into pdf-lib and attach ZUGFeRD XML
+    const pdfA3bDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    let zugferdData;
+    try {
+      zugferdData = await finalizePdf(pdfBuffer, invoiceData);
+    } catch (err) {
+      console.warn("⚠️ finalizePdf failed, proceeding without XML:", err.message);
+    }
+
+    if (zugferdData?.xml) {
+      pdfA3bDoc.attach(Buffer.from(zugferdData.xml, "utf-8"), "ZUGFeRD-invoice.xml", {
+        mimeType: "application/xml",
+        description: "ZUGFeRD invoice",
+      });
+      console.log("✅ ZUGFeRD XML embedded into PDF/A-3b");
+    }
+
+    // 6️⃣ Save final PDF
+    pdfBuffer = Buffer.from(await pdfA3bDoc.save({ useObjectStreams: false }));
+
+    // 7️⃣ Send PDF to client
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
@@ -185,6 +189,7 @@ if (isMerchant) {
     return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
   }
 }
+
 
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
