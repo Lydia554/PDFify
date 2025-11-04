@@ -101,7 +101,6 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
 console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath), fs.statSync(iccProfilePath).mode);
 
-
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
@@ -112,81 +111,44 @@ if (isMerchant) {
 
     // 2️⃣ Sanitize /Info dictionary and remove Metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-    console.log("✅ PDFDocument loaded, pages:", pdfDoc.getPageCount());
+    const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
+    if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
+    pdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 
-    const infoRef = pdfDoc.context.trailerInfo.Info;
-    if (infoRef) {
-      const infoDict = pdfDoc.context.lookup(infoRef);
-      console.log("🔹 /Info dictionary found");
-      if (infoDict?.dict instanceof Map) {
-        for (const [key, value] of infoDict.dict) {
-          if (value instanceof PDFHexString) {
-            const decoded = value.decodeText();
-            infoDict.set(key, pdfDoc.context.obj(decoded));
-          }
-        }
-      } else {
-        console.warn("⚠️ /Info dictionary is not a standard PDFDict, skipping sanitization");
+    // 3️⃣ Embed ZUGFeRD XML using finalizePdf
+    let zugferdData;
+    try {
+      zugferdData = await finalizePdf(pdfBuffer, invoiceData);
+      if (zugferdData?.xml) {
+        pdfDoc.attach(Buffer.from(zugferdData.xml, "utf-8"), "ZUGFeRD-invoice.xml", {
+          mimeType: "application/xml",
+          description: "ZUGFeRD invoice",
+        });
+        console.log("✅ ZUGFeRD XML embedded into PDFDocument");
       }
-    } else {
-      console.log("⚠️ No /Info dictionary present");
+      pdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+    } catch (err) {
+      console.warn("⚠️ finalizePdf failed, proceeding without XML:", err.message);
     }
 
-    const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
-    console.log("🔹 Metadata exists before deletion:", !!metadata);
-    if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
-
-    pdfBuffer = Buffer.from(await pdfDoc.save());
-    console.log(`📄 PDF after /Info & Metadata sanitization, size: ${pdfBuffer.length} bytes`);
-
-    // 3️⃣ Prepare temp files
+    // 4️⃣ Save temporary file for Ghostscript
     const tmpDir = path.join(__dirname, "../../tmp_gs");
     fs.mkdirSync(tmpDir, { recursive: true });
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
-    const tmpFlattened = path.join(tmpDir, `flat-${Date.now()}.pdf`);
-    const tmpOutput = path.join(tmpDir, `out-${Date.now()}.pdf`);
+    const tmpOutput = path.join(tmpDir, `output-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, pdfBuffer);
-    console.log("💾 Temporary input PDF saved:", tmpInput);
 
-    // 4️⃣ Flatten PDF using Ghostscript
-    console.log("🔹 Flattening PDF with Ghostscript...");
-    const gsFlatten = spawnSync("gs", [
-      "-sDEVICE=pdfwrite",
-      "-dNOPAUSE",
-      "-dBATCH",
-      "-dNOSAFER",
-      "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
-      "-dCompressFonts=true",
-      "-dDetectDuplicateImages=true",
-      "-dColorImageDownsampleType=/Bicubic",
-      "-dColorImageResolution=300",
-      `-sOutputFile=${tmpFlattened}`,
-      tmpInput,
-    ], { encoding: "utf-8" });
-
-    console.log("🔹 Ghostscript flatten stdout:", gsFlatten.stdout);
-    console.log("🔹 Ghostscript flatten stderr:", gsFlatten.stderr);
-    console.log("🔹 Ghostscript flatten status:", gsFlatten.status);
-    if (gsFlatten.error || gsFlatten.status !== 0) {
-      console.error("❌ Ghostscript flattening failed");
-      throw new Error("Ghostscript flattening failed");
-    }
-    console.log(`📄 Flattened PDF size: ${fs.statSync(tmpFlattened).size} bytes`);
-
-    // 5️⃣ Convert to PDF/A-3b
+    // 5️⃣ Convert to PDF/A-3b with Ghostscript (keeps XML intact)
     let iccProfilePath = process.env.ICC_PROFILE_PATH
       ? path.resolve(process.env.ICC_PROFILE_PATH)
       : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-    console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath));
-
     if (!fs.existsSync(iccProfilePath)) {
-      console.warn("⚠️ ICC profile missing, using Ghostscript default sRGB");
+      console.warn("⚠️ ICC profile missing, using default sRGB");
       iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc";
     }
 
-    console.log("🔹 Converting to PDF/A-3b...");
+    console.log("🔹 Converting to PDF/A-3b with Ghostscript...");
     const gsPdfa = spawnSync("gs", [
       "-dPDFA=3",
       "-dPDFACompatibilityPolicy=1",
@@ -200,63 +162,17 @@ if (isMerchant) {
       "-dProcessColorModel=/DeviceRGB",
       `-sOutputICCProfile=${iccProfilePath}`,
       `-sOutputFile=${tmpOutput}`,
-      tmpFlattened,
+      tmpInput,
     ], { encoding: "utf-8" });
 
-    console.log("🔹 Ghostscript PDF/A-3b stdout:", gsPdfa.stdout);
-    console.log("🔹 Ghostscript PDF/A-3b stderr:", gsPdfa.stderr);
-    console.log("🔹 Ghostscript PDF/A-3b status:", gsPdfa.status);
-
     if (gsPdfa.error || gsPdfa.status !== 0) {
-      console.error("❌ Ghostscript PDF/A-3b failed");
-      throw new Error("Ghostscript PDF/A-3b generation failed");
+      throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gsPdfa.stderr}`);
     }
-    console.log(`📄 PDF/A-3b PDF size: ${fs.statSync(tmpOutput).size} bytes`);
+
     pdfBuffer = fs.readFileSync(tmpOutput);
+    console.log(`📄 Final PDF/A-3b with ZUGFeRD XML size: ${pdfBuffer.length} bytes`);
 
-async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
-  console.log("🔹 [Debug] Starting finalizePdf...");
-
-  // Step 1: Load the current PDF/A buffer into pdf-lib
-  const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-
-  // Step 2: Call finalizePdf to get the ZUGFeRD XML or other metadata
-  let zugferdData;
-  try {
-    zugferdData = await finalizePdf(pdfBuffer, invoiceData);
-    console.log("🔹 finalizePdf returned:", typeof zugferdData);
-  } catch (err) {
-    console.error("❌ finalizePdf threw error:", err);
-    // Continue with PDF/A buffer if finalizePdf fails
-    zugferdData = null;
-  }
-
-  // Step 3: Embed ZUGFeRD XML if available
-  if (zugferdData?.xml) {
-    const xmlBuffer = Buffer.from(zugferdData.xml, "utf-8");
-    pdfDoc.attach(xmlBuffer, "ZUGFeRD-invoice.xml", {
-      mimeType: "application/xml",
-      description: "ZUGFeRD invoice",
-    });
-    console.log("✅ ZUGFeRD XML embedded into PDFDocument");
-  }
-
-  // Step 4: Save PDFDocument to buffer
-  const finalPdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
-
-  // Step 5: Save debug copy
-  const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
-  fs.writeFileSync(debugPath, finalPdfBuffer);
-  console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
-
-  return finalPdfBuffer;
-}
-
-
-    pdfBuffer = await finalizePdfDebug(pdfBuffer, invoiceData, tmpDir);
-    console.log("✅ ZUGFeRD XML embedded.");
-
-    // 7️⃣ Send PDF to client
+    // 6️⃣ Send PDF to client
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
@@ -269,6 +185,7 @@ async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
     return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
   }
 }
+
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
     // ----------------------------
