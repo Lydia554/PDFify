@@ -112,16 +112,23 @@ if (isMerchant) {
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
 
     // Sanitize /Info dictionary
-    const infoRef = pdfDoc.context.trailerInfo.Info;
-    if (infoRef) {
-      const infoDict = pdfDoc.context.lookup(infoRef);
-      for (const [key, value] of infoDict.map) {
-        if (value instanceof PDFHexString) {
-          const decoded = value.decodeText(); // convert UTF-16 hex to normal string
-          infoDict.set(key, pdfDoc.context.obj(decoded));
-        }
+   const infoRef = pdfDoc.context.trailerInfo.Info;
+if (infoRef) {
+  // Lookup the object behind the reference
+  const infoDict = pdfDoc.context.lookup(infoRef);
+
+  // Ensure it’s really a dictionary before iterating
+  if (infoDict?.dict instanceof Map) {
+    for (const [key, value] of infoDict.dict) {
+      if (value instanceof PDFHexString) {
+        const decoded = value.decodeText();
+        infoDict.set(key, pdfDoc.context.obj(decoded));
       }
     }
+  } else {
+    console.warn("⚠️ /Info dictionary is not a standard PDFDict, skipping sanitization");
+  }
+}
 
     // Remove Metadata stream if exists
     const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
