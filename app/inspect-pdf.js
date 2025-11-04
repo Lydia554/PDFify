@@ -1,6 +1,9 @@
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, PDFName } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
+const { spawnSync } = require("child_process");
+const { createBasePdf } = require("./server/routes/shopify/shopifyMerchantTemplate");
+const { finalizePdf } = require("./server/Helpers/pdf-helpers");
 
 (async () => {
   try {
@@ -23,45 +26,90 @@ const { PDFDocument, PDFName } = require("pdf-lib");
       locale: { language: "en" },
     };
 
-    // 1️⃣ Generate base PDF
-    const pdfBuffer = await require("./server/routes/shopify/shopifyMerchantTemplate").createBasePdf(invoiceData);
+    // Step 1️⃣ Base PDF
+    let pdfBuffer = await createBasePdf(invoiceData);
     const step1Path = path.join(tmpDir, "step1_base.pdf");
     fs.writeFileSync(step1Path, pdfBuffer);
-    console.log("✅ Step 1: Base PDF saved:", step1Path, "size:", pdfBuffer.length, "bytes");
+    console.log("✅ Step 1: Base PDF saved:", step1Path, "size:", pdfBuffer.length);
 
-    // 2️⃣ Load PDF and inspect
+    // Step 2️⃣ Strip metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-    console.log("✅ PDFDocument loaded successfully");
-    console.log("Pages:", pdfDoc.getPageCount());
+    if (pdfDoc.context.trailerInfo.Info) pdfDoc.context.delete(pdfDoc.context.trailerInfo.Info);
+    const metadataStream = pdfDoc.catalog.get(PDFName.of("Metadata"));
+    if (metadataStream) pdfDoc.catalog.delete(PDFName.of("Metadata"));
+    pdfBuffer = Buffer.from(await pdfDoc.save());
+    const step2Path = path.join(tmpDir, "step2_metadata_stripped.pdf");
+    fs.writeFileSync(step2Path, pdfBuffer);
+    console.log("✅ Step 2: Metadata stripped:", step2Path, "size:", pdfBuffer.length);
 
-    // Inspect trailer info
-    console.log("Trailer Info:", pdfDoc.context.trailerInfo);
+    // Step 3️⃣ Flatten via Ghostscript
+    const gsExe = "C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe"; // correct Windows path
+    const tmpFlattened = path.join(tmpDir, "step3_flattened.pdf");
 
-    // Inspect /Info dictionary
-    const infoRef = pdfDoc.context.trailerInfo.Info;
-    if (infoRef) {
-      const infoDict = pdfDoc.context.lookup(infoRef);
-      console.log("Detailed /Info dictionary (raw):", infoDict);
+    const gsFlatten = spawnSync(gsExe, [
+      "-sDEVICE=pdfwrite",
+      "-dNOPAUSE",
+      "-dBATCH",
+      "-dNOSAFER",
+      "-dEmbedAllFonts=true",
+      "-dSubsetFonts=true",
+      "-dCompressFonts=true",
+      "-dDetectDuplicateImages=true",
+      "-dColorImageDownsampleType=/Bicubic",
+      "-dColorImageResolution=300",
+      `-sOutputFile=${tmpFlattened}`,
+      step2Path
+    ], { encoding: "utf-8" });
 
-      // Map keys to strings if possible
-      if (infoDict?.map) {
-        console.log("Detailed /Info key-values:");
-        for (const [key, value] of infoDict.map) {
-          console.log(`  ${key?.name || key}:`, value?.toString?.() || value);
-        }
-      }
+    console.log("🔹 Step 3 Ghostscript stdout:", gsFlatten.stdout);
+    console.log("🔹 Step 3 Ghostscript stderr:", gsFlatten.stderr);
+    console.log("🔹 Step 3 Ghostscript status:", gsFlatten.status);
+
+    if (gsFlatten.error || gsFlatten.status !== 0) {
+      console.error("❌ Step 3: Ghostscript flatten failed");
     } else {
-      console.log("No /Info dictionary present.");
+      pdfBuffer = fs.readFileSync(tmpFlattened);
+      console.log("✅ Step 3: Flattened PDF saved:", tmpFlattened, "size:", pdfBuffer.length);
     }
 
-    // Inspect catalog keys
-    console.log("Catalog Keys:", pdfDoc.catalog.keys());
+    // Step 4️⃣ Convert to PDF/A-3b
+    const tmpPdfa = path.join(tmpDir, "step4_pdfa3b.pdf");
+    const iccProfile = path.resolve("./server/Helpers/sRGB_v4_ICC_preference.icc");
 
-    // Check if metadata exists
-    const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
-    console.log("Metadata object exists:", !!metadata);
+    const gsPdfa = spawnSync(gsExe, [
+      "-dPDFA=3",
+      "-dPDFACompatibilityPolicy=1",
+      "-sDEVICE=pdfwrite",
+      "-dNOPAUSE",
+      "-dBATCH",
+      "-dNOSAFER",
+      "-dEmbedAllFonts=true",
+      "-dSubsetFonts=true",
+      "-dCompressFonts=true",
+      "-dProcessColorModel=/DeviceRGB",
+      `-sOutputICCProfile=${iccProfile}`,
+      `-sOutputFile=${tmpPdfa}`,
+      tmpFlattened
+    ], { encoding: "utf-8" });
 
-    console.log("🎯 Base PDF inspection complete. Open the PDF in a viewer to check for visual errors.");
+    console.log("🔹 Step 4 Ghostscript PDF/A-3b stdout:", gsPdfa.stdout);
+    console.log("🔹 Step 4 Ghostscript PDF/A-3b stderr:", gsPdfa.stderr);
+    console.log("🔹 Step 4 Ghostscript PDF/A-3b status:", gsPdfa.status);
+
+    if (gsPdfa.error || gsPdfa.status !== 0) {
+      console.error("❌ Step 4: PDF/A-3b conversion failed");
+    } else {
+      pdfBuffer = fs.readFileSync(tmpPdfa);
+      console.log("✅ Step 4: PDF/A-3b saved:", tmpPdfa, "size:", pdfBuffer.length);
+    }
+
+    // Step 5️⃣ Embed ZUGFeRD
+    const finalPdf = await finalizePdf(pdfBuffer, invoiceData);
+    const step5Path = path.join(tmpDir, "step5_final_zugferd.pdf");
+    fs.writeFileSync(step5Path, finalPdf);
+    console.log("✅ Step 5: ZUGFeRD embedded PDF saved:", step5Path, "size:", finalPdf.length);
+
+    console.log("🎉 All steps completed. Check 'debug_steps' folder for intermediate PDFs.");
 
   } catch (err) {
     console.error("❌ Debug script failed:", err);

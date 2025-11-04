@@ -101,6 +101,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
 console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath), fs.statSync(iccProfilePath).mode);
 
+
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
@@ -111,9 +112,12 @@ if (isMerchant) {
 
     // 2️⃣ Sanitize /Info dictionary and remove Metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    console.log("✅ PDFDocument loaded, pages:", pdfDoc.getPageCount());
+
     const infoRef = pdfDoc.context.trailerInfo.Info;
     if (infoRef) {
       const infoDict = pdfDoc.context.lookup(infoRef);
+      console.log("🔹 /Info dictionary found");
       if (infoDict?.dict instanceof Map) {
         for (const [key, value] of infoDict.dict) {
           if (value instanceof PDFHexString) {
@@ -124,8 +128,12 @@ if (isMerchant) {
       } else {
         console.warn("⚠️ /Info dictionary is not a standard PDFDict, skipping sanitization");
       }
+    } else {
+      console.log("⚠️ No /Info dictionary present");
     }
+
     const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
+    console.log("🔹 Metadata exists before deletion:", !!metadata);
     if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
 
     pdfBuffer = Buffer.from(await pdfDoc.save());
@@ -138,9 +146,10 @@ if (isMerchant) {
     const tmpFlattened = path.join(tmpDir, `flat-${Date.now()}.pdf`);
     const tmpOutput = path.join(tmpDir, `out-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, pdfBuffer);
+    console.log("💾 Temporary input PDF saved:", tmpInput);
 
     // 4️⃣ Flatten PDF using Ghostscript
-    console.log("🔹 Flattening PDF...");
+    console.log("🔹 Flattening PDF with Ghostscript...");
     const gsFlatten = spawnSync("gs", [
       "-sDEVICE=pdfwrite",
       "-dNOPAUSE",
@@ -156,23 +165,28 @@ if (isMerchant) {
       tmpInput,
     ], { encoding: "utf-8" });
 
+    console.log("🔹 Ghostscript flatten stdout:", gsFlatten.stdout);
+    console.log("🔹 Ghostscript flatten stderr:", gsFlatten.stderr);
+    console.log("🔹 Ghostscript flatten status:", gsFlatten.status);
     if (gsFlatten.error || gsFlatten.status !== 0) {
-      console.error("❌ Ghostscript flattening failed:", gsFlatten.stderr);
+      console.error("❌ Ghostscript flattening failed");
       throw new Error("Ghostscript flattening failed");
     }
     console.log(`📄 Flattened PDF size: ${fs.statSync(tmpFlattened).size} bytes`);
 
     // 5️⃣ Convert to PDF/A-3b
-    console.log("🔹 Converting to PDF/A-3b...");
     let iccProfilePath = process.env.ICC_PROFILE_PATH
       ? path.resolve(process.env.ICC_PROFILE_PATH)
       : "/usr/share/color/icc/ghostscript/srgb.icc";
+
+    console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath));
 
     if (!fs.existsSync(iccProfilePath)) {
       console.warn("⚠️ ICC profile missing, using Ghostscript default sRGB");
       iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc";
     }
 
+    console.log("🔹 Converting to PDF/A-3b...");
     const gsPdfa = spawnSync("gs", [
       "-dPDFA=3",
       "-dPDFACompatibilityPolicy=1",
@@ -189,41 +203,36 @@ if (isMerchant) {
       tmpFlattened,
     ], { encoding: "utf-8" });
 
+    console.log("🔹 Ghostscript PDF/A-3b stdout:", gsPdfa.stdout);
+    console.log("🔹 Ghostscript PDF/A-3b stderr:", gsPdfa.stderr);
+    console.log("🔹 Ghostscript PDF/A-3b status:", gsPdfa.status);
+
     if (gsPdfa.error || gsPdfa.status !== 0) {
-      console.error("❌ Ghostscript PDF/A-3b failed:", gsPdfa.stderr);
+      console.error("❌ Ghostscript PDF/A-3b failed");
       throw new Error("Ghostscript PDF/A-3b generation failed");
     }
     console.log(`📄 PDF/A-3b PDF size: ${fs.statSync(tmpOutput).size} bytes`);
     pdfBuffer = fs.readFileSync(tmpOutput);
 
-    // 6️⃣ Embed ZUGFeRD XML (with debug wrapper)
+    // 6️⃣ Embed ZUGFeRD XML with debug
     async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
       console.log("🔹 [Debug] Starting finalizePdf...");
-
-      if (!pdfBuffer || !pdfBuffer.length) {
-        console.warn("⚠️ Input PDF buffer is empty");
-      } else {
-        console.log(`📄 Input PDF buffer size: ${pdfBuffer.length}`);
-      }
+      console.log(`📄 Input PDF buffer size: ${pdfBuffer?.length || 0}`);
 
       let finalPdf;
       try {
         finalPdf = await finalizePdf(pdfBuffer, invoiceData);
-
-        if (!finalPdf) {
-          console.error("❌ finalizePdf returned null/undefined");
-        } else if (!(finalPdf instanceof Buffer)) {
+        if (!finalPdf) console.error("❌ finalizePdf returned null/undefined");
+        else if (!(finalPdf instanceof Buffer)) {
           console.warn(`⚠️ finalizePdf returned type ${typeof finalPdf}, converting to Buffer`);
           finalPdf = Buffer.from(finalPdf);
         }
-
         console.log(`✅ finalizePdf returned buffer of size: ${finalPdf.length}`);
       } catch (err) {
         console.error("❌ finalizePdf threw error:", err);
         throw err;
       }
 
-      // Save a debug copy
       const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
       try {
         fs.writeFileSync(debugPath, finalPdf);
@@ -231,7 +240,6 @@ if (isMerchant) {
       } catch (err) {
         console.error("❌ Could not save debug PDF:", err);
       }
-
       return finalPdf;
     }
 
@@ -251,7 +259,6 @@ if (isMerchant) {
     return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
   }
 }
-
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
     // ----------------------------
