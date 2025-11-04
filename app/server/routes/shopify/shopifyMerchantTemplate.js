@@ -132,7 +132,7 @@ async function createBasePdf(data) {
 
 
 
-async function createShopifyInvoiceZugferdNode(order, shopConfig = {}) {
+async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   // 1️⃣ Map order data
   const data = mapOrderToPdfData(order, shopConfig);
 
@@ -155,4 +155,4 @@ async function createShopifyInvoiceZugferdNode(order, shopConfig = {}) {
   return { pdfPath: outputPath, pdfBuffer: finalBuffer };
 }
 
-module.exports = { createShopifyInvoiceZugferdNode };
+module.exports = { createShopifyInvoiceZugferd };
