@@ -1,10 +1,8 @@
 const fs = require("fs");
 const path = require("path");
-const axios = require("axios");
-const FormData = require("form-data");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-
+const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
 // ---------------------
 // Map Shopify order → PDF data
@@ -134,61 +132,27 @@ async function createBasePdf(data) {
 
 
 
-async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
+async function createShopifyInvoiceZugferdNode(order, shopConfig = {}) {
+  // 1️⃣ Map order data
   const data = mapOrderToPdfData(order, shopConfig);
+
+  // 2️⃣ Generate base PDF
   const pdfBuffer = await createBasePdf(data);
 
+  // 3️⃣ Finalize PDF: embed XMP + ZUGFeRD XML
+  const finalBuffer = await finalizePdf(pdfBuffer, data);
 
-  const form = new FormData();
+  // 4️⃣ Save PDF locally
+  const outputDir = path.resolve(__dirname, "../Generated");
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
- 
-  form.append("invoiceData", JSON.stringify(data));
+  const outputPath = path.join(outputDir, `Invoice-ZUGFeRD-${data.orderId}.pdf`);
+  fs.writeFileSync(outputPath, finalBuffer);
 
+  console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
 
-  form.append("pdfFile", {
-    value: pdfBuffer,
-    options: {
-      filename: `Invoice-${data.orderId}.pdf`,
-      contentType: "application/pdf",
-      knownLength: pdfBuffer.length, 
-    },
-  });
-
-  const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://python-service:5000/generate-zugferd";
-
-  try {
-    const response = await axios.post(pythonUrl, form, {
-      headers: form.getHeaders(),
-      responseType: "arraybuffer", 
-      timeout: 20000,
-      validateStatus: () => true,
-    });
-
-    if (response.status !== 200) {
-      let text = "";
-      try { text = response.data.toString("utf-8"); } catch {}
-      console.error("❌ Python service returned error:", response.status, text);
-      throw new Error(`Python ZUGFeRD service error: ${response.status}`);
-    }
-
-    const outputDir = path.resolve(__dirname, "../Generated");
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-    const outputPath = path.join(outputDir, `Invoice-ZUGFeRD-${data.orderId}.pdf`);
-    fs.writeFileSync(outputPath, response.data);
-
-    console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
-    return { pdfPath: outputPath, pdfBuffer: response.data };
-
-  } catch (err) {
-    if (err.response) {
-      let text = "";
-      try { text = err.response.data.toString("utf-8"); } catch {}
-      console.error("❌ Python error body:", text);
-    }
-    console.error("❌ Failed to connect to Python ZUGFeRD service:", err.message);
-    throw err;
-  }
+  // 5️⃣ Return PDF buffer and path
+  return { pdfPath: outputPath, pdfBuffer: finalBuffer };
 }
 
-
-module.exports = { createShopifyInvoiceZugferd, createBasePdf };
+module.exports = { createShopifyInvoiceZugferdNode };
