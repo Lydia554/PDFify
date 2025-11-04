@@ -160,6 +160,7 @@ if (isMerchant) {
       "-dSubsetFonts=true",
       "-dCompressFonts=true",
       "-dProcessColorModel=/DeviceRGB",
+      "-dPDFACompatibilityPolicy=1",
       `-sOutputICCProfile=${iccProfilePath}`,
       `-sOutputFile=${tmpOutput}`,
       tmpInput,
@@ -169,16 +170,36 @@ if (isMerchant) {
       throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gsPdfa.stderr}`);
     }
 
-    pdfBuffer = fs.readFileSync(tmpOutput);
-    console.log(`📄 Final PDF/A-3b with ZUGFeRD XML size: ${pdfBuffer.length} bytes`);
+    
+// 5️⃣ Convert to PDF/A-3b with Ghostscript
+pdfBuffer = fs.readFileSync(tmpOutput);
+console.log(`📄 PDF/A-3b generated, size: ${pdfBuffer.length} bytes`);
 
-    // 6️⃣ Send PDF to client
-    const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
+// --- Use a fresh PDFDocument to re-attach ZUGFeRD XML after GS ---
+try {
+  const pdfDoc2 = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+  
+  if (zugferdData?.xml) {
+    pdfDoc2.attach(Buffer.from(zugferdData.xml, "utf-8"), "ZUGFeRD-invoice.xml", {
+      mimeType: "application/xml",
+      description: "ZUGFeRD invoice",
     });
-    return res.send(pdfBuffer);
+    console.log("✅ Re-attached ZUGFeRD XML into fresh PDFDocument");
+  }
+  
+  pdfBuffer = Buffer.from(await pdfDoc2.save({ useObjectStreams: false }));
+} catch (err) {
+  console.warn("⚠️ Re-attaching ZUGFeRD XML failed, proceeding without it:", err.message);
+}
+
+// 6️⃣ Send PDF to client
+const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+res.set({
+  "Content-Type": "application/pdf",
+  "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
+});
+return res.send(pdfBuffer);
+
 
   } catch (err) {
     console.error("❌ Merchant PDF generation failed:", err);
