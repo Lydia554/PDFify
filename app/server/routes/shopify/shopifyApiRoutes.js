@@ -15,7 +15,8 @@ const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice"
 const { createShopifyInvoiceZugferd, createBasePdf} = require("./shopifyMerchantTemplate");
 const { PDFDocument, PDFName } = require("pdf-lib");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
-
+const { spawnSync } = require("child_process");
+const os = require("os");
 const JSZip = require("jszip");
 
 const router = express.Router();
@@ -100,53 +101,31 @@ const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
 console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath), fs.statSync(iccProfilePath).mode);
 
 
-// ----------------------
-// Merchant PDF generation
-// ----------------------
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
-    // 1️⃣ Node: generate base PDF
+    // 1️⃣ Generate base PDF in Node
     let pdfBuffer = await createBasePdf(invoiceData);
 
-    // 2️⃣ Strip DOCINFO / metadata to prevent Ghostscript XMP errors
+    // 2️⃣ Strip metadata to prevent Ghostscript XMP errors
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-
-    if (pdfDoc.context.trailerInfo.Info) {
-      pdfDoc.context.delete(pdfDoc.context.trailerInfo.Info);
-    }
+    if (pdfDoc.context.trailerInfo.Info) pdfDoc.context.delete(pdfDoc.context.trailerInfo.Info);
     const metadataStream = pdfDoc.catalog.get(PDFName.of("Metadata"));
-    if (metadataStream) {
-      pdfDoc.catalog.delete(PDFName.of("Metadata"));
-    }
-
+    if (metadataStream) pdfDoc.catalog.delete(PDFName.of("Metadata"));
     pdfBuffer = Buffer.from(await pdfDoc.save());
 
-    // ---- LOCAL TEMP DIRECTORY ----
-    const localTmpDir = path.join(__dirname, "../../tmp_gs");
-    fs.mkdirSync(localTmpDir, { recursive: true });
-
-    const tmpInput = path.join(localTmpDir, `input-${Date.now()}.pdf`);
-    const tmpFlattened = path.join(localTmpDir, `flat-${Date.now()}.pdf`);
-    const tmpOutput = path.join(localTmpDir, `out-${Date.now()}.pdf`);
-
+    // 3️⃣ Prepare temp files for Ghostscript
+    const tmpDir = path.join(__dirname, "../../tmp_gs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
+    const tmpFlattened = path.join(tmpDir, `flat-${Date.now()}.pdf`);
+    const tmpOutput = path.join(tmpDir, `out-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, pdfBuffer);
 
-    // ---- ICC PROFILE ----
-    let iccProfilePath = process.env.ICC_PROFILE_PATH
-      ? path.resolve(process.env.ICC_PROFILE_PATH)
-      : "/usr/share/color/icc/ghostscript/srgb.icc";
-
-    if (!fs.existsSync(iccProfilePath)) {
-      console.warn("⚠️ ICC profile missing, falling back to built-in Ghostscript sRGB profile.");
-      iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc";
-    }
-
-    // ---- FLATTEN STEP ----
-    console.log("🔹 Flattening PDF before PDF/A conversion...");
-    const { spawnSync } = require("child_process");
-    const gsFlatten = spawnSync("gs", [
+    // 4️⃣ Flatten PDF using Ghostscript
+    console.log("🔹 Flattening PDF...");
+    let gsFlatten = spawnSync("gs", [
       "-sDEVICE=pdfwrite",
       "-dNOPAUSE",
       "-dBATCH",
@@ -159,16 +138,24 @@ if (isMerchant) {
       "-dColorImageResolution=300",
       `-sOutputFile=${tmpFlattened}`,
       tmpInput,
-    ]);
+    ], { encoding: "utf-8" });
 
     if (gsFlatten.error || gsFlatten.status !== 0) {
-      console.error("❌ Ghostscript flattening failed:\n", gsFlatten.stderr?.toString());
+      console.error("❌ Ghostscript flattening failed:", gsFlatten.stderr);
       throw new Error("Ghostscript flattening failed");
     }
 
-    // ---- PDF/A-3b CONVERSION ----
+    // 5️⃣ Convert to PDF/A-3b
     console.log("🔹 Converting to PDF/A-3b...");
-    const gsArgs = [
+    let iccProfilePath = process.env.ICC_PROFILE_PATH
+      ? path.resolve(process.env.ICC_PROFILE_PATH)
+      : "/usr/share/color/icc/ghostscript/srgb.icc";
+    if (!fs.existsSync(iccProfilePath)) {
+      console.warn("⚠️ ICC profile missing, using Ghostscript default sRGB");
+      iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc";
+    }
+
+    const gsPdfa = spawnSync("gs", [
       "-dPDFA=3",
       "-dPDFACompatibilityPolicy=1",
       "-sDEVICE=pdfwrite",
@@ -182,44 +169,30 @@ if (isMerchant) {
       `-sOutputICCProfile=${iccProfilePath}`,
       `-sOutputFile=${tmpOutput}`,
       tmpFlattened,
-    ];
+    ], { encoding: "utf-8" });
 
-    const util = require("util");
-    const execAsync = util.promisify(require("child_process").exec);
-
-    try {
-      const gsCommand = `gs ${gsArgs.map((a) => `"${a}"`).join(" ")}`;
-      console.log("🧩 [DEBUG] Running Ghostscript command:", gsCommand);
-
-      const { stdout, stderr } = await execAsync(gsCommand);
-      console.log("📄 [Ghostscript STDOUT]:", stdout);
-      console.log("📄 [Ghostscript STDERR]:", stderr);
-    } catch (error) {
-      console.error("❌ [Ghostscript ERROR MESSAGE]:", error.message);
-      console.error("❌ [Ghostscript ERROR STDERR]:", error.stderr);
-      console.error("❌ [Ghostscript ERROR STDOUT]:", error.stdout);
-      throw new Error("Ghostscript failed to generate PDF/A-3b");
+    if (gsPdfa.error || gsPdfa.status !== 0) {
+      console.error("❌ Ghostscript PDF/A-3b failed:", gsPdfa.stderr);
+      throw new Error("Ghostscript PDF/A-3b generation failed");
     }
 
-    // ---- FINAL OUTPUT ----
+    // 6️⃣ Read fully generated PDF/A-3b
     pdfBuffer = fs.readFileSync(tmpOutput);
     console.log("✅ PDF/A-3b successfully created.");
 
-// 3️⃣ Node: Embed ZUGFeRD XML directly
+    // 7️⃣ Embed ZUGFeRD XML
+    console.log("📦 Embedding ZUGFeRD XML...");
+    pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
+    console.log("✅ ZUGFeRD XML embedded.");
 
-console.log("📦 Embedding ZUGFeRD XML in Node...");
-pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
-console.log("✅ ZUGFeRD XML successfully embedded in Node.");
-
-    // 4️⃣ Save final PDF
+    // 8️⃣ Save final PDF
     const outputDir = path.resolve(__dirname, "../Generated");
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+    fs.mkdirSync(outputDir, { recursive: true });
     const outputPath = path.join(outputDir, `Invoice-ZUGFeRD-${invoiceData.orderId}.pdf`);
     fs.writeFileSync(outputPath, pdfBuffer);
+    console.log(`✅ Final PDF saved: ${outputPath}`);
 
-    console.log(`✅ Final ZUGFeRD PDF saved: ${outputPath}`);
-
-    // 5️⃣ Return PDF to client
+    // 9️⃣ Return PDF to client
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
@@ -228,7 +201,7 @@ console.log("✅ ZUGFeRD XML successfully embedded in Node.");
     return res.send(pdfBuffer);
 
   } catch (err) {
-    console.error("❌ [Shopify] Merchant PDF generation failed:", err);
+    console.error("❌ Merchant PDF generation failed:", err);
     return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
   }
 }
