@@ -108,11 +108,25 @@ if (isMerchant) {
     // 1️⃣ Generate base PDF
     let pdfBuffer = await createBasePdf(invoiceData);
 
-    // 2️⃣ Strip metadata
+    // 2️⃣ Sanitize /Info dictionary and remove Metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-    if (pdfDoc.context.trailerInfo.Info) pdfDoc.context.delete(pdfDoc.context.trailerInfo.Info);
-    const metadataStream = pdfDoc.catalog.get(PDFName.of("Metadata"));
-    if (metadataStream) pdfDoc.catalog.delete(PDFName.of("Metadata"));
+
+    // Sanitize /Info dictionary
+    const infoRef = pdfDoc.context.trailerInfo.Info;
+    if (infoRef) {
+      const infoDict = pdfDoc.context.lookup(infoRef);
+      for (const [key, value] of infoDict.map) {
+        if (value instanceof PDFHexString) {
+          const decoded = value.decodeText(); // convert UTF-16 hex to normal string
+          infoDict.set(key, pdfDoc.context.obj(decoded));
+        }
+      }
+    }
+
+    // Remove Metadata stream if exists
+    const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
+    if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
+
     pdfBuffer = Buffer.from(await pdfDoc.save());
 
     // 3️⃣ Prepare temp files
@@ -123,7 +137,7 @@ if (isMerchant) {
     const tmpOutput = path.join(tmpDir, `out-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, pdfBuffer);
 
-    // 4️⃣ Flatten PDF
+    // 4️⃣ Flatten PDF using Ghostscript
     console.log("🔹 Flattening PDF...");
     const gsFlatten = spawnSync("gs", [
       "-sDEVICE=pdfwrite",
@@ -140,25 +154,21 @@ if (isMerchant) {
       tmpInput,
     ], { encoding: "utf-8" });
 
-    console.log("🔹 Ghostscript flatten stdout:", gsFlatten.stdout);
-    console.log("🔹 Ghostscript flatten stderr:", gsFlatten.stderr);
-    console.log("🔹 Ghostscript flatten status:", gsFlatten.status);
     if (gsFlatten.error || gsFlatten.status !== 0) {
-      console.error("❌ Ghostscript flattening failed");
+      console.error("❌ Ghostscript flattening failed:", gsFlatten.stderr);
       throw new Error("Ghostscript flattening failed");
     }
-    pdfBuffer = fs.readFileSync(tmpFlattened);
 
-    // 5️⃣ PDF/A-3b conversion
+    // 5️⃣ Convert to PDF/A-3b
     console.log("🔹 Converting to PDF/A-3b...");
     let iccProfilePath = process.env.ICC_PROFILE_PATH
       ? path.resolve(process.env.ICC_PROFILE_PATH)
       : "/usr/share/color/icc/ghostscript/srgb.icc";
+
     if (!fs.existsSync(iccProfilePath)) {
       console.warn("⚠️ ICC profile missing, using Ghostscript default sRGB");
       iccProfilePath = "/usr/share/color/icc/ghostscript/srgb.icc";
     }
-    console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath));
 
     const gsPdfa = spawnSync("gs", [
       "-dPDFA=3",
@@ -176,17 +186,15 @@ if (isMerchant) {
       tmpFlattened,
     ], { encoding: "utf-8" });
 
-    console.log("🔹 Ghostscript PDF/A-3b stdout:", gsPdfa.stdout);
-    console.log("🔹 Ghostscript PDF/A-3b stderr:", gsPdfa.stderr);
-    console.log("🔹 Ghostscript PDF/A-3b status:", gsPdfa.status);
     if (gsPdfa.error || gsPdfa.status !== 0) {
-      console.error("❌ Ghostscript PDF/A-3b failed");
+      console.error("❌ Ghostscript PDF/A-3b failed:", gsPdfa.stderr);
       throw new Error("Ghostscript PDF/A-3b generation failed");
     }
+
     pdfBuffer = fs.readFileSync(tmpOutput);
     console.log("✅ PDF/A-3b successfully created.");
 
-    // 6️⃣ Embed ZUGFeRD
+    // 6️⃣ Embed ZUGFeRD XML
     console.log("📦 Embedding ZUGFeRD XML...");
     pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
     console.log("✅ ZUGFeRD XML embedded.");
@@ -198,7 +206,7 @@ if (isMerchant) {
     fs.writeFileSync(outputPath, pdfBuffer);
     console.log(`✅ Final PDF saved: ${outputPath}`);
 
-    // 8️⃣ Return PDF to client
+    // 8️⃣ Send PDF to client
     const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
     res.set({
       "Content-Type": "application/pdf",
