@@ -101,41 +101,35 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 const iccProfilePath = path.resolve(process.env.ICC_PROFILE_PATH);
 console.log("Resolved ICC profile:", iccProfilePath, fs.existsSync(iccProfilePath), fs.statSync(iccProfilePath).mode);
 
-
 if (isMerchant) {
   try {
     console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
 
     // 1️⃣ Generate base PDF
     let pdfBuffer = await createBasePdf(invoiceData);
+    console.log(`📄 Base PDF generated, size: ${pdfBuffer.length} bytes`);
 
     // 2️⃣ Sanitize /Info dictionary and remove Metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-
-    // Sanitize /Info dictionary
-   const infoRef = pdfDoc.context.trailerInfo.Info;
-if (infoRef) {
-  // Lookup the object behind the reference
-  const infoDict = pdfDoc.context.lookup(infoRef);
-
-  // Ensure it’s really a dictionary before iterating
-  if (infoDict?.dict instanceof Map) {
-    for (const [key, value] of infoDict.dict) {
-      if (value instanceof PDFHexString) {
-        const decoded = value.decodeText();
-        infoDict.set(key, pdfDoc.context.obj(decoded));
+    const infoRef = pdfDoc.context.trailerInfo.Info;
+    if (infoRef) {
+      const infoDict = pdfDoc.context.lookup(infoRef);
+      if (infoDict?.dict instanceof Map) {
+        for (const [key, value] of infoDict.dict) {
+          if (value instanceof PDFHexString) {
+            const decoded = value.decodeText();
+            infoDict.set(key, pdfDoc.context.obj(decoded));
+          }
+        }
+      } else {
+        console.warn("⚠️ /Info dictionary is not a standard PDFDict, skipping sanitization");
       }
     }
-  } else {
-    console.warn("⚠️ /Info dictionary is not a standard PDFDict, skipping sanitization");
-  }
-}
-
-    // Remove Metadata stream if exists
     const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
     if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
 
     pdfBuffer = Buffer.from(await pdfDoc.save());
+    console.log(`📄 PDF after /Info & Metadata sanitization, size: ${pdfBuffer.length} bytes`);
 
     // 3️⃣ Prepare temp files
     const tmpDir = path.join(__dirname, "../../tmp_gs");
@@ -166,6 +160,7 @@ if (infoRef) {
       console.error("❌ Ghostscript flattening failed:", gsFlatten.stderr);
       throw new Error("Ghostscript flattening failed");
     }
+    console.log(`📄 Flattened PDF size: ${fs.statSync(tmpFlattened).size} bytes`);
 
     // 5️⃣ Convert to PDF/A-3b
     console.log("🔹 Converting to PDF/A-3b...");
@@ -198,57 +193,64 @@ if (infoRef) {
       console.error("❌ Ghostscript PDF/A-3b failed:", gsPdfa.stderr);
       throw new Error("Ghostscript PDF/A-3b generation failed");
     }
-
+    console.log(`📄 PDF/A-3b PDF size: ${fs.statSync(tmpOutput).size} bytes`);
     pdfBuffer = fs.readFileSync(tmpOutput);
-    console.log("✅ PDF/A-3b successfully created.");
 
-    // 6️⃣ Embed ZUGFeRD XML with debug logging
-console.log("📦 Embedding ZUGFeRD XML (debug mode)...");
+    // 6️⃣ Embed ZUGFeRD XML (with debug wrapper)
+    async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
+      console.log("🔹 [Debug] Starting finalizePdf...");
 
-async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
-  console.log("🔹 [Debug] Starting finalizePdf...");
-  
-  if (!pdfBuffer || !pdfBuffer.length) {
-    console.warn("⚠️ Input PDF buffer is empty");
-  } else {
-    console.log(`📄 Input PDF buffer size: ${pdfBuffer.length}`);
-  }
+      if (!pdfBuffer || !pdfBuffer.length) {
+        console.warn("⚠️ Input PDF buffer is empty");
+      } else {
+        console.log(`📄 Input PDF buffer size: ${pdfBuffer.length}`);
+      }
 
-  let finalPdf;
-  try {
-    finalPdf = await finalizePdf(pdfBuffer, invoiceData);
+      let finalPdf;
+      try {
+        finalPdf = await finalizePdf(pdfBuffer, invoiceData);
 
-    if (!finalPdf) {
-      console.error("❌ finalizePdf returned undefined/null");
-    } else if (!(finalPdf instanceof Buffer)) {
-      console.warn(`⚠️ finalizePdf returned type: ${typeof finalPdf}, converting to Buffer`);
-      finalPdf = Buffer.from(finalPdf);
+        if (!finalPdf) {
+          console.error("❌ finalizePdf returned null/undefined");
+        } else if (!(finalPdf instanceof Buffer)) {
+          console.warn(`⚠️ finalizePdf returned type ${typeof finalPdf}, converting to Buffer`);
+          finalPdf = Buffer.from(finalPdf);
+        }
+
+        console.log(`✅ finalizePdf returned buffer of size: ${finalPdf.length}`);
+      } catch (err) {
+        console.error("❌ finalizePdf threw error:", err);
+        throw err;
+      }
+
+      // Save a debug copy
+      const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
+      try {
+        fs.writeFileSync(debugPath, finalPdf);
+        console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
+      } catch (err) {
+        console.error("❌ Could not save debug PDF:", err);
+      }
+
+      return finalPdf;
     }
 
-    console.log(`✅ finalizePdf returned buffer of size: ${finalPdf.length}`);
+    pdfBuffer = await finalizePdfDebug(pdfBuffer, invoiceData, tmpDir);
+    console.log("✅ ZUGFeRD XML embedded.");
+
+    // 7️⃣ Send PDF to client
+    const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
+    });
+    return res.send(pdfBuffer);
 
   } catch (err) {
-    console.error("❌ finalizePdf threw an error:", err);
-    throw err;
+    console.error("❌ Merchant PDF generation failed:", err);
+    return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
   }
-
-  // Save debug copy
-  const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
-  try {
-    fs.writeFileSync(debugPath, finalPdf);
-    console.log(`💾 finalizePdf debug file saved: ${debugPath}`);
-  } catch (err) {
-    console.error("❌ Could not save debug PDF:", err);
-  }
-
-  return finalPdf;
 }
-
-// Replace original call with debug wrapper
-pdfBuffer = await finalizePdfDebug(pdfBuffer, invoiceData, tmpDir);
-console.log("✅ ZUGFeRD XML embedding (debug) complete.");
-
-
 
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
