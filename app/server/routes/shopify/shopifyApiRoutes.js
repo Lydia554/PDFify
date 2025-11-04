@@ -219,14 +219,25 @@ async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
   console.log(`📄 Input PDF buffer size: ${pdfBuffer?.length || 0}`);
 
   let finalPdfBuffer;
+
   try {
     const finalPdf = await finalizePdf(pdfBuffer, invoiceData);
 
     if (finalPdf?.save && typeof finalPdf.save === "function") {
-      // Save PDFDocument to buffer correctly
-      finalPdfBuffer = await finalPdf.save({ useObjectStreams: false });
+      // If finalizePdf returned a PDFDocument, save it as Buffer
+      finalPdfBuffer = Buffer.from(await finalPdf.save({ useObjectStreams: false }));
     } else if (finalPdf instanceof Buffer) {
+      // Already a Buffer
       finalPdfBuffer = finalPdf;
+    } else if (finalPdf && typeof finalPdf === "object") {
+      // Sometimes finalizePdf returns a plain object with pdfDoc inside
+      if (finalPdf.pdfDoc?.save && typeof finalPdf.pdfDoc.save === "function") {
+        finalPdfBuffer = Buffer.from(await finalPdf.pdfDoc.save({ useObjectStreams: false }));
+      } else {
+        throw new Error(
+          "finalizePdf returned an object without a valid PDFDocument, cannot convert to buffer"
+        );
+      }
     } else {
       throw new Error("finalizePdf returned an invalid type, expected PDFDocument or Buffer");
     }
@@ -237,6 +248,7 @@ async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
     throw err;
   }
 
+  // Save a debug copy
   const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
   fs.writeFileSync(debugPath, finalPdfBuffer);
   console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
