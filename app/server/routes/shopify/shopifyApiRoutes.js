@@ -157,18 +157,17 @@ fs.writeFileSync(path.join(tmpDir, `step5_final_zugferd.pdf`), pdfBuffer);
 console.log("✅ PDF/A-3b + ZUGFeRD XML finalized and saved");
 
 // 6️⃣ Send to client
-res.set({
-  "Content-Type": "application/pdf",
-  "Content-Disposition": `attachment; filename=Invoice-${invoiceData.orderId}.pdf`,
-});
-res.send(pdfBuffer);
-
-
+ res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=Invoice-${invoiceData.orderId}.pdf`,
+    });
+    return res.send(pdfBuffer); // ← add 'return' here to stop execution
   } catch (err) {
     console.error("❌ Merchant PDF generation failed:", err);
     return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
-  }
-}
+  }}
+
+
 
 
     // ----------------------------
