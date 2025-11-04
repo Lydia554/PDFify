@@ -216,28 +216,35 @@ if (isMerchant) {
 
 async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
   console.log("🔹 [Debug] Starting finalizePdf...");
-  console.log(`📄 Input PDF buffer size: ${pdfBuffer?.length || 0}`);
 
-  let finalPdf = await finalizePdf(pdfBuffer, invoiceData);
-  console.log("🔹 Raw finalizePdf return type:", typeof finalPdf);
-  console.log("🔹 Raw finalizePdf value preview:", 
-              typeof finalPdf === "object" ? Object.keys(finalPdf) : finalPdf);
+  // Step 1: Load the current PDF/A buffer into pdf-lib
+  const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
 
-  let finalPdfBuffer;
-
-  // Only convert if it is a valid PDFDocument or Buffer
-  if (finalPdf?.save && typeof finalPdf.save === "function") {
-    finalPdfBuffer = Buffer.from(await finalPdf.save({ useObjectStreams: false }));
-  } else if (finalPdf instanceof Buffer) {
-    finalPdfBuffer = finalPdf;
-  } else {
-    // If not Buffer or PDFDocument, stop and dump for inspection
-    const dumpPath = path.join(tmpDir, `finalizePdf_raw_${Date.now()}.json`);
-    fs.writeFileSync(dumpPath, JSON.stringify(finalPdf, null, 2));
-    console.error(`❌ finalizePdf returned unsupported type. Dumped to: ${dumpPath}`);
-    throw new Error("finalizePdf returned unsupported type, cannot convert to PDF buffer");
+  // Step 2: Call finalizePdf to get the ZUGFeRD XML or other metadata
+  let zugferdData;
+  try {
+    zugferdData = await finalizePdf(pdfBuffer, invoiceData);
+    console.log("🔹 finalizePdf returned:", typeof zugferdData);
+  } catch (err) {
+    console.error("❌ finalizePdf threw error:", err);
+    // Continue with PDF/A buffer if finalizePdf fails
+    zugferdData = null;
   }
 
+  // Step 3: Embed ZUGFeRD XML if available
+  if (zugferdData?.xml) {
+    const xmlBuffer = Buffer.from(zugferdData.xml, "utf-8");
+    pdfDoc.attach(xmlBuffer, "ZUGFeRD-invoice.xml", {
+      mimeType: "application/xml",
+      description: "ZUGFeRD invoice",
+    });
+    console.log("✅ ZUGFeRD XML embedded into PDFDocument");
+  }
+
+  // Step 4: Save PDFDocument to buffer
+  const finalPdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+
+  // Step 5: Save debug copy
   const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
   fs.writeFileSync(debugPath, finalPdfBuffer);
   console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
