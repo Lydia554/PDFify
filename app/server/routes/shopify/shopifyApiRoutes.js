@@ -224,19 +224,19 @@ async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
     const finalPdf = await finalizePdf(pdfBuffer, invoiceData);
 
     if (finalPdf?.save && typeof finalPdf.save === "function") {
-      // If finalizePdf returned a PDFDocument, save it as Buffer
+      // PDFDocument returned
       finalPdfBuffer = Buffer.from(await finalPdf.save({ useObjectStreams: false }));
     } else if (finalPdf instanceof Buffer) {
-      // Already a Buffer
+      // Already a buffer
       finalPdfBuffer = finalPdf;
     } else if (finalPdf && typeof finalPdf === "object") {
-      // Sometimes finalizePdf returns a plain object with pdfDoc inside
-      if (finalPdf.pdfDoc?.save && typeof finalPdf.pdfDoc.save === "function") {
-        finalPdfBuffer = Buffer.from(await finalPdf.pdfDoc.save({ useObjectStreams: false }));
-      } else {
-        throw new Error(
-          "finalizePdf returned an object without a valid PDFDocument, cannot convert to buffer"
-        );
+      // Object returned: try to convert to PDFDocument
+      try {
+        const pdfDoc = await PDFDocument.load(Buffer.from(JSON.stringify(finalPdf)), { ignoreEncryption: true });
+        finalPdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+        console.log("⚠️ Converted plain object to PDFDocument buffer");
+      } catch {
+        throw new Error("finalizePdf returned an object that could not be converted to PDFDocument");
       }
     } else {
       throw new Error("finalizePdf returned an invalid type, expected PDFDocument or Buffer");
@@ -248,7 +248,6 @@ async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
     throw err;
   }
 
-  // Save a debug copy
   const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
   fs.writeFileSync(debugPath, finalPdfBuffer);
   console.log(`💾 Saved debug finalizePdf output to: ${debugPath}`);
