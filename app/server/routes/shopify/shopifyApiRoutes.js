@@ -218,34 +218,24 @@ async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
   console.log("🔹 [Debug] Starting finalizePdf...");
   console.log(`📄 Input PDF buffer size: ${pdfBuffer?.length || 0}`);
 
+  let finalPdf = await finalizePdf(pdfBuffer, invoiceData);
+  console.log("🔹 Raw finalizePdf return type:", typeof finalPdf);
+  console.log("🔹 Raw finalizePdf value preview:", 
+              typeof finalPdf === "object" ? Object.keys(finalPdf) : finalPdf);
+
   let finalPdfBuffer;
 
-  try {
-    const finalPdf = await finalizePdf(pdfBuffer, invoiceData);
-
-    if (finalPdf?.save && typeof finalPdf.save === "function") {
-      // PDFDocument returned
-      finalPdfBuffer = Buffer.from(await finalPdf.save({ useObjectStreams: false }));
-    } else if (finalPdf instanceof Buffer) {
-      // Already a buffer
-      finalPdfBuffer = finalPdf;
-    } else if (finalPdf && typeof finalPdf === "object") {
-      // Object returned: try to convert to PDFDocument
-      try {
-        const pdfDoc = await PDFDocument.load(Buffer.from(JSON.stringify(finalPdf)), { ignoreEncryption: true });
-        finalPdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
-        console.log("⚠️ Converted plain object to PDFDocument buffer");
-      } catch {
-        throw new Error("finalizePdf returned an object that could not be converted to PDFDocument");
-      }
-    } else {
-      throw new Error("finalizePdf returned an invalid type, expected PDFDocument or Buffer");
-    }
-
-    console.log(`✅ finalizePdf returned buffer of size: ${finalPdfBuffer.length}`);
-  } catch (err) {
-    console.error("❌ finalizePdf threw error:", err);
-    throw err;
+  // Only convert if it is a valid PDFDocument or Buffer
+  if (finalPdf?.save && typeof finalPdf.save === "function") {
+    finalPdfBuffer = Buffer.from(await finalPdf.save({ useObjectStreams: false }));
+  } else if (finalPdf instanceof Buffer) {
+    finalPdfBuffer = finalPdf;
+  } else {
+    // If not Buffer or PDFDocument, stop and dump for inspection
+    const dumpPath = path.join(tmpDir, `finalizePdf_raw_${Date.now()}.json`);
+    fs.writeFileSync(dumpPath, JSON.stringify(finalPdf, null, 2));
+    console.error(`❌ finalizePdf returned unsupported type. Dumped to: ${dumpPath}`);
+    throw new Error("finalizePdf returned unsupported type, cannot convert to PDF buffer");
   }
 
   const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
