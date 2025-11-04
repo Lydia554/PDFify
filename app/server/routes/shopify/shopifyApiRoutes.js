@@ -13,9 +13,11 @@ const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 const { createShopifyInvoiceZugferd, createBasePdf} = require("./shopifyMerchantTemplate");
-const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
+const { PDFDocument} = require("pdf-lib");
 
-const { finalizePdf } = require("../../Helpers/pdf-helpers");
+const { embedXmp, embedZugferdXml } = require("../../Helpers/pdf-helpers");
+
+
 const { spawnSync } = require("child_process");
 const os = require("os");
 const JSZip = require("jszip");
