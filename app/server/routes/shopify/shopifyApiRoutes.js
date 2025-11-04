@@ -202,32 +202,51 @@ if (infoRef) {
     pdfBuffer = fs.readFileSync(tmpOutput);
     console.log("✅ PDF/A-3b successfully created.");
 
-    // 6️⃣ Embed ZUGFeRD XML
-    console.log("📦 Embedding ZUGFeRD XML...");
-    pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
-    console.log("✅ ZUGFeRD XML embedded.");
+    // 6️⃣ Embed ZUGFeRD XML with debug logging
+console.log("📦 Embedding ZUGFeRD XML (debug mode)...");
 
-    // 7️⃣ Save final PDF
-    const outputDir = path.resolve(__dirname, "../Generated");
-    fs.mkdirSync(outputDir, { recursive: true });
-    const outputPath = path.join(outputDir, `Invoice-ZUGFeRD-${invoiceData.orderId}.pdf`);
-    fs.writeFileSync(outputPath, pdfBuffer);
-    console.log(`✅ Final PDF saved: ${outputPath}`);
+async function finalizePdfDebug(pdfBuffer, invoiceData, tmpDir) {
+  console.log("🔹 [Debug] Starting finalizePdf...");
+  
+  if (!pdfBuffer || !pdfBuffer.length) {
+    console.warn("⚠️ Input PDF buffer is empty");
+  } else {
+    console.log(`📄 Input PDF buffer size: ${pdfBuffer.length}`);
+  }
 
-    // 8️⃣ Send PDF to client
-    const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
-    });
-    return res.send(pdfBuffer);
+  let finalPdf;
+  try {
+    finalPdf = await finalizePdf(pdfBuffer, invoiceData);
+
+    if (!finalPdf) {
+      console.error("❌ finalizePdf returned undefined/null");
+    } else if (!(finalPdf instanceof Buffer)) {
+      console.warn(`⚠️ finalizePdf returned type: ${typeof finalPdf}, converting to Buffer`);
+      finalPdf = Buffer.from(finalPdf);
+    }
+
+    console.log(`✅ finalizePdf returned buffer of size: ${finalPdf.length}`);
 
   } catch (err) {
-    console.error("❌ Merchant PDF generation failed:", err);
-    return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
+    console.error("❌ finalizePdf threw an error:", err);
+    throw err;
   }
+
+  // Save debug copy
+  const debugPath = path.join(tmpDir, `debug_finalizePdf_${Date.now()}.pdf`);
+  try {
+    fs.writeFileSync(debugPath, finalPdf);
+    console.log(`💾 finalizePdf debug file saved: ${debugPath}`);
+  } catch (err) {
+    console.error("❌ Could not save debug PDF:", err);
+  }
+
+  return finalPdf;
 }
 
+// Replace original call with debug wrapper
+pdfBuffer = await finalizePdfDebug(pdfBuffer, invoiceData, tmpDir);
+console.log("✅ ZUGFeRD XML embedding (debug) complete.");
 
 
 
