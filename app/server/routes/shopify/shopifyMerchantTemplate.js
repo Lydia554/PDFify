@@ -124,8 +124,8 @@ async function createBasePdf(data) {
   });
 
   // Optional: Add minimal PDF/A-3b metadata
- const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
+const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=''
         xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
@@ -135,6 +135,7 @@ async function createBasePdf(data) {
   </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end='w'?>`;
+
 const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, 'utf8'), {
   Type: PDFName.of('Metadata'),
   Subtype: PDFName.of('XML'),

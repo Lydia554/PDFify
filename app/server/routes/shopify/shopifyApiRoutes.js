@@ -109,6 +109,11 @@ if (isMerchant) {
     let pdfBuffer = await createBasePdf(invoiceData);
     console.log(`📄 Base PDF generated, size: ${pdfBuffer.length} bytes`);
 
+    const doc = await PDFDocument.load(pdfBuffer);
+console.log("Metadata:", !!doc.catalog.get(PDFName.of("Metadata")));
+console.log("OutputIntent:", !!doc.catalog.get(PDFName.of("OutputIntents")));
+
+
     // 2️⃣ Sanitize /Info dictionary and remove Metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
     const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
@@ -129,11 +134,14 @@ if (isMerchant) {
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     const tmpOutput = path.join(tmpDir, `output-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, pdfBuffer);
+// 5️⃣ Convert to PDF/A-3b with Ghostscript
+const iccProfilePathFinal =
+  process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
+    ? process.env.ICC_PROFILE_PATH
+    : fs.existsSync(iccProfilePath)
+    ? iccProfilePath
+    : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-    // 5️⃣ Convert to PDF/A-3b with Ghostscript
-    const iccProfilePathFinal = fs.existsSync(iccProfilePath)
-      ? iccProfilePath
-      : "/usr/share/color/icc/ghostscript/srgb.icc";
 
     console.log("🔹 Converting to PDF/A-3b with Ghostscript...");
     const gsPdfa = spawnSync("gs", [
@@ -147,6 +155,8 @@ if (isMerchant) {
       "-dSubsetFonts=true",
       "-dCompressFonts=true",
       "-dProcessColorModel=/DeviceRGB",
+      "-sColorConversionStrategy=RGB",
+        "-dUseCIEColor",
       `-sOutputICCProfile=${iccProfilePathFinal}`,
       `-sOutputFile=${tmpOutput}`,
       tmpInput,
