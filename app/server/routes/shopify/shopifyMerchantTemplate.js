@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb } = require("pdf-lib");
+const { PDFDocument, rgb, PDFName, PDFString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
@@ -16,10 +16,10 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     const total = net + tax;
 
     return {
-      position: index + 1,         
+      position: index + 1,
       name: item.title || item.name || "Item",
       quantity,
-      unitCode: "EA",            
+      unitCode: "EA",
       price,
       net,
       tax,
@@ -47,11 +47,14 @@ function mapOrderToPdfData(order, shopConfig = {}) {
     bic: shopConfig.bic || "COBADEFFXXX",
     paymentTerms: order.payment?.terms || "Due within 14 days",
     creator: "PDFify",
-    companyName: shopConfig.companyName || "YOUR COMPANY GMBH", 
+    companyName: shopConfig.companyName || "YOUR COMPANY GMBH",
     locale: { language: order.locale || "en" },
   };
 }
 
+// ---------------------
+// Create base PDF with fonts + PDF/A-3b prep
+// ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
@@ -64,19 +67,13 @@ async function createBasePdf(data) {
 
   function asciiSafe(str) {
     if (!str) return " ";
-    return str.replace(/[^\x20-\x7E]/g, ""); 
+    return str.replace(/[^\x20-\x7E]/g, "");
   }
-
-  // sanitize metadata
-
-
 
   // sanitize table & page content
   data.customerName = asciiSafe(data.customerName);
   data.companyName = asciiSafe(data.companyName);
-  data.items.forEach(item => {
-    item.name = asciiSafe(item.name);
-  });
+  data.items.forEach(item => { item.name = asciiSafe(item.name); });
 
   const page = pdfDoc.addPage([595, 842]);
   let y = 780;
@@ -126,12 +123,28 @@ async function createBasePdf(data) {
     y -= rowHeight;
   });
 
-  return Buffer.from(await pdfDoc.save());
+  // Optional: Add minimal PDF/A-3b metadata
+  const xmpString = `
+  <?xpacket begin="ï»¿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  <x:xmpmeta xmlns:x="adobe:ns:meta/">
+    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+      <rdf:Description rdf:about=""
+          xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+        <pdfaid:part>3</pdfaid:part>
+        <pdfaid:conformance>B</pdfaid:conformance>
+      </rdf:Description>
+    </rdf:RDF>
+  </x:xmpmeta>
+  <?xpacket end="w"?>`;
+  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpString, "utf-8"));
+  pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
+
+  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
 
-
-
-
+// ---------------------
+// Create full ZUGFeRD PDF
+// ---------------------
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   // 1️⃣ Map order data
   const data = mapOrderToPdfData(order, shopConfig);
@@ -155,4 +168,8 @@ async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   return { pdfPath: outputPath, pdfBuffer: finalBuffer };
 }
 
-module.exports = { createShopifyInvoiceZugferd,createBasePdf };
+module.exports = {
+  createShopifyInvoiceZugferd,
+  createBasePdf,
+  mapOrderToPdfData
+};

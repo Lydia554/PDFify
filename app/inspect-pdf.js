@@ -1,85 +1,66 @@
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, PDFName, PDFRawStream } = require("pdf-lib");
-const pako = require("pako"); // npm i pako
+const { PDFDocument, PDFName, PDFString, PDFRawStream } = require("pdf-lib");
+const zlib = require("zlib");
 
 (async () => {
-  try {
-const pdfPath = path.resolve("./debug_steps/step5_final_zugferd.pdf"); // your PDF
-    const pdfBuffer = fs.readFileSync(pdfPath);
+  const pdfPath = process.argv[2];
+  if (!pdfPath) {
+    console.error("❌ Please provide a PDF to inspect, e.g.:");
+    console.error("   node inspect-pdf-af.js debug_steps/step5_final_zugferd.pdf");
+    process.exit(1);
+  }
 
-    const tmpDir = path.join(__dirname, "debug_steps");
-    fs.mkdirSync(tmpDir, { recursive: true });
+  if (!fs.existsSync(pdfPath)) {
+    console.error("❌ File not found:", pdfPath);
+    process.exit(1);
+  }
 
-    const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-    console.log("✅ PDF loaded, pages:", pdfDoc.getPageCount());
+  const pdfData = fs.readFileSync(pdfPath);
+  const pdfDoc = await PDFDocument.load(pdfData, { ignoreEncryption: true });
 
-    // --- 1️⃣ Extract XMP metadata ---
-    const metadataRef = pdfDoc.catalog.get(PDFName.of("Metadata"));
-    if (metadataRef instanceof PDFRawStream) {
-      let xmlContent;
-      const filter = metadataRef.dictionary.get(PDFName.of("Filter"))?.name;
-      if (filter === "FlateDecode") {
-        xmlContent = pako.inflate(metadataRef.contents, { to: "string" });
-      } else {
-        xmlContent = Buffer.from(metadataRef.contents).toString("utf-8");
-      }
-      const xmlPath = path.join(tmpDir, "xmp_metadata.xml");
-      fs.writeFileSync(xmlPath, xmlContent, "utf-8");
-      console.log("💾 XMP metadata saved:", xmlPath);
-    } else {
-      console.log("⚠️ No XMP metadata found or not a PDFRawStream.");
+  console.log(`✅ Loaded PDF: ${pdfPath}`);
+  console.log(`📄 Pages: ${pdfDoc.getPageCount()}`);
+
+  // --- Check /AF array in the catalog ---
+  const afArray = pdfDoc.catalog.get(PDFName.of("AF"));
+  if (!afArray) {
+    console.warn("⚠️ No /AF (Associated Files) array found");
+    return;
+  }
+
+  console.log(`📌 /AF array found with ${afArray.size} object(s)`);
+
+  let extractedCount = 0;
+
+  for (let i = 0; i < afArray.size; i++) {
+    const fileSpecRef = afArray.lookup(i);
+    const fileSpec = fileSpecRef.lookup();
+
+    const fileName = fileSpec.get(PDFName.of("F"))?.value || `attached_${i}.xml`;
+    const efDict = fileSpec.get(PDFName.of("EF"))?.lookup(PDFName.of("F"));
+
+    if (!efDict || !(efDict instanceof PDFRawStream)) {
+      console.warn(`⚠️ Object ${i} has no stream for EF/F`);
+      continue;
     }
 
-    // --- 2️⃣ Extract embedded ZUGFeRD XML ---
-    const namesDictRef = pdfDoc.catalog.get(PDFName.of("Names"));
-    if (!namesDictRef) {
-      console.log("⚠️ No /Names dictionary found.");
-      return;
+    let content = efDict.contents;
+    const filter = efDict.dict.get(PDFName.of("Filter"))?.value;
+
+    if (filter === "FlateDecode") {
+      content = zlib.inflateSync(content);
     }
 
-    const namesDict = pdfDoc.context.lookup(namesDictRef);
-    const embeddedFilesDictRef = namesDict.lookup(PDFName.of("EmbeddedFiles"));
-    if (!embeddedFilesDictRef) {
-      console.log("⚠️ No /EmbeddedFiles found.");
-      return;
-    }
+    const outPath = path.join(path.dirname(pdfPath), `extracted_${fileName}`);
+    fs.writeFileSync(outPath, content);
+    console.log(`✅ Extracted attached file to: ${outPath}`);
+    extractedCount++;
+  }
 
-    const embeddedFilesDict = pdfDoc.context.lookup(embeddedFilesDictRef);
-    const namesArrayRef = embeddedFilesDict.get(PDFName.of("Names"));
-    const namesArray = pdfDoc.context.lookup(namesArrayRef);
-    if (!Array.isArray(namesArray)) {
-      console.log("⚠️ Embedded /Names array missing or invalid.");
-      return;
-    }
-
-    for (let i = 0; i < namesArray.length; i += 2) {
-      const fileNameObj = namesArray[i];
-      const fileSpecRef = namesArray[i + 1];
-      const fileSpec = pdfDoc.context.lookup(fileSpecRef);
-
-      const efDictRef = fileSpec.get(PDFName.of("EF"));
-      if (!efDictRef) continue;
-      const efDict = pdfDoc.context.lookup(efDictRef);
-      const fRef = efDict.get(PDFName.of("F"));
-      const fileStream = pdfDoc.context.lookup(fRef);
-
-      let fileData = fileStream.contents;
-      const filter = fileStream.dictionary.get(PDFName.of("Filter"));
-      if (filter?.name === "FlateDecode" || (Array.isArray(filter) && filter[0].name === "FlateDecode")) {
-        fileData = pako.inflate(fileData, { to: "string" });
-      } else {
-        fileData = Buffer.from(fileData).toString("utf-8");
-      }
-
-      const decodedFileName = fileSpec.get(PDFName.of("F"))?.decodeText?.() || `zugferd_${i / 2}.xml`;
-      const filePath = path.join(tmpDir, decodedFileName);
-      fs.writeFileSync(filePath, fileData, "utf-8");
-      console.log("💾 Extracted embedded XML:", filePath);
-    }
-
-    console.log("🎯 Extraction complete. Check 'debug_steps' folder.");
-  } catch (err) {
-    console.error("❌ PDF extraction failed:", err);
+  if (extractedCount === 0) {
+    console.warn("⚠️ No attached files extracted from /AF");
+  } else {
+    console.log(`🎯 Extraction complete: ${extractedCount} file(s)`);
   }
 })();
