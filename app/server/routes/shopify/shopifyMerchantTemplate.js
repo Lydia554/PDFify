@@ -124,20 +124,23 @@ async function createBasePdf(data) {
   });
 
   // Optional: Add minimal PDF/A-3b metadata
-  const xmpString = `
-  <?xpacket begin="ï»¿" id="W5M0MpCehiHzreSzNTczkc9d"?>
-  <x:xmpmeta xmlns:x="adobe:ns:meta/">
-    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-      <rdf:Description rdf:about=""
-          xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-        <pdfaid:part>3</pdfaid:part>
-        <pdfaid:conformance>B</pdfaid:conformance>
-      </rdf:Description>
-    </rdf:RDF>
-  </x:xmpmeta>
-  <?xpacket end="w"?>`;
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmpString, "utf-8"));
-  pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
+ const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <rdf:Description rdf:about=''
+        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end='w'?>`;
+const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, 'utf8'), {
+  Type: PDFName.of('Metadata'),
+  Subtype: PDFName.of('XML'),
+});
+pdfDoc.catalog.set(PDFName.of('Metadata'), pdfDoc.context.register(metadataStream));
+
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }

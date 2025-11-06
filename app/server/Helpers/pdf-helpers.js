@@ -15,7 +15,7 @@ function cleanPdfBuffer(buf) {
 // Embed XMP metadata into PDF
 // -----------------------------
 async function embedXmp(pdfDoc) {
-  const xmp = `<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  const xmp = `<?xpacket begin='' id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
@@ -25,10 +25,11 @@ async function embedXmp(pdfDoc) {
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, "utf8"), {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-  });
+const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
+  Type: PDFName.of("Metadata"),
+  Subtype: PDFName.of("XML"),
+});
+
 
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
@@ -54,12 +55,14 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
   const xmlRef = pdfDoc.context.register(xmlStream);
 
   // Create file spec
-  const fileSpec = pdfDoc.context.obj({
-    Type: PDFName.of("Filespec"),
-    F: PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`),
-    UF: PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`),
-    EF: pdfDoc.context.obj({ F: xmlRef }),
-  });
+const fileSpec = pdfDoc.context.obj({
+  Type: PDFName.of("Filespec"),
+  F: PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`),
+  UF: PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`),
+  EF: pdfDoc.context.obj({ F: xmlRef }),
+  AFRelationship: PDFName.of("Alternative"),
+});
+
   const fileSpecRef = pdfDoc.context.register(fileSpec);
 
   // Attach file to EmbeddedFiles dictionary
