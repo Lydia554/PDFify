@@ -109,10 +109,7 @@ if (isMerchant) {
     let pdfBuffer = await createBasePdf(invoiceData);
     console.log(`📄 Base PDF generated, size: ${pdfBuffer.length} bytes`);
 
-    const doc = await PDFDocument.load(pdfBuffer);
-console.log("Metadata:", !!doc.catalog.get(PDFName.of("Metadata")));
-console.log("OutputIntent:", !!doc.catalog.get(PDFName.of("OutputIntents")));
-
+    
 
     // 2️⃣ Sanitize /Info dictionary and remove Metadata
     const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
