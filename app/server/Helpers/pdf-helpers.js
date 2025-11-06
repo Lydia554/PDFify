@@ -11,7 +11,35 @@ function cleanPdfBuffer(buf) {
   return pdfStart > 0 ? buf.slice(pdfStart) : buf;
 }
 
+// -----------------------------
+// Embed XMP metadata into PDF
+// -----------------------------
+async function embedXmp(pdfDoc) {
+const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <rdf:Description rdf:about=''
+        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end='w'?>`;
 
+
+const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
+  Type: PDFName.of("Metadata"),
+  Subtype: PDFName.of("XML"),
+});
+
+
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
+  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
+
+  return pdfDoc;
+}
 
 // -----------------------------
 // Embed ZUGFeRD XML into PDF
