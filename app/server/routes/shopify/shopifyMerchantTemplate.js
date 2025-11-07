@@ -68,7 +68,7 @@ async function createBasePdf(data) {
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
   // ---------------------
-  // DefaultRGB + OutputIntent setup BEFORE pages
+  // DefaultRGB + OutputIntent
   // ---------------------
   const iccProfilePath =
     process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
@@ -101,7 +101,7 @@ async function createBasePdf(data) {
   pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
 
   // ---------------------
-  // Create page after DefaultRGB is set
+  // Create page
   // ---------------------
   const page = pdfDoc.addPage([595, 842]);
   page.node.set(PDFName.of("Resources"), pdfDoc.context.obj({
@@ -142,27 +142,56 @@ async function createBasePdf(data) {
     y -= rowHeight;
   });
 
-  // XMP metadata & Trailer ID as before
+  // ---------------------
+  // XMP metadata & Trailer ID (PDF/A-3B compliant)
+  // ---------------------
   const now = new Date().toISOString();
   const docId = `uuid:${crypto.randomUUID()}`;
   const instId = `uuid:${crypto.randomUUID()}`;
+  const escapeXml = (str) =>
+    str ? str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c])) : "";
+
   const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+
+    <!-- PDF/A Identification -->
     <rdf:Description rdf:about=""
-      xmlns:xmp='http://ns.adobe.com/xap/1.0/'
-      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
-      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
-      xmlns:dc='http://purl.org/dc/elements/1.1/'
-      pdfaid:part="3"
-      pdfaid:conformance="B">
+      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+
+    <!-- XMP Basic -->
+    <rdf:Description rdf:about=""
+      xmlns:xmp='http://ns.adobe.com/xap/1.0/'>
       <xmp:CreateDate>${now}</xmp:CreateDate>
       <xmp:ModifyDate>${now}</xmp:ModifyDate>
+      <xmp:CreatorTool>PDFify</xmp:CreatorTool>
+    </rdf:Description>
+
+    <!-- XMPMM -->
+    <rdf:Description rdf:about=""
+      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'>
       <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
       <xmpMM:InstanceID>${instId}</xmpMM:InstanceID>
-      <dc:title><rdf:Alt><rdf:Li xml:lang="x-default">Invoice ${data.orderId}</rdf:Li></rdf:Alt></dc:title>
-      <dc:creator><rdf:Seq><rdf:Li>${data.creator}</rdf:Li></rdf:Seq></dc:creator>
     </rdf:Description>
+
+    <!-- Dublin Core -->
+    <rdf:Description rdf:about=""
+      xmlns:dc='http://purl.org/dc/elements/1.1/'>
+      <dc:title>
+        <rdf:Alt>
+          <rdf:Li xml:lang="x-default">Invoice ${escapeXml(data.orderId)}</rdf:Li>
+        </rdf:Alt>
+      </dc:title>
+      <dc:creator>
+        <rdf:Seq>
+          <rdf:Li>${escapeXml(data.creator)}</rdf:Li>
+        </rdf:Seq>
+      </dc:creator>
+    </rdf:Description>
+
   </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end='w'?>`;
@@ -180,11 +209,7 @@ async function createBasePdf(data) {
   pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
-
-  console.log("💾 Base PDF saved, size:", buffer.length);
-  return buffer;
 }
-
 
 // ---------------------
 // Merchant PDF: Ghostscript + ZUGFeRD
