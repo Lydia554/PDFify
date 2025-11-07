@@ -123,28 +123,32 @@ async function createMerchantPdf(invoiceData) {
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-    // ---------------------
-    // PDFBox Processing
-    // ---------------------
-    const pdfboxJar = path.resolve(__dirname, "../../../libs/pdfbox-app-3.1.3.jar"); // adjust path
-    const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-${Date.now()}.pdf`);
-    const pdfBoxCmd = spawnSync(
-      "java",
-      [
-        "-jar",
-        pdfboxJar,
-        "Preflight",
-        "-a",
-        tmpInput,
-        "-o",
-        tmpPdfBoxOutput
-      ],
-      { encoding: "utf-8" }
-    );
-    if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
-      console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
-      throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
-    }
+// ---------------------
+// PDFBox Processing
+// ---------------------
+console.log("🟢 Running PDFBox Preflight on:", tmpInput);
+const pdfBoxCmd = spawnSync(
+  "java",
+  [
+    "-jar",
+    pdfboxJar,
+    "Preflight",
+    "-a",
+    tmpInput,
+    "-o",
+    tmpPdfBoxOutput
+  ],
+  { encoding: "utf-8" }
+);
+console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
+console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
+
+if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
+  console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
+  throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
+}
+console.log("✅ PDFBox Preflight completed, output:", tmpPdfBoxOutput);
+
 
     // ---------------------
     // Ghostscript PDF/A-3B enforcement
