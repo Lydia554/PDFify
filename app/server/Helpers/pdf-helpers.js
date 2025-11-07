@@ -106,7 +106,6 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
 
 module.exports = {
   cleanPdfBuffer,
-  embedXmp,
   embedZugferdXml,
   finalizePdf,
 };
