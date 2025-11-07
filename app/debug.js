@@ -1,25 +1,44 @@
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, PDFName } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
+const fontkit = require("@pdf-lib/fontkit");
+const crypto = require("crypto");
 const { spawnSync } = require("child_process");
+const { finalizePdf } = require("./server/Helpers/pdf-helpers"); // adjust path if needed
 
 const debugDir = path.join(__dirname, "debug_steps_pdfa_test");
 fs.mkdirSync(debugDir, { recursive: true });
 
 (async () => {
-  // --- 1️⃣ Create base PDF ---
+  // ---------------------
+  // Step 1: Base PDF
+  // ---------------------
+  console.log("🟢 Step 1: Create base PDF with embedded fonts");
   const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
   const page = pdfDoc.addPage([595, 842]);
   page.drawText("PDF/A Debug Test - Base PDF", { x: 50, y: 800 });
-  let pdfBuffer = await pdfDoc.save({ useObjectStreams: false });
 
+  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "./templates/fonts/LiberationSans-Regular.ttf"));
+  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "./templates/fonts/LiberationSans-Bold.ttf"));
+  const regularFont = await pdfDoc.embedFont(regularFontBytes);
+  const boldFont = await pdfDoc.embedFont(boldFontBytes);
+
+  page.drawText("Test header using embedded fonts", { x: 50, y: 780, font: boldFont, size: 14 });
+
+  let pdfBuffer = await pdfDoc.save({ useObjectStreams: false });
   const step1Path = path.join(debugDir, "step1_base.pdf");
   fs.writeFileSync(step1Path, pdfBuffer);
-  console.log("📄 Step 1: Base PDF created →", step1Path);
+  console.log("📄 Step 1 saved →", step1Path);
 
-  // --- 2️⃣ Inject valid XMP metadata ---
+  // ---------------------
+  // Step 2: Add XMP metadata
+  // ---------------------
+  console.log("🟢 Step 2: Add XMP metadata");
   const pdfDoc2 = await PDFDocument.load(pdfBuffer);
 
+  const now = new Date().toISOString();
   const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
@@ -36,7 +55,6 @@ fs.mkdirSync(debugDir, { recursive: true });
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
   });
-
   const metadataRef = pdfDoc2.context.register(metadataStream);
   pdfDoc2.catalog.set(PDFName.of("Metadata"), metadataRef);
   pdfDoc2.catalog.set(PDFName.of("MarkInfo"), pdfDoc2.context.obj({ Marked: true }));
@@ -44,9 +62,12 @@ fs.mkdirSync(debugDir, { recursive: true });
   pdfBuffer = await pdfDoc2.save({ useObjectStreams: false });
   const step2Path = path.join(debugDir, "step2_xmp_added.pdf");
   fs.writeFileSync(step2Path, pdfBuffer);
-  console.log("📄 Step 2: Added valid XMP metadata →", step2Path);
+  console.log("📄 Step 2 saved →", step2Path);
 
-  // --- 3️⃣ Convert to PDF/A-3b with Ghostscript ---
+  // ---------------------
+  // Step 3: Convert to PDF/A-3b using Ghostscript
+  // ---------------------
+  console.log("🟢 Step 3: Convert to PDF/A-3b using Ghostscript");
   const tmpInput = path.join(debugDir, "gs_input.pdf");
   const tmpOutput = path.join(debugDir, "step3_pdfa3b.pdf");
   fs.writeFileSync(tmpInput, pdfBuffer);
@@ -56,7 +77,6 @@ fs.mkdirSync(debugDir, { recursive: true });
     : "gs";
 
   const iccProfilePath = path.resolve("./server/Helpers/sRGB_v4_ICC_preference.icc");
-  console.log("🔹 Running Ghostscript for PDF/A-3b...");
 
   const gs = spawnSync(gsExe, [
     "-dPDFA=3",
@@ -72,7 +92,7 @@ fs.mkdirSync(debugDir, { recursive: true });
     "-sColorConversionStrategy=RGB",
     `-sOutputICCProfile=${iccProfilePath}`,
     `-sOutputFile=${tmpOutput}`,
-    tmpInput, // only PDF input
+    tmpInput,
   ], { encoding: "utf-8" });
 
   if (gs.error || gs.status !== 0) {
@@ -80,6 +100,31 @@ fs.mkdirSync(debugDir, { recursive: true });
     process.exit(1);
   }
 
-  console.log("📄 Step 3: PDF/A-3b saved →", tmpOutput);
-  console.log("🎯 All steps complete. Validate with VeraPDF now.");
+  pdfBuffer = fs.readFileSync(tmpOutput);
+  console.log("📄 Step 3 saved →", tmpOutput);
+
+  // ---------------------
+  // Step 4: Embed ZUGFeRD XML (mock)
+  // ---------------------
+  console.log("🟢 Step 4: Embed ZUGFeRD XML (mock)");
+
+  const mockOrder = {
+    orderId: "TEST123",
+    line_items: [{ title: "Test Item", quantity: 1, price: 10, tax_lines: [{ price: 2 }] }],
+    currency: "EUR",
+    created_at: new Date().toISOString(),
+    customer: { first_name: "John", last_name: "Doe" },
+    payment: { terms: "Due within 14 days" },
+  };
+
+  try {
+    const step4Buffer = await finalizePdf(pdfBuffer, mockOrder);
+    const step4Path = path.join(debugDir, "step4_zugferd_embedded.pdf");
+    fs.writeFileSync(step4Path, step4Buffer);
+    console.log("📄 Step 4 saved →", step4Path);
+  } catch (err) {
+    console.error("⚠️ Step 4 skipped due to ZUGFeRD embedding error:", err.message);
+  }
+
+  console.log("🎯 Debug PDF steps complete. Validate each step with VeraPDF.");
 })();

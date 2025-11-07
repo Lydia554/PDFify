@@ -122,28 +122,31 @@ async function createBasePdf(data) {
   const now = new Date().toISOString();
   const docId = `uuid:${crypto.randomUUID()}`;
   const instId = `uuid:${crypto.randomUUID()}`;
-  const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about=""
-      xmlns:xmp='http://ns.adobe.com/xap/1.0/'
-      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
-      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
-      xmlns:dc='http://purl.org/dc/elements/1.1/'
-      pdfaid:part="3"
-      pdfaid:conformance="B">
-      <xmp:CreateDate>${now}</xmp:CreateDate>
-      <xmp:ModifyDate>${now}</xmp:ModifyDate>
-      <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
-      <xmpMM:InstanceID>${instId}</xmpMM:InstanceID>
-      <dc:title><rdf:Alt><rdf:Li xml:lang="x-default">Invoice ${data.orderId}</rdf:Li></rdf:Alt></dc:title>
-      <dc:creator><rdf:Seq><rdf:Li>${data.creator}</rdf:Li></rdf:Seq></dc:creator>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end='w'?>`;
 
-  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
+  const xmpBody = ` 
+  <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
+    <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+      <rdf:Description rdf:about=""
+        xmlns:xmp='http://ns.adobe.com/xap/1.0/'
+        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+        xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
+        xmlns:dc='http://purl.org/dc/elements/1.1/'
+        pdfaid:part="3"
+        pdfaid:conformance="B">
+        <xmp:CreateDate>${now}</xmp:CreateDate>
+        <xmp:ModifyDate>${now}</xmp:ModifyDate>
+        <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
+        <xmpMM:InstanceID>${instId}</xmpMM:InstanceID>
+        <dc:title><rdf:Alt><rdf:Li xml:lang="x-default">Invoice ${data.orderId}</rdf:Li></rdf:Alt></dc:title>
+        <dc:creator><rdf:Seq><rdf:Li>${data.creator}</rdf:Li></rdf:Seq></dc:creator>
+      </rdf:Description>
+    </rdf:RDF>
+  </x:xmpmeta>`;
+
+  // include BOM and use a proper xpacket begin value — helps veraPDF accept packet as UTF-8 XMP
+  const xmpPacket = '\uFEFF<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>' + xmpBody + '<?xpacket end="w"?>';
+
+  const metadataStream = pdfDoc.context.stream(Buffer.from(xmpPacket, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
   });
@@ -153,11 +156,15 @@ async function createBasePdf(data) {
 
   // Trailer /ID
   try {
-    console.log("🆔 Setting trailer ID via catalog instead of context.trailer");
-    const id1 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
-    const id2 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
-    pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
-    console.log("✅ Trailer ID set via catalog");
+    console.log("🆔 Setting trailer ID in context.trailer");
+    const idHex1 = crypto.randomBytes(16).toString("hex");
+    const idHex2 = crypto.randomBytes(16).toString("hex");
+    const id1 = PDFHexString.fromText(idHex1);
+    const id2 = PDFHexString.fromText(idHex2);
+
+    // Put ID into the trailer (not the catalog)
+    pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
+    console.log("✅ Trailer ID set via context.trailer");
   } catch (err) {
     console.error("❌ Error setting trailer ID:", err);
   }
@@ -234,7 +241,7 @@ async function createMerchantPdf(invoiceData) {
       ? process.env.ICC_PROFILE_PATH
       : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-  console.log("👻 Running Ghostscript...");
+ console.log("👻 Running Ghostscript...");
   const gs = spawnSync(
     "gs",
     [
@@ -245,7 +252,7 @@ async function createMerchantPdf(invoiceData) {
       "-dBATCH",
       "-dNOSAFER",
       "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
+      "-dSubsetFonts=false",
       "-dCompressFonts=true",
       "-dProcessColorModel=/DeviceRGB",
       "-sColorConversionStrategy=RGB",
