@@ -82,23 +82,13 @@ async function createBasePdf(data) {
   data.items.forEach((i) => (i.name = asciiSafe(i.name)));
 
   // Header
-  console.log("📝 Drawing page header");
   page.drawRectangle({ x: 0, y: 780, width: 595, height: 40, color: rgb(0.18, 0.31, 0.61) });
-  if (data.logoPath && fs.existsSync(data.logoPath)) {
-    const logoBytes = fs.readFileSync(data.logoPath);
-    const logoImage = await pdfDoc.embedPng(logoBytes);
-    const logoDims = logoImage.scale(0.25);
-    page.drawImage(logoImage, { x: 40, y: 784 - logoDims.height / 2, width: logoDims.width, height: logoDims.height });
-    console.log("🖼 Logo embedded");
-  }
-
   page.drawText(String(data.companyName || "YOUR COMPANY GMBH"), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1, 1, 1) });
   page.drawText(`INVOICE #${String(data.orderId || "UNKNOWN")}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
   page.drawText(`Date: ${String(data.date)}`, { x: 50, y: y - 20, size: 12, font: regularFont });
   page.drawText(`Customer: ${String(data.customerName)}`, { x: 50, y: y - 40, size: 12, font: regularFont });
 
   // Table
-  console.log("📊 Drawing table");
   y -= 70;
   let x = 50;
   headers.forEach((header, i) => {
@@ -106,7 +96,6 @@ async function createBasePdf(data) {
     x += colWidths[i];
   });
   y -= rowHeight;
-
   data.items.forEach((item) => {
     let x = 50;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
@@ -117,20 +106,21 @@ async function createBasePdf(data) {
     y -= rowHeight;
   });
 
-  // XMP metadata
- console.log("🗂 Adding XMP metadata");
+  // XMP metadata (UTF-8 BOM + pdfaid info)
+  console.log("🗂 Adding XMP metadata");
   const now = new Date().toISOString();
   const docId = `uuid:${crypto.randomUUID()}`;
   const instId = `uuid:${crypto.randomUUID()}`;
-
-  const xmpBody = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  const xmp = `\uFEFF<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=""
-      xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-      xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
-      xmlns:dc="http://purl.org/dc/elements/1.1/"
-      xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      xmlns:xmp='http://ns.adobe.com/xap/1.0/'
+      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
+      xmlns:dc='http://purl.org/dc/elements/1.1/'
+      pdfaid:part="3"
+      pdfaid:conformance="B">
       <xmp:CreateDate>${now}</xmp:CreateDate>
       <xmp:ModifyDate>${now}</xmp:ModifyDate>
       <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
@@ -138,76 +128,45 @@ async function createBasePdf(data) {
       <dc:title><rdf:Alt><rdf:Li xml:lang="x-default">Invoice ${data.orderId}</rdf:Li></rdf:Alt></dc:title>
       <dc:creator><rdf:Seq><rdf:Li>${data.creator}</rdf:Li></rdf:Seq></dc:creator>
     </rdf:Description>
-
-    <!-- PDF/A identification extension (required) -->
-    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end="w"?>`.trim();
+<?xpacket end='w'?>`;
 
-const metadataStream = pdfDoc.context.stream(Buffer.from(xmpBody, "utf8"), {
-  Type: PDFName.of("Metadata"),
-  Subtype: PDFName.of("XML"),
-});
-pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
-pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
-console.log("✅ XMP metadata embedded");
+  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
+    Type: PDFName.of("Metadata"),
+    Subtype: PDFName.of("XML"),
+  });
+  pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
+  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
+  console.log("✅ XMP metadata embedded");
 
-  // Trailer /ID
+  // DefaultRGB + OutputIntent (ICCBased reference)
   try {
-    console.log("🆔 Setting trailer ID");
-    const idHex1 = crypto.randomBytes(16).toString("hex");
-    const idHex2 = crypto.randomBytes(16).toString("hex");
-    const id1 = PDFHexString.fromText(idHex1);
-    const id2 = PDFHexString.fromText(idHex2);
-
-    const idArray = pdfDoc.context.obj([id1, id2]);
-
-    let trailerDict = pdfDoc.context.trailer;
-    if (!trailerDict) {
-      trailerDict = pdfDoc.context.obj({});
-    }
-    trailerDict.set(PDFName.of("ID"), idArray);
-    pdfDoc.context.trailer = trailerDict; 
-    console.log("✅ Trailer ID set");
-  } catch (err) {
-    console.error("❌ Error setting trailer ID:", err);
-  }
-
-  // DefaultRGB + OutputIntent
-   try {
     console.log("🎨 Setting DefaultRGB color space + OutputIntent");
-    const iccProfilePath =
-      process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
-        ? process.env.ICC_PROFILE_PATH
-        : "/usr/share/color/icc/ghostscript/srgb.icc";
+    const iccProfilePath = process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
+      ? process.env.ICC_PROFILE_PATH
+      : "/usr/share/color/icc/ghostscript/srgb.icc";
     const iccProfileBytes = fs.readFileSync(iccProfilePath);
-
- 
     const iccStream = pdfDoc.context.flateStream(iccProfileBytes, {
       N: 3,
-      Alternate: PDFName.of("DeviceRGB"),
       Subtype: PDFName.of("ICCBased"),
     });
     const iccRef = pdfDoc.context.register(iccStream);
 
-    
-    const oiDict = pdfDoc.context.obj({
-      Type: PDFName.of("OutputIntent"),
-      S: PDFName.of("GTS_PDFA1"),
-      OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
-      Info: PDFString.of("sRGB IEC61966-2.1"),
-      DestOutputProfile: iccRef,
-    });
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([oiDict]));
+    pdfDoc.catalog.set(
+      PDFName.of("OutputIntents"),
+      pdfDoc.context.obj([
+        {
+          Type: PDFName.of("OutputIntent"),
+          S: PDFName.of("GTS_PDFA1"),
+          DestOutputProfile: iccRef,
+          OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+          Info: PDFString.of("sRGB IEC61966-2.1"),
+        },
+      ])
+    );
 
-   
-    const defaultRgbArray = pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]);
-    pdfDoc.catalog.set(PDFName.of("DefaultRGB"), defaultRgbArray);
-
+    pdfDoc.catalog.set(PDFName.of("DefaultRGB"), iccRef);
     console.log("✅ DefaultRGB + OutputIntent set");
   } catch (err) {
     console.error("❌ Error setting DefaultRGB/OutputIntent:", err);
@@ -217,6 +176,7 @@ console.log("✅ XMP metadata embedded");
   console.log("💾 Base PDF saved, size:", buffer.length);
   return buffer;
 }
+
 
 // ---------------------
 // Merchant PDF: Ghostscript + ZUGFeRD
@@ -243,7 +203,7 @@ async function createMerchantPdf(invoiceData) {
       ? process.env.ICC_PROFILE_PATH
       : "/usr/share/color/icc/ghostscript/srgb.icc";
 
- console.log("👻 Running Ghostscript...");
+  console.log("👻 Running Ghostscript...");
   const gs = spawnSync(
     "gs",
     [
@@ -254,7 +214,7 @@ async function createMerchantPdf(invoiceData) {
       "-dBATCH",
       "-dNOSAFER",
       "-dEmbedAllFonts=true",
-      "-dSubsetFonts=false",
+      "-dSubsetFonts=true",
       "-dCompressFonts=true",
       "-dProcessColorModel=/DeviceRGB",
       "-sColorConversionStrategy=RGB",
