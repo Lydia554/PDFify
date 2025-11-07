@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { PDFDocument, rgb, PDFName, PDFHexString } = require("pdf-lib");
+const { PDFDocument, rgb, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const crypto = require("crypto");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
@@ -56,7 +56,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Create base PDF with embedded fonts + XMP metadata + DefaultRGB + /ID
+// Create base PDF with embedded fonts + XMP metadata + DefaultRGB + OutputIntent + /ID
 // ---------------------
 async function createBasePdf(data) {
   console.log("🟢 Starting createBasePdf");
@@ -120,20 +120,29 @@ async function createBasePdf(data) {
   // XMP metadata
   console.log("🗂 Adding XMP metadata");
   const now = new Date().toISOString();
+  const docId = `uuid:${crypto.randomUUID()}`;
+  const instId = `uuid:${crypto.randomUUID()}`;
   const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about=''
+    <rdf:Description rdf:about=""
       xmlns:xmp='http://ns.adobe.com/xap/1.0/'
-      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
+      xmlns:dc='http://purl.org/dc/elements/1.1/'
+      pdfaid:part="3"
+      pdfaid:conformance="B">
       <xmp:CreateDate>${now}</xmp:CreateDate>
       <xmp:ModifyDate>${now}</xmp:ModifyDate>
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
+      <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
+      <xmpMM:InstanceID>${instId}</xmpMM:InstanceID>
+      <dc:title><rdf:Alt><rdf:Li xml:lang="x-default">Invoice ${data.orderId}</rdf:Li></rdf:Alt></dc:title>
+      <dc:creator><rdf:Seq><rdf:Li>${data.creator}</rdf:Li></rdf:Seq></dc:creator>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end='w'?>`;
+
   const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
@@ -143,20 +152,45 @@ async function createBasePdf(data) {
   console.log("✅ XMP metadata embedded");
 
   // Trailer /ID
-try {
-  console.log("🆔 Setting trailer ID via catalog instead of context.trailer");
-  const id1 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
-  const id2 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
-  const idArray = pdfDoc.context.obj([id1, id2]);
-  pdfDoc.catalog.set(PDFName.of("ID"), idArray);
-  console.log("✅ Trailer ID set via catalog");
-} catch (err) {
-  console.error("❌ Error setting trailer ID:", err);
-}
-
-  // DefaultRGB
   try {
-    console.log("🎨 Setting DefaultRGB color space");
+    console.log("🆔 Setting trailer ID via catalog instead of context.trailer");
+    const id1 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
+    const id2 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
+    pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
+    console.log("✅ Trailer ID set via catalog");
+  } catch (err) {
+    console.error("❌ Error setting trailer ID:", err);
+  }
+
+  // DefaultRGB + OutputIntent
+  try {
+    console.log("🎨 Setting DefaultRGB color space + OutputIntent");
+    const iccProfilePath =
+      process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
+        ? process.env.ICC_PROFILE_PATH
+        : "/usr/share/color/icc/ghostscript/srgb.icc";
+    const iccProfileBytes = fs.readFileSync(iccProfilePath);
+
+    const iccStream = pdfDoc.context.flateStream(iccProfileBytes, {
+      N: 3,
+      Alternate: PDFName.of("DeviceRGB"),
+      Subtype: PDFName.of("ICCBased"),
+    });
+    const iccRef = pdfDoc.context.register(iccStream);
+
+    pdfDoc.catalog.set(
+      PDFName.of("OutputIntents"),
+      pdfDoc.context.obj([
+        {
+          Type: PDFName.of("OutputIntent"),
+          S: PDFName.of("GTS_PDFA1"),
+          DestOutputProfile: iccRef,
+          OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+          Info: PDFString.of("sRGB IEC61966-2.1"),
+        },
+      ])
+    );
+
     const sRGBProfile = pdfDoc.context.obj({
       N: 3,
       Range: [0, 1, 0, 1, 0, 1],
@@ -164,9 +198,10 @@ try {
     });
     const sRGBRef = pdfDoc.context.register(sRGBProfile);
     pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
-    console.log("✅ DefaultRGB set");
+
+    console.log("✅ DefaultRGB + OutputIntent set");
   } catch (err) {
-    console.error("❌ Error setting DefaultRGB:", err);
+    console.error("❌ Error setting DefaultRGB/OutputIntent:", err);
   }
 
   const buffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
