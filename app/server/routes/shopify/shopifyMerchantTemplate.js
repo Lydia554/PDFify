@@ -118,59 +118,67 @@ async function createBasePdf(data) {
   });
 
   // XMP metadata
-  console.log("🗂 Adding XMP metadata");
+ console.log("🗂 Adding XMP metadata");
   const now = new Date().toISOString();
   const docId = `uuid:${crypto.randomUUID()}`;
   const instId = `uuid:${crypto.randomUUID()}`;
 
-  const xmpBody = ` 
-  <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
-    <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-      <rdf:Description rdf:about=""
-        xmlns:xmp='http://ns.adobe.com/xap/1.0/'
-        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
-        xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
-        xmlns:dc='http://purl.org/dc/elements/1.1/'
-        pdfaid:part="3"
-        pdfaid:conformance="B">
-        <xmp:CreateDate>${now}</xmp:CreateDate>
-        <xmp:ModifyDate>${now}</xmp:ModifyDate>
-        <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
-        <xmpMM:InstanceID>${instId}</xmpMM:InstanceID>
-        <dc:title><rdf:Alt><rdf:Li xml:lang="x-default">Invoice ${data.orderId}</rdf:Li></rdf:Alt></dc:title>
-        <dc:creator><rdf:Seq><rdf:Li>${data.creator}</rdf:Li></rdf:Seq></dc:creator>
-      </rdf:Description>
-    </rdf:RDF>
-  </x:xmpmeta>`;
+  const xmpBody = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about=""
+      xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+      xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+      xmlns:dc="http://purl.org/dc/elements/1.1/"
+      xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <xmp:CreateDate>${now}</xmp:CreateDate>
+      <xmp:ModifyDate>${now}</xmp:ModifyDate>
+      <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
+      <xmpMM:InstanceID>${instId}</xmpMM:InstanceID>
+      <dc:title><rdf:Alt><rdf:Li xml:lang="x-default">Invoice ${data.orderId}</rdf:Li></rdf:Alt></dc:title>
+      <dc:creator><rdf:Seq><rdf:Li>${data.creator}</rdf:Li></rdf:Seq></dc:creator>
+    </rdf:Description>
 
-  // include BOM and use a proper xpacket begin value — helps veraPDF accept packet as UTF-8 XMP
-  const xmpPacket = '\uFEFF<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>' + xmpBody + '<?xpacket end="w"?>';
+    <!-- PDF/A identification extension (required) -->
+    <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`.trim();
 
-  const metadataStream = pdfDoc.context.stream(Buffer.from(xmpPacket, "utf8"), {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-  });
-  pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
-  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
-  console.log("✅ XMP metadata embedded");
+const metadataStream = pdfDoc.context.stream(Buffer.from(xmpBody, "utf8"), {
+  Type: PDFName.of("Metadata"),
+  Subtype: PDFName.of("XML"),
+});
+pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
+pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
+console.log("✅ XMP metadata embedded");
 
   // Trailer /ID
   try {
-    console.log("🆔 Setting trailer ID in context.trailer");
+    console.log("🆔 Setting trailer ID");
     const idHex1 = crypto.randomBytes(16).toString("hex");
     const idHex2 = crypto.randomBytes(16).toString("hex");
     const id1 = PDFHexString.fromText(idHex1);
     const id2 = PDFHexString.fromText(idHex2);
 
-    // Put ID into the trailer (not the catalog)
-    pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
-    console.log("✅ Trailer ID set via context.trailer");
+    const idArray = pdfDoc.context.obj([id1, id2]);
+
+    let trailerDict = pdfDoc.context.trailer;
+    if (!trailerDict) {
+      trailerDict = pdfDoc.context.obj({});
+    }
+    trailerDict.set(PDFName.of("ID"), idArray);
+    pdfDoc.context.trailer = trailerDict; 
+    console.log("✅ Trailer ID set");
   } catch (err) {
     console.error("❌ Error setting trailer ID:", err);
   }
 
   // DefaultRGB + OutputIntent
-  try {
+   try {
     console.log("🎨 Setting DefaultRGB color space + OutputIntent");
     const iccProfilePath =
       process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
@@ -178,6 +186,7 @@ async function createBasePdf(data) {
         : "/usr/share/color/icc/ghostscript/srgb.icc";
     const iccProfileBytes = fs.readFileSync(iccProfilePath);
 
+ 
     const iccStream = pdfDoc.context.flateStream(iccProfileBytes, {
       N: 3,
       Alternate: PDFName.of("DeviceRGB"),
@@ -185,26 +194,19 @@ async function createBasePdf(data) {
     });
     const iccRef = pdfDoc.context.register(iccStream);
 
-    pdfDoc.catalog.set(
-      PDFName.of("OutputIntents"),
-      pdfDoc.context.obj([
-        {
-          Type: PDFName.of("OutputIntent"),
-          S: PDFName.of("GTS_PDFA1"),
-          DestOutputProfile: iccRef,
-          OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
-          Info: PDFString.of("sRGB IEC61966-2.1"),
-        },
-      ])
-    );
-
-    const sRGBProfile = pdfDoc.context.obj({
-      N: 3,
-      Range: [0, 1, 0, 1, 0, 1],
-      Alternate: PDFName.of("DeviceRGB"),
+    
+    const oiDict = pdfDoc.context.obj({
+      Type: PDFName.of("OutputIntent"),
+      S: PDFName.of("GTS_PDFA1"),
+      OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+      Info: PDFString.of("sRGB IEC61966-2.1"),
+      DestOutputProfile: iccRef,
     });
-    const sRGBRef = pdfDoc.context.register(sRGBProfile);
-    pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([oiDict]));
+
+   
+    const defaultRgbArray = pdfDoc.context.obj([PDFName.of("ICCBased"), iccRef]);
+    pdfDoc.catalog.set(PDFName.of("DefaultRGB"), defaultRgbArray);
 
     console.log("✅ DefaultRGB + OutputIntent set");
   } catch (err) {
