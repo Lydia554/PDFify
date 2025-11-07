@@ -3,7 +3,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { PDFDocument, rgb, PDFName } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { finalizePdf } = require("../../Helpers/pdf-helpers");
+const { cleanPdfBuffer, embedZugferdXml, finalizePdf } = require("../../Helpers/pdf-helpers");
 
 // ---------------------
 // Map Shopify order → PDF data
@@ -54,7 +54,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Create minimal PDF (Ghostscript-safe)
+// Create minimal PDF
 // ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
@@ -65,9 +65,6 @@ async function createBasePdf(data) {
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
-  // ---------------------
-  // Create page and draw invoice content only
-  // ---------------------
   const page = pdfDoc.addPage([595, 842]);
   let y = 780;
   const rowHeight = 24;
@@ -79,7 +76,7 @@ async function createBasePdf(data) {
   data.companyName = asciiSafe(data.companyName);
   data.items.forEach((i) => (i.name = asciiSafe(i.name)));
 
-  // Header rectangle + text
+  // Header
   page.drawRectangle({ x: 0, y: 780, width: 595, height: 40, color: rgb(0.18, 0.31, 0.61) });
   page.drawText(String(data.companyName), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1, 1, 1) });
   page.drawText(`INVOICE #${String(data.orderId)}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
@@ -103,80 +100,68 @@ async function createBasePdf(data) {
     y -= rowHeight;
   });
 
-  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+  return pdfDoc;
 }
 
 // ---------------------
-// Create Merchant PDF (Ghostscript + ZUGFeRD compliant XMP)
+// Create Merchant PDF: embed metadata first, then Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
   console.log("🟢 Starting createMerchantPdf");
 
-  // 1️⃣ Minimal base PDF
-  let pdfBuffer;
+  let pdfDoc;
   try {
-    pdfBuffer = await createBasePdf(invoiceData);
+    pdfDoc = await createBasePdf(invoiceData);
+    // Embed XMP + ZUGFeRD XML **before** Ghostscript
+    await embedZugferdXml(pdfDoc, invoiceData);
+    const xmpBuffer = await finalizePdf(await pdfDoc.save({ useObjectStreams: false }), invoiceData);
+    const tmpDir = path.join(__dirname, "../../tmp_gs");
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
+    fs.writeFileSync(tmpInput, xmpBuffer);
+
+    const tmpOutput = path.join(tmpDir, `output-${Date.now()}.pdf`);
+    const iccProfilePath =
+      process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
+        ? process.env.ICC_PROFILE_PATH
+        : "/usr/share/color/icc/ghostscript/srgb.icc";
+
+    const gs = spawnSync(
+      "gs",
+      [
+        "-dPDFA=3",
+        "-dPDFACompatibilityPolicy=1",
+        "-sDEVICE=pdfwrite",
+        "-dNOPAUSE",
+        "-dBATCH",
+        "-dNOSAFER",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dCompressFonts=true",
+        "-dUseCIEColor",
+        "-dProcessColorModel=/DeviceRGB",
+        "-sColorConversionStrategy=RGB",
+        `-sOutputICCProfile=${iccProfilePath}`,
+        `-sOutputFile=${tmpOutput}`,
+        tmpInput,
+      ],
+      { encoding: "utf-8" }
+    );
+
+    if (gs.error || gs.status !== 0) {
+      console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
+      throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
+    }
+
+    return fs.readFileSync(tmpOutput);
   } catch (err) {
-    console.error("❌ createBasePdf failed:", err);
+    console.error("❌ createMerchantPdf failed:", err);
     throw err;
   }
-
-  const tmpDir = path.join(__dirname, "../../tmp_gs");
-  fs.mkdirSync(tmpDir, { recursive: true });
-  const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
-  const tmpOutput = path.join(tmpDir, `output-${Date.now()}.pdf`);
-  fs.writeFileSync(tmpInput, pdfBuffer);
-
-  // 2️⃣ Ghostscript: enforce PDF/A-3B
-  const iccProfilePath =
-    process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
-      ? process.env.ICC_PROFILE_PATH
-      : "/usr/share/color/icc/ghostscript/srgb.icc";
-
-  const gs = spawnSync(
-    "gs",
-    [
-      "-dPDFA=3",
-      "-dPDFACompatibilityPolicy=1",
-      "-sDEVICE=pdfwrite",
-      "-dNOPAUSE",
-      "-dBATCH",
-      "-dNOSAFER",
-      "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
-      "-dCompressFonts=true",
-      "-dUseCIEColor",
-      "-dProcessColorModel=/DeviceRGB",
-      "-sColorConversionStrategy=RGB",
-      `-sOutputICCProfile=${iccProfilePath}`,
-      `-sOutputFile=${tmpOutput}`,
-      tmpInput,
-    ],
-    { encoding: "utf-8" }
-  );
-
-  if (gs.error || gs.status !== 0) {
-    console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
-    throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
-  }
-
-  pdfBuffer = fs.readFileSync(tmpOutput);
-
-  // 3️⃣ Inject fully compliant ZUGFeRD XMP after Ghostscript
-  try {
-    const zugferdData = await finalizePdf(pdfBuffer, invoiceData); 
-    pdfBuffer = Buffer.from(zugferdData);
-  } catch (err) {
-    console.error("❌ finalizePdf failed:", err);
-    throw err;
-  }
-
-  return pdfBuffer;
 }
 
 module.exports = {
   mapOrderToPdfData,
   createBasePdf,
   createMerchantPdf,
-  finalizePdf
 };
