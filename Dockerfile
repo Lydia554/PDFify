@@ -43,7 +43,8 @@ COPY ./app ./
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
 
 # Copy PDFBox jar
-COPY ./lib/pdfbox-app-3.0.0.jar ./lib/pdfbox-app-3.0.0.jar
+COPY ./lib/pdfbox-app-3.0.0.jar ./libs/pdfbox-app-3.0.0.jar
+
 
 # Copy PDF/A definition file
 COPY ./app/server/routes/pdfa_def.ps /app/pdfa_def.ps
