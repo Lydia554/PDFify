@@ -51,36 +51,29 @@ fs.mkdirSync(debugDir, { recursive: true });
   const tmpOutput = path.join(debugDir, "step3_pdfa3b.pdf");
   fs.writeFileSync(tmpInput, pdfBuffer);
 
-  const gsExe =
-    process.platform === "win32"
-      ? "C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe"
-      : "gs";
+  const gsExe = process.platform === "win32"
+    ? "C:\\Program Files\\gs\\gs10.05.1\\bin\\gswin64c.exe"
+    : "gs";
 
-  // Use your exact ICC profile path
-  const iccProfilePath = path.resolve(
-    "C:\\Users\\goldb\\Pro\\PDF-API\\app\\server\\Helpers\\sRGB_v4_ICC_preference.icc"
-  );
-
+  const iccProfilePath = path.resolve("./server/Helpers/sRGB_v4_ICC_preference.icc");
   console.log("🔹 Running Ghostscript for PDF/A-3b...");
-  const gs = spawnSync(
-    gsExe,
-    [
-      "-dPDFA=3",
-      "-dPDFACompatibilityPolicy=1",
-      "-sDEVICE=pdfwrite",
-      "-dNOPAUSE",
-      "-dBATCH",
-      "-dNOSAFER",
-      "-dEmbedAllFonts=true",
-      "-dSubsetFonts=true",
-      "-dCompressFonts=true",
-      "-dProcessColorModel=/DeviceRGB",
-      `-sOutputICCProfile=${iccProfilePath}`,
-      `-sOutputFile=${tmpOutput}`,
-      tmpInput,
-    ],
-    { encoding: "utf-8" }
-  );
+
+  const gs = spawnSync(gsExe, [
+    "-dPDFA=3",
+    "-dPDFACompatibilityPolicy=1",
+    "-sDEVICE=pdfwrite",
+    "-dNOPAUSE",
+    "-dBATCH",
+    "-dNOSAFER",
+    "-dEmbedAllFonts=true",
+    "-dSubsetFonts=true",
+    "-dCompressFonts=true",
+    "-dProcessColorModel=/DeviceRGB",
+    "-sColorConversionStrategy=RGB",
+    `-sOutputICCProfile=${iccProfilePath}`,
+    `-sOutputFile=${tmpOutput}`,
+    tmpInput, // only PDF input
+  ], { encoding: "utf-8" });
 
   if (gs.error || gs.status !== 0) {
     console.error("❌ Ghostscript failed:", gs.stderr || gs.error);
