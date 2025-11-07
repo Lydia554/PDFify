@@ -12,7 +12,8 @@ const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
-const { createShopifyInvoiceZugferd} = require("./shopifyMerchantTemplate");
+const { mapOrderToPdfData, createMerchantPdf } = require("./shopifyMerchantTemplate");
+
 
 
 
@@ -98,21 +99,23 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
 
 if (isMerchant) {
-  try {
-    console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
-    const pdfBuffer = await createMerchantPdf(invoiceData);
-    console.log(`📄 Merchant PDF generated, size: ${pdfBuffer.length} bytes`);
+try {
+  console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
+  const invoiceData = mapOrderToPdfData(order, shopConfig);
+  const pdfBuffer = await createMerchantPdf(invoiceData);
+  console.log(`📄 Merchant PDF generated, size: ${pdfBuffer.length} bytes`);
 
-    const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
-    });
-    return res.send(pdfBuffer);
-  } catch (err) {
-    console.error("❌ Merchant PDF generation failed:", err);
-    return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
-  }
+  const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+  res.set({
+    "Content-Type": "application/pdf",
+    "Content-Disposition": `attachment; filename=Invoice-${safeOrderId}.pdf`,
+  });
+  return res.send(pdfBuffer);
+} catch (err) {
+  console.error("❌ Merchant PDF generation failed:", err);
+  return res.status(500).json({ error: "Merchant PDF generation failed", details: err.message });
+}
+
 }
 
     // ----------------------------

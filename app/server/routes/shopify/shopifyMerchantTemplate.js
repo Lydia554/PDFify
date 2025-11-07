@@ -54,7 +54,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Create base PDF with embedded fonts and minimal metadata
+// Create base PDF with embedded fonts, XMP metadata, and DefaultRGB
 // ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
@@ -111,11 +111,16 @@ async function createBasePdf(data) {
     y -= rowHeight;
   });
 
-  // Minimal XMP Metadata
+  // ---------- Extended XMP metadata ----------
+  const now = new Date().toISOString();
   const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
   <x:xmpmeta xmlns:x='adobe:ns:meta/'>
     <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-      <rdf:Description rdf:about='' xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+      <rdf:Description rdf:about=''
+        xmlns:xmp='http://ns.adobe.com/xap/1.0/'
+        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+        <xmp:CreateDate>${now}</xmp:CreateDate>
+        <xmp:ModifyDate>${now}</xmp:ModifyDate>
         <pdfaid:part>3</pdfaid:part>
         <pdfaid:conformance>B</pdfaid:conformance>
       </rdf:Description>
@@ -129,22 +134,35 @@ async function createBasePdf(data) {
   });
   pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
 
+  // ---------- DefaultRGB color space ----------
+  const sRGBProfile = pdfDoc.context.obj({
+    N: 3,
+    Range: [0, 1, 0, 1, 0, 1],
+    Alternate: PDFName.of("DeviceRGB"),
+  });
+  const sRGBRef = pdfDoc.context.register(sRGBProfile);
+  pdfDoc.catalog.set(
+    PDFName.of("ColorSpace"),
+    pdfDoc.context.obj({
+      DefaultRGB: sRGBRef,
+    })
+  );
+
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
 
 // ---------------------
-// Merchant PDF: full Ghostscript + ZUGFeRD pipeline
+// Merchant PDF: Ghostscript + ZUGFeRD pipeline
 // ---------------------
 async function createMerchantPdf(invoiceData) {
   let pdfBuffer = await createBasePdf(invoiceData);
 
-  // Remove minimal metadata to avoid duplication
+  // Strip metadata before Ghostscript
   const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
   const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
   if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
   pdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 
-  // Embed XML before Ghostscript
   let zugferdData;
   try {
     zugferdData = await finalizePdf(pdfBuffer, invoiceData);
@@ -152,7 +170,6 @@ async function createMerchantPdf(invoiceData) {
     console.warn("⚠️ finalizePdf failed:", err.message);
   }
 
-  // Ghostscript conversion
   const tmpDir = path.join(__dirname, "../../tmp_gs");
   fs.mkdirSync(tmpDir, { recursive: true });
   const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
@@ -191,7 +208,7 @@ async function createMerchantPdf(invoiceData) {
 
   pdfBuffer = fs.readFileSync(tmpOutput);
 
-  // Embed XML after Ghostscript
+  // Re-embed ZUGFeRD XML
   if (zugferdData?.xml) {
     const pdfDoc2 = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
     const xmlBuffer = Buffer.from(zugferdData.xml, "utf-8");
@@ -224,7 +241,7 @@ async function createMerchantPdf(invoiceData) {
 }
 
 // ---------------------
-// Optional: direct ZUGFeRD generator (no Ghostscript)
+// Optional helper for direct ZUGFeRD-only generation
 // ---------------------
 async function createShopifyInvoiceZugferd(order, shopConfig = {}) {
   const data = mapOrderToPdfData(order, shopConfig);
