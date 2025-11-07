@@ -59,18 +59,55 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create base PDF with embedded fonts + XMP metadata + DefaultRGB + OutputIntent + /ID
 // ---------------------
 async function createBasePdf(data) {
-  console.log("🟢 Starting createBasePdf");
   const pdfDoc = await PDFDocument.create();
   pdfDoc.registerFontkit(fontkit);
-  console.log("📄 PDFDocument created and fontkit registered");
 
   const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
   const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf"));
   const regularFont = await pdfDoc.embedFont(regularFontBytes);
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
-  console.log("🔤 Fonts embedded");
 
+  // ---------------------
+  // DefaultRGB + OutputIntent setup BEFORE pages
+  // ---------------------
+  const iccProfilePath =
+    process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
+      ? process.env.ICC_PROFILE_PATH
+      : "/usr/share/color/icc/ghostscript/srgb.icc";
+  const iccProfileBytes = fs.readFileSync(iccProfilePath);
+
+  const iccStream = pdfDoc.context.flateStream(iccProfileBytes, {
+    N: 3,
+    Alternate: PDFName.of("DeviceRGB"),
+    Subtype: PDFName.of("ICCBased"),
+  });
+  const iccRef = pdfDoc.context.register(iccStream);
+
+  pdfDoc.catalog.set(
+    PDFName.of("OutputIntents"),
+    pdfDoc.context.obj([
+      {
+        Type: PDFName.of("OutputIntent"),
+        S: PDFName.of("GTS_PDFA1"),
+        DestOutputProfile: iccRef,
+        OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
+        Info: PDFString.of("sRGB IEC61966-2.1"),
+      },
+    ])
+  );
+
+  const sRGBProfile = pdfDoc.context.obj({ N: 3, Range: [0, 1, 0, 1, 0, 1], Alternate: PDFName.of("DeviceRGB") });
+  const sRGBRef = pdfDoc.context.register(sRGBProfile);
+  pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
+
+  // ---------------------
+  // Create page after DefaultRGB is set
+  // ---------------------
   const page = pdfDoc.addPage([595, 842]);
+  page.node.set(PDFName.of("Resources"), pdfDoc.context.obj({
+    ColorSpace: { DeviceRGB: sRGBRef },
+  }));
+
   let y = 780;
   const rowHeight = 24;
   const colWidths = [180, 60, 80, 80, 80];
@@ -81,12 +118,10 @@ async function createBasePdf(data) {
   data.companyName = asciiSafe(data.companyName);
   data.items.forEach((i) => (i.name = asciiSafe(i.name)));
 
-  // Header
+  // Header rectangle + text
   page.drawRectangle({ x: 0, y: 780, width: 595, height: 40, color: rgb(0.18, 0.31, 0.61) });
-  page.drawText(String(data.companyName || "YOUR COMPANY GMBH"), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1, 1, 1) });
-  page.drawText(`INVOICE #${String(data.orderId || "UNKNOWN")}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
-  page.drawText(`Date: ${String(data.date)}`, { x: 50, y: y - 20, size: 12, font: regularFont });
-  page.drawText(`Customer: ${String(data.customerName)}`, { x: 50, y: y - 40, size: 12, font: regularFont });
+  page.drawText(String(data.companyName), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1, 1, 1) });
+  page.drawText(`INVOICE #${String(data.orderId)}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
 
   // Table
   y -= 70;
@@ -96,6 +131,7 @@ async function createBasePdf(data) {
     x += colWidths[i];
   });
   y -= rowHeight;
+
   data.items.forEach((item) => {
     let x = 50;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
@@ -106,12 +142,11 @@ async function createBasePdf(data) {
     y -= rowHeight;
   });
 
-  // XMP metadata (UTF-8 BOM + pdfaid info)
-  console.log("🗂 Adding XMP metadata");
+  // XMP metadata & Trailer ID as before
   const now = new Date().toISOString();
   const docId = `uuid:${crypto.randomUUID()}`;
   const instId = `uuid:${crypto.randomUUID()}`;
-  const xmp = `\uFEFF<?xpacket begin="﻿" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=""
@@ -138,41 +173,14 @@ async function createBasePdf(data) {
   });
   pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
   pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
-  console.log("✅ XMP metadata embedded");
 
-  // DefaultRGB + OutputIntent (ICCBased reference)
-  try {
-    console.log("🎨 Setting DefaultRGB color space + OutputIntent");
-    const iccProfilePath = process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
-      ? process.env.ICC_PROFILE_PATH
-      : "/usr/share/color/icc/ghostscript/srgb.icc";
-    const iccProfileBytes = fs.readFileSync(iccProfilePath);
-    const iccStream = pdfDoc.context.flateStream(iccProfileBytes, {
-      N: 3,
-      Subtype: PDFName.of("ICCBased"),
-    });
-    const iccRef = pdfDoc.context.register(iccStream);
+  // Trailer ID
+  const id1 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
+  const id2 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
+  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
 
-    pdfDoc.catalog.set(
-      PDFName.of("OutputIntents"),
-      pdfDoc.context.obj([
-        {
-          Type: PDFName.of("OutputIntent"),
-          S: PDFName.of("GTS_PDFA1"),
-          DestOutputProfile: iccRef,
-          OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
-          Info: PDFString.of("sRGB IEC61966-2.1"),
-        },
-      ])
-    );
+  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 
-    pdfDoc.catalog.set(PDFName.of("DefaultRGB"), iccRef);
-    console.log("✅ DefaultRGB + OutputIntent set");
-  } catch (err) {
-    console.error("❌ Error setting DefaultRGB/OutputIntent:", err);
-  }
-
-  const buffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
   console.log("💾 Base PDF saved, size:", buffer.length);
   return buffer;
 }
