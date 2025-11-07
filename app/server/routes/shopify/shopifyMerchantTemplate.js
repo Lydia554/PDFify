@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { PDFDocument, rgb, PDFName, PDFString } = require("pdf-lib");
+const { PDFDocument, rgb, PDFName, PDFString, PDFHexString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
@@ -114,39 +114,37 @@ async function createBasePdf(data) {
   // ---------- Extended XMP metadata ----------
   const now = new Date().toISOString();
   const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-  <x:xmpmeta xmlns:x='adobe:ns:meta/'>
-    <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-      <rdf:Description rdf:about=''
-        xmlns:xmp='http://ns.adobe.com/xap/1.0/'
-        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-        <xmp:CreateDate>${now}</xmp:CreateDate>
-        <xmp:ModifyDate>${now}</xmp:ModifyDate>
-        <pdfaid:part>3</pdfaid:part>
-        <pdfaid:conformance>B</pdfaid:conformance>
-      </rdf:Description>
-    </rdf:RDF>
-  </x:xmpmeta>
-  <?xpacket end='w'?>`;
+<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <rdf:Description rdf:about=''
+      xmlns:xmp='http://ns.adobe.com/xap/1.0/'
+      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'
+      xmlns:dc='http://purl.org/dc/elements/1.1/'>
+      <xmp:CreateDate>${now}</xmp:CreateDate>
+      <xmp:ModifyDate>${now}</xmp:ModifyDate>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end='w'?>`;
 
   const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
     Type: PDFName.of("Metadata"),
     Subtype: PDFName.of("XML"),
   });
   pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
+  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
+
+  // ---------- Trailer /ID ----------
+  const idHex = PDFHexString.fromText(`${Date.now()}`);
+  pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([idHex, idHex]));
 
   // ---------- DefaultRGB color space ----------
-  const sRGBProfile = pdfDoc.context.obj({
-    N: 3,
-    Range: [0, 1, 0, 1, 0, 1],
-    Alternate: PDFName.of("DeviceRGB"),
-  });
+  const sRGBProfile = pdfDoc.context.obj({ N: 3, Alternate: PDFName.of("DeviceRGB") });
   const sRGBRef = pdfDoc.context.register(sRGBProfile);
-  pdfDoc.catalog.set(
-    PDFName.of("ColorSpace"),
-    pdfDoc.context.obj({
-      DefaultRGB: sRGBRef,
-    })
-  );
+  pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
@@ -156,19 +154,6 @@ async function createBasePdf(data) {
 // ---------------------
 async function createMerchantPdf(invoiceData) {
   let pdfBuffer = await createBasePdf(invoiceData);
-
-  // Strip metadata before Ghostscript
-  const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-  const metadata = pdfDoc.catalog.get(PDFName.of("Metadata"));
-  if (metadata) pdfDoc.catalog.delete(PDFName.of("Metadata"));
-  pdfBuffer = Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
-
-  let zugferdData;
-  try {
-    zugferdData = await finalizePdf(pdfBuffer, invoiceData);
-  } catch (err) {
-    console.warn("⚠️ finalizePdf failed:", err.message);
-  }
 
   const tmpDir = path.join(__dirname, "../../tmp_gs");
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -209,33 +194,8 @@ async function createMerchantPdf(invoiceData) {
   pdfBuffer = fs.readFileSync(tmpOutput);
 
   // Re-embed ZUGFeRD XML
-  if (zugferdData?.xml) {
-    const pdfDoc2 = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
-    const xmlBuffer = Buffer.from(zugferdData.xml, "utf-8");
-
-    const fileStream = pdfDoc2.context.flateStream(xmlBuffer, {
-      Type: "EmbeddedFile",
-      Subtype: "application/xml",
-    });
-    const fileStreamRef = pdfDoc2.context.register(fileStream);
-
-    const fileSpec = pdfDoc2.context.obj({
-      Type: "Filespec",
-      F: PDFString.of("ZUGFeRD-invoice.xml"),
-      EF: pdfDoc2.context.obj({ F: fileStreamRef }),
-      AFRelationship: PDFName.of("Data"),
-    });
-    const fileSpecRef = pdfDoc2.context.register(fileSpec);
-
-    const embeddedFilesDict = pdfDoc2.context.obj({
-      Names: [PDFString.of("ZUGFeRD-invoice.xml"), fileSpecRef],
-    });
-    const namesDict = pdfDoc2.context.obj({ EmbeddedFiles: embeddedFilesDict });
-    pdfDoc2.catalog.set(PDFName.of("Names"), namesDict);
-    pdfDoc2.catalog.set(PDFName.of("AF"), pdfDoc2.context.obj([fileSpecRef]));
-
-    pdfBuffer = await pdfDoc2.save({ useObjectStreams: false });
-  }
+  const zugferdData = await finalizePdf(pdfBuffer, invoiceData);
+  pdfBuffer = Buffer.from(zugferdData);
 
   return pdfBuffer;
 }
