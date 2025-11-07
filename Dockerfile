@@ -49,3 +49,4 @@ COPY ./lib/pdfbox-app-3.0.0.jar ./lib/pdfbox-app-3.0.0.jar
 COPY ./app/server/routes/pdfa_def.ps /app/pdfa_def.ps
 
 CMD ["node", "server/index.js"]
+
