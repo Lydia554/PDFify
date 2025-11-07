@@ -12,37 +12,7 @@ function cleanPdfBuffer(buf) {
   return pdfStart > 0 ? buf.slice(pdfStart) : buf;
 }
 
-// -----------------------------
-// Embed XMP metadata into PDF
-// -----------------------------
-async function embedXmp(pdfDoc) {
-  console.log("🟢 Embedding XMP metadata");
-  const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about=''
-        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end='w'?>`;
 
-  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-  });
-
-  const metadataRef = pdfDoc.context.register(metadataStream);
-
-  if (!pdfDoc.catalog) throw new Error("❌ pdfDoc.catalog is undefined while embedding XMP!");
-  pdfDoc.catalog.set(PDFName.of("Metadata"), metadataRef);
-  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
-
-  console.log("✅ XMP metadata embedded successfully");
-  return pdfDoc;
-}
 
 // -----------------------------
 // Embed ZUGFeRD XML into PDF
@@ -102,20 +72,37 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Add XMP + ZUGFeRD XML
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("🟢 finalizePdf start for order:", invoiceData.orderId);
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
 
-  console.log("📄 PDF loaded, pages:", pdfDoc.getPages().length);
+  // Only embed PDF/A-3B identification XMP
+  const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
+<x:xmpmeta xmlns:x='adobe:ns:meta/'>
+  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+    <rdf:Description rdf:about=''
+        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end='w'?>`;
 
-  await embedXmp(pdfDoc);
+  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, 'utf8'), {
+    Type: PDFName.of('Metadata'),
+    Subtype: PDFName.of('XML'),
+  });
+
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+  pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+
+  // Embed ZUGFeRD XML as file object, referenced via AF array
   await embedZugferdXml(pdfDoc, invoiceData);
 
-  const finalBuffer = await pdfDoc.save({ useObjectStreams: false });
-  console.log("💾 finalizePdf finished, buffer size:", finalBuffer.length);
-
-  return finalBuffer;
+  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
+
 
 module.exports = {
   cleanPdfBuffer,
