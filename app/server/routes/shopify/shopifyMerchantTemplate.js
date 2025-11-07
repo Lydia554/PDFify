@@ -145,10 +145,11 @@ async function createBasePdf(data) {
   // Trailer /ID
   try {
     console.log("🆔 Setting trailer ID");
-    const id1 = PDFHexString.fromUint8Array(crypto.randomBytes(16));
-    const id2 = PDFHexString.fromUint8Array(crypto.randomBytes(16));
-    pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
-    console.log("✅ Trailer ID set");
+   const id1 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
+const id2 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
+pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
+console.log("✅ Trailer ID set");
+
   } catch (err) {
     console.error("❌ Error setting trailer ID:", err);
   }
