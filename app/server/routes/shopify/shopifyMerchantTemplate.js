@@ -178,4 +178,5 @@ module.exports = {
   mapOrderToPdfData,
   createBasePdf,
   createMerchantPdf,
+  finalizePdf
 };
