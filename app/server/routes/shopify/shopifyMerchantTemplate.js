@@ -142,9 +142,14 @@ async function createBasePdf(data) {
   pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([idHex, idHex]));
 
   // ---------- DefaultRGB color space ----------
-  const sRGBProfile = pdfDoc.context.obj({ N: 3, Alternate: PDFName.of("DeviceRGB") });
-  const sRGBRef = pdfDoc.context.register(sRGBProfile);
-  pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
+ const sRGBProfile = pdfDoc.context.obj({
+  N: 3,
+  Range: [0, 1, 0, 1, 0, 1],
+  Alternate: PDFName.of("DeviceRGB"),
+});
+const sRGBRef = pdfDoc.context.register(sRGBProfile);
+pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
+
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
