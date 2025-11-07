@@ -1,9 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { PDFDocument, rgb, PDFName, PDFHexString, PDFString } = require("pdf-lib");
+const { PDFDocument, rgb, PDFName } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const crypto = require("crypto");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
 // ---------------------
@@ -56,7 +55,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Create base PDF with embedded fonts + XMP metadata + DefaultRGB + OutputIntent + /ID
+// Create minimal base PDF (Ghostscript-safe)
 // ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
@@ -68,7 +67,7 @@ async function createBasePdf(data) {
   const boldFont = await pdfDoc.embedFont(boldFontBytes);
 
   // ---------------------
-  // DefaultRGB + OutputIntent
+  // DefaultRGB + OutputIntent (minimal, Ghostscript will enforce compliance)
   // ---------------------
   const iccProfilePath =
     process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
@@ -90,8 +89,8 @@ async function createBasePdf(data) {
         Type: PDFName.of("OutputIntent"),
         S: PDFName.of("GTS_PDFA1"),
         DestOutputProfile: iccRef,
-        OutputConditionIdentifier: PDFString.of("sRGB IEC61966-2.1"),
-        Info: PDFString.of("sRGB IEC61966-2.1"),
+        OutputConditionIdentifier: "sRGB IEC61966-2.1",
+        Info: "sRGB IEC61966-2.1",
       },
     ])
   );
@@ -101,12 +100,10 @@ async function createBasePdf(data) {
   pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
 
   // ---------------------
-  // Create page
+  // Create page and draw invoice content
   // ---------------------
   const page = pdfDoc.addPage([595, 842]);
-  page.node.set(PDFName.of("Resources"), pdfDoc.context.obj({
-    ColorSpace: { DeviceRGB: sRGBRef },
-  }));
+  page.node.set(PDFName.of("Resources"), pdfDoc.context.obj({ ColorSpace: { DeviceRGB: sRGBRef } }));
 
   let y = 780;
   const rowHeight = 24;
@@ -141,72 +138,6 @@ async function createBasePdf(data) {
     });
     y -= rowHeight;
   });
-
-  // ---------------------
-  // XMP metadata & Trailer ID (PDF/A-3B compliant)
-  // ---------------------
-  const now = new Date().toISOString();
-  const docId = `uuid:${crypto.randomUUID()}`;
-  const instId = `uuid:${crypto.randomUUID()}`;
-  const escapeXml = (str) =>
-    str ? str.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;" }[c])) : "";
-
-  const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='pdf-lib'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-
-    <!-- PDF/A Identification -->
-    <rdf:Description rdf:about=""
-      xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
-
-    <!-- XMP Basic -->
-    <rdf:Description rdf:about=""
-      xmlns:xmp='http://ns.adobe.com/xap/1.0/'>
-      <xmp:CreateDate>${now}</xmp:CreateDate>
-      <xmp:ModifyDate>${now}</xmp:ModifyDate>
-      <xmp:CreatorTool>PDFify</xmp:CreatorTool>
-    </rdf:Description>
-
-    <!-- XMPMM -->
-    <rdf:Description rdf:about=""
-      xmlns:xmpMM='http://ns.adobe.com/xap/1.0/mm/'>
-      <xmpMM:DocumentID>${docId}</xmpMM:DocumentID>
-      <xmpMM:InstanceID>${instId}</xmpMM:InstanceID>
-    </rdf:Description>
-
-    <!-- Dublin Core -->
-    <rdf:Description rdf:about=""
-      xmlns:dc='http://purl.org/dc/elements/1.1/'>
-      <dc:title>
-        <rdf:Alt>
-          <rdf:Li xml:lang="x-default">Invoice ${escapeXml(data.orderId)}</rdf:Li>
-        </rdf:Alt>
-      </dc:title>
-      <dc:creator>
-        <rdf:Seq>
-          <rdf:Li>${escapeXml(data.creator)}</rdf:Li>
-        </rdf:Seq>
-      </dc:creator>
-    </rdf:Description>
-
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end='w'?>`;
-
-  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, "utf8"), {
-    Type: PDFName.of("Metadata"),
-    Subtype: PDFName.of("XML"),
-  });
-  pdfDoc.catalog.set(PDFName.of("Metadata"), pdfDoc.context.register(metadataStream));
-  pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
-
-  // Trailer ID
-  const id1 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
-  const id2 = PDFHexString.fromText(crypto.randomBytes(16).toString("hex"));
-  pdfDoc.catalog.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
