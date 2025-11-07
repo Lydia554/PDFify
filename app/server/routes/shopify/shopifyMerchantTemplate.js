@@ -3,6 +3,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { PDFDocument, rgb, PDFName, PDFString, PDFHexString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
+const crypto = require("crypto");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
 // ---------------------
@@ -54,7 +55,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Create base PDF with embedded fonts, XMP metadata, and DefaultRGB
+// Create base PDF with embedded fonts + XMP metadata
 // ---------------------
 async function createBasePdf(data) {
   const pdfDoc = await PDFDocument.create();
@@ -138,18 +139,9 @@ async function createBasePdf(data) {
   pdfDoc.catalog.set(PDFName.of("MarkInfo"), pdfDoc.context.obj({ Marked: true }));
 
   // ---------- Trailer /ID ----------
-  const idHex = PDFHexString.fromText(`${Date.now()}`);
-  pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([idHex, idHex]));
-
-  // ---------- DefaultRGB color space ----------
- const sRGBProfile = pdfDoc.context.obj({
-  N: 3,
-  Range: [0, 1, 0, 1, 0, 1],
-  Alternate: PDFName.of("DeviceRGB"),
-});
-const sRGBRef = pdfDoc.context.register(sRGBProfile);
-pdfDoc.catalog.set(PDFName.of("DefaultRGB"), sRGBRef);
-
+  const id1 = crypto.randomBytes(16);
+  const id2 = crypto.randomBytes(16);
+  pdfDoc.context.trailer.set(PDFName.of("ID"), pdfDoc.context.obj([id1, id2]));
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
