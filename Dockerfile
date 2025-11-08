@@ -1,8 +1,7 @@
 FROM node:20-slim
 
-# Puppeteer dependencies + fonts + Ghostscript + Java
+# Puppeteer dependencies + fonts + Ghostscript
 RUN apt-get update && apt-get install -y \
-    openjdk-17-jdk \
     wget \
     ca-certificates \
     fonts-noto-color-emoji \
@@ -33,21 +32,16 @@ WORKDIR /app
 # Copy package.json first for caching
 COPY ./app/package*.json ./
 
-# Install Node dependencies
+# Install dependencies
 RUN npm install
 
-# Copy app code
+# Copy the rest of the app
 COPY ./app ./
 
-# Copy ICC profile
+# Copy the ICC profile into Helpers
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
-
-# Copy PDFBox jar
-COPY ./lib/pdfbox-app-3.0.0.jar ./libs/pdfbox-app-3.0.0.jar
-
 
 # Copy PDF/A definition file
 COPY ./app/server/routes/pdfa_def.ps /app/pdfa_def.ps
 
 CMD ["node", "server/index.js"]
-
