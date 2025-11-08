@@ -131,6 +131,7 @@ const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
 console.log("🟢 Running PDFBox Preflight on:", tmpInput);
 console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 
+
     const pdfBoxCmd = spawnSync("java", [
       "-jar",
       pdfboxJar,
