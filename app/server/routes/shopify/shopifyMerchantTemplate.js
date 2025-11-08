@@ -127,19 +127,21 @@ async function createMerchantPdf(invoiceData) {
 // PDFBox Processing
 // ---------------------
 console.log("🟢 Running PDFBox Preflight on:", tmpInput);
-const pdfBoxCmd = spawnSync(
-  "java",
-  [
-    "-jar",
-    pdfboxJar,
-    "Preflight",
-    "-a",
-    tmpInput,
-    "-o",
-    tmpPdfBoxOutput
-  ],
-  { encoding: "utf-8" }
-);
+const pdfboxJar = path.resolve(__dirname, "../../../libs/pdfbox-app-3.0.0.jar");
+
+const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
+console.log("🟢 Running PDFBox Preflight:", tmpInput);
+
+const pdfBoxCmd = spawnSync("java", [
+  "-jar",
+  pdfboxJar,
+  "Preflight",
+  "-a",
+  tmpInput,
+  "-o",
+  tmpPdfBoxOutput
+], { encoding: "utf-8" });
+
 console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
 console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
 
