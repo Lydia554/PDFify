@@ -109,52 +109,42 @@ async function createBasePdf(data) {
 async function createMerchantPdf(invoiceData) {
   console.log("🟢 Starting createMerchantPdf");
 
-  let pdfDoc;
   try {
-    pdfDoc = await createBasePdf(invoiceData);
-
-    // Embed ZUGFeRD XML
+    // 1️⃣ Create base PDF and embed ZUGFeRD XML
+    const pdfDoc = await createBasePdf(invoiceData);
     await embedZugferdXml(pdfDoc, invoiceData);
-    const prePdfBuffer = await finalizePdf(await pdfDoc.save({ useObjectStreams: false }), invoiceData);
+    const prePdfBuffer = await pdfDoc.save({ useObjectStreams: false });
 
-    // Write temp file for PDFBox
+    // 2️⃣ Write temp file for PDFBox
     const tmpDir = path.join(__dirname, "../../tmp_gs");
     fs.mkdirSync(tmpDir, { recursive: true });
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-// ---------------------
-// PDFBox Processing
-// ---------------------
-console.log("🟢 Running PDFBox Preflight on:", tmpInput);
-const pdfboxJar = path.resolve(__dirname, "../../../libs/pdfbox-app-3.0.0.jar");
+    // 3️⃣ PDFBox Preflight
+    const pdfboxJar = path.resolve(__dirname, "../../../libs/pdfbox-app-3.0.0.jar");
+    const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
+    console.log("🟢 Running PDFBox Preflight on:", tmpInput);
 
-const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
-console.log("🟢 Running PDFBox Preflight:", tmpInput);
+    const pdfBoxCmd = spawnSync("java", [
+      "-jar",
+      pdfboxJar,
+      "Preflight",
+      "-a",
+      tmpInput,
+      "-o",
+      tmpPdfBoxOutput
+    ], { encoding: "utf-8" });
 
-const pdfBoxCmd = spawnSync("java", [
-  "-jar",
-  pdfboxJar,
-  "Preflight",
-  "-a",
-  tmpInput,
-  "-o",
-  tmpPdfBoxOutput
-], { encoding: "utf-8" });
+    console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
+    console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
+    if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
+      console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
+      throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
+    }
+    console.log("✅ PDFBox Preflight completed, output:", tmpPdfBoxOutput);
 
-console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
-console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
-
-if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
-  console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
-  throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
-}
-console.log("✅ PDFBox Preflight completed, output:", tmpPdfBoxOutput);
-
-
-    // ---------------------
-    // Ghostscript PDF/A-3B enforcement
-    // ---------------------
+    // 4️⃣ Ghostscript PDF/A-3B enforcement
     const tmpOutput = path.join(tmpDir, `output-${Date.now()}.pdf`);
     const iccProfilePath =
       process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
@@ -182,17 +172,20 @@ console.log("✅ PDFBox Preflight completed, output:", tmpPdfBoxOutput);
       ],
       { encoding: "utf-8" }
     );
+
     if (gs.error || gs.status !== 0) {
       console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
       throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
     }
 
+    // ✅ Return final PDF buffer
     return fs.readFileSync(tmpOutput);
   } catch (err) {
     console.error("❌ createMerchantPdf failed:", err);
     throw err;
   }
 }
+
 
 module.exports = {
   mapOrderToPdfData,
