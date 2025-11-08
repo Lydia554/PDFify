@@ -43,34 +43,20 @@ router.post("/user-creation", async (req, res) => {
 
     // Reactivate deleted user
     if (user && user.deleted) {
-      const deletedAt = user.deletedAt || new Date(0);
-      const hoursSinceDeleted = (new Date() - deletedAt) / (1000 * 60 * 60);
-
+      const hoursSinceDeleted = (new Date() - (user.deletedAt || new Date(0))) / (1000 * 60 * 60);
       if (hoursSinceDeleted < 24) {
         const remaining = Math.ceil(24 - hoursSinceDeleted);
         return res.status(403).json({
-          error: `You must wait ${remaining} more hour(s) before you can reactivate this account.`,
+          error: `You must wait ${remaining} more hour(s) before reactivating this account.`,
         });
       }
 
+      const hashedPassword = await bcrypt.hash(password, 10);
       const newApiKey = crypto.randomBytes(24).toString("hex");
       const verificationToken = crypto.randomBytes(32).toString("hex");
-      const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+      const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24h
 
-      // Send verification email first
-      const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
-      const subject = "Reactivate your PDFify account";
-      const html = generateEmailHTML({
-        title: "Reactivate Account",
-        body: `Hi ${email},<br><br>Click the button below to verify and reactivate your account.`,
-        ctaText: "Verify & Reactivate",
-        ctaLink: verifyUrl
-      });
-      const text = `Hi ${email},\n\nVerify your account here: ${verifyUrl}\n\nThis link expires in 24 hours.\n\nPDFify Team`;
-
-      await sendEmail({ to: email, subject, text, html });
-
-      user.password = password;
+      user.password = hashedPassword;
       user.apiKey = newApiKey;
       user.deleted = false;
       user.deletedAt = null;
@@ -79,9 +65,22 @@ router.post("/user-creation", async (req, res) => {
       user.verificationTokenExpiry = expiry;
       await user.save();
 
+      const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
+      await sendEmail({
+        to: email,
+        subject: "Reactivate your PDFify account",
+        html: generateEmailHTML({
+          title: "Reactivate Account",
+          body: `Hi ${email},<br><br>Click the button below to verify and reactivate your account.`,
+          ctaText: "Verify & Reactivate",
+          ctaLink: verifyUrl,
+        }),
+        text: `Hi ${email},\n\nVerify your account here: ${verifyUrl}\n\nThis link expires in 24h.\nPDFify Team`,
+      });
+
       return res.status(200).json({
-        message: "This account was previously deleted. Check your email to reactivate it.",
-        redirect: "/login.html"
+        message: "Account reactivation email sent. Please check your email.",
+        redirect: "/login.html",
       });
     }
 
@@ -91,37 +90,38 @@ router.post("/user-creation", async (req, res) => {
     }
 
     // New user creation
+    const hashedPassword = await bcrypt.hash(password, 10);
     const apiKey = crypto.randomBytes(24).toString("hex");
     const verificationToken = crypto.randomBytes(32).toString("hex");
-    const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+    const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24h
 
-    // Send verification email first
-    const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
-    const subject = "Verify your PDFify account";
-    const html = generateEmailHTML({
-      title: "Confirm your email",
-      body: `Hi ${email},<br><br>Click the button below to verify your email and activate your account.`,
-      ctaText: "Verify Email",
-      ctaLink: verifyUrl
-    });
-    const text = `Hi ${email},\n\nClick this link to verify your email: ${verifyUrl}\n\nThis link expires in 24 hours.\n\nPDFify Team`;
-
-    await sendEmail({ to: email, subject, text, html });
-
-    // Save user after email sent
     const newUser = new User({
       email,
-      password,
+      password: hashedPassword,
       apiKey,
       isVerified: false,
       verificationToken,
-      verificationTokenExpiry: expiry
+      verificationTokenExpiry: expiry,
     });
-    await newUser.save();
+
+    await newUser.save(); // Save first
+
+    const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
+    await sendEmail({
+      to: email,
+      subject: "Verify your PDFify account",
+      html: generateEmailHTML({
+        title: "Confirm your email",
+        body: `Hi ${email},<br><br>Click the button below to verify your email and activate your account.`,
+        ctaText: "Verify Email",
+        ctaLink: verifyUrl,
+      }),
+      text: `Hi ${email},\n\nClick this link to verify your email: ${verifyUrl}\n\nThis link expires in 24h.\nPDFify Team`,
+    });
 
     res.status(201).json({
       message: "User created. Please check your email to verify your account.",
-      redirect: "/login.html"
+      redirect: "/login.html",
     });
 
   } catch (error) {
