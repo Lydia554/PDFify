@@ -39,6 +39,7 @@ const generateEmailHTML = ({ title, body, ctaText, ctaLink }) => `
 // ---------------- USER CREATION ----------------
 router.post("/user-creation", async (req, res) => {
   const { email, password } = req.body;
+  const crypto = require("crypto"); // safe inside async function
 
   try {
     let user = await User.findOne({ email });
@@ -59,14 +60,13 @@ router.post("/user-creation", async (req, res) => {
         });
       }
 
-      const newApiKey = require("crypto").randomBytes(24).toString("hex");
+      const newApiKey = crypto.randomBytes(24).toString("hex");
       user.password = password;
       user.apiKey = newApiKey;
       user.deleted = false;
       user.deletedAt = null;
       await user.save();
 
-      // Account restore email
       const subject = "Welcome back to PDFify!";
       const html = generateEmailHTML({
         title: "Welcome Back!",
@@ -84,64 +84,43 @@ router.post("/user-creation", async (req, res) => {
       });
     }
 
-    // New user creation
-    const apiKey = require("crypto").randomBytes(24).toString("hex");
-    const newUser = new User({ email, password, apiKey });
+    // ---- New user creation with email verification ----
+    const apiKey = crypto.randomBytes(24).toString("hex");
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+
+    const newUser = new User({
+      email,
+      password,
+      apiKey,
+      isVerified: false,
+      verificationToken,
+      verificationTokenExpiry: expiry,
+    });
+
     await newUser.save();
 
-    const subject = "Welcome to PDFify!";
+    const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
+    const subject = "Verify your PDFify account";
     const html = generateEmailHTML({
-      title: "Welcome to PDFify!",
-      body: `Hi ${email},<br><br>Thank you for signing up! Your API key is: <strong>${apiKey}</strong><br>Enjoy your PDFify experience.`,
-      ctaText: "Go to PDFify",
-      ctaLink: process.env.BASE_URL,
+      title: "Confirm your email",
+      body: `Hi ${email},<br><br>Click the button below to verify your email and activate your account.`,
+      ctaText: "Verify Email",
+      ctaLink: verifyUrl,
     });
-    const text = `Hi ${email},\n\nThank you for signing up! Your API key is: ${apiKey}\n\nGo to PDFify: ${process.env.BASE_URL}\n\nPDFify Team`;
+    const text = `Hi ${email},\n\nClick this link to verify your email: ${verifyUrl}\n\nThis link expires in 24 hours.\n\nPDFify Team`;
 
     await sendEmail({ to: email, subject, text, html });
 
-    res.status(201).json({ message: "User created", redirect: "/login.html" });
-
+    res.status(201).json({
+      message: "User created. Please check your email to verify your account.",
+      redirect: "/login.html",
+    });
   } catch (error) {
     console.error("User creation error:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
-
-
-// After creating new user
-const apiKey = require("crypto").randomBytes(24).toString("hex");
-const verificationToken = require("crypto").randomBytes(32).toString("hex");
-const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
-
-const newUser = new User({
-  email,
-  password,
-  apiKey,
-  isVerified: false,
-  verificationToken,
-  verificationTokenExpiry: expiry
-});
-await newUser.save();
-
-// Send verification email
-const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
-const subject = "Verify your PDFify account";
-const html = generateEmailHTML({
-  title: "Confirm your email",
-  body: `Hi ${email},<br><br>Click the button below to verify your email and activate your account.`,
-  ctaText: "Verify Email",
-  ctaLink: verifyUrl
-});
-const text = `Hi ${email},\n\nClick this link to verify your email: ${verifyUrl}\n\nThis link expires in 24 hours.\n\nPDFify Team`;
-
-await sendEmail({ to: email, subject, text, html });
-
-res.status(201).json({
-  message: "User created. Please check your email to verify your account.",
-  redirect: "/login.html"
-});
-
 
 
 
