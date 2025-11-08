@@ -67,12 +67,16 @@ const userSchema = new mongoose.Schema({
 
   deleted: { type: Boolean, default: false },
   deletedAt: { type: Date, default: null },
-
   cookieConsent: { type: Boolean, default: false },
   cookieConsentDate: { type: Date },
 
+  isVerified: { type: Boolean, default: false },
+  verificationToken: { type: String },
+  verificationTokenExpiry: { type: Date },
+
   resetToken: { type: String },
   resetTokenExpiry: { type: Date },
+
 
   extraPages: { type: Number, default: 0 },
 }, { timestamps: true });

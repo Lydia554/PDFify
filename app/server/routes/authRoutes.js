@@ -40,6 +40,11 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
+    if (!user.isVerified) {
+  return res.status(403).json({ error: "Please verify your email before logging in." });
+}
+
+
    
     req.session.userId = user._id;
 
@@ -52,6 +57,32 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+router.get("/verify-email", async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).send("Invalid or expired verification link.");
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiry = undefined;
+    await user.save();
+
+    res.redirect(`${process.env.BASE_URL}login.html`);
+  } catch (error) {
+    console.error("Email verification error:", error);
+    res.status(500).send("Server error during verification.");
   }
 });
 

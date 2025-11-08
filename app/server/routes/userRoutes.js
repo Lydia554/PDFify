@@ -109,6 +109,41 @@ router.post("/user-creation", async (req, res) => {
 });
 
 
+// After creating new user
+const apiKey = require("crypto").randomBytes(24).toString("hex");
+const verificationToken = require("crypto").randomBytes(32).toString("hex");
+const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+
+const newUser = new User({
+  email,
+  password,
+  apiKey,
+  isVerified: false,
+  verificationToken,
+  verificationTokenExpiry: expiry
+});
+await newUser.save();
+
+// Send verification email
+const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
+const subject = "Verify your PDFify account";
+const html = generateEmailHTML({
+  title: "Confirm your email",
+  body: `Hi ${email},<br><br>Click the button below to verify your email and activate your account.`,
+  ctaText: "Verify Email",
+  ctaLink: verifyUrl
+});
+const text = `Hi ${email},\n\nClick this link to verify your email: ${verifyUrl}\n\nThis link expires in 24 hours.\n\nPDFify Team`;
+
+await sendEmail({ to: email, subject, text, html });
+
+res.status(201).json({
+  message: "User created. Please check your email to verify your account.",
+  redirect: "/login.html"
+});
+
+
+
 
 router.post("/consent", authenticate, async (req, res) => {
   try {
