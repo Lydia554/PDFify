@@ -42,11 +42,11 @@ COPY ./app ./
 # Copy ICC profile
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
 
-# Copy PDFBox jar (ensure the file exists locally)
+# Copy PDFBox jar
 COPY ./lib/pdfbox-app-3.0.0.jar ./lib/pdfbox-app-3.0.0.jar
+
 
 # Copy PDF/A definition file
 COPY ./app/server/routes/pdfa_def.ps /app/pdfa_def.ps
 
 CMD ["node", "server/index.js"]
-
