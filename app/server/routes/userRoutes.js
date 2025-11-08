@@ -5,7 +5,6 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const sendEmail = require("../sendEmail");
 const ShopConfig = require("../models/ShopConfig"); 
-const crypto = require("crypto");
 
 const router = express.Router();
 
@@ -17,10 +16,12 @@ const log = (message, data = null) => {
 };
 
 
+// Helper: HTML template for emails
 const generateEmailHTML = ({ title, body, ctaText, ctaLink }) => `
 <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
   <div style="text-align: center; padding: 20px;">
-    <img src="${process.env.BASE_URL}images/Icon.png" alt="PDFify Icon" width="100" style="border-radius: 10px;" />
+  <img src="${process.env.BASE_URL}images/Icon.png" alt="PDFify Icon" width="100" style="border-radius: 10px;" />
+
   </div>
   <h2 style="color: #6b21a8;">${title}</h2>
   <p>${body}</p>
@@ -35,98 +36,75 @@ const generateEmailHTML = ({ title, body, ctaText, ctaLink }) => `
 </div>
 `;
 
+// ---------------- USER CREATION ----------------
 router.post("/user-creation", async (req, res) => {
   const { email, password } = req.body;
 
   try {
     let user = await User.findOne({ email });
 
-    // Reactivate deleted user
-    if (user && user.deleted) {
-      const hoursSinceDeleted = (new Date() - (user.deletedAt || new Date(0))) / (1000 * 60 * 60);
+    if (user) {
+      if (!user.deleted) {
+        return res.status(400).json({ error: "User already exists" });
+      }
+
+      const deletedAt = user.deletedAt || new Date(0);
+      const now = new Date();
+      const hoursSinceDeleted = (now - deletedAt) / (1000 * 60 * 60);
+
       if (hoursSinceDeleted < 24) {
         const remaining = Math.ceil(24 - hoursSinceDeleted);
         return res.status(403).json({
-          error: `You must wait ${remaining} more hour(s) before reactivating this account.`,
+          error: `You must wait ${remaining} more hour(s) before you can reactivate this account.`,
         });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
-      const newApiKey = crypto.randomBytes(24).toString("hex");
-      const verificationToken = crypto.randomBytes(32).toString("hex");
-      const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24h
-
-      user.password = hashedPassword;
+      const newApiKey = require("crypto").randomBytes(24).toString("hex");
+      user.password = password;
       user.apiKey = newApiKey;
       user.deleted = false;
       user.deletedAt = null;
-      user.isVerified = false;
-      user.verificationToken = verificationToken;
-      user.verificationTokenExpiry = expiry;
       await user.save();
 
-      const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
-      await sendEmail({
-        to: email,
-        subject: "Reactivate your PDFify account",
-        html: generateEmailHTML({
-          title: "Reactivate Account",
-          body: `Hi ${email},<br><br>Click the button below to verify and reactivate your account.`,
-          ctaText: "Verify & Reactivate",
-          ctaLink: verifyUrl,
-        }),
-        text: `Hi ${email},\n\nVerify your account here: ${verifyUrl}\n\nThis link expires in 24h.\nPDFify Team`,
+      // Account restore email
+      const subject = "Welcome back to PDFify!";
+      const html = generateEmailHTML({
+        title: "Welcome Back!",
+        body: `Hi ${email},<br><br>This account was previously deleted. It has now been restored.<br>Your new API key is: <strong>${newApiKey}</strong>`,
+        ctaText: "Login Now",
+        ctaLink: `${process.env.BASE_URL}login.html`,
       });
+      const text = `Hi ${email},\n\nThis account was previously deleted. It has now been restored. Your new API key is: ${newApiKey}\n\nLogin here: ${process.env.BASE_URL}login.html\n\nPDFify Team`;
+
+      await sendEmail({ to: email, subject, text, html });
 
       return res.status(200).json({
-        message: "Account reactivation email sent. Please check your email.",
+        message: "This account was previously deleted. Restoring...",
         redirect: "/login.html",
       });
     }
 
-    // Prevent duplicate active user
-    if (user && !user.deleted) {
-      return res.status(400).json({ error: "User already exists" });
-    }
-
     // New user creation
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const apiKey = crypto.randomBytes(24).toString("hex");
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24h
+    const apiKey = require("crypto").randomBytes(24).toString("hex");
+    const newUser = new User({ email, password, apiKey });
+    await newUser.save();
 
-    const newUser = new User({
-      email,
-      password: hashedPassword,
-      apiKey,
-      isVerified: false,
-      verificationToken,
-      verificationTokenExpiry: expiry,
+    const subject = "Welcome to PDFify!";
+    const html = generateEmailHTML({
+      title: "Welcome to PDFify!",
+      body: `Hi ${email},<br><br>Thank you for signing up! Your API key is: <strong>${apiKey}</strong><br>Enjoy your PDFify experience.`,
+      ctaText: "Go to PDFify",
+      ctaLink: process.env.BASE_URL,
     });
+    const text = `Hi ${email},\n\nThank you for signing up! Your API key is: ${apiKey}\n\nGo to PDFify: ${process.env.BASE_URL}\n\nPDFify Team`;
 
-    await newUser.save(); // Save first
+    await sendEmail({ to: email, subject, text, html });
 
-    const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
-    await sendEmail({
-      to: email,
-      subject: "Verify your PDFify account",
-      html: generateEmailHTML({
-        title: "Confirm your email",
-        body: `Hi ${email},<br><br>Click the button below to verify your email and activate your account.`,
-        ctaText: "Verify Email",
-        ctaLink: verifyUrl,
-      }),
-      text: `Hi ${email},\n\nClick this link to verify your email: ${verifyUrl}\n\nThis link expires in 24h.\nPDFify Team`,
-    });
-
-    res.status(201).json({
-      message: "User created. Please check your email to verify your account.",
-      redirect: "/login.html",
-    });
+    res.status(201).json({ message: "User created", redirect: "/login.html" });
 
   } catch (error) {
     console.error("User creation error:", error);
-    res.status(500).json({ error: "Failed to create user. Please try again." });
+    res.status(500).json({ error: "Server error" });
   }
 });
 
