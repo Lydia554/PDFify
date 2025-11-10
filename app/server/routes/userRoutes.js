@@ -5,6 +5,8 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const sendEmail = require("../sendEmail");
 const ShopConfig = require("../models/ShopConfig"); 
+const crypto = require("crypto");
+
 
 const router = express.Router();
 
