@@ -43,13 +43,16 @@ router.get("/verify-email", async (req, res) => {
 
     await user.save();
 
-    // Send email with the API key from the user document
+    // Decrypt API key before sending
+    const decryptedApiKey = user.getDecryptedApiKey();
+
+    // Send email with the decrypted API key
     const subject = "Your PDFify API Key";
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
         <h2 style="color:#6b21a8;">Your API Key is Ready</h2>
         <p>Hi ${user.email},<br><br>Your account is now verified!</p>
-        <p>Your API key: <strong>${user.apiKey}</strong></p>
+        <p>Your API key: <strong>${decryptedApiKey}</strong></p>
         <p style="text-align:center;">
           <a href="${process.env.BASE_URL}" 
              style="background:#6b21a8;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;">
@@ -58,10 +61,11 @@ router.get("/verify-email", async (req, res) => {
         </p>
       </div>
     `;
-    const text = `Hi ${user.email},\n\nYour account is now verified!\nYour API key: ${user.apiKey}\n\nGo to PDFify: ${process.env.BASE_URL}\n\nPDFify Team`;
+    const text = `Hi ${user.email},\n\nYour account is now verified!\nYour API key: ${decryptedApiKey}\n\nGo to PDFify: ${process.env.BASE_URL}\n\nPDFify Team`;
 
     await sendEmail({ to: user.email, subject, text, html });
 
+    // Redirect to login page
     res.redirect(`${process.env.BASE_URL}login.html`);
   } catch (error) {
     console.error("Email verification error:", error);
