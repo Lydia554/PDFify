@@ -31,20 +31,19 @@ router.get("/verify-email", async (req, res) => {
       return res.status(400).send("Invalid or expired verification link.");
     }
 
-    
+    // Mark user as verified
     user.isVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpiry = undefined;
 
-   
+    // Only generate a new API key if it doesn't exist
     if (!user.apiKey) {
-      const apiKey = require("crypto").randomBytes(24).toString("hex");
-      user.apiKey = apiKey;
+      user.apiKey = require("crypto").randomBytes(24).toString("hex");
     }
 
     await user.save();
 
-    
+    // Send email with the API key from the user document
     const subject = "Your PDFify API Key";
     const html = `
       <div style="font-family: Arial, sans-serif; color: #333;">
@@ -63,13 +62,13 @@ router.get("/verify-email", async (req, res) => {
 
     await sendEmail({ to: user.email, subject, text, html });
 
-    
     res.redirect(`${process.env.BASE_URL}login.html`);
   } catch (error) {
     console.error("Email verification error:", error);
     res.status(500).send("Server error during verification.");
   }
 });
+
 
 
 router.post("/login", async (req, res) => {
