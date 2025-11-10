@@ -31,18 +31,38 @@ router.get("/verify-email", async (req, res) => {
       return res.status(400).send("Invalid or expired verification link.");
     }
 
+  
     user.isVerified = true;
     user.verificationToken = undefined;
     user.verificationTokenExpiry = undefined;
     await user.save();
 
+  
+    const subject = "Your PDFify API Key";
+    const html = `
+      <div style="font-family: Arial, sans-serif; color: #333;">
+        <h2 style="color:#6b21a8;">Your API Key is Ready</h2>
+        <p>Hi ${user.email},<br><br>Your account is now verified!</p>
+        <p>Your API key: <strong>${user.apiKey}</strong></p>
+        <p style="text-align:center;">
+          <a href="${process.env.BASE_URL}" 
+             style="background:#6b21a8;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;">
+             Go to PDFify
+          </a>
+        </p>
+      </div>
+    `;
+    const text = `Hi ${user.email},\n\nYour account is now verified!\nYour API key: ${user.apiKey}\n\nGo to PDFify: ${process.env.BASE_URL}\n\nPDFify Team`;
+
+    await sendEmail({ to: user.email, subject, text, html });
+
+   
     res.redirect(`${process.env.BASE_URL}login.html`);
   } catch (error) {
     console.error("Email verification error:", error);
     res.status(500).send("Server error during verification.");
   }
 });
-
 
 
 router.post("/login", async (req, res) => {
@@ -63,6 +83,11 @@ router.post("/login", async (req, res) => {
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid password" });
     }
+
+    if (!user.isVerified) {
+  return res.status(403).json({ error: "Please verify your email before logging in." });
+}
+
 
    
     req.session.userId = user._id;
