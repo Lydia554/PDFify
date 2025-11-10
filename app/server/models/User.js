@@ -74,6 +74,11 @@ const userSchema = new mongoose.Schema({
   resetToken: { type: String },
   resetTokenExpiry: { type: Date },
 
+  isVerified: { type: Boolean, default: false },
+  verificationToken: { type: String },
+  verificationTokenExpiry: { type: Date },
+
+
   extraPages: { type: Number, default: 0 },
 }, { timestamps: true });
 

@@ -18,96 +18,62 @@ const log = (message, data = null) => {
 
 // Helper: HTML template for emails
 const generateEmailHTML = ({ title, body, ctaText, ctaLink }) => `
-<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.5;">
-  <div style="text-align: center; padding: 20px;">
-  <img src="${process.env.BASE_URL}images/Icon.png" alt="PDFify Icon" width="100" style="border-radius: 10px;" />
-
-  </div>
-  <h2 style="color: #6b21a8;">${title}</h2>
+<div style="font-family: Arial, sans-serif; color: #333;">
+  <h2 style="color:#6b21a8;">${title}</h2>
   <p>${body}</p>
-  ${ctaText && ctaLink ? `<p style="text-align: center;">
+  <p style="text-align:center;">
     <a href="${ctaLink}" 
-       style="background-color:#6b21a8; color:#fff; padding: 10px 20px; text-decoration:none; border-radius:5px;">
+       style="background:#6b21a8;color:#fff;padding:10px 20px;text-decoration:none;border-radius:5px;">
        ${ctaText}
     </a>
-  </p>` : ""}
-  <hr style="border:none; border-top:1px solid #ddd; margin:20px 0;" />
-  <p style="font-size: 12px; color:#999;">PDFify Team</p>
+  </p>
 </div>
 `;
 
-// ---------------- USER CREATION ----------------
 router.post("/user-creation", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    let user = await User.findOne({ email });
-
-    if (user) {
-      if (!user.deleted) {
-        return res.status(400).json({ error: "User already exists" });
-      }
-
-      const deletedAt = user.deletedAt || new Date(0);
-      const now = new Date();
-      const hoursSinceDeleted = (now - deletedAt) / (1000 * 60 * 60);
-
-      if (hoursSinceDeleted < 24) {
-        const remaining = Math.ceil(24 - hoursSinceDeleted);
-        return res.status(403).json({
-          error: `You must wait ${remaining} more hour(s) before you can reactivate this account.`,
-        });
-      }
-
-      const newApiKey = require("crypto").randomBytes(24).toString("hex");
-      user.password = password;
-      user.apiKey = newApiKey;
-      user.deleted = false;
-      user.deletedAt = null;
-      await user.save();
-
-      // Account restore email
-      const subject = "Welcome back to PDFify!";
-      const html = generateEmailHTML({
-        title: "Welcome Back!",
-        body: `Hi ${email},<br><br>This account was previously deleted. It has now been restored.<br>Your new API key is: <strong>${newApiKey}</strong>`,
-        ctaText: "Login Now",
-        ctaLink: `${process.env.BASE_URL}login.html`,
-      });
-      const text = `Hi ${email},\n\nThis account was previously deleted. It has now been restored. Your new API key is: ${newApiKey}\n\nLogin here: ${process.env.BASE_URL}login.html\n\nPDFify Team`;
-
-      await sendEmail({ to: email, subject, text, html });
-
-      return res.status(200).json({
-        message: "This account was previously deleted. Restoring...",
-        redirect: "/login.html",
-      });
+    const existing = await User.findOne({ email });
+    if (existing && !existing.deleted) {
+      return res.status(400).json({ error: "User already exists" });
     }
 
-    // New user creation
-    const apiKey = require("crypto").randomBytes(24).toString("hex");
-    const newUser = new User({ email, password, apiKey });
+    const apiKey = crypto.randomBytes(24).toString("hex");
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const expiry = Date.now() + 1000 * 60 * 60 * 24; // 24 hours
+
+    const newUser = new User({
+      email,
+      password,
+      apiKey,
+      isVerified: false,
+      verificationToken,
+      verificationTokenExpiry: expiry
+    });
     await newUser.save();
 
-    const subject = "Welcome to PDFify!";
+    const verifyUrl = `${process.env.BASE_URL}api/auth/verify-email?token=${verificationToken}`;
+    const subject = "Verify your PDFify account";
     const html = generateEmailHTML({
-      title: "Welcome to PDFify!",
-      body: `Hi ${email},<br><br>Thank you for signing up! Your API key is: <strong>${apiKey}</strong><br>Enjoy your PDFify experience.`,
-      ctaText: "Go to PDFify",
-      ctaLink: process.env.BASE_URL,
+      title: "Confirm your email",
+      body: `Hi ${email},<br><br>Click the button below to verify your email and activate your account.`,
+      ctaText: "Verify Email",
+      ctaLink: verifyUrl
     });
-    const text = `Hi ${email},\n\nThank you for signing up! Your API key is: ${apiKey}\n\nGo to PDFify: ${process.env.BASE_URL}\n\nPDFify Team`;
+    const text = `Hi ${email},\n\nClick this link to verify your email: ${verifyUrl}\n\nPDFify Team`;
 
     await sendEmail({ to: email, subject, text, html });
 
-    res.status(201).json({ message: "User created", redirect: "/login.html" });
-
+    res.status(201).json({
+      message: "User created. Please check your email to verify your account.",
+      redirect: "/login.html"
+    });
   } catch (error) {
     console.error("User creation error:", error);
     res.status(500).json({ error: "Server error" });
   }
 });
-
 
 
 router.post("/consent", authenticate, async (req, res) => {

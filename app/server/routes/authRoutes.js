@@ -18,6 +18,30 @@ const log = (message, data = null) => {
 };
 
 
+router.get("/verify-email", async (req, res) => {
+  const { token } = req.query;
+
+  try {
+    const user = await User.findOne({
+      verificationToken: token,
+      verificationTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).send("Invalid or expired verification link.");
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiry = undefined;
+    await user.save();
+
+    res.redirect(`${process.env.BASE_URL}login.html`);
+  } catch (error) {
+    console.error("Email verification error:", error);
+    res.status(500).send("Server error during verification.");
+  }
+});
 
 
 
