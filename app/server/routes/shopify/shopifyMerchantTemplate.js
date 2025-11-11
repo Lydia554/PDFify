@@ -145,7 +145,6 @@ const pdfBoxCmd = spawnSync(
 );
 
 
-
     console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
     console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
 
