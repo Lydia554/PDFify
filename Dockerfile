@@ -50,3 +50,4 @@ RUN chmod 644 ./lib/preflight-app-3.0.6.jar
 COPY ./app/server/routes/pdfa_def.ps ./pdfa_def.ps
 
 CMD ["node", "server/index.js"]
+
