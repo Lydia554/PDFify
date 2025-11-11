@@ -121,33 +121,40 @@ async function createMerchantPdf(invoiceData) {
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-    // 3️⃣ PDFBox Preflight
-const pdfboxJar = process.env.PDFBOX_JAR_PATH
-  ? path.resolve(process.env.PDFBOX_JAR_PATH)
-  : path.resolve(__dirname, "../../../lib/pdfbox-app-3.0.6.jar"); 
+    // 3️⃣ PDFBox Preflight (fixed syntax)
+    const pdfboxJar = process.env.PDFBOX_JAR_PATH
+      ? path.resolve(process.env.PDFBOX_JAR_PATH)
+      : path.resolve(__dirname, "../../../lib/pdfbox-app-3.0.6.jar");
 
+    const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
+    console.log("🟢 Running PDFBox Preflight on:", tmpInput);
+    console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 
-const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
-console.log("🟢 Running PDFBox Preflight on:", tmpInput);
-console.log("🟢 Using PDFBox JAR:", pdfboxJar);
-
-
-    const pdfBoxCmd = spawnSync("java", [
-      "-jar",
-      pdfboxJar,
-      "Preflight",
-      "-a",
-      tmpInput,
-      "-o",
-      tmpPdfBoxOutput
-    ], { encoding: "utf-8" });
+    const pdfBoxCmd = spawnSync(
+      "java",
+      [
+        "-jar",
+        pdfboxJar,
+        "pdfbox",
+        "preflight",
+        tmpInput,
+        tmpPdfBoxOutput,
+      ],
+      { encoding: "utf-8" }
+    );
 
     console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
     console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
+
     if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
       console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
       throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
     }
+
+    if (!fs.existsSync(tmpPdfBoxOutput) || fs.statSync(tmpPdfBoxOutput).size === 0) {
+      throw new Error("PDFBox did not produce a valid output PDF.");
+    }
+
     console.log("✅ PDFBox Preflight completed, output:", tmpPdfBoxOutput);
 
     // 4️⃣ Ghostscript PDF/A-3B enforcement
@@ -157,34 +164,33 @@ console.log("🟢 Using PDFBox JAR:", pdfboxJar);
         ? process.env.ICC_PROFILE_PATH
         : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-   const gs = spawnSync(
-  "gs",
-  [
-    "-dPDFA=3",
-    "-dPDFACompatibilityPolicy=1",
-    "-sDEVICE=pdfwrite",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-dNOSAFER",
-    "-dEmbedAllFonts=true",
-    "-dSubsetFonts=true",
-    "-dCompressFonts=true",
-    "-sColorConversionStrategy=UseDeviceIndependentColor",
-    "-sProcessColorModel=DeviceRGB",
-    `-sOutputICCProfile=${iccProfilePath}`,
-    `-sOutputFile=${tmpOutput}`,
-    tmpPdfBoxOutput,
-  ],
-  { encoding: "utf-8" }
-);
-
+    const gs = spawnSync(
+      "gs",
+      [
+        "-dPDFA=3",
+        "-dPDFACompatibilityPolicy=1",
+        "-sDEVICE=pdfwrite",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-dNOSAFER",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dCompressFonts=true",
+        "-sColorConversionStrategy=UseDeviceIndependentColor",
+        "-sProcessColorModel=DeviceRGB",
+        `-sOutputICCProfile=${iccProfilePath}`,
+        `-sOutputFile=${tmpOutput}`,
+        tmpPdfBoxOutput,
+      ],
+      { encoding: "utf-8" }
+    );
 
     if (gs.error || gs.status !== 0) {
       console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
       throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
     }
 
-    // ✅ Return final PDF buffer
+    // Return final PDF buffer
     return fs.readFileSync(tmpOutput);
   } catch (err) {
     console.error("❌ createMerchantPdf failed:", err);
@@ -192,10 +198,8 @@ console.log("🟢 Using PDFBox JAR:", pdfboxJar);
   }
 }
 
-
 module.exports = {
   mapOrderToPdfData,
   createBasePdf,
   createMerchantPdf,
 };
-
