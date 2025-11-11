@@ -43,8 +43,8 @@ COPY ./app ./
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
 
 # Copy PDFBox jar into container individually to avoid folder issues
-COPY ./app/lib/preflight-app-3.0.6.jar ./lib/preflight-app-3.0.6.jar
-RUN chmod 644 ./lib/preflight-app-3.0.6.jar
+COPY ./app/server/Helpers/preflight-app-3.0.6.jar ./server/Helpers/preflight-app-3.0.6.jar
+
 
 # Copy PDF/A definition file
 COPY ./app/server/routes/pdfa_def.ps ./pdfa_def.ps
