@@ -157,27 +157,27 @@ console.log("🟢 Using PDFBox JAR:", pdfboxJar);
         ? process.env.ICC_PROFILE_PATH
         : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-    const gs = spawnSync(
-      "gs",
-      [
-        "-dPDFA=3",
-        "-dPDFACompatibilityPolicy=1",
-        "-sDEVICE=pdfwrite",
-        "-dNOPAUSE",
-        "-dBATCH",
-        "-dNOSAFER",
-        "-dEmbedAllFonts=true",
-        "-dSubsetFonts=true",
-        "-dCompressFonts=true",
-        "-dUseCIEColor",
-        "-dProcessColorModel=/DeviceRGB",
-        "-sColorConversionStrategy=RGB",
-        `-sOutputICCProfile=${iccProfilePath}`,
-        `-sOutputFile=${tmpOutput}`,
-        tmpPdfBoxOutput,
-      ],
-      { encoding: "utf-8" }
-    );
+   const gs = spawnSync(
+  "gs",
+  [
+    "-dPDFA=3",
+    "-dPDFACompatibilityPolicy=1",
+    "-sDEVICE=pdfwrite",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-dNOSAFER",
+    "-dEmbedAllFonts=true",
+    "-dSubsetFonts=true",
+    "-dCompressFonts=true",
+    "-sColorConversionStrategy=UseDeviceIndependentColor",
+    "-sProcessColorModel=DeviceRGB",
+    `-sOutputICCProfile=${iccProfilePath}`,
+    `-sOutputFile=${tmpOutput}`,
+    tmpPdfBoxOutput,
+  ],
+  { encoding: "utf-8" }
+);
+
 
     if (gs.error || gs.status !== 0) {
       console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
