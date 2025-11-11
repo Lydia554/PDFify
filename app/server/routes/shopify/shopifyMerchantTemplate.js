@@ -121,10 +121,10 @@ async function createMerchantPdf(invoiceData) {
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-//  PDFBox Preflight (PDFBox 3.x Preflight jar)
+// PDFBox Preflight (PDFBox 3.x Preflight jar)
 const pdfboxJar = process.env.PDFBOX_JAR_PATH
   ? path.resolve(process.env.PDFBOX_JAR_PATH)
-  : path.resolve(__dirname, "../../../lib/preflight-app-3.0.6.jar");
+  : path.resolve(__dirname, "../../lib/preflight-app-3.0.6.jar");
 
 
 
