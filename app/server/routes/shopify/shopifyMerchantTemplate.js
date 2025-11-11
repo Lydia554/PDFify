@@ -131,7 +131,7 @@ const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
     console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 
 
-    const pdfBoxCmd = spawnSync(
+const pdfBoxCmd = spawnSync(
   "java",
   [
     "-jar",
@@ -141,7 +141,7 @@ const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
     "--save",
     tmpPdfBoxOutput
   ],
-  { encoding: "utf‑8" }
+  { encoding: "utf8" } 
 );
 
 
@@ -166,26 +166,26 @@ const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
         ? process.env.ICC_PROFILE_PATH
         : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-    const gs = spawnSync(
-      "gs",
-      [
-        "-dPDFA=3",
-        "-dPDFACompatibilityPolicy=1",
-        "-sDEVICE=pdfwrite",
-        "-dBATCH",
-        "-dNOPAUSE",
-        "-dNOSAFER",
-        "-dEmbedAllFonts=true",
-        "-dSubsetFonts=true",
-        "-dCompressFonts=true",
-        "-sColorConversionStrategy=UseDeviceIndependentColor",
-        "-sProcessColorModel=DeviceRGB",
-        `-sOutputICCProfile=${iccProfilePath}`,
-        `-sOutputFile=${tmpOutput}`,
-        tmpPdfBoxOutput,
-      ],
-      { encoding: "utf-8" }
-    );
+const gs = spawnSync(
+  "gs",
+  [
+    "-dPDFA=3",
+    "-dPDFACompatibilityPolicy=1",
+    "-sDEVICE=pdfwrite",
+    "-dBATCH",
+    "-dNOPAUSE",
+    "-dNOSAFER",
+    "-dEmbedAllFonts=true",
+    "-dSubsetFonts=true",
+    "-dCompressFonts=true",
+    "-sColorConversionStrategy=UseDeviceIndependentColor",
+    "-sProcessColorModel=DeviceRGB",
+    `-sOutputICCProfile=${iccProfilePath}`,
+    `-sOutputFile=${tmpOutput}`,
+    tmpPdfBoxOutput,
+  ],
+  { encoding: "utf8" } 
+);
 
     if (gs.error || gs.status !== 0) {
       console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
