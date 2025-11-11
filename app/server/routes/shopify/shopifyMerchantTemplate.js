@@ -110,34 +110,35 @@ async function createMerchantPdf(invoiceData) {
   console.log("🟢 Starting createMerchantPdf");
 
   try {
-    // 1️⃣ Create base PDF and embed ZUGFeRD XML
+    //  Create base PDF and embed ZUGFeRD XML
     const pdfDoc = await createBasePdf(invoiceData);
     await embedZugferdXml(pdfDoc, invoiceData);
     const prePdfBuffer = await pdfDoc.save({ useObjectStreams: false });
 
-    // 2️⃣ Write temp file for PDFBox
+    //  Write temp file for PDFBox
     const tmpDir = path.join(__dirname, "../../tmp_gs");
     fs.mkdirSync(tmpDir, { recursive: true });
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-    // 3️⃣ PDFBox Preflight (fixed syntax)
-    const pdfboxJar = process.env.PDFBOX_JAR_PATH
-      ? path.resolve(process.env.PDFBOX_JAR_PATH)
-      : path.resolve(__dirname, "../../../lib/pdfbox-app-3.0.6.jar");
+//  PDFBox Preflight (PDFBox 3.x Preflight jar)
+const pdfboxJar = process.env.PDFBOX_JAR_PATH
+  ? path.resolve(process.env.PDFBOX_JAR_PATH)
+  : path.resolve(__dirname, "../../../lib/preflight-app-3.0.6.jar");
 
 const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
-    console.log("🟢 Running PDFBox Preflight on:", tmpInput);
-    console.log("🟢 Using PDFBox JAR:", pdfboxJar);
-
+console.log("🟢 Running PDFBox Preflight on:", tmpInput);
+console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 
 const pdfBoxCmd = spawnSync(
   "java",
   [
-    "-cp",
+    "-jar",
     pdfboxJar,
-    "org.apache.pdfbox.preflight.Preflight",
-    tmpInput
+    "-a",         
+    tmpInput,     
+    "-o",
+    tmpPdfBoxOutput 
   ],
   { encoding: "utf8" }
 );
