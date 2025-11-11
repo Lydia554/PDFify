@@ -44,8 +44,6 @@ COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_IC
 
 # Copy PDFBox jar into container individually to avoid folder issues
 COPY ./app/server/Helpers/preflight-app-3.0.6.jar ./server/Helpers/preflight-app-3.0.6.jar
-RUN chmod 644 /app/server/Helpers/preflight-app-3.0.6.jar
-
 
 
 # Copy PDF/A definition file
