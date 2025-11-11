@@ -134,15 +134,14 @@ const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
 const pdfBoxCmd = spawnSync(
   "java",
   [
-    "-jar",
+    "-cp",
     pdfboxJar,
-    "Preflight",
-    tmpInput,
-    "--save",
-    tmpPdfBoxOutput
+    "org.apache.pdfbox.preflight.Preflight",
+    tmpInput
   ],
-  { encoding: "utf8" } 
+  { encoding: "utf8" }
 );
+
 
 
     console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
