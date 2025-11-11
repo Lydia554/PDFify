@@ -124,7 +124,7 @@ async function createMerchantPdf(invoiceData) {
 // PDFBox Preflight (PDFBox 3.x Preflight jar)
 const pdfboxJar = process.env.PDFBOX_JAR_PATH
   ? path.resolve(process.env.PDFBOX_JAR_PATH)
-  : path.resolve(__dirname, "../../lib/preflight-app-3.0.6.jar");
+  : "/app/lib/preflight-app-3.0.6.jar";
 
 
 
