@@ -39,6 +39,10 @@ RUN npm install
 # Copy app code
 COPY ./app ./
 
+# Ensure Helpers directory exists
+RUN mkdir -p /app/server/Helpers
+
+
 # Copy ICC profile
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
 
