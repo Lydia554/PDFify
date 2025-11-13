@@ -54,4 +54,3 @@ COPY ./app/server/Helpers/preflight-app-3.0.6.jar ./server/Helpers/preflight-app
 COPY ./app/server/routes/pdfa_def.ps ./pdfa_def.ps
 
 CMD ["node", "server/index.js"]
-
