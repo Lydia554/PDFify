@@ -130,17 +130,18 @@ async function createMerchantPdf(invoiceData) {
     console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 
     // PDFBox + small helper Java class (PdfA3bFixer) fixes /ID, fonts, XMP
-    const pdfBoxCmd = spawnSync(
-      "java",
-      [
-        "-cp",
-        pdfboxJar,
-        "com.yourcompany.PdfA3bFixer",
-        tmpInput,
-        tmpPdfBoxOutput
-      ],
-      { encoding: "utf8" }
-    );
+const pdfBoxCmd = spawnSync(
+  "java",
+  [
+    "-cp",
+    "./server/Helpers/classes:./server/Helpers/preflight-app-3.0.6.jar", // note ':' for Linux-based container
+    "com.yourcompany.PdfA3bFixer",
+    tmpInput,
+    tmpPdfBoxOutput
+  ],
+  { encoding: "utf8" }
+);
+
 
     console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
     console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
