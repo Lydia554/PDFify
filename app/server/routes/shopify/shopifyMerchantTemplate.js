@@ -110,39 +110,37 @@ async function createMerchantPdf(invoiceData) {
   console.log("🟢 Starting createMerchantPdf");
 
   try {
-    //  Create base PDF and embed ZUGFeRD XML
+    // Create base PDF and embed ZUGFeRD XML
     const pdfDoc = await createBasePdf(invoiceData);
     await embedZugferdXml(pdfDoc, invoiceData);
     const prePdfBuffer = await pdfDoc.save({ useObjectStreams: false });
 
-    //  Write temp file for PDFBox
+    // Temp directories
     const tmpDir = path.join(__dirname, "../../tmp_gs");
     fs.mkdirSync(tmpDir, { recursive: true });
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-const pdfboxJar = process.env.PDFBOX_JAR_PATH
-  ? path.resolve(process.env.PDFBOX_JAR_PATH)
-  : path.resolve(__dirname, "../../Helpers/preflight-app-3.0.6.jar");
+    const pdfboxJar = process.env.PDFBOX_JAR_PATH
+      ? path.resolve(process.env.PDFBOX_JAR_PATH)
+      : path.resolve(__dirname, "../../Helpers/preflight-app-3.0.6.jar");
 
+    const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
+    console.log("🟢 Running PDFBox Preflight (A-3B fixer) on:", tmpInput);
+    console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 
-
-const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
-console.log("🟢 Running PDFBox Preflight on:", tmpInput);
-console.log("🟢 Using PDFBox JAR:", pdfboxJar);
-
-const pdfBoxCmd = spawnSync(
-  "java",
-  [
-    "-cp",
-    pdfboxJar,
-    "org.apache.pdfbox.preflight.Validator_A3b",
-    tmpInput,
-    tmpPdfBoxOutput
-  ],
-  { encoding: "utf8" }
-);
-
+    // PDFBox + small helper Java class (PdfA3bFixer) fixes /ID, fonts, XMP
+    const pdfBoxCmd = spawnSync(
+      "java",
+      [
+        "-cp",
+        pdfboxJar,
+        "com.yourcompany.PdfA3bFixer",
+        tmpInput,
+        tmpPdfBoxOutput
+      ],
+      { encoding: "utf8" }
+    );
 
     console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
     console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
@@ -158,40 +156,39 @@ const pdfBoxCmd = spawnSync(
 
     console.log("✅ PDFBox Preflight completed, output:", tmpPdfBoxOutput);
 
-    // 4️⃣ Ghostscript PDF/A-3B enforcement
+    // Ghostscript PDF/A-3B enforcement
     const tmpOutput = path.join(tmpDir, `output-${Date.now()}.pdf`);
     const iccProfilePath =
       process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
         ? process.env.ICC_PROFILE_PATH
         : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-const gs = spawnSync(
-  "gs",
-  [
-    "-dPDFA=3",
-    "-dPDFACompatibilityPolicy=1",
-    "-sDEVICE=pdfwrite",
-    "-dBATCH",
-    "-dNOPAUSE",
-    "-dNOSAFER",
-    "-dEmbedAllFonts=true",
-    "-dSubsetFonts=true",
-    "-dCompressFonts=true",
-    "-sColorConversionStrategy=UseDeviceIndependentColor",
-    "-sProcessColorModel=DeviceRGB",
-    `-sOutputICCProfile=${iccProfilePath}`,
-    `-sOutputFile=${tmpOutput}`,
-    tmpPdfBoxOutput,
-  ],
-  { encoding: "utf8" } 
-);
+    const gs = spawnSync(
+      "gs",
+      [
+        "-dPDFA=3",
+        "-dPDFACompatibilityPolicy=1",
+        "-sDEVICE=pdfwrite",
+        "-dBATCH",
+        "-dNOPAUSE",
+        "-dNOSAFER",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dCompressFonts=true",
+        "-sColorConversionStrategy=UseDeviceIndependentColor",
+        "-sProcessColorModel=DeviceRGB",
+        `-sOutputICCProfile=${iccProfilePath}`,
+        `-sOutputFile=${tmpOutput}`,
+        tmpPdfBoxOutput,
+      ],
+      { encoding: "utf8" }
+    );
 
     if (gs.error || gs.status !== 0) {
       console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
       throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
     }
 
-    // Return final PDF buffer
     return fs.readFileSync(tmpOutput);
   } catch (err) {
     console.error("❌ createMerchantPdf failed:", err);
