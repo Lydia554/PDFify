@@ -134,12 +134,11 @@ console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 const pdfBoxCmd = spawnSync(
   "java",
   [
-    "-jar",
+    "-cp",
     pdfboxJar,
-    "-a",         
-    tmpInput,     
-    "-o",
-    tmpPdfBoxOutput 
+    "org.apache.pdfbox.preflight.Validator_A3b",
+    tmpInput,
+    tmpPdfBoxOutput
   ],
   { encoding: "utf8" }
 );
