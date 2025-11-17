@@ -49,6 +49,11 @@ COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_IC
 # Copy PDFBox jar 
 COPY ./app/server/Helpers/preflight-app-3.0.6.jar ./server/Helpers/preflight-app-3.0.6.jar
 
+# Copy PdfA3bFixer Java class
+COPY ./app/server/Helpers/com/yourcompany/PdfA3bFixer.java ./server/Helpers/com/yourcompany/PdfA3bFixer.java
+
+# Compile PdfA3bFixer
+RUN javac -cp ./server/Helpers/preflight-app-3.0.6.jar ./server/Helpers/com/yourcompany/PdfA3bFixer.java
 
 # Copy PDF/A definition file
 COPY ./app/server/routes/pdfa_def.ps ./pdfa_def.ps
