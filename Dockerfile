@@ -46,22 +46,28 @@ RUN mkdir -p /app/server/Helpers
 # Copy ICC profile
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
 
-# Copy PDFBox JARs
+# Copy PDFBox + helper JARs
 COPY ./app/server/Helpers/pdfbox-3.0.6.jar ./server/Helpers/pdfbox-3.0.6.jar
 COPY ./app/server/Helpers/pdfbox-io-3.0.6.jar ./server/Helpers/pdfbox-io-3.0.6.jar
 COPY ./app/server/Helpers/preflight-3.0.6.jar ./server/Helpers/preflight-3.0.6.jar
 COPY ./app/server/Helpers/fontbox-3.0.6.jar ./server/Helpers/fontbox-3.0.6.jar
 COPY ./app/server/Helpers/xmpbox-3.0.6.jar ./server/Helpers/xmpbox-3.0.6.jar
 COPY ./app/server/Helpers/commons-logging-1.2.jar ./server/Helpers/commons-logging-1.2.jar
+COPY ./app/server/Helpers/activation-1.1.1.jar ./server/Helpers/activation-1.1.1.jar
 
-# Copy PdfA3bFixer Java source
+# Your Preflight JAR (2.0.24)
+COPY ./app/server/Helpers/preflight-app-2.0.24.jar ./server/Helpers/preflight-app-2.0.24.jar
+
+# Copy Java source
 COPY ./app/server/Helpers/com/yourcompany/PdfA3bFixer.java ./server/Helpers/com/yourcompany/PdfA3bFixer.java
 
-# Compile PdfA3bFixer
+# Compile PdfA3bFixer 
 RUN mkdir -p /app/server/Helpers/classes \
-    && javac -cp "./server/Helpers/pdfbox-3.0.6.jar:./server/Helpers/pdfbox-io-3.0.6.jar:./server/Helpers/preflight-3.0.6.jar:./server/Helpers/fontbox-3.0.6.jar:./server/Helpers/xmpbox-3.0.6.jar:./server/Helpers/commons-logging-1.2.jar" \
+    && javac \
+       -cp "./server/Helpers/pdfbox-3.0.6.jar:./server/Helpers/pdfbox-io-3.0.6.jar:./server/Helpers/preflight-3.0.6.jar:./server/Helpers/fontbox-3.0.6.jar:./server/Helpers/xmpbox-3.0.6.jar:./server/Helpers/commons-logging-1.2.jar:./server/Helpers/activation-1.1.1.jar:./server/Helpers/preflight-app-2.0.24.jar" \
        -d ./server/Helpers/classes \
        ./server/Helpers/com/yourcompany/PdfA3bFixer.java
+
 
 # Copy PDF/A definition file
 COPY ./app/server/routes/pdfa_def.ps ./pdfa_def.ps
