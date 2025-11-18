@@ -41,10 +41,13 @@ PDFify is a **production-ready, enterprise-grade PDF generation service** that t
 ```
 Backend:     Node.js 20, Express.js, MongoDB 5.0
 PDF Engine:  Puppeteer (headless Chrome), pdf-lib, Ghostscript
-Compliance:  Python Flask microservice (factur-x, ZUGFeRD)
+Compliance:  ZUGFeRD via xmlbuilder2, PDF/A-3b via pdf-lib (Java optional)
 Payments:    Stripe (subscriptions + token packs)
 Auth:        JWT, bcrypt, AES-256-CBC encryption
 Deployment:  Docker Compose, GitHub Actions CI/CD
+
+Note: Python service exists in docker-compose but is NOT used (can be removed)
+      Java/PDFBox used only for Shopify merchant PDF/A compliance (see ALTERNATIVES.md)
 ```
 
 ---
