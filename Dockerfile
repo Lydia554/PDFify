@@ -61,3 +61,4 @@ RUN mkdir -p /app/server/Helpers/classes \
 COPY ./app/server/routes/pdfa_def.ps ./pdfa_def.ps
 
 CMD ["node", "server/index.js"]
+
