@@ -47,11 +47,6 @@ RUN mkdir -p /app/server/Helpers
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
 
 # Copy PDFBox + helper JARs
-COPY ./app/server/Helpers/pdfbox-3.0.6.jar ./server/Helpers/pdfbox-3.0.6.jar
-COPY ./app/server/Helpers/pdfbox-io-3.0.6.jar ./server/Helpers/pdfbox-io-3.0.6.jar
-COPY ./app/server/Helpers/preflight-3.0.6.jar ./server/Helpers/preflight-3.0.6.jar
-COPY ./app/server/Helpers/fontbox-3.0.6.jar ./server/Helpers/fontbox-3.0.6.jar
-COPY ./app/server/Helpers/xmpbox-3.0.6.jar ./server/Helpers/xmpbox-3.0.6.jar
 COPY ./app/server/Helpers/commons-logging-1.2.jar ./server/Helpers/commons-logging-1.2.jar
 COPY ./app/server/Helpers/activation-1.1.1.jar ./server/Helpers/activation-1.1.1.jar
 
