@@ -148,6 +148,7 @@ const pdfBoxCmd = spawnSync(
     tmpPdfBoxOutput
   ],
   { encoding: "utf8" }
+  
 );
 
 console.log("JAVA STDOUT:", pdfBoxCmd.stdout);

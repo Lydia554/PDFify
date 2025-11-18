@@ -32,7 +32,7 @@ Built for performance, compliance, and modern e-commerce use cases — PDFify po
 
 ### 📁 Merchant-Facing Compliance
 - **PDF/A-3b archival compliance** with Ghostscript validation  
-- **ZUGFeRD 2.1.1 XML embedding** handled natively (via `pdf-lib` + XML builders)  
+- **ZUGFeRD 2.3 XML embedding** handled natively (via `pdf-lib` + XML builders)  
 - ICC output intent profiles for color compliance  
 - XMP metadata embedding + sanitization pipeline  
 - **VeraPDF-ready local copies** for archival and tax authority compatibility  
@@ -74,7 +74,6 @@ Built for performance, compliance, and modern e-commerce use cases — PDFify po
 - Puppeteer — HTML → PDF rendering  
 - pdf-lib — Low-level PDF editing (metadata, ICC, ZUGFeRD XML)  
 - Ghostscript — PDF/A-3b compliance validation  
-- VeraPDF — Standards verification  
 
 **E-commerce Integrations**  
 - Shopify Webhooks API  
@@ -114,18 +113,6 @@ This repository is for **public showcase purposes only**.
 🎥 Video demo coming soon.  
 
 ---
-
-## 📸 Screenshots
-
-### 🧾 Invoice Rendering (Development Mode)
-![Invoice Dev Premium 1](./assets/Invoice-Dev-Premium-1.jpg)  
-![Invoice Dev Premium 2](./assets/Invoice-Dev-Premium-2.jpg)  
-
----
-
-### 🛒 Shopify → PDF Generation
-![Shopify Invoice Premium 1](./assets/Shopify-Invoice-Premium-1.jpg)  
-![Shopify Invoice Premium 2](./assets/Shopify-Invoice-Premium-2.jpg)  
 
 ---
 
