@@ -172,19 +172,22 @@ PDFify/
 │                    Docker Compose Network                    │
 │                                                              │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │   Node.js    │───▶│   MongoDB    │    │   Python     │  │
+│  │   Node.js    │───▶│   MongoDB    │    │   Python*    │  │
 │  │   Express    │    │     5.0      │    │   Flask      │  │
 │  │   Port 3000  │    │  Port 27017  │    │  Port 5000   │  │
 │  │              │    │              │    │              │  │
 │  │ • REST API   │    │ • Users DB   │    │ • ZUGFeRD    │  │
 │  │ • Puppeteer  │    │ • Sessions   │    │ • factur-x   │  │
 │  │ • Ghostscript│    │ • Configs    │    │ • Validation │  │
-│  └──────┬───────┘    └──────────────┘    └──────▲───────┘  │
-│         │                                         │          │
-│         └─────────────────────────────────────────┘          │
-│                   HTTP POST (PDF + metadata)                 │
+│  └──────┬───────┘    └──────────────┘    └──────────────┘  │
+│         │                                                    │
+│         └────────────────────────────────────────           │
+│                                                              │
+│  * Python service exists but is NOT USED (see note below)   │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+**Important Note:** The Python service was originally planned for ZUGFeRD XML embedding using the `factur-x` library. However, the final implementation uses pure Node.js (`pdf-lib` + `xmlbuilder2`) instead. The Python service exists in docker-compose but is never called by the application and can be safely removed. See `ALTERNATIVES.md` and `PDF-A-COMPLIANCE-GUIDE.md` for details.
 
 ### Database Models
 
