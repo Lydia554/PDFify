@@ -8,6 +8,8 @@ import org.apache.pdfbox.preflight.ValidationResult.ValidationError;
 import org.apache.pdfbox.preflight.exception.ValidationException;
 import org.apache.pdfbox.preflight.parser.PreflightParser;
 import org.apache.pdfbox.preflight.PreflightDocument;
+import org.apache.pdfbox.cos.COSDictionary;
+import org.apache.pdfbox.cos.COSName;
 
 public class PdfA3bFixer {
     public static void main(String[] args) throws IOException {
@@ -36,11 +38,9 @@ public class PdfA3bFixer {
                 }
 
                 // Fix missing ID
-                if (preflightDoc.getDocument().getTrailer().getCOSObject().getItem("ID") == null) {
-                    preflightDoc.getDocument().getTrailer().getCOSObject().setItem(
-                        "ID",
-                        preflightDoc.getDocument().getDocumentID()
-                    );
+                COSDictionary trailerDict = (COSDictionary) preflightDoc.getDocument().getTrailer().getCOSObject();
+                if (trailerDict.getItem(COSName.ID) == null) {
+                    trailerDict.setItem(COSName.ID, preflightDoc.getDocument().getDocumentID());
                 }
             }
 
