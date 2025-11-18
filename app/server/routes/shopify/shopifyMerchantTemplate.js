@@ -137,20 +137,19 @@ const pdfBoxCmd = spawnSync(
     [
       "./server/Helpers/classes",
       "./server/Helpers/preflight-app-2.0.24.jar",
-      "./server/Helpers/pdfbox-3.0.6.jar",
-      "./server/Helpers/pdfbox-io-3.0.6.jar",
-      "./server/Helpers/preflight-3.0.6.jar",
-      "./server/Helpers/fontbox-3.0.6.jar",
-      "./server/Helpers/xmpbox-3.0.6.jar",
+      "./server/Helpers/pdfbox-2.0.24.jar",
+      "./server/Helpers/fontbox-2.0.24.jar",
+      "./server/Helpers/xmpbox-2.0.24.jar",
       "./server/Helpers/commons-logging-1.2.jar",
       "./server/Helpers/activation-1.1.1.jar"
-    ].join(":"), // ':' is Linux path separator
+    ].join(":"), // Linux path separator
     "com.yourcompany.PdfA3bFixer",
     tmpInput,
     tmpPdfBoxOutput
   ],
   { encoding: "utf8" }
 );
+
 
 
     console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
