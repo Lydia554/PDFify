@@ -1,82 +1,115 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, jsonify
 from io import BytesIO
 from facturx import generate_facturx_from_file
-from lxml import etree
 import json
+import traceback
+import sys
 
 app = Flask(__name__)
 
-def shopify_invoice_to_en16931(invoice):
-    nsmap = {
-        "rsm": "urn:ferd:CrossIndustryInvoice:invoice:1p0",
-        "ram": "urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100",
-        "qdt": "urn:un:unece:uncefact:data:standard:QualifiedDataType:100",
-        "udt": "urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100",
-    }
+# Configure logging
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-    root = etree.Element("{urn:ferd:CrossIndustryInvoice:invoice:1p0}CrossIndustryInvoice", nsmap=nsmap)
-
-    exchanged_document = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocument")
-    etree.SubElement(exchanged_document, "{%s}ID" % nsmap["ram"]).text = str(invoice.get("orderId", "UNKNOWN"))
-    etree.SubElement(exchanged_document, "{%s}TypeCode" % nsmap["ram"]).text = "380"
-    etree.SubElement(exchanged_document, "{%s}IssueDateTime" % nsmap["ram"]).text = invoice.get("date", "")
-
-    doc_context = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}ExchangedDocumentContext")
-    business_process = etree.SubElement(doc_context, "{%s}GuidelineSpecifiedDocumentContextParameter" % nsmap["ram"])
-    etree.SubElement(business_process, "{%s}ID" % nsmap["ram"]).text = "urn:ferd:CrossIndustryDocument:invoice:1p0:basic"
-
-    trade_transaction = etree.SubElement(root, "{urn:ferd:CrossIndustryInvoice:invoice:1p0}SupplyChainTradeTransaction")
-
-    seller = etree.SubElement(trade_transaction, "{%s}SellerTradeParty" % nsmap["ram"])
-    etree.SubElement(seller, "{%s}Name" % nsmap["ram"]).text = invoice.get("companyName", "YOUR COMPANY GMBH")
-
-    buyer = etree.SubElement(trade_transaction, "{%s}BuyerTradeParty" % nsmap["ram"])
-    etree.SubElement(buyer, "{%s}Name" % nsmap["ram"]).text = invoice.get("customerName", "Valued Customer")
-
-    for idx, item in enumerate(invoice.get("items", []), start=1):
-        line_item = etree.SubElement(trade_transaction, "{%s}IncludedSupplyChainTradeLineItem" % nsmap["ram"])
-        etree.SubElement(line_item, "{%s}LineID" % nsmap["ram"]).text = str(item.get("position", idx))
-
-        product = etree.SubElement(line_item, "{%s}SpecifiedTradeProduct" % nsmap["ram"])
-        etree.SubElement(product, "{%s}Name" % nsmap["ram"]).text = str(item.get("name", ""))
-
-        trade_agreement = etree.SubElement(line_item, "{%s}SpecifiedLineTradeAgreement" % nsmap["ram"])
-        price_elem = etree.SubElement(trade_agreement, "{%s}NetPriceProductTradePrice" % nsmap["ram"])
-        etree.SubElement(price_elem, "{%s}ChargeAmount" % nsmap["ram"]).text = str(item.get("price", 0))
-
-        trade_delivery = etree.SubElement(line_item, "{%s}SpecifiedLineTradeDelivery" % nsmap["ram"])
-        etree.SubElement(trade_delivery, "{%s}BilledQuantity" % nsmap["ram"]).text = str(item.get("quantity", 1))
-
-        trade_settlement = etree.SubElement(line_item, "{%s}SpecifiedLineTradeSettlement" % nsmap["ram"])
-        tax_elem = etree.SubElement(trade_settlement, "{%s}ApplicableTradeTax" % nsmap["ram"])
-        etree.SubElement(tax_elem, "{%s}CalculatedAmount" % nsmap["ram"]).text = str(item.get("tax", 0))
-        etree.SubElement(tax_elem, "{%s}TypeCode" % nsmap["ram"]).text = "VAT"
-        etree.SubElement(tax_elem, "{%s}RateApplicablePercent" % nsmap["ram"]).text = str(item.get("taxRate", 0))
-
-    return root
-
+@app.route("/health", methods=["GET"])
+def health():
+    """Health check endpoint"""
+    try:
+        # Verify factur-x is available
+        from facturx import __version__ as facturx_version
+        return jsonify({
+            "status": "ok",
+            "service": "zugferd-generator",
+            "facturx_version": facturx_version,
+            "python_version": sys.version
+        }), 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return jsonify({
+            "status": "error",
+            "error": str(e)
+        }), 500
 
 @app.route("/generate-zugferd", methods=["POST"])
 def generate_zugferd():
+    """
+    Generate PDF/A-3b compliant PDF with embedded ZUGFeRD XML.
+
+    Expects:
+        - pdfFile: PDF file upload
+        - invoiceData: JSON string with:
+            - xmlContent: Pre-generated ZUGFeRD XML string
+            - orderId: Invoice order ID (optional, for logging)
+            - seller.name: Seller name (optional, for PDF metadata)
+
+    Returns:
+        PDF/A-3b compliant PDF with embedded ZUGFeRD XML
+    """
     try:
+        # Get PDF file
         pdf_file = request.files.get("pdfFile")
         if not pdf_file:
-            return {"error": "Missing pdfFile"}, 400
+            logger.error("Missing pdfFile in request")
+            return jsonify({"error": "Missing pdfFile"}), 400
 
+        # Get invoice data
         invoice_data_json = request.form.get("invoiceData")
         if not invoice_data_json:
-            return {"error": "Missing invoiceData"}, 400
+            logger.error("Missing invoiceData in request")
+            return jsonify({"error": "Missing invoiceData"}), 400
 
         invoice_data = json.loads(invoice_data_json)
+        order_id = invoice_data.get("orderId", "unknown")
+
+        logger.info(f"Processing ZUGFeRD generation for order: {order_id}")
+
+        # Get XML content (pre-generated from Node.js)
+        xml_content = invoice_data.get("xmlContent")
+        if not xml_content:
+            logger.error("Missing xmlContent in invoiceData")
+            return jsonify({"error": "Missing xmlContent in invoiceData"}), 400
+
+        # Read PDF buffer
         input_pdf_io = BytesIO(pdf_file.read())
+        logger.info(f"PDF file size: {len(input_pdf_io.getvalue())} bytes")
 
-        xml_root = shopify_invoice_to_en16931(invoice_data)
+        # Convert XML string to bytes if needed
+        if isinstance(xml_content, str):
+            xml_bytes = xml_content.encode('utf-8')
+        else:
+            xml_bytes = xml_content
 
+        logger.info(f"XML content size: {len(xml_bytes)} bytes")
+
+        # Prepare PDF metadata
+        pdf_metadata = {
+            'author': invoice_data.get('seller', {}).get('name', 'PDFify'),
+            'title': f"Invoice {order_id}",
+            'subject': 'ZUGFeRD Invoice'
+        }
+
+        logger.info(f"Generating PDF/A-3b with factur-x, level: EN16931")
+
+        # Generate PDF/A-3b with embedded ZUGFeRD XML using factur-x
+        # This handles ALL PDF/A-3b compliance requirements:
+        # - AFRelationship metadata
+        # - XMP extensions schema
+        # - ICC color profile
+        # - OutputIntent
+        # - Proper file specification
         output_pdf_bytes = generate_facturx_from_file(
             input_pdf_io,
-            xml_root,
-            facturx_level="EN16931"
+            xml_bytes,
+            facturx_level="EN16931",  # ZUGFeRD 2.1.1 / EN16931
+            pdf_metadata=pdf_metadata
         )
+
+        logger.info(f"✅ Successfully generated PDF/A-3b for order: {order_id}")
+        logger.info(f"Output PDF size: {len(output_pdf_bytes)} bytes")
 
         output_pdf_io = BytesIO(output_pdf_bytes)
         output_pdf_io.seek(0)
@@ -84,14 +117,37 @@ def generate_zugferd():
         return send_file(
             output_pdf_io,
             mimetype="application/pdf",
-            as_attachment=True,
-            download_name=f"Invoice-ZUGFeRD-{invoice_data.get('orderId', 'unknown')}.pdf"
+            as_attachment=False,
+            download_name=f"invoice-{order_id}.pdf"
         )
 
+    except json.JSONDecodeError as e:
+        logger.error(f"JSON decode error: {e}")
+        return jsonify({
+            "error": "Invalid JSON in invoiceData",
+            "details": str(e)
+        }), 400
     except Exception as e:
-        print("❌ Python ZUGFeRD service error:", e)
-        return {"error": "ZUGFeRD generation failed", "details": str(e)}, 500
+        logger.error(f"❌ ZUGFeRD generation error: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "error": "ZUGFeRD generation failed",
+            "details": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
 
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "Endpoint not found"}), 404
+
+@app.errorhandler(500)
+def internal_error(e):
+    logger.error(f"Internal server error: {e}")
+    return jsonify({"error": "Internal server error"}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    logger.info("🚀 Starting ZUGFeRD PDF/A-3b Generation Service")
+    logger.info("Endpoints available:")
+    logger.info("  - GET  /health")
+    logger.info("  - POST /generate-zugferd")
+    app.run(host="0.0.0.0", port=5000, debug=True)

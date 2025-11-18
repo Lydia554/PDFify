@@ -12,6 +12,8 @@ const { incrementUsage } = require("../utils/usageUtils");
 const { generateInvoiceHTML } = require("../../templates/english.js");
 const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js");
 const { generateZugferdXML, embedXmp, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
+const { generateZugferdPdfWithFallback, checkZugferdServiceHealth } = require("../Helpers/zugferd-client");
+const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 const locales = {
   sl: require("../../locales/sl.json"),
@@ -72,16 +74,44 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   // Only run this for Pro users + compliant toggle
   if (user.planType === "pro" && invoiceData.compliant) {
-    const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuffer);
-    const zugferdXml = generateZugferdXML(invoiceData);
-    await embedXmp(pdfDocPro);
-    embedXmlIntoPdf(pdfDocPro, zugferdXml);
-    pdfBuffer = await pdfDocPro.save();
+    log(`🔐 Generating PDF/A-3b compliant invoice for order: ${invoiceData.orderId}`);
 
-    // Add ICC profile via Ghostscript (PDF/A-3b)
-    if (!DEBUG_MODE) {
-      const iccPath = require("path").join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
-      pdfBuffer = await makePdfA3b(pdfBuffer, { iccProfilePath: iccPath });
+    // Generate ZUGFeRD XML using Node.js generator
+    const zugferdXml = generateZugferdXml(invoiceData);
+    log(`✅ Generated ZUGFeRD XML (${zugferdXml.length} characters)`);
+
+    // Try to use Python factur-x service for guaranteed compliance
+    // Falls back to Node.js implementation if service unavailable
+    const fallbackFn = async (pdfBuf, invData) => {
+      log(`⚠️  Using Node.js fallback for PDF/A-3b generation`);
+      const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuf);
+      const zugferdXmlFallback = generateZugferdXML(invData);
+      await embedXmp(pdfDocPro);
+      embedXmlIntoPdf(pdfDocPro, zugferdXmlFallback);
+      let fallbackBuffer = await pdfDocPro.save();
+
+      // Add ICC profile via Ghostscript (PDF/A-3b)
+      if (!DEBUG_MODE) {
+        const iccPath = require("path").join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
+        fallbackBuffer = await makePdfA3b(fallbackBuffer, { iccProfilePath: iccPath });
+      }
+
+      return Buffer.from(fallbackBuffer);
+    };
+
+    try {
+      // Use factur-x Python service with fallback
+      pdfBuffer = await generateZugferdPdfWithFallback(
+        pdfBuffer,
+        invoiceData,
+        zugferdXml,
+        fallbackFn
+      );
+      log(`✅ PDF/A-3b generation complete for order: ${invoiceData.orderId}`);
+    } catch (error) {
+      log(`❌ PDF/A-3b generation failed: ${error.message}`);
+      // If both Python service and fallback fail, throw error
+      throw error;
     }
   }
 
