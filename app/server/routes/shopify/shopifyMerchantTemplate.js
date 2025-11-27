@@ -133,8 +133,6 @@ async function createMerchantPdf(invoiceData) {
 const pdfBoxCmd = spawnSync(
   "java",
   [
-    "--add-modules",
-    "java.xml.bind",
     "-cp",
     [
       "./server/Helpers/classes",
@@ -143,7 +141,10 @@ const pdfBoxCmd = spawnSync(
       "./server/Helpers/fontbox-2.0.24.jar",
       "./server/Helpers/xmpbox-2.0.24.jar",
       "./server/Helpers/commons-logging-1.2.jar",
-      "./server/Helpers/activation-1.1.1.jar"
+      "./server/Helpers/activation-1.1.1.jar",
+      "./server/Helpers/jaxb-api.jar", 
+      "./server/Helpers/jaxb-core.jar",
+      "./server/Helpers/jaxb-impl.jar"
     ].join(path.delimiter),
     "com.yourcompany.PdfA3bFixer",
     tmpInput,
