@@ -88,7 +88,7 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
 </x:xmpmeta>
 <?xpacket end='w'?>`;
 
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, 'utf8'), {
+  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, 'utf8'), {
     Type: PDFName.of('Metadata'),
     Subtype: PDFName.of('XML'),
   });
