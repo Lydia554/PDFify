@@ -32,8 +32,8 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
   const fileSpec = pdfDoc.context.obj({
     Type: PDFName.of("Filespec"),
-    F: PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`),
-    UF: PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`),
+    F: PDFHexString.fromText(`factur-x.xml`),
+    UF: PDFHexString.fromText(`factur-x.xml`),
     EF: pdfDoc.context.obj({ F: xmlRef }),
     AFRelationship: PDFName.of("Alternative"),
   });
@@ -44,7 +44,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
     console.log("📁 Names dictionary not found, creating new one");
     names = pdfDoc.context.obj({
       EmbeddedFiles: pdfDoc.context.obj({
-        Names: [PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`), fileSpecRef],
+        Names: [PDFHexString.fromText(`factur-x.xml`), fileSpecRef],
       }),
     });
     pdfDoc.catalog.set(PDFName.of("Names"), names);
@@ -54,7 +54,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
     if (embeddedFiles) {
       const namesArray = embeddedFiles.lookup(PDFName.of("Names"));
       if (namesArray) {
-        namesArray.push(PDFHexString.fromText(`ZUGFeRD-invoice-${invoiceData.orderId}.xml`), fileSpecRef);
+        namesArray.push(PDFHexString.fromText(`factur-x.xml`), fileSpecRef);
       } else {
         console.warn("⚠️ EmbeddedFiles.Names not found, cannot append");
       }
