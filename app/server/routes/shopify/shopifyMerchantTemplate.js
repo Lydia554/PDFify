@@ -142,9 +142,9 @@ const pdfBoxCmd = spawnSync(
       "./server/Helpers/xmpbox-2.0.24.jar",
       "./server/Helpers/commons-logging-1.2.jar",
       "./server/Helpers/activation-1.1.1.jar",
-      "./server/Helpers/jaxb-api.jar", 
-      "./server/Helpers/jaxb-core.jar",
-      "./server/Helpers/jaxb-impl.jar"
+      "./server/Helpers/jaxb-api-2.3.1.jar",
+      "./server/Helpers/jaxb-core-2.3.0.1.jar",
+      "./server/Helpers/jaxb-impl-2.3.3.jar"
     ].join(path.delimiter),
     "com.yourcompany.PdfA3bFixer",
     tmpInput,
