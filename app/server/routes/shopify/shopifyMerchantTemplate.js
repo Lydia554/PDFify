@@ -112,8 +112,7 @@ async function createMerchantPdf(invoiceData) {
   try {
     // Create base PDF and embed ZUGFeRD XML
     const pdfDoc = await createBasePdf(invoiceData);
-    await embedZugferdXml(pdfDoc, invoiceData);
-    const prePdfBuffer = await pdfDoc.save({ useObjectStreams: false });
+    const prePdfBuffer = await finalizePdf(await pdfDoc.save({ useObjectStreams: false }), invoiceData);
 
     // Temp directories
     const tmpDir = path.join(__dirname, "../../tmp_gs");
