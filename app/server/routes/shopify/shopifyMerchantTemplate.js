@@ -4,6 +4,8 @@ const { spawnSync } = require("child_process");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const { cleanPdfBuffer, embedZugferdXml, finalizePdf } = require("../../Helpers/pdf-helpers");
+const puppeteer = require("puppeteer"); // Added puppeteer import
+const { generateInvoiceHTML } = require("./merchantInvoice"); // Added generateInvoiceHTML import
 
 // ---------------------
 // Map Shopify order → PDF data
@@ -54,65 +56,28 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Create minimal PDF
-// ---------------------
-async function createBasePdf(data) {
-  const pdfDoc = await PDFDocument.create();
-  pdfDoc.registerFontkit(fontkit);
-
-  const regularFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
-  const boldFontBytes = fs.readFileSync(path.resolve(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf"));
-  const regularFont = await pdfDoc.embedFont(regularFontBytes);
-  const boldFont = await pdfDoc.embedFont(boldFontBytes);
-
-  const page = pdfDoc.addPage([595, 842]);
-  let y = 780;
-  const rowHeight = 24;
-  const colWidths = [180, 60, 80, 80, 80];
-  const headers = ["Item", "Qty", "Price", "Tax", "Total"];
-
-  const asciiSafe = (str) => (str ? str.replace(/[^\x20-\x7E]/g, "") : " ");
-  data.customerName = asciiSafe(data.customerName);
-  data.companyName = asciiSafe(data.companyName);
-  data.items.forEach((i) => (i.name = asciiSafe(i.name)));
-
-  // Header
-  page.drawRectangle({ x: 0, y: 780, width: 595, height: 40, color: rgb(0.18, 0.31, 0.61) });
-  page.drawText(String(data.companyName), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1, 1, 1) });
-  page.drawText(`INVOICE #${String(data.orderId)}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
-
-  // Table
-  y -= 70;
-  let x = 50;
-  headers.forEach((header, i) => {
-    page.drawText(asciiSafe(header), { x, y, size: 10, font: boldFont });
-    x += colWidths[i];
-  });
-  y -= rowHeight;
-
-  data.items.forEach((item) => {
-    let x = 50;
-    const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
-    row.forEach((cell, i) => {
-      page.drawText(cell, { x, y, size: 10, font: regularFont });
-      x += colWidths[i];
-    });
-    y -= rowHeight;
-  });
-
-  return pdfDoc;
-}
-
-// ---------------------
 // Create Merchant PDF: PDFBox + Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
   console.log("🟢 Starting createMerchantPdf");
 
   try {
-    // Create base PDF and embed ZUGFeRD XML
-    const pdfDoc = await createBasePdf(invoiceData);
-    const prePdfBuffer = await finalizePdf(await pdfDoc.save({ useObjectStreams: false }), invoiceData);
+    // Generate HTML for the invoice
+    const html = await generateInvoiceHTML(invoiceData);
+
+    // Launch Puppeteer and generate PDF
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    const puppeteerPdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: 40, bottom: 40, left: 40, right: 40 },
+    });
+    await browser.close();
+
+    // Embed ZUGFeRD XML and finalize PDF/A
+    const prePdfBuffer = await finalizePdf(puppeteerPdfBuffer, invoiceData);
 
     // Temp directories
     const tmpDir = path.join(__dirname, "../../tmp_gs");
@@ -216,6 +181,5 @@ console.log("JAVA STATUS:", pdfBoxCmd.status);
 
 module.exports = {
   mapOrderToPdfData,
-  createBasePdf,
-  createMerchantPdf,
+  createMerchantPdf, 
 };
