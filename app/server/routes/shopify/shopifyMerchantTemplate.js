@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { PDFDocument, rgb, cmyk } = require("pdf-lib");
+const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const { cleanPdfBuffer, embedZugferdXml, finalizePdf } = require("../../Helpers/pdf-helpers");
 
@@ -77,15 +77,15 @@ async function createBasePdf(data) {
   data.items.forEach((i) => (i.name = asciiSafe(i.name)));
 
   // Header
-  page.drawRectangle({ x: 0, y: 780, width: 595, height: 40, color: cmyk(0.69, 0.49, 0, 0.39) });
-  page.drawText(String(data.companyName), { x: 220, y: 794, size: 16, font: boldFont, color: cmyk(0, 0, 0, 0) });
-  page.drawText(`INVOICE #${String(data.orderId)}`, { x: 50, y, size: 18, font: boldFont, color: cmyk(0.71, 0.71, 0, 0.3) });
+  page.drawRectangle({ x: 0, y: 780, width: 595, height: 40, color: rgb(0.18, 0.31, 0.61) });
+  page.drawText(String(data.companyName), { x: 220, y: 794, size: 16, font: boldFont, color: rgb(1, 1, 1) });
+  page.drawText(`INVOICE #${String(data.orderId)}`, { x: 50, y, size: 18, font: boldFont, color: rgb(0.2, 0.2, 0.7) });
 
   // Table
   y -= 70;
   let x = 50;
   headers.forEach((header, i) => {
-    page.drawText(asciiSafe(header), { x, y, size: 10, font: boldFont, color: cmyk(0, 0, 0, 1) });
+    page.drawText(asciiSafe(header), { x, y, size: 10, font: boldFont });
     x += colWidths[i];
   });
   y -= rowHeight;
@@ -94,7 +94,7 @@ async function createBasePdf(data) {
     let x = 50;
     const row = [item.name, String(item.quantity), item.price.toFixed(2), item.tax.toFixed(2), item.total.toFixed(2)];
     row.forEach((cell, i) => {
-      page.drawText(cell, { x, y, size: 10, font: regularFont, color: cmyk(0, 0, 0, 1) });
+      page.drawText(cell, { x, y, size: 10, font: regularFont });
       x += colWidths[i];
     });
     y -= rowHeight;
@@ -129,24 +129,22 @@ async function createMerchantPdf(invoiceData) {
     console.log("🟢 Using PDFBox JAR:", pdfboxJar);
 
     // PDFBox + small helper Java class (PdfA3bFixer) fixes /ID, fonts, XMP
-    const classPaths = [
-      path.join(__dirname, "../../Helpers/classes"),
-      path.join(__dirname, "../../Helpers/preflight-app-2.0.24.jar"),
-      path.join(__dirname, "../../Helpers/pdfbox-2.0.24.jar"),
-      path.join(__dirname, "../../Helpers/fontbox-2.0.24.jar"),
-      path.join(__dirname, "../../Helpers/xmpbox-2.0.24.jar"),
-      path.join(__dirname, "../../Helpers/commons-logging-1.2.jar"),
-      path.join(__dirname, "../../Helpers/activation-1.1.1.jar"),
-      path.join(__dirname, "../../Helpers/jaxb-api-2.3.1.jar"),
-      path.join(__dirname, "../../Helpers/jaxb-core-2.3.0.1.jar"),
-      path.join(__dirname, "../../Helpers/jaxb-impl-2.3.3.jar"),
-    ];
-
 const pdfBoxCmd = spawnSync(
   "java",
   [
     "-cp",
-    classPaths.join(path.delimiter),
+    [
+      "./server/Helpers/classes",
+      "./server/Helpers/preflight-app-2.0.24.jar",
+      "./server/Helpers/pdfbox-2.0.24.jar",
+      "./server/Helpers/fontbox-2.0.24.jar",
+      "./server/Helpers/xmpbox-2.0.24.jar",
+      "./server/Helpers/commons-logging-1.2.jar",
+      "./server/Helpers/activation-1.1.1.jar",
+      "./server/Helpers/jaxb-api-2.3.1.jar",
+      "./server/Helpers/jaxb-core-2.3.0.1.jar",
+      "./server/Helpers/jaxb-impl-2.3.3.jar"
+    ].join(path.delimiter),
     "com.yourcompany.PdfA3bFixer",
     tmpInput,
     tmpPdfBoxOutput
@@ -196,7 +194,7 @@ console.log("JAVA STATUS:", pdfBoxCmd.status);
         "-dSubsetFonts=true",
         "-dCompressFonts=true",
         "-sColorConversionStrategy=UseDeviceIndependentColor",
-        "-sProcessColorModel=DeviceCMYK",
+        "-sProcessColorModel=DeviceRGB",
         `-sOutputICCProfile=${iccProfilePath}`,
         `-sOutputFile=${tmpOutput}`,
         tmpPdfBoxOutput,
