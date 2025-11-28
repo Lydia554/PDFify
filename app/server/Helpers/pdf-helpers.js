@@ -75,19 +75,27 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
   const now = new Date();
+  const creator = invoiceData.creator || "PDFify";
+  const producer = "pdf-lib";
+
+  // Set metadata in Info dictionary to sync with XMP
+  pdfDoc.setTitle(invoiceData.orderId);
+  pdfDoc.setCreator(creator);
+  pdfDoc.setProducer(producer);
+  pdfDoc.setCreationDate(now);
+  pdfDoc.setModificationDate(now);
 
   // Embed the sRGB ICC profile
-  const iccProfileBytes = fs.readFileSync(path.resolve(__dirname, './sRGB_v4_ICC_preference.icc'));
+  const iccProfileBytes = fs.readFileSync(path.resolve(__dirname, './sRGB2014.icc'));
   const iccProfileStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
   const iccProfileRef = pdfDoc.context.register(iccProfileStream);
 
-  // Add the OutputIntents dictionary
+  // Add the OutputIntents dictionary for PDF/A
   pdfDoc.catalog.set(
     PDFName.of('OutputIntents'),
     pdfDoc.context.obj([
       {
         Type: 'OutputIntent',
-        S: 'GTS_PDFA1',
         OutputConditionIdentifier: PDFHexString.fromText('sRGB IEC61966-2.1'),
         Info: PDFHexString.fromText('sRGB IEC61966-2.1'),
         DestOutputProfile: iccProfileRef,
@@ -113,12 +121,13 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
       </dc:title>
       <dc:creator>
         <rdf:Seq>
-          <rdf:li>${invoiceData.creator || "PDFify"}</rdf:li>
+          <rdf:li>${creator}</rdf:li>
         </rdf:Seq>
       </dc:creator>
+      <xmp:CreatorTool>${creator}</xmp:CreatorTool>
       <xmp:CreateDate>${now.toISOString()}</xmp:CreateDate>
       <xmp:ModifyDate>${now.toISOString()}</xmp:ModifyDate>
-      <pdf:Producer>pdf-lib</pdf:Producer>
+      <pdf:Producer>${producer}</pdf:Producer>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
