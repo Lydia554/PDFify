@@ -74,15 +74,28 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 async function finalizePdf(originalPdfBuffer, invoiceData) {
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
+  const now = new Date();
 
   // Only embed PDF/A-3B identification XMP
   const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
     <rdf:Description rdf:about=''
-        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
-      <pdfaid:part>3</pdfaid:part>
+        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
+        xmlns:dc='http://purl.org/dc/elements/1.1/'
+        xmlns:xmp='http://ns.adobe.com/xap/1.0/'
+        xmlns:pdf='http://ns.adobe.com/pdf/1.3/'>
+      <pdfaid:part>1</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
+      <dc:title>${invoiceData.orderId}</dc:title>
+      <dc:creator>
+        <rdf:Seq>
+          <rdf:li>${invoiceData.creator || "PDFify"}</rdf:li>
+        </rdf:Seq>
+      </dc:creator>
+      <xmp:CreateDate>${now.toISOString()}</xmp:CreateDate>
+      <xmp:ModifyDate>${now.toISOString()}</xmp:ModifyDate>
+      <pdf:Producer>pdf-lib</pdf:Producer>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
