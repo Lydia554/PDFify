@@ -23,7 +23,8 @@ function mapOrderToPdfData(order, shopConfig = {}) {
       unitCode: "EA",
       price,
       net,
-      tax,
+      tax
+      ,
       total,
       taxRate: 21,
       currency: order.currency || "EUR",
@@ -57,6 +58,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF: PDFBox + Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
+  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v2) 🚀");
   console.log("🟢 Starting createMerchantPdf");
 
   try {
