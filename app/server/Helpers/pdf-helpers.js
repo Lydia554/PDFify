@@ -55,9 +55,9 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
       const namesArray = embeddedFiles.lookup(PDFName.of("Names"));
       if (namesArray) {
         namesArray.push(PDFHexString.fromText(`factur-x.xml`), fileSpecRef);
-      } else {
-        console.warn("⚠️ EmbeddedFiles.Names not found, cannot append");
       }
+    } else {
+      console.warn("⚠️ EmbeddedFiles.Names not found, cannot append");
     }
   }
 
@@ -72,6 +72,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Add XMP + ZUGFeRD XML
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
+  console.log("📄 Using SIMPLIFIED finalizePdf function (v3) 📄");
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
 
