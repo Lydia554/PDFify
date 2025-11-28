@@ -1,11 +1,9 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { PDFDocument, rgb } = require("pdf-lib");
-const fontkit = require("@pdf-lib/fontkit");
-const { cleanPdfBuffer, embedZugferdXml, finalizePdf } = require("../../Helpers/pdf-helpers");
-const puppeteer = require("puppeteer"); // Added puppeteer import
-const { generateInvoiceHTML } = require("./merchantInvoice"); // Added generateInvoiceHTML import
+const { finalizePdf } = require("../../Helpers/pdf-helpers");
+const puppeteer = require("puppeteer"); 
+const { generateInvoiceHTML } = require("./merchantInvoice"); 
 
 // ---------------------
 // Map Shopify order → PDF data

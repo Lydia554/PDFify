@@ -85,24 +85,6 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setCreationDate(now);
   pdfDoc.setModificationDate(now);
 
-  // Embed the sRGB ICC profile
-  const iccProfileBytes = fs.readFileSync(path.resolve(__dirname, './sRGB2014.icc'));
-  const iccProfileStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
-  const iccProfileRef = pdfDoc.context.register(iccProfileStream);
-
-  // Add the OutputIntents dictionary for PDF/A
-  pdfDoc.catalog.set(
-    PDFName.of('OutputIntents'),
-    pdfDoc.context.obj([
-      {
-        Type: 'OutputIntent',
-        OutputConditionIdentifier: PDFHexString.fromText('sRGB IEC61966-2.1'),
-        Info: PDFHexString.fromText('sRGB IEC61966-2.1'),
-        DestOutputProfile: iccProfileRef,
-      },
-    ])
-  );
-
   // Create and embed compliant XMP
   const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
