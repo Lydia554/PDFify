@@ -132,7 +132,6 @@ async function createMerchantPdf(invoiceData) {
         "-cp",
         [
           "./server/Helpers/classes",
-          pdfboxJar,
           path.join(__dirname, "../../Helpers/pdfbox-2.0.24.jar"),
           path.join(__dirname, "../../Helpers/fontbox-2.0.24.jar"),
           path.join(__dirname, "../../Helpers/xmpbox-2.0.24.jar"),
