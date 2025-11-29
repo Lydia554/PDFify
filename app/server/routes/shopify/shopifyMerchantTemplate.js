@@ -57,7 +57,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF: PDFBox + Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v3 - Reordered) 🚀");
+  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v3 - Reverted Order) 🚀");
   console.log("🟢 Starting createMerchantPdf");
 
   try {
@@ -84,8 +84,48 @@ async function createMerchantPdf(invoiceData) {
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-    // 5. Run Ghostscript FIRST to enforce PDF/A compliance
-    const tmpGsOutput = path.join(tmpDir, `gs-out-${Date.now()}.pdf`);
+    // 5. Run PDFBox FIRST
+    const pdfboxJar = process.env.PDFBOX_JAR_PATH
+      ? path.resolve(process.env.PDFBOX_JAR_PATH)
+      : path.resolve(__dirname, "../../Helpers/preflight-app-2.0.24.jar");
+    const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
+    console.log("🟢 Running PDFBox Preflight (A-3B fixer) on initial PDF...");
+    
+    const pdfBoxCmd = spawnSync(
+      "java",
+      [
+        "-cp",
+        [
+          "./server/Helpers/classes",
+          path.join(__dirname, "../../Helpers/pdfbox-tools-2.0.24.jar"),
+          path.join(__dirname, "../../Helpers/pdfbox-2.0.24.jar"),
+          path.join(__dirname, "../../Helpers/fontbox-2.0.24.jar"),
+          path.join(__dirname, "../../Helpers/xmpbox-2.0.24.jar"),
+          path.join(__dirname, "../../Helpers/commons-logging-1.2.jar"),
+          path.join(__dirname, "../../Helpers/activation-1.1.1.jar"),
+          path.join(__dirname, "../../Helpers/jaxb-api-2.3.1.jar"),
+          path.join(__dirname, "../../Helpers/jaxb-core-2.3.0.1.jar"),
+          path.join(__dirname, "../../Helpers/jaxb-impl-2.3.3.jar"),
+        ].join(path.delimiter),
+        "com.yourcompany.PdfA3bFixer",
+        tmpInput, 
+        tmpPdfBoxOutput
+      ],
+      { encoding: "utf8" }
+    );
+
+    console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
+    console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
+
+    if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
+      console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
+      throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
+    }
+    console.log("✅ PDFBox Preflight completed.");
+
+
+    // 6. Run Ghostscript on the PDFBox output
+    const finalOutput = path.join(tmpDir, `final-out-${Date.now()}.pdf`);
     const iccProfilePath =
       process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
         ? process.env.ICC_PROFILE_PATH
@@ -107,8 +147,8 @@ async function createMerchantPdf(invoiceData) {
         "-sColorConversionStrategy=UseDeviceIndependentColor",
         "-sProcessColorModel=DeviceRGB",
         `-sOutputICCProfile=${iccProfilePath}`,
-        `-sOutputFile=${tmpGsOutput}`,
-        tmpInput, // Use the pdf-lib output as input
+        `-sOutputFile=${finalOutput}`,
+        tmpPdfBoxOutput, 
       ],
       { encoding: "utf8" }
     );
@@ -118,46 +158,6 @@ async function createMerchantPdf(invoiceData) {
       throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
     }
     console.log("✅ Ghostscript conversion successful.");
-
-    // 6. Run PDFBox on the Ghostscript output for final validation and fixing
-    const pdfboxJar = process.env.PDFBOX_JAR_PATH
-      ? path.resolve(process.env.PDFBOX_JAR_PATH)
-      : path.resolve(__dirname, "../../Helpers/preflight-app-2.0.24.jar");
-    const finalOutput = path.join(tmpDir, `final-out-${Date.now()}.pdf`);
-    
-    console.log("🟢 Running PDFBox Preflight (A-3B fixer) on Ghostscript output...");
-    const pdfBoxCmd = spawnSync(
-      "java",
-      [
-        "-cp",
-        [
-          "./server/Helpers/classes",
-          path.join(__dirname, "../../Helpers/pdfbox-tools-2.0.24.jar"),
-          path.join(__dirname, "../../Helpers/fontbox-2.0.24.jar"),
-          path.join(__dirname, "../../Helpers/activation-1.1.1.jar"),
-          path.join(__dirname, "../../Helpers/jaxb-api-2.3.1.jar"),
-          path.join(__dirname, "../../Helpers/jaxb-core-2.3.0.1.jar"),
-          path.join(__dirname, "../../Helpers/jaxb-impl-2.3.3.jar"),
-        ].join(path.delimiter),
-        "com.yourcompany.PdfA3bFixer",
-        tmpGsOutput, // Use the Ghostscript output as input
-        finalOutput
-      ],
-      { encoding: "utf8" }
-    );
-
-    console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
-    console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
-
-    if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
-      console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
-      throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
-    }
-
-    if (!fs.existsSync(finalOutput) || fs.statSync(finalOutput).size === 0) {
-      throw new Error("PDFBox did not produce a valid output PDF.");
-    }
-    console.log("✅ PDFBox Preflight completed, output:", finalOutput);
     
     return fs.readFileSync(finalOutput);
   } catch (err) {
