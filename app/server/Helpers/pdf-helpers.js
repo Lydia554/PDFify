@@ -72,6 +72,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Add XMP + ZUGFeRD XML
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
+  console.log("📄 Using FULL finalizePdf function (v4 - PDFBox Enabled) ✨📄"); // Updated log message
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
   const now = new Date();
