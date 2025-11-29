@@ -23,8 +23,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
       unitCode: "EA",
       price,
       net,
-      tax
-      ,
+      tax,
       total,
       taxRate: 21,
       currency: order.currency || "EUR",
