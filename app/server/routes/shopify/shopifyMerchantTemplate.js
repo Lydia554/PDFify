@@ -85,9 +85,6 @@ async function createMerchantPdf(invoiceData) {
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
     // 5. Run PDFBox FIRST
-    const pdfboxJar = process.env.PDFBOX_JAR_PATH
-      ? path.resolve(process.env.PDFBOX_JAR_PATH)
-      : path.resolve(__dirname, "../../Helpers/preflight-app-2.0.24.jar");
     const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
     console.log("🟢 Running PDFBox Preflight (A-3B fixer) on initial PDF...");
     
@@ -97,10 +94,11 @@ async function createMerchantPdf(invoiceData) {
         "-cp",
         [
           "./server/Helpers/classes",
-          path.join(__dirname, "../../Helpers/pdfbox-tools-2.0.24.jar"),
+          path.join(__dirname, "../../Helpers/pdfbox-2.0.24.jar"),
           path.join(__dirname, "../../Helpers/fontbox-2.0.24.jar"),
           path.join(__dirname, "../../Helpers/xmpbox-2.0.24.jar"),
           path.join(__dirname, "../../Helpers/commons-logging-1.2.jar"),
+          path.join(__dirname, "../../Helpers/pdfbox-tools-2.0.24.jar"),
           path.join(__dirname, "../../Helpers/activation-1.1.1.jar"),
           path.join(__dirname, "../../Helpers/jaxb-api-2.3.1.jar"),
           path.join(__dirname, "../../Helpers/jaxb-core-2.3.0.1.jar"),
