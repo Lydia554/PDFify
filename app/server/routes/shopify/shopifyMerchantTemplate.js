@@ -57,7 +57,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF: PDFBox + Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v-final - Skip PDFBox) 🚀");
+  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v6 - Final Evidence-Based Fix) 🚀");
   console.log("🟢 Starting createMerchantPdf");
 
   try {
@@ -84,8 +84,44 @@ async function createMerchantPdf(invoiceData) {
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-    // 5. Run Ghostscript to enforce PDF/A compliance
-    const tmpGsOutput = path.join(tmpDir, `gs-out-${Date.now()}.pdf`);
+    // 5. Run PDFBox FIRST with the minimal, correct classpath
+    const pdfboxJar = process.env.PDFBOX_JAR_PATH
+      ? path.resolve(process.env.PDFBOX_JAR_PATH)
+      : path.resolve(__dirname, "../../Helpers/preflight-app-2.0.24.jar");
+    const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
+    console.log("🟢 Running PDFBox Preflight (A-3B fixer) on initial PDF...");
+    
+    const pdfBoxCmd = spawnSync(
+      "java",
+      [
+        "-cp",
+        [
+          "./server/Helpers/classes",
+          pdfboxJar, // preflight-app-2.0.24.jar
+          path.join(__dirname, "../../Helpers/activation-1.1.1.jar"),
+          path.join(__dirname, "../../Helpers/jaxb-api-2.3.1.jar"),
+          path.join(__dirname, "../../Helpers/jaxb-core-2.3.0.1.jar"),
+          path.join(__dirname, "../../Helpers/jaxb-impl-2.3.3.jar"),
+        ].join(path.delimiter),
+        "com.yourcompany.PdfA3bFixer",
+        tmpInput, 
+        tmpPdfBoxOutput
+      ],
+      { encoding: "utf8" }
+    );
+
+    console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
+    console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
+
+    if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
+      console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
+      throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
+    }
+    console.log("✅ PDFBox Preflight completed.");
+
+
+    // 6. Run Ghostscript on the PDFBox output
+    const finalOutput = path.join(tmpDir, `final-out-${Date.now()}.pdf`);
     const iccProfilePath =
       process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
         ? process.env.ICC_PROFILE_PATH
@@ -107,8 +143,8 @@ async function createMerchantPdf(invoiceData) {
         "-sColorConversionStrategy=UseDeviceIndependentColor",
         "-sProcessColorModel=DeviceRGB",
         `-sOutputICCProfile=${iccProfilePath}`,
-        `-sOutputFile=${tmpGsOutput}`,
-        tmpInput, 
+        `-sOutputFile=${finalOutput}`,
+        tmpPdfBoxOutput, 
       ],
       { encoding: "utf8" }
     );
@@ -117,11 +153,9 @@ async function createMerchantPdf(invoiceData) {
       console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
       throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
     }
-    console.log("✅ Ghostscript conversion successful. Returning this PDF.");
-
-    // 6. PDFBox step is SKIPPED as a workaround for the Java classpath error.
+    console.log("✅ Ghostscript conversion successful.");
     
-    return fs.readFileSync(tmpGsOutput);
+    return fs.readFileSync(finalOutput);
   } catch (err) {
     console.error("❌ createMerchantPdf failed:", err);
     throw err;
