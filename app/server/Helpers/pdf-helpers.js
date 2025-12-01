@@ -69,79 +69,12 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 // -----------------------------
-// Finalize PDF: Add XMP + ZUGFeRD XML
+// Finalize PDF: Add ZUGFeRD XML ONLY
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v4 - PDFBox Enabled) ✨📄"); // Updated log message
+  console.log("📄 Using MINIMAL finalizePdf function (v5 - XML Only) ✨📄");
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
-  const now = new Date();
-  const creator = invoiceData.creator || "PDFify";
-  const producer = "pdf-lib";
-
-  // Set metadata in Info dictionary to sync with XMP
-  pdfDoc.setTitle(invoiceData.orderId);
-  pdfDoc.setCreator(creator);
-  pdfDoc.setProducer(producer);
-  pdfDoc.setCreationDate(now);
-  pdfDoc.setModificationDate(now);
-
-  // Embed the sRGB ICC profile
-  const iccProfileBytes = fs.readFileSync(path.resolve(__dirname, './sRGB2014.icc'));
-  const iccProfileStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
-  const iccProfileRef = pdfDoc.context.register(iccProfileStream);
-
-  // Add the OutputIntents dictionary for PDF/A
-  pdfDoc.catalog.set(
-    PDFName.of('OutputIntents'),
-    pdfDoc.context.obj([
-      {
-        Type: 'OutputIntent',
-        OutputConditionIdentifier: PDFHexString.fromText('sRGB IEC61966-2.1'),
-        Info: PDFHexString.fromText('sRGB IEC61966-2.1'),
-        DestOutputProfile: iccProfileRef,
-      },
-    ])
-  );
-
-  // Create and embed compliant XMP
-  const xmp = `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <rdf:Description rdf:about=''
-        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'
-        xmlns:dc='http://purl.org/dc/elements/1.1/'
-        xmlns:xmp='http://ns.adobe.com/xap/1.0/'
-        xmlns:pdf='http://ns.adobe.com/pdf/1.3/'>
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-      <dc:title>
-        <rdf:Alt>
-          <rdf:li xml:lang="x-default">${invoiceData.orderId}</rdf:li>
-        </rdf:Alt>
-      </dc:title>
-      <dc:creator>
-        <rdf:Seq>
-          <rdf:li>${creator}</rdf:li>
-        </rdf:Seq>
-      </dc:creator>
-      <xmp:CreatorTool>${creator}</xmp:CreatorTool>
-      <xmp:CreateDate>${now.toISOString()}</xmp:CreateDate>
-      <xmp:ModifyDate>${now.toISOString()}</xmp:ModifyDate>
-      <pdf:Producer>${producer}</pdf:Producer>
-    </rdf:Description>
-  </rdf:RDF>
-</x:xmpmeta>
-<?xpacket end='w'?>`;
-
-  const metadataStream = pdfDoc.context.stream(Buffer.from(xmp, 'utf8'), {
-    Type: PDFName.of('Metadata'),
-    Subtype: PDFName.of('XML'),
-  });
-
-  const metadataRef = pdfDoc.context.register(metadataStream);
-  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-  pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
   // Embed ZUGFeRD XML as file object, referenced via AF array
   await embedZugferdXml(pdfDoc, invoiceData);
