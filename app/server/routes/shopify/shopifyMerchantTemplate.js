@@ -57,8 +57,8 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF: PDFBox + Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v4 - PDFBox Enabled) ✨🚀");
-  console.log("🟢 Starting createMerchantPdf");
+  console.log(" STARTING NEW PUPPETEER-BASED PDF GENERATION (v4 - PDFBox Enabled) ");
+  console.log(" Starting createMerchantPdf");
 
   try {
     // 1. Generate HTML for the invoice
@@ -89,7 +89,7 @@ async function createMerchantPdf(invoiceData) {
       ? path.resolve(process.env.PDFBOX_JAR_PATH)
       : path.resolve(__dirname, "../../Helpers/preflight-app-2.0.24.jar");
     const tmpPdfBoxOutput = path.join(tmpDir, `pdfbox-out-${Date.now()}.pdf`);
-    console.log("🟢 Running PDFBox Preflight (A-3B fixer) on initial PDF...");
+    console.log(" Running PDFBox Preflight (A-3B fixer) on initial PDF...");
     
     const pdfBoxCmd = spawnSync(
       "java",
@@ -114,14 +114,14 @@ async function createMerchantPdf(invoiceData) {
       { encoding: "utf8" }
     );
 
-    console.log("📄 PDFBox stdout:", pdfBoxCmd.stdout);
-    console.log("📄 PDFBox stderr:", pdfBoxCmd.stderr);
+    console.log(" PDFBox stdout:", pdfBoxCmd.stdout);
+    console.log(" PDFBox stderr:", pdfBoxCmd.stderr);
 
     if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
-      console.error("❌ PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
+      console.error(" PDFBox Preflight failed:", pdfBoxCmd.error || pdfBoxCmd.stderr);
       throw new Error(`PDFBox processing failed: ${pdfBoxCmd.stderr}`);
     }
-    console.log("✅ PDFBox Preflight completed.");
+    console.log(" PDFBox Preflight completed.");
 
 
     // 6. Run Ghostscript on the PDFBox output
@@ -131,7 +131,7 @@ async function createMerchantPdf(invoiceData) {
         ? process.env.ICC_PROFILE_PATH
         : "/usr/share/color/icc/ghostscript/srgb.icc";
 
-    console.log("🟢 Running Ghostscript to enforce PDF/A-3b...");
+    console.log(" Running Ghostscript to enforce PDF/A-3b...");
     const gs = spawnSync(
       "gs",
       [
@@ -154,14 +154,14 @@ async function createMerchantPdf(invoiceData) {
     );
 
     if (gs.error || gs.status !== 0) {
-      console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
+      console.error(" Ghostscript failed:", gs.error || gs.stderr);
       throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
     }
-    console.log("✅ Ghostscript conversion successful.");
+    console.log(" Ghostscript conversion successful.");
     
     return fs.readFileSync(finalOutput);
   } catch (err) {
-    console.error("❌ createMerchantPdf failed:", err);
+    console.error(" createMerchantPdf failed:", err);
     throw err;
   }
 }
