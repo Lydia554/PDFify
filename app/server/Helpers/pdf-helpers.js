@@ -11,107 +11,88 @@ function cleanPdfBuffer(buf) {
 
 function generatePdfA3bXmp(invoiceData) {
   const now = new Date().toISOString();
+  const creationDate = now.substring(0, now.length - 5); // Remove 'Z' for XMPBasic
   const orderId = invoiceData.orderId || 'UNKNOWN';
+  const zugferdFilename = `ZUGFeRD-invoice-${orderId}.xml`;
 
-  return `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
-<x:xmpmeta xmlns:x='adobe:ns:meta/'>
-  <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
+  return `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c011 79.156380, 2014/05/21-23:38:37        ">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 
-    <!-- Dublin Core -->
-    <rdf:Description rdf:about=''
-        xmlns:dc='http://purl.org/dc/elements/1.1/'>
+    <rdf:Description rdf:about=""
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+        xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+        xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
+        xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+        xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+        xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+        xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#" >
+
       <dc:format>application/pdf</dc:format>
       <dc:title>
         <rdf:Alt>
-          <rdf:li xml:lang='x-default'>Invoice ${invoiceData.orderId}</rdf:li>
-          <rdf:li xml:lang='x-default'>Invoice ${orderId}</rdf:li>
+          <rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li>
         </rdf:Alt>
       </dc:title>
       <dc:creator>
         <rdf:Seq>
           <rdf:li>PDFify</rdf:li>
-          <rdf:li>PDFify Invoice Generator</rdf:li>
         </rdf:Seq>
       </dc:creator>
       <dc:description>
         <rdf:Alt>
-          <rdf:li xml:lang='x-default'>ZUGFeRD Invoice ${orderId}</rdf:li>
+          <rdf:li xml:lang="x-default">ZUGFeRD Invoice ${orderId}</rdf:li>
         </rdf:Alt>
       </dc:description>
-    </rdf:Description>
 
-    <!-- PDF/A Identification -->
-    <rdf:Description rdf:about=''
-        xmlns:pdfaid='http://www.aiim.org/pdfa/ns/id/'>
       <pdfaid:part>3</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
-    </rdf:Description>
 
-    <!-- XMP Basic Metadata -->
-    <rdf:Description rdf:about=''
-        xmlns:xmp='http://ns.adobe.com/xap/1.0/'>
       <xmp:CreatorTool>PDFify v1.0 (Puppeteer + pdf-lib)</xmp:CreatorTool>
-      <xmp:CreateDate>${now}</xmp:CreateDate>
-      <xmp:ModifyDate>${now}</xmp:ModifyDate>
-      <xmp:MetadataDate>${now}</xmp:MetadataDate>
-    </rdf:Description>
+      <xmp:CreateDate>${creationDate}</xmp:CreateDate>
+      <xmp:ModifyDate>${creationDate}</xmp:ModifyDate>
+      <xmp:MetadataDate>${creationDate}</xmp:MetadataDate>
 
-    <!-- PDF/A Extension Schema -->
-    <rdf:Description rdf:about=''
-        xmlns:pdfaExtension='http://www.aiim.org/pdfa/ns/extension/'
-        xmlns:pdfaSchema='http://www.aiim.org/pdfa/ns/schema#'
-        xmlns:pdfaProperty='http://www.aiim.org/pdfa/ns/property#'>
       <pdfaExtension:schemas>
         <rdf:Bag>
-
-          <rdf:li rdf:parseType='Resource'>
+          <rdf:li rdf:parseType="Resource">
             <pdfaSchema:schema>ZUGFeRD PDFA Schema</pdfaSchema:schema>
             <pdfaSchema:namespaceURI>urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
             <pdfaSchema:prefix>zf</pdfaSchema:prefix>
-
             <pdfaSchema:property>
               <rdf:Seq>
-
-                <rdf:li rdf:parseType='Resource'>
+                <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>Name of the embedded ZUGFeRD invoice XML file</pdfaProperty:description>
                 </rdf:li>
-
-                <rdf:li rdf:parseType='Resource'>
+                <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>DocumentType</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>Type of the embedded ZUGFeRD data</pdfaProperty:description>
                 </rdf:li>
-
-                <rdf:li rdf:parseType='Resource'>
+                <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>ZUGFeRD conformance level</pdfaProperty:description>
                 </rdf:li>
-
-                <rdf:li rdf:parseType='Resource'>
+                <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>Version</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>ZUGFeRD version</pdfaProperty:description>
                 </rdf:li>
-
               </rdf:Seq>
             </pdfaSchema:property>
           </rdf:li>
-
         </rdf:Bag>
       </pdfaExtension:schemas>
-    </rdf:Description>
 
-    <!-- ZUGFeRD Metadata -->
-    <rdf:Description rdf:about=''
-        xmlns:zf='urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#'>
-      <zf:DocumentFileName>ZUGFeRD-invoice-${orderId}.xml</zf:DocumentFileName>
+      <zf:DocumentFileName>${zugferdFilename}</zf:DocumentFileName>
       <zf:DocumentType>INVOICE</zf:DocumentType>
       <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
       <zf:Version>1.0</zf:Version>
@@ -207,7 +188,7 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   // 4. Mark as tagged PDF
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
-  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+  return Buffer.from(await pdfDoc.save({ useObjectStreams: false, updateMetadata: true }));
 }
 
 
