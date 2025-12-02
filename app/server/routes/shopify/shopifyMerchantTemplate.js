@@ -86,11 +86,17 @@ async function createMerchantPdf(invoiceData) {
     const xmpString = generatePdfA3bXmp(invoiceData);
     const xmpFile = path.join(tmpDir, "metadata.xmp");
     fs.writeFileSync(xmpFile, xmpString);
+    console.log("--- XMP METADATA ---");
+    console.log(xmpString);
+    console.log("--------------------");
 
     // 5. Generate and write pdfmark
     const pdfMarkFile = path.join(tmpDir, "pdfmark.ps");
     const pdfMarkContent = `[ /Subtype /XML /MetadataFile (${xmpFile}) /DOCINFO pdfmark`;
     fs.writeFileSync(pdfMarkFile, pdfMarkContent);
+    console.log("--- PDFMARK CONTENT ---");
+    console.log(pdfMarkContent);
+    console.log("-----------------------");
     
     // 6. Run Ghostscript to enforce PDF/A compliance and embed XMP
     const tmpGsOutput = path.join(tmpDir, `gs-out-${Date.now()}.pdf`);
