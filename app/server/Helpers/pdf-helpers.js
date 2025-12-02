@@ -100,18 +100,20 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
     });
     pdfDoc.catalog.set(PDFName.of("Names"), names);
   } else {
-    console.log("📁 Names dictionary exists, appending");
-    const embeddedFiles = names.lookupMaybe(PDFName.of("EmbeddedFiles"));
-    if (embeddedFiles) {
-      const namesArray = embeddedFiles.lookup(PDFName.of("Names"));
-      if (namesArray) {
-        namesArray.push(PDFHexString.fromText(zugferdFilename), fileSpecRef);
-      } else {
-        console.warn("⚠️ EmbeddedFiles.Names array not found, cannot append");
-      }
-    } else {
-      console.warn("⚠️ EmbeddedFiles dictionary not found, cannot append");
+    console.log("📁 Names dictionary exists, updating");
+    let embeddedFiles = names.lookupMaybe(PDFName.of("EmbeddedFiles"));
+    if (!embeddedFiles) {
+      embeddedFiles = pdfDoc.context.obj({ Names: [] });
+      names.set(PDFName.of("EmbeddedFiles"), embeddedFiles);
     }
+
+    let namesArray = embeddedFiles.lookupMaybe(PDFName.of("Names"));
+    if (!namesArray) {
+      namesArray = pdfDoc.context.obj([]);
+      embeddedFiles.set(PDFName.of("Names"), namesArray);
+    }
+    
+    namesArray.push(PDFHexString.fromText(zugferdFilename), fileSpecRef);
   }
 
   const afArray = pdfDoc.context.obj([fileSpecRef]);
