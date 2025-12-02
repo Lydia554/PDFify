@@ -116,6 +116,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
     } else {
       console.warn("⚠️ EmbeddedFiles dictionary not found, cannot append");
     }
+  }
 
   const afArray = pdfDoc.context.obj([fileSpecRef]);
   pdfDoc.catalog.set(PDFName.of("AF"), afArray);
