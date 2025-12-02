@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
 const { generatePdfA3bXmp } = require("../../Helpers/pdf-helpers");
-const generateZugferdXml = require("../../xml/generateZugferdXml");
+const generateZugferdXml = require("../../../xml/generateZugferdXml");
 const puppeteer = require("puppeteer"); 
 const { generateInvoiceHTML } = require("./merchantInvoice"); 
 
