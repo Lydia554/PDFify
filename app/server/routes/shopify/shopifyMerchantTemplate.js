@@ -1,8 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { generatePdfA3bXmp } = require("../../Helpers/pdf-helpers");
-const generateZugferdXml = require("../../xml/generateZugferdXml");
+const { generatePdfA3bXmp, embedZugferdXml } = require("../../Helpers/pdf-helpers");
+const { PDFDocument } = require("pdf-lib");
 const puppeteer = require("puppeteer"); 
 const { generateInvoiceHTML } = require("./merchantInvoice"); 
 
@@ -55,50 +55,57 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 }
 
 // ---------------------
-// Create Merchant PDF: Ghostscript Only
+// Create Merchant PDF: PDFBox + Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING GHOSTSCRIPT-ONLY PDF GENERATION 🚀");
-
-  const tmpDir = path.join(__dirname, "../../tmp_gs");
-  fs.mkdirSync(tmpDir, { recursive: true });
+  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v8 - Graceful Fallback) 🚀");
+  console.log("🟢 Starting createMerchantPdf");
 
   try {
-    // 1. Generate HTML
+    // 1. Generate HTML for the invoice
     const html = await generateInvoiceHTML(invoiceData);
 
-    // 2. Generate standard PDF with Puppeteer
+    // 2. Launch Puppeteer and generate a standard PDF
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
-    const puppeteerPdfBuffer = await page.pdf({ format: "A4", printBackground: true, margin: { top: 40, bottom: 40, left: 40, right: 40 } });
+    const puppeteerPdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: 40, bottom: 40, left: 40, right: 40 },
+    });
     await browser.close();
-    
+
+    // 3. Setup temp directories and files
+    const tmpDir = path.join(__dirname, "../../tmp_gs");
+    fs.mkdirSync(tmpDir, { recursive: true });
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, puppeteerPdfBuffer);
 
-    // 3. Generate XMP and ZUGFeRD XML
+    // 4. Generate and write XMP metadata
     const xmpString = generatePdfA3bXmp(invoiceData);
     const xmpFile = path.join(tmpDir, "metadata.xmp");
     fs.writeFileSync(xmpFile, xmpString);
+    console.log("--- XMP METADATA ---");
+    console.log(xmpString);
+    console.log("--------------------");
 
-    const zugferdXmlString = generateZugferdXml(invoiceData);
-    const zugferdXmlFile = path.join(tmpDir, "factur-x.xml");
-    fs.writeFileSync(zugferdXmlFile, zugferdXmlString);
-    
-    // 4. Create pdfmark file for Ghostscript
+    // 5. Generate and write pdfmark
     const pdfMarkFile = path.join(tmpDir, "pdfmark.ps");
-    const pdfMarkContent = `
-[ /Subtype /XML /MetadataFile (${xmpFile.replace(/\\/g, '/')}) /DOCINFO pdfmark
-[ /F (factur-x.xml) /UF (factur-x.xml) /Desc (ZUGFeRD Invoice) /AFRelationship /Alternative /Subtype /text#2fxml /FS file (${zugferdXmlFile.replace(/\\/g, '/')}) ] /PUT pdfmark
-`;
+    const pdfMarkContent = `[ /Subtype /XML /MetadataFile (${xmpFile}) /DOCINFO pdfmark`;
     fs.writeFileSync(pdfMarkFile, pdfMarkContent);
+    console.log("--- PDFMARK CONTENT ---");
+    console.log(pdfMarkContent);
+    console.log("-----------------------");
     
-    // 5. Run Ghostscript
+    // 6. Run Ghostscript to enforce PDF/A compliance and embed XMP
     const tmpGsOutput = path.join(tmpDir, `gs-out-${Date.now()}.pdf`);
-    const iccProfilePath = path.resolve(__dirname, "../../Helpers/sRGB2014.icc");
+    const iccProfilePath =
+      process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
+        ? process.env.ICC_PROFILE_PATH
+        : path.resolve(__dirname, "../../Helpers/sRGB2014.icc");
 
-    console.log("🟢 Running Ghostscript to enforce PDF/A-3b and embed files...");
+    console.log("🟢 Running Ghostscript to enforce PDF/A-3b...");
     const gs = spawnSync(
       "gs",
       [
@@ -108,31 +115,32 @@ async function createMerchantPdf(invoiceData) {
         "-dBATCH",
         "-dNOPAUSE",
         "-dNOSAFER",
+        "-dEmbedAllFonts=true",
+        "-dSubsetFonts=true",
+        "-dCompressFonts=true",
         "-sColorConversionStrategy=UseDeviceIndependentColor",
         "-sProcessColorModel=DeviceRGB",
-        `-sOutputICCProfile=${iccProfilePath.replace(/\\/g, '/')}`,
-        `-sOutputFile=${tmpGsOutput.replace(/\\/g, '/')}`,
-        tmpInput.replace(/\\/g, '/'),
-        pdfMarkFile.replace(/\\/g, '/'),
+        `-sOutputICCProfile=${iccProfilePath}`,
+        `-sOutputFile=${tmpGsOutput}`,
+        tmpInput,
+        pdfMarkFile, // Embed the metadata
       ],
       { encoding: "utf8" }
     );
 
     if (gs.error || gs.status !== 0) {
-      console.error("❌ Ghostscript failed:", gs.stderr || gs.error);
-      throw new Error(`Ghostscript PDF generation failed: ${gs.stderr || 'Unknown error'}`);
+      console.error("❌ Ghostscript failed:", gs.error || gs.stderr);
+      throw new Error(`Ghostscript PDF/A-3b conversion failed: ${gs.stderr}`);
     }
-    
     console.log("✅ Ghostscript conversion successful.");
-    const finalPdfBuffer = fs.readFileSync(tmpGsOutput);
-    
-    // Cleanup
-    fs.unlinkSync(tmpInput);
-    fs.unlinkSync(xmpFile);
-    fs.unlinkSync(zugferdXmlFile);
-    fs.unlinkSync(pdfMarkFile);
-    fs.unlinkSync(tmpGsOutput);
 
+    // 7. Embed ZUGFeRD XML into the Ghostscript output
+    const gsPdfBuffer = fs.readFileSync(tmpGsOutput);
+    const pdfDoc = await PDFDocument.load(gsPdfBuffer);
+    await embedZugferdXml(pdfDoc, invoiceData);
+    const finalPdfBuffer = await pdfDoc.save();
+
+    console.log("✅ PDF/A-3b generation with ZUGFeRD complete. Returning final PDF.");
     return finalPdfBuffer;
     
   } catch (err) {
@@ -144,4 +152,5 @@ async function createMerchantPdf(invoiceData) {
 module.exports = {
   mapOrderToPdfData,
   createMerchantPdf, 
+
 };
