@@ -175,5 +175,6 @@ module.exports = {
   convertToPdfA3b,
   generatePdfA3bXmp,
   convertToPdfA3b_v2,
+  embedZugferdXml,
 };
 
