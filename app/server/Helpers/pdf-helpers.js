@@ -77,6 +77,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
   console.log("🟢 Embedding ZUGFeRD XML for order:", invoiceData.orderId);
   const xmlString = generateZugferdXml(invoiceData);
   const zugferdFilename = `factur-x.xml`;
+  console.log(`🔍 ZUGFeRD XML string length: ${xmlString.length} bytes`);
 
   const xmlStream = pdfDoc.context.flateStream(Buffer.from(xmlString, "utf8"));
   const xmlRef = pdfDoc.context.register(xmlStream);
@@ -127,11 +128,14 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
  */
 async function convertToPdfA3b(pdfBuffer, invoiceData) {
   console.log("🔄 Converting to PDF/A-3b + ZUGFeRD using pdf-lib (v3)...");
+  console.log(`🔍 Initial PDF Buffer size: ${pdfBuffer.length} bytes`);
 
   const pdfDoc = await PDFDocument.load(pdfBuffer);
+  console.log(`🔍 Initial PDF page count: ${pdfDoc.getPages().length}`);
 
   // 1. Embed XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
+  console.log(`🔍 XMP Metadata string length: ${xmp.length} bytes`);
   pdfDoc.catalog.set(
     PDFName.of('Metadata'),
     pdfDoc.context.stream(xmp, {
@@ -150,6 +154,10 @@ async function convertToPdfA3b(pdfBuffer, invoiceData) {
 
   // 4. Save with PDF/A-3b compatible settings
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+
+  console.log(`🔍 Final PDF Buffer size: ${pdfBytes.length} bytes`);
+  const finalPdfDoc = await PDFDocument.load(pdfBytes);
+  console.log(`🔍 Final PDF page count: ${finalPdfDoc.getPages().length}`);
 
   console.log("✅ PDF/A-3b conversion complete");
   return Buffer.from(pdfBytes);
