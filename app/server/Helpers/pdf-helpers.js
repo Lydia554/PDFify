@@ -107,6 +107,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
       embeddedFiles = pdfDoc.context.obj({ Names: [] });
       names.set(PDFName.of("EmbeddedFiles"), embeddedFiles);
     }
+  }
 
     let namesArray = embeddedFiles.lookupMaybe(PDFName.of("Names"));
     if (!namesArray) {
