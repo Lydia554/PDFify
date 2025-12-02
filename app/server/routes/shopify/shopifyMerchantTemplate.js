@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { finalizePdf } = require("../../Helpers/pdf-helpers");
+const { finalizePdf, generatePdfA3bXmp } = require("../../Helpers/pdf-helpers");
 const puppeteer = require("puppeteer"); 
 const { generateInvoiceHTML } = require("./merchantInvoice"); 
 
@@ -75,21 +75,28 @@ async function createMerchantPdf(invoiceData) {
     });
     await browser.close();
 
-    // 3. Embed ZUGFeRD XML using pdf-lib
-    const prePdfBuffer = await finalizePdf(puppeteerPdfBuffer, invoiceData);
-
-    // 4. Setup temp directories and files
+    // 3. Setup temp directories and files
     const tmpDir = path.join(__dirname, "../../tmp_gs");
     fs.mkdirSync(tmpDir, { recursive: true });
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
-    fs.writeFileSync(tmpInput, prePdfBuffer);
+    fs.writeFileSync(tmpInput, puppeteerPdfBuffer);
 
-    // 5. Run Ghostscript FIRST to enforce PDF/A compliance
+    // 4. Generate and write XMP metadata
+    const xmpString = generatePdfA3bXmp(invoiceData);
+    const xmpFile = path.join(tmpDir, "metadata.xmp");
+    fs.writeFileSync(xmpFile, xmpString);
+
+    // 5. Generate and write pdfmark
+    const pdfMarkFile = path.join(tmpDir, "pdfmark.ps");
+    const pdfMarkContent = `[ /Subtype /XML /MetadataFile (${xmpFile}) /DOCINFO pdfmark`;
+    fs.writeFileSync(pdfMarkFile, pdfMarkContent);
+    
+    // 6. Run Ghostscript to enforce PDF/A compliance and embed XMP
     const tmpGsOutput = path.join(tmpDir, `gs-out-${Date.now()}.pdf`);
     const iccProfilePath =
       process.env.ICC_PROFILE_PATH && fs.existsSync(process.env.ICC_PROFILE_PATH)
         ? process.env.ICC_PROFILE_PATH
-        : "/usr/share/color/icc/ghostscript/srgb.icc";
+        : path.resolve(__dirname, "../../Helpers/sRGB2014.icc");
 
     console.log("🟢 Running Ghostscript to enforce PDF/A-3b...");
     const gs = spawnSync(
@@ -108,7 +115,8 @@ async function createMerchantPdf(invoiceData) {
         "-sProcessColorModel=DeviceRGB",
         `-sOutputICCProfile=${iccProfilePath}`,
         `-sOutputFile=${tmpGsOutput}`,
-        tmpInput, // Use the pdf-lib output as input
+        tmpInput,
+        pdfMarkFile, // Embed the metadata
       ],
       { encoding: "utf8" }
     );
@@ -119,42 +127,12 @@ async function createMerchantPdf(invoiceData) {
     }
     console.log("✅ Ghostscript conversion successful.");
 
-    // 6. Run PDFBox on the Ghostscript output for final validation and fixing
-    const pdfboxJar = path.resolve(__dirname, "../../Helpers/preflight-2.0.24.jar");
-    const finalOutput = path.join(tmpDir, `final-out-${Date.now()}.pdf`);
-    
-    console.log("🟢 Running PDFBox Preflight (A-3B fixer) on Ghostscript output...");
-    const pdfBoxCmd = spawnSync(
-      "java",
-      [
-        "-cp",
-        [
-          "./server/Helpers/classes",
-          pdfboxJar,
-          path.join(__dirname, "../../Helpers/pdfbox-2.0.24.jar"),
-          path.join(__dirname, "../../Helpers/fontbox-2.0.24.jar"),
-          path.join(__dirname, "../../Helpers/xmpbox-2.0.24.jar"),
-          path.join(__dirname, "../../Helpers/commons-logging-1.2.jar"),
-          path.join(__dirname, "../../Helpers/pdfbox-tools-2.0.24.jar"),
-          path.join(__dirname, "../../Helpers/activation-1.1.1.jar"),
-          path.join(__dirname, "../../Helpers/jaxb-api-2.3.1.jar"),
-          path.join(__dirname, "../../Helpers/jaxb-core-2.3.0.1.jar"),
-          path.join(__dirname, "../../Helpers/jaxb-impl-2.3.3.jar"),
-        ].join(path.delimiter),
-        "com.yourcompany.PdfA3bFixer",
-        tmpGsOutput, // Use the Ghostscript output as input
-        finalOutput
-      ],
-      { encoding: "utf8" }
-    );
+    // 7. Embed ZUGFeRD XML into the Ghostscript output
+    const gsPdfBuffer = fs.readFileSync(tmpGsOutput);
+    const finalPdfBuffer = await finalizePdf(gsPdfBuffer, invoiceData);
 
-    if (pdfBoxCmd.error || pdfBoxCmd.status !== 0) {
-      console.error("⚠️ PDFBox Preflight failed, but returning Ghostscript PDF as a fallback:", pdfBoxCmd.stderr);
-      return fs.readFileSync(tmpGsOutput);
-    }
-
-    console.log("✅ PDFBox Preflight completed successfully. Returning final PDF.");
-    return fs.readFileSync(finalOutput);
+    console.log("✅ PDF/A-3b generation with ZUGFeRD complete. Returning final PDF.");
+    return finalPdfBuffer;
     
   } catch (err) {
     console.error("❌ createMerchantPdf failed:", err);

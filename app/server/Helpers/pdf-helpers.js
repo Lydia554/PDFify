@@ -68,6 +68,7 @@ function generatePdfA3bXmp(invoiceData) {
 <?xpacket end='w'?>`;
 }
 
+
 // -----------------------------
 // Embed ZUGFeRD XML into PDF
 // -----------------------------
@@ -110,9 +111,9 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
       if (namesArray) {
         namesArray.push(PDFHexString.fromText(`factur-x.xml`), fileSpecRef);
       }
-    } else {
-      console.warn("⚠️ EmbeddedFiles.Names not found, cannot append");
     }
+  } else {
+    console.warn("⚠️ EmbeddedFiles.Names not found, cannot append");
   }
 
   const afArray = pdfDoc.context.obj([fileSpecRef]);
@@ -123,42 +124,15 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 // -----------------------------
-// Finalize PDF: Full PDF/A-3b Implementation
+// Finalize PDF: Add ZUGFeRD XML ONLY
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v6 - XMP, ICC, XML) ✨📄");
+  console.log("📄 Using MINIMAL finalizePdf function (v5 - XML Only) ✨📄");
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
 
-  // 1. Embed ICC color profile
-  const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
-  const iccProfileBytes = fs.readFileSync(iccProfilePath);
-  const iccStream = pdfDoc.context.flateStream(iccProfileBytes, { N: 3 });
-  const iccRef = pdfDoc.context.register(iccStream);
-  const outputIntent = pdfDoc.context.obj({
-    Type: PDFName.of("OutputIntent"),
-    S: PDFName.of("GTS_PDFA1"),
-    OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
-  });
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
-  console.log("✅ ICC profile embedded successfully");
-
-  // 2. Add XMP metadata
-  const xmp = generatePdfA3bXmp(invoiceData);
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, 'utf8'), {
-    Type: PDFName.of('Metadata'),
-    Subtype: PDFName.of('XML')
-  });
-  const metadataRef = pdfDoc.context.register(metadataStream);
-  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-  console.log("✅ XMP metadata embedded successfully");
-
-  // 3. Embed ZUGFeRD XML
+  // Embed ZUGFeRD XML as file object, referenced via AF array
   await embedZugferdXml(pdfDoc, invoiceData);
-
-  // 4. Mark as tagged PDF
-  pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
@@ -168,4 +142,5 @@ module.exports = {
   cleanPdfBuffer,
   embedZugferdXml,
   finalizePdf,
+  generatePdfA3bXmp
 };
