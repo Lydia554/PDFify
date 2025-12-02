@@ -208,12 +208,10 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
   // Explicitly set info dictionary to force ID generation
-  pdfDoc.setInfo({
-    Producer: 'PDFify with pdf-lib',
-    Creator: 'PDFify Application',
-    CreationDate: new Date(),
-    ModDate: new Date(),
-  });
+  pdfDoc.setProducer('PDFify with pdf-lib');
+  pdfDoc.setCreator('PDFify Application');
+  pdfDoc.setCreationDate(new Date());
+  pdfDoc.setModificationDate(new Date());
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false, updateMetadata: true }));
 }
