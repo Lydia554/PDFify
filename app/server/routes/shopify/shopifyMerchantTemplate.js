@@ -89,17 +89,8 @@ async function createMerchantPdf(invoiceData) {
     // 4. Create pdfmark file for Ghostscript
     const pdfMarkFile = path.join(tmpDir, "pdfmark.ps");
     const pdfMarkContent = `
-[ /Subtype /XML /MetadataFile (${xmpFile.replace(/\\/g, '/')}) /DOCINFO pdfmark
-[/_objdef {AF} /type /dict /OBJ pdfmark
-[ {AF} <<
-    /Type /Filespec
-    /F (factur-x.xml)
-    /UF (factur-x.xml)
-    /Desc (ZUGFeRD Invoice)
-    /AFRelationship /Alternative
-    /EF << /F [ /FS file (${zugferdXmlFile.replace(/\\/g, '/')}) ] >>
->> /PUT pdfmark
-[ {Catalog} /AF [ {AF} ] /PUT pdfmark
+[ /Subtype /XML /MetadataFile (${xmpFile.replace(/\\/g, '/')}) /PUT pdfmark
+[ /F (factur-x.xml) /UF (factur-x.xml) /Desc (ZUGFeRD Invoice) /AFRelationship /Alternative /FS file (${zugferdXmlFile.replace(/\\/g, '/')}) ] /PUT pdfmark
 `;
     fs.writeFileSync(pdfMarkFile, pdfMarkContent);
     
