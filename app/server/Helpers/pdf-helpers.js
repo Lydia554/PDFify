@@ -19,9 +19,9 @@ function cleanPdfBuffer(buf) {
 
 function generatePdfA3bXmp(invoiceData) {
   const now = new Date().toISOString();
-  const creationDate = now.substring(0, now.length - 5); // Remove 'Z' for XMPBasic and ensure consistent format
+  const creationDate = now.substring(0, now.length - 5) + 'Z'; 
   const orderId = invoiceData.orderId || 'UNKNOWN';
-  const zugferdFilename = `ZUGFeRD-invoice-${orderId}.xml`;
+  const zugferdFilename = `factur-x.xml`;
   const documentId = `uuid:${generateUuid()}`;
   const instanceId = `uuid:${generateUuid()}`;
 
@@ -48,7 +48,7 @@ function generatePdfA3bXmp(invoiceData) {
       </dc:creator>
       <dc:description>
         <rdf:Alt>
-          <rdf:li xml:lang="x-default">ZUGFeRD Invoice ${orderId}</rdf:li>
+          <rdf:li xml:lang="x-default">Factur-X Invoice ${orderId}</rdf:li>
         </rdf:Alt>
       </dc:description>
 
@@ -64,7 +64,7 @@ function generatePdfA3bXmp(invoiceData) {
       <pdfaid:conformance>B</pdfaid:conformance>
     </rdf:Description>
 
-    <!-- PDF/A Extension Schema for ZUGFeRD -->
+    <!-- PDF/A Extension Schema for Factur-X -->
     <rdf:Description rdf:about=""
         xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
         xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
@@ -72,34 +72,34 @@ function generatePdfA3bXmp(invoiceData) {
       <pdfaExtension:schemas>
         <rdf:Bag>
           <rdf:li rdf:parseType="Resource">
-            <pdfaSchema:schema>ZUGFeRD PDFA Schema</pdfaSchema:schema>
-            <pdfaSchema:namespaceURI>urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
-            <pdfaSchema:prefix>zf</pdfaSchema:prefix>
+            <pdfaSchema:schema>Factur-X PDFA Extension Schema</pdfaSchema:schema>
+            <pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
+            <pdfaSchema:prefix>fx</pdfaSchema:prefix>
             <pdfaSchema:property>
               <rdf:Seq>
                 <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Name of the embedded ZUGFeRD invoice XML file</pdfaProperty:description>
+                  <pdfaProperty:description>Name of the embedded XML invoice file</pdfaProperty:description>
                 </rdf:li>
                 <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>DocumentType</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>Type of the embedded ZUGFeRD data</pdfaProperty:description>
+                  <pdfaProperty:description>INVOICE</pdfaProperty:description>
                 </rdf:li>
                 <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>ZUGFeRD conformance level</pdfaProperty:description>
+                  <pdfaProperty:description>The conformance level of the embedded Factur-X data</pdfaProperty:description>
                 </rdf:li>
                 <rdf:li rdf:parseType="Resource">
                   <pdfaProperty:name>Version</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>ZUGFeRD version</pdfaProperty:description>
+                  <pdfaProperty:description>The version of the Factur-X standard</pdfaProperty:description>
                 </rdf:li>
               </rdf:Seq>
             </pdfaSchema:property>
@@ -108,13 +108,13 @@ function generatePdfA3bXmp(invoiceData) {
       </pdfaExtension:schemas>
     </rdf:Description>
 
-    <!-- ZUGFeRD Metadata (Actual Values) -->
+    <!-- Factur-X Metadata (Actual Values) -->
     <rdf:Description rdf:about=""
-        xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#">
-      <zf:DocumentFileName>${zugferdFilename}</zf:DocumentFileName>
-      <zf:DocumentType>INVOICE</zf:DocumentType>
-      <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
-      <zf:Version>1.0</zf:Version>
+        xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">
+      <fx:DocumentFileName>${zugferdFilename}</fx:DocumentFileName>
+      <fx:DocumentType>INVOICE</fx:DocumentType>
+      <fx:ConformanceLevel>COMFORT</fx:ConformanceLevel>
+      <fx:Version>1.0</fx:Version>
     </rdf:Description>
 
   </rdf:RDF>

@@ -66,7 +66,6 @@ function generateZugferdXml(invoiceData) {
     // Add line items
     items.forEach((item, index) => {
         const lineTotal = (item.price * item.quantity).toFixed(2);
-        const taxAmount = (lineTotal * (item.taxRate / 100)).toFixed(2);
 
         doc.ele('ram:IncludedSupplyChainTradeLineItem')
             .ele('ram:AssociatedDocumentLineDocument')
@@ -107,21 +106,31 @@ function generateZugferdXml(invoiceData) {
         .up()
     .up();
 
-    // Monetary Summary
+    // Monetary Summary & VAT Breakdown
     doc.ele('ram:ApplicableHeaderTradeSettlement')
         .ele('ram:InvoiceCurrencyCode').txt(currency).up()
-        .ele('ram:SpecifiedTradeSettlementHeaderMonetarySummation')
-            .ele('ram:LineTotalAmount').txt(subtotal.toFixed(2)).up()        // Sum of line totals
-            .ele('ram:TaxBasisTotalAmount').txt(subtotal.toFixed(2)).up()   // Tax basis
-            .ele('ram:TaxTotalAmount', { currencyID: currency }).txt(tax.toFixed(2)).up() // Total tax
-            .ele('ram:GrandTotalAmount').txt(total.toFixed(2)).up()          // Grand total
-            .ele('ram:DuePayableAmount').txt(total.toFixed(2)).up()           // Amount due
+        // Payment Means
+        .ele('ram:PaymentMeans')
+            .ele('ram:TypeCode').txt('30').up() // 30 = Credit Transfer
+            .ele('ram:PayeeFinancialAccount')
+                .ele('ram:IBANID').txt(iban || 'DE12345678901234567890').up()
+            .up()
         .up()
-        // VAT Breakdown
+        // Overall VAT Breakdown
         .ele('ram:ApplicableTradeTax')
             .ele('ram:CalculatedAmount').txt(tax.toFixed(2)).up()
             .ele('ram:TypeCode').txt('VAT').up()
             .ele('ram:BasisAmount').txt(subtotal.toFixed(2)).up()
+            .ele('ram:CategoryCode').txt('S').up() // Standard rate
+            .ele('ram:RateApplicablePercent').txt(invoiceData.vatRate ? invoiceData.vatRate.toFixed(2) : '0.00').up() // Assuming a single rate for simplicity
+        .up()
+        // Monetary Summary
+        .ele('ram:SpecifiedTradeSettlementHeaderMonetarySummation')
+            .ele('ram:LineTotalAmount').txt(subtotal.toFixed(2)).up()
+            .ele('ram:TaxBasisTotalAmount').txt(subtotal.toFixed(2)).up()
+            .ele('ram:TaxTotalAmount', { currencyID: currency }).txt(tax.toFixed(2)).up()
+            .ele('ram:GrandTotalAmount').txt(total.toFixed(2)).up()
+            .ele('ram:DuePayableAmount').txt(total.toFixed(2)).up()
         .up()
     .up();
 
