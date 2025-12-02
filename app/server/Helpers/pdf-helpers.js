@@ -110,11 +110,12 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
       const namesArray = embeddedFiles.lookup(PDFName.of("Names"));
       if (namesArray) {
         namesArray.push(PDFHexString.fromText(`factur-x.xml`), fileSpecRef);
+      } else {
+        console.warn("⚠️ EmbeddedFiles.Names array not found, cannot append");
       }
+    } else {
+      console.warn("⚠️ EmbeddedFiles dictionary not found, cannot append");
     }
-  } else {
-    console.warn("⚠️ EmbeddedFiles.Names not found, cannot append");
-  }
 
   const afArray = pdfDoc.context.obj([fileSpecRef]);
   pdfDoc.catalog.set(PDFName.of("AF"), afArray);
