@@ -120,9 +120,7 @@ async function createMerchantPdf(invoiceData) {
     console.log("✅ Ghostscript conversion successful.");
 
     // 6. Run PDFBox on the Ghostscript output for final validation and fixing
-    const pdfboxJar = process.env.PDFBOX_JAR_PATH
-      ? path.resolve(process.env.PDFBOX_JAR_PATH)
-      : path.resolve(__dirname, "../../Helpers/preflight-2.0.24.jar");
+    const pdfboxJar = path.resolve(__dirname, "../../Helpers/preflight-2.0.24.jar");
     const finalOutput = path.join(tmpDir, `final-out-${Date.now()}.pdf`);
     
     console.log("🟢 Running PDFBox Preflight (A-3B fixer) on Ghostscript output...");
