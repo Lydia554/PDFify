@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
-const { finalizePdf, generatePdfA3bXmp } = require("../../Helpers/pdf-helpers");
+const { generatePdfA3bXmp, embedZugferdXml } = require("../../Helpers/pdf-helpers");
+const { PDFDocument } = require("pdf-lib");
 const puppeteer = require("puppeteer"); 
 const { generateInvoiceHTML } = require("./merchantInvoice"); 
 
@@ -135,7 +136,9 @@ async function createMerchantPdf(invoiceData) {
 
     // 7. Embed ZUGFeRD XML into the Ghostscript output
     const gsPdfBuffer = fs.readFileSync(tmpGsOutput);
-    const finalPdfBuffer = await finalizePdf(gsPdfBuffer, invoiceData);
+    const pdfDoc = await PDFDocument.load(gsPdfBuffer);
+    await embedZugferdXml(pdfDoc, invoiceData);
+    const finalPdfBuffer = await pdfDoc.save();
 
     console.log("✅ PDF/A-3b generation with ZUGFeRD complete. Returning final PDF.");
     return finalPdfBuffer;
