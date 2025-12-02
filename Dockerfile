@@ -40,7 +40,7 @@ RUN mkdir -p /app/server/Helpers
 COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
 
 # Only PDFBox 2.x compatible JARs
-COPY ./app/server/Helpers/preflight-app-2.0.24.jar ./server/Helpers/preflight-app-2.0.24.jar
+COPY ./app/server/Helpers/preflight-2.0.24.jar ./server/Helpers/preflight-2.0.24.jar
 COPY ./app/server/Helpers/pdfbox-2.0.24.jar ./server/Helpers/pdfbox-2.0.24.jar
 COPY ./app/server/Helpers/pdfbox-tools-2.0.24.jar ./server/Helpers/pdfbox-tools-2.0.24.jar
 COPY ./app/server/Helpers/fontbox-2.0.24.jar ./server/Helpers/fontbox-2.0.24.jar
@@ -54,7 +54,7 @@ COPY ./app/server/Helpers/com/yourcompany/PdfA3bFixer.java ./server/Helpers/com/
 # Compile PdfA3bFixer using ONLY 2.x JARs
 RUN mkdir -p /app/server/Helpers/classes \
     && javac \
-       -cp "./server/Helpers/preflight-app-2.0.24.jar:./server/Helpers/pdfbox-2.0.24.jar:./server/Helpers/fontbox-2.0.24.jar:./server/Helpers/xmpbox-2.0.24.jar:./server/Helpers/commons-logging-1.2.jar:./server/Helpers/activation-1.1.1.jar" \
+       -cp "./server/Helpers/preflight-2.0.24.jar:./server/Helpers/pdfbox-2.0.24.jar:./server/Helpers/fontbox-2.0.24.jar:./server/Helpers/xmpbox-2.0.24.jar:./server/Helpers/commons-logging-1.2.jar:./server/Helpers/activation-1.1.1.jar" \
        -d ./server/Helpers/classes \
        ./server/Helpers/com/yourcompany/PdfA3bFixer.java
 
