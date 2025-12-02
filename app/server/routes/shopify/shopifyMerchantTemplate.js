@@ -57,7 +57,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF: PDFBox + Ghostscript
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v6 - Final Evidence-Based Fix) 🚀");
+  console.log("🚀 STARTING NEW PUPPETEER-BASED PDF GENERATION (v7 - preflight-app only) 🚀");
   console.log("🟢 Starting createMerchantPdf");
 
   try {
@@ -84,7 +84,7 @@ async function createMerchantPdf(invoiceData) {
     const tmpInput = path.join(tmpDir, `input-${Date.now()}.pdf`);
     fs.writeFileSync(tmpInput, prePdfBuffer);
 
-    // 5. Run PDFBox FIRST with the minimal, correct classpath
+    // 5. Run PDFBox FIRST, with a minimal classpath
     const pdfboxJar = process.env.PDFBOX_JAR_PATH
       ? path.resolve(process.env.PDFBOX_JAR_PATH)
       : path.resolve(__dirname, "../../Helpers/preflight-app-2.0.24.jar");
@@ -97,7 +97,7 @@ async function createMerchantPdf(invoiceData) {
         "-cp",
         [
           "./server/Helpers/classes",
-          pdfboxJar, // preflight-app-2.0.24.jar
+          pdfboxJar,
           path.join(__dirname, "../../Helpers/activation-1.1.1.jar"),
           path.join(__dirname, "../../Helpers/jaxb-api-2.3.1.jar"),
           path.join(__dirname, "../../Helpers/jaxb-core-2.3.0.1.jar"),
