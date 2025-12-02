@@ -4,6 +4,14 @@ const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
+// Utility to generate UUIDs for xmpMM:DocumentID and InstanceID
+function generateUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 function cleanPdfBuffer(buf) {
   const pdfStart = buf.indexOf('%PDF');
   return pdfStart > 0 ? buf.slice(pdfStart) : buf;
@@ -11,23 +19,21 @@ function cleanPdfBuffer(buf) {
 
 function generatePdfA3bXmp(invoiceData) {
   const now = new Date().toISOString();
-  const creationDate = now.substring(0, now.length - 5); // Remove 'Z' for XMPBasic
+  const creationDate = now.substring(0, now.length - 5); // Remove 'Z' for XMPBasic and ensure consistent format
   const orderId = invoiceData.orderId || 'UNKNOWN';
   const zugferdFilename = `ZUGFeRD-invoice-${orderId}.xml`;
+  const documentId = `uuid:${generateUuid()}`;
+  const instanceId = `uuid:${generateUuid()}`;
 
   return `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c011 79.156380, 2014/05/21-23:38:37        ">
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 
     <rdf:Description rdf:about=""
-        xmlns:dc="http://purl.org/dc/elements/1.1/"
-        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
         xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-        xmlns:pdf="http://ns.adobe.com/pdf/1.3/"
-        xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-        xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-        xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-        xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#" >
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
 
       <dc:format>application/pdf</dc:format>
       <dc:title>
@@ -46,14 +52,23 @@ function generatePdfA3bXmp(invoiceData) {
         </rdf:Alt>
       </dc:description>
 
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-
-      <xmp:CreatorTool>PDFify v1.0 (Puppeteer + pdf-lib)</xmp:CreatorTool>
       <xmp:CreateDate>${creationDate}</xmp:CreateDate>
       <xmp:ModifyDate>${creationDate}</xmp:ModifyDate>
       <xmp:MetadataDate>${creationDate}</xmp:MetadataDate>
+      <xmp:CreatorTool>PDFify v1.0 (Puppeteer + pdf-lib)</xmp:CreatorTool>
 
+      <xmpMM:DocumentID>${documentId}</xmpMM:DocumentID>
+      <xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>
+
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+    </rdf:Description>
+
+    <!-- PDF/A Extension Schema for ZUGFeRD -->
+    <rdf:Description rdf:about=""
+        xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+        xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+        xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#">
       <pdfaExtension:schemas>
         <rdf:Bag>
           <rdf:li rdf:parseType="Resource">
@@ -91,7 +106,11 @@ function generatePdfA3bXmp(invoiceData) {
           </rdf:li>
         </rdf:Bag>
       </pdfaExtension:schemas>
+    </rdf:Description>
 
+    <!-- ZUGFeRD Metadata (Actual Values) -->
+    <rdf:Description rdf:about=""
+        xmlns:zf="urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#">
       <zf:DocumentFileName>${zugferdFilename}</zf:DocumentFileName>
       <zf:DocumentType>INVOICE</zf:DocumentType>
       <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
@@ -100,7 +119,7 @@ function generatePdfA3bXmp(invoiceData) {
 
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end='w'?>`;
+<?xpacket end="w"?>`;
 }
 
 /**
@@ -187,6 +206,14 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
 
   // 4. Mark as tagged PDF
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+
+  // Explicitly set info dictionary to force ID generation
+  pdfDoc.setInfo({
+    Producer: 'PDFify with pdf-lib',
+    Creator: 'PDFify Application',
+    CreationDate: new Date(),
+    ModDate: new Date(),
+  });
 
   return Buffer.from(await pdfDoc.save({ useObjectStreams: false, updateMetadata: true }));
 }
