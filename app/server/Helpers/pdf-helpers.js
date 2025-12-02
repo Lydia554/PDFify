@@ -4,28 +4,32 @@ const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
-/**
- * Generate complete PDF/A-3b + ZUGFeRD 2.3 compliant XMP metadata.
- * This version corrects the namespaces and structure for modern e-invoicing standards.
- */
+function cleanPdfBuffer(buf) {
+  const pdfStart = buf.indexOf('%PDF');
+  return pdfStart > 0 ? buf.slice(pdfStart) : buf;
+}
+
 function generatePdfA3bXmp(invoiceData) {
   const now = new Date().toISOString();
   const orderId = invoiceData.orderId || 'UNKNOWN';
-<<<<<<< HEAD
+
   return `<?xpacket begin='' id='W5M0MpCehiHzreSzNTczkc9d'?>
 <x:xmpmeta xmlns:x='adobe:ns:meta/'>
   <rdf:RDF xmlns:rdf='http://www.w3.org/1999/02/22-rdf-syntax-ns#'>
-    <!-- Dublin Core Metadata -->
+
+    <!-- Dublin Core -->
     <rdf:Description rdf:about=''
         xmlns:dc='http://purl.org/dc/elements/1.1/'>
       <dc:format>application/pdf</dc:format>
       <dc:title>
         <rdf:Alt>
+          <rdf:li xml:lang='x-default'>Invoice ${invoiceData.orderId}</rdf:li>
           <rdf:li xml:lang='x-default'>Invoice ${orderId}</rdf:li>
         </rdf:Alt>
       </dc:title>
       <dc:creator>
         <rdf:Seq>
+          <rdf:li>PDFify</rdf:li>
           <rdf:li>PDFify Invoice Generator</rdf:li>
         </rdf:Seq>
       </dc:creator>
@@ -52,46 +56,54 @@ function generatePdfA3bXmp(invoiceData) {
       <xmp:MetadataDate>${now}</xmp:MetadataDate>
     </rdf:Description>
 
-    <!-- PDF Extension Schema for ZUGFeRD -->
+    <!-- PDF/A Extension Schema -->
     <rdf:Description rdf:about=''
         xmlns:pdfaExtension='http://www.aiim.org/pdfa/ns/extension/'
         xmlns:pdfaSchema='http://www.aiim.org/pdfa/ns/schema#'
         xmlns:pdfaProperty='http://www.aiim.org/pdfa/ns/property#'>
       <pdfaExtension:schemas>
         <rdf:Bag>
+
           <rdf:li rdf:parseType='Resource'>
-            <pdfaSchema:schema>ZUGFeRD PDFA Extension Schema</pdfaSchema:schema>
+            <pdfaSchema:schema>ZUGFeRD PDFA Schema</pdfaSchema:schema>
             <pdfaSchema:namespaceURI>urn:ferd:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
             <pdfaSchema:prefix>zf</pdfaSchema:prefix>
+
             <pdfaSchema:property>
               <rdf:Seq>
+
                 <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>Name of the embedded ZUGFeRD invoice XML file</pdfaProperty:description>
                 </rdf:li>
+
                 <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>DocumentType</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>Type of the embedded ZUGFeRD data</pdfaProperty:description>
                 </rdf:li>
+
                 <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>ZUGFeRD conformance level</pdfaProperty:description>
                 </rdf:li>
+
                 <rdf:li rdf:parseType='Resource'>
                   <pdfaProperty:name>Version</pdfaProperty:name>
                   <pdfaProperty:valueType>Text</pdfaProperty:valueType>
                   <pdfaProperty:category>external</pdfaProperty:category>
                   <pdfaProperty:description>ZUGFeRD version</pdfaProperty:description>
                 </rdf:li>
+
               </rdf:Seq>
             </pdfaSchema:property>
           </rdf:li>
+
         </rdf:Bag>
       </pdfaExtension:schemas>
     </rdf:Description>
@@ -104,11 +116,10 @@ function generatePdfA3bXmp(invoiceData) {
       <zf:ConformanceLevel>BASIC</zf:ConformanceLevel>
       <zf:Version>1.0</zf:Version>
     </rdf:Description>
+
   </rdf:RDF>
 </x:xmpmeta>
-<?xpacket end="w"?>`;
-</x:xmpmeta>
-<?xpacket end="w"?>`;
+<?xpacket end='w'?>`;
 }
 
 /**
@@ -142,50 +153,61 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
   console.log("🟢 Embedding ZUGFeRD XML for order:", invoiceData.orderId);
   const xmlString = generateZugferdXml(invoiceData);
   const zugferdFilename = `factur-x.xml`;
-  console.log(`🔍 ZUGFeRD XML string length: ${xmlString.length} bytes`);
+  const xmlBytes = Buffer.from(xmlString, "utf8");
 
-  const xmlStream = pdfDoc.context.flateStream(Buffer.from(xmlString, "utf8"));
-  const xmlRef = pdfDoc.context.register(xmlStream);
-
-  const fileSpec = pdfDoc.context.obj({
-    Type: PDFName.of("Filespec"),
-    F: PDFHexString.fromText(zugferdFilename),
-    UF: PDFHexString.fromText(zugferdFilename),
-    EF: pdfDoc.context.obj({ F: xmlRef }),
-    AFRelationship: PDFName.of("Alternative"),
+  await pdfDoc.attach(xmlBytes, zugferdFilename, {
+    mimeType: "application/xml",
+    afRelationship: "Alternative",
+    creationDate: new Date(),
+    modificationDate: new Date(),
+    description: "Factur-X (ZUGFeRD) Invoice",
   });
-  const fileSpecRef = pdfDoc.context.register(fileSpec);
-
-  let names = pdfDoc.catalog.lookupMaybe(PDFName.of("Names"));
-  if (!names) {
-    console.log("📁 Names dictionary not found, creating new one");
-    names = pdfDoc.context.obj({
-      EmbeddedFiles: pdfDoc.context.obj({
-        Names: [PDFHexString.fromText(zugferdFilename), fileSpecRef],
-      }),
-    });
-    pdfDoc.catalog.set(PDFName.of("Names"), names);
-  } else {
-    console.log("📁 Names dictionary exists, updating");
-    let embeddedFiles = names.lookupMaybe(PDFName.of("EmbeddedFiles"));
-    if (!embeddedFiles) {
-      embeddedFiles = pdfDoc.context.obj({ Names: [] });
-      names.set(PDFName.of("EmbeddedFiles"), embeddedFiles);
-    }
-  }
-
-    let namesArray = embeddedFiles.lookupMaybe(PDFName.of("Names"));
-    if (!namesArray) {
-      namesArray = pdfDoc.context.obj([]);
-      embeddedFiles.set(PDFName.of("Names"), namesArray);
-    }
-    
-    namesArray.push(PDFHexString.fromText(zugferdFilename), fileSpecRef);
-  }
-
-  const afArray = pdfDoc.context.obj([fileSpecRef]);
-  pdfDoc.catalog.set(PDFName.of("AF"), afArray);
+  
   console.log("✅ ZUGFeRD XML embedded successfully");
+}
+
+// -----------------------------
+// Finalize PDF: Full PDF/A-3b Implementation
+// -----------------------------
+async function finalizePdf(originalPdfBuffer, invoiceData) {
+  console.log("📄 Using FULL finalizePdf function (v6 - XMP, ICC, XML) ✨📄");
+
+  const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
+  const pdfDoc = await PDFDocument.load(cleanBuffer);
+
+  // 1. Embed ICC profile
+  const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
+  const iccProfileBytes = fs.readFileSync(iccProfilePath);
+  const iccStream = pdfDoc.context.flateStream(iccProfileBytes, { N: 3 });
+  const iccRef = pdfDoc.context.register(iccStream);
+
+  const outputIntent = pdfDoc.context.obj({
+    Type: PDFName.of("OutputIntent"),
+    S: PDFName.of("GTS_PDFA1"),
+    OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
+    DestOutputProfile: iccRef,
+  });
+
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
+  console.log("✅ ICC profile embedded successfully");
+
+  // 2. Add XMP
+  const xmp = generatePdfA3bXmp(invoiceData);
+  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, 'utf8'), {
+    Type: PDFName.of('Metadata'),
+    Subtype: PDFName.of('XML')
+  });
+  const metadataRef = pdfDoc.context.register(metadataStream);
+  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+  console.log("✅ XMP metadata embedded successfully");
+
+  // 3. Embed ZUGFeRD XML
+  await embedZugferdXml(pdfDoc, invoiceData);
+
+  // 4. Mark as tagged PDF
+  pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+
+  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
 
 
@@ -194,14 +216,11 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
  */
 async function convertToPdfA3b(pdfBuffer, invoiceData) {
   console.log("🔄 Converting to PDF/A-3b + ZUGFeRD using pdf-lib (v3)...");
-  console.log(`🔍 Initial PDF Buffer size: ${pdfBuffer.length} bytes`);
 
   const pdfDoc = await PDFDocument.load(pdfBuffer);
-  console.log(`🔍 Initial PDF page count: ${pdfDoc.getPages().length}`);
 
   // 1. Embed XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
-  console.log(`🔍 XMP Metadata string length: ${xmp.length} bytes`);
   pdfDoc.catalog.set(
     PDFName.of('Metadata'),
     pdfDoc.context.stream(xmp, {
@@ -220,10 +239,6 @@ async function convertToPdfA3b(pdfBuffer, invoiceData) {
 
   // 4. Save with PDF/A-3b compatible settings
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-
-  console.log(`🔍 Final PDF Buffer size: ${pdfBytes.length} bytes`);
-  const finalPdfDoc = await PDFDocument.load(pdfBytes);
-  console.log(`🔍 Final PDF page count: ${finalPdfDoc.getPages().length}`);
 
   console.log("✅ PDF/A-3b conversion complete");
   return Buffer.from(pdfBytes);
@@ -281,5 +296,5 @@ module.exports = {
   generatePdfA3bXmp,
   convertToPdfA3b_v2,
   embedZugferdXml,
+  finalizePdf,
 };
-

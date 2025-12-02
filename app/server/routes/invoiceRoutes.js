@@ -11,7 +11,7 @@ const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
 const { generateInvoiceHTML } = require("../../templates/english.js");
 const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js");
-const { generateZugferdXML, embedXmp, embedXmlIntoPdf, makePdfA3b } = require("../Helpers/pdf-helpers");
+const { finalizePdf } = require("../Helpers/pdf-helpers");
 const { generateZugferdPdfWithFallback, checkZugferdServiceHealth } = require("../Helpers/zugferd-client");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
@@ -30,7 +30,6 @@ const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta)
 // PDF generation helper
 // -----------------------------
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
-  const PDFLib = require("pdf-lib");
   const page = await browser.newPage();
 
   await page.setViewport({ width: 1200, height: 1600 });
@@ -69,51 +68,15 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   await page.close();
 
-  const pdfDoc = await PDFLib.PDFDocument.load(pdfBuffer);
-  const pageCount = pdfDoc.getPageCount();
-
-  // Only run this for Pro users + compliant toggle
+  // If pro user and compliant, finalize the PDF for PDF/A-3b and ZUGFeRD
   if (user.planType === "pro" && invoiceData.compliant) {
-    log(`🔐 Generating PDF/A-3b compliant invoice for order: ${invoiceData.orderId}`);
-
-    // Generate ZUGFeRD XML using Node.js generator
-    const zugferdXml = generateZugferdXml(invoiceData);
-    log(`✅ Generated ZUGFeRD XML (${zugferdXml.length} characters)`);
-
-    // Try to use Python factur-x service for guaranteed compliance
-    // Falls back to Node.js implementation if service unavailable
-    const fallbackFn = async (pdfBuf, invData) => {
-      log(`⚠️  Using Node.js fallback for PDF/A-3b generation`);
-      const pdfDocPro = await PDFLib.PDFDocument.load(pdfBuf);
-      const zugferdXmlFallback = generateZugferdXML(invData);
-      await embedXmp(pdfDocPro);
-      embedXmlIntoPdf(pdfDocPro, zugferdXmlFallback);
-      let fallbackBuffer = await pdfDocPro.save();
-
-      // Add ICC profile via Ghostscript (PDF/A-3b)
-      if (!DEBUG_MODE) {
-        const iccPath = require("path").join(__dirname, "../Helpers/sRGB_v4_ICC_preference.icc");
-        fallbackBuffer = await makePdfA3b(fallbackBuffer, { iccProfilePath: iccPath });
-      }
-
-      return Buffer.from(fallbackBuffer);
-    };
-
-    try {
-      // Use factur-x Python service with fallback
-      pdfBuffer = await generateZugferdPdfWithFallback(
-        pdfBuffer,
-        invoiceData,
-        zugferdXml,
-        fallbackFn
-      );
-      log(`✅ PDF/A-3b generation complete for order: ${invoiceData.orderId}`);
-    } catch (error) {
-      log(`❌ PDF/A-3b generation failed: ${error.message}`);
-      // If both Python service and fallback fail, throw error
-      throw error;
-    }
+    pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
   }
+
+  // Need to reload to get accurate page count after potential finalizePdf operations
+  // This is a workaround as pdf-lib's save() doesn't currently return page count easily
+  const { PDFDocument } = require("pdf-lib"); // Moved here
+  const pdfDocFinal = await PDFDocument.load(pdfBuffer);  const pageCount = pdfDocFinal.getPageCount();
 
   return { pdfBuffer, pageCount };
 }
