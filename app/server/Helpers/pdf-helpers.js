@@ -171,7 +171,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v10 - ID & Metadata fix) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v11 - Trailer fix attempt) ✨📄");
 
   // 1. Load the source PDF from Puppeteer
   const sourcePdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
@@ -225,16 +225,10 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  // 9. Create and set the file ID in the trailer
-  const fileId = crypto.randomBytes(16).toString('hex').toUpperCase();
-  const idArray = pdfDoc.context.obj([
-      PDFHexString.of(fileId),
-      PDFHexString.of(fileId)
-  ]);
-  pdfDoc.trailer.set(PDFName.of('ID'), idArray);
-  console.log(`✅ File ID set in trailer: ${fileId}`);
-
-  // 10. Save the document
+  // 9. Save the document.
+  // The `ID` should be added automatically by pdf-lib on save.
+  // The previous manual attempt caused a crash because `pdfDoc.trailer` is not
+  // available on a newly created document before the save operation.
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
   
   console.log("✅ PDF finalization complete with page-copying strategy.");
