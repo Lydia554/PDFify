@@ -171,7 +171,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v13 - Metadata fix only) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v14 - Metadata fix on best code) ✨📄");
 
   // 1. Load the source PDF from Puppeteer
   const sourcePdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
@@ -202,7 +202,7 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
   console.log("✅ ICC profile embedded successfully");
 
-  // 5. Add XMP metadata (FIXED: using flateStream with correct properties)
+  // 5. Add XMP metadata (THE ONLY CHANGE)
   const xmp = generatePdfA3bXmp(invoiceData);
   const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, 'utf8'), {
     Type: PDFName.of('Metadata'),
@@ -215,21 +215,20 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   // 6. Embed ZUGFeRD XML
   await embedZugferdXml(pdfDoc, invoiceData);
   
-  // 7. Mark as tagged PDF
+  // 7. Mark as tagged PDF (important for accessibility and PDF/A)
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
   console.log("✅ PDF marked as tagged");
 
-  // 8. Set PDF Info Dictionary
+  // 8. Set PDF Info Dictionary (Producer, Creator, Dates)
   pdfDoc.setProducer('PDFify with pdf-lib');
   pdfDoc.setCreator('PDFify Application');
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  // 9. Save the document.
-  // Relying on pdf-lib to add the ID automatically, hoping the metadata fix enables this.
+  // 9. Save the document (NO ID MANIPULATION)
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
   
-  console.log("✅ PDF finalization complete.");
+  console.log("✅ PDF finalization complete. Left ID issue for next step.");
   return Buffer.from(pdfBytes);
 }
 
