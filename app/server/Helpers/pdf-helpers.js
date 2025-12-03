@@ -171,7 +171,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v7 - ID, XMP, ICC, XML) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v8 - ID, XMP, ICC, XML) ✨📄");
 
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
@@ -214,9 +214,12 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
       PDFHexString.of(fileId),
       PDFHexString.of(fileId)
   ]);
-  pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
-  console.log(`✅ File ID set: ${fileId}`);
-
+  if (pdfDoc.trailer) {
+    pdfDoc.trailer.set(PDFName.of('ID'), idArray);
+    console.log(`✅ File ID set: ${fileId}`);
+  } else {
+    console.warn('⚠️ pdfDoc.trailer is not available, unable to set PDF ID.');
+  }
 
   // Explicitly set info dictionary to force ID generation
   pdfDoc.setProducer('PDFify with pdf-lib');
