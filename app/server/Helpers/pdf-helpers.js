@@ -171,7 +171,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v9 - Page-copying strategy) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v10 - ID & Metadata fix) ✨📄");
 
   // 1. Load the source PDF from Puppeteer
   const sourcePdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
@@ -202,9 +202,12 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
   console.log("✅ ICC profile embedded successfully");
 
-  // 5. Add XMP metadata
+  // 5. Add XMP metadata (with correct stream properties)
   const xmp = generatePdfA3bXmp(invoiceData);
-  const metadataStream = pdfDoc.context.stream(xmp);
+  const metadataStream = pdfDoc.context.flateStream(xmp, {
+    Type: PDFName.of('Metadata'),
+    Subtype: PDFName.of('XML'),
+  });
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
   console.log("✅ XMP metadata embedded successfully");
@@ -212,19 +215,26 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   // 6. Embed ZUGFeRD XML
   await embedZugferdXml(pdfDoc, invoiceData);
   
-  // 7. Mark as tagged PDF (important for accessibility and PDF/A)
+  // 7. Mark as tagged PDF
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
   console.log("✅ PDF marked as tagged");
 
-  // 8. Set PDF Info Dictionary (Producer, Creator, Dates)
-  // This is good practice and helps ensure a valid structure.
+  // 8. Set PDF Info Dictionary
   pdfDoc.setProducer('PDFify with pdf-lib');
   pdfDoc.setCreator('PDFify Application');
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  // 9. Save the document
-  // useObjectStreams: false is required for PDF/A-3b compatibility
+  // 9. Create and set the file ID in the trailer
+  const fileId = crypto.randomBytes(16).toString('hex').toUpperCase();
+  const idArray = pdfDoc.context.obj([
+      PDFHexString.of(fileId),
+      PDFHexString.of(fileId)
+  ]);
+  pdfDoc.trailer.set(PDFName.of('ID'), idArray);
+  console.log(`✅ File ID set in trailer: ${fileId}`);
+
+  // 10. Save the document
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
   
   console.log("✅ PDF finalization complete with page-copying strategy.");
