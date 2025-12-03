@@ -171,63 +171,64 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v8 - ID, XMP, ICC, XML) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v9 - Page-copying strategy) ✨📄");
 
-  const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
-  const pdfDoc = await PDFDocument.load(cleanBuffer);
+  // 1. Load the source PDF from Puppeteer
+  const sourcePdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
+  
+  // 2. Create a new PDF document
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
 
-  // 1. Embed ICC profile
+  // 3. Copy pages from the source to the new document
+  const copiedPageIndices = await pdfDoc.copyPages(sourcePdfDoc, sourcePdfDoc.getPageIndices());
+  copiedPageIndices.forEach((page) => pdfDoc.addPage(page));
+  console.log(`📄 Copied ${copiedPageIndices.length} pages to new PDF document.`);
+
+  // 4. Embed ICC profile
   const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
   const iccProfileBytes = fs.readFileSync(iccProfilePath);
-  const iccStream = pdfDoc.context.flateStream(iccProfileBytes, { N: 3 });
+  const iccStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
   const iccRef = pdfDoc.context.register(iccStream);
 
   const outputIntent = pdfDoc.context.obj({
     Type: PDFName.of("OutputIntent"),
     S: PDFName.of("GTS_PDFA1"),
     OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
+    RegistryName: PDFHexString.fromText("http://www.color.org"),
+    Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
     DestOutputProfile: iccRef,
   });
-
   pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
   console.log("✅ ICC profile embedded successfully");
 
-  // 2. Add XMP
+  // 5. Add XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
-  const metadataStream = pdfDoc.context.flateStream(Buffer.from(xmp, 'utf8'), {
-    Type: PDFName.of('Metadata'),
-    Subtype: PDFName.of('XML')
-  });
+  const metadataStream = pdfDoc.context.stream(xmp);
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
   console.log("✅ XMP metadata embedded successfully");
 
-  // 3. Embed ZUGFeRD XML
+  // 6. Embed ZUGFeRD XML
   await embedZugferdXml(pdfDoc, invoiceData);
-
-  // 4. Mark as tagged PDF
+  
+  // 7. Mark as tagged PDF (important for accessibility and PDF/A)
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+  console.log("✅ PDF marked as tagged");
 
-  // 5. Create and set the file ID
-  const fileId = crypto.randomBytes(16).toString('hex').toUpperCase();
-  const idArray = pdfDoc.context.obj([
-      PDFHexString.of(fileId),
-      PDFHexString.of(fileId)
-  ]);
-  if (pdfDoc.trailer) {
-    pdfDoc.trailer.set(PDFName.of('ID'), idArray);
-    console.log(`✅ File ID set: ${fileId}`);
-  } else {
-    console.warn('⚠️ pdfDoc.trailer is not available, unable to set PDF ID.');
-  }
-
-  // Explicitly set info dictionary to force ID generation
+  // 8. Set PDF Info Dictionary (Producer, Creator, Dates)
+  // This is good practice and helps ensure a valid structure.
   pdfDoc.setProducer('PDFify with pdf-lib');
   pdfDoc.setCreator('PDFify Application');
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
+  // 9. Save the document
+  // useObjectStreams: false is required for PDF/A-3b compatibility
+  const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+  
+  console.log("✅ PDF finalization complete with page-copying strategy.");
+  return Buffer.from(pdfBytes);
 }
 
 
