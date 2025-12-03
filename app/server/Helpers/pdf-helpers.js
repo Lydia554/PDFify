@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
@@ -170,7 +171,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v6 - XMP, ICC, XML) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v7 - ID, XMP, ICC, XML) ✨📄");
 
   const cleanBuffer = cleanPdfBuffer(originalPdfBuffer);
   const pdfDoc = await PDFDocument.load(cleanBuffer);
@@ -207,13 +208,23 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   // 4. Mark as tagged PDF
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
+  // 5. Create and set the file ID
+  const fileId = crypto.randomBytes(16).toString('hex').toUpperCase();
+  const idArray = pdfDoc.context.obj([
+      PDFHexString.of(fileId),
+      PDFHexString.of(fileId)
+  ]);
+  pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
+  console.log(`✅ File ID set: ${fileId}`);
+
+
   // Explicitly set info dictionary to force ID generation
   pdfDoc.setProducer('PDFify with pdf-lib');
   pdfDoc.setCreator('PDFify Application');
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  return Buffer.from(await pdfDoc.save({ useObjectStreams: false, updateMetadata: true }));
+  return Buffer.from(await pdfDoc.save({ useObjectStreams: false }));
 }
 
 
