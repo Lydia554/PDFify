@@ -216,14 +216,11 @@ console.log(" Converting to PDF/A-3b + ZUGFeRD using pdf-lib (v3)..." );
 const pdfDoc = await PDFDocument.load(pdfBuffer);
 // 1. Embed XMP metadata
 const xmp = generatePdfA3bXmp(invoiceData);
-pdfDoc.catalog.set(
-PDFName.of('Metadata'),
-pdfDoc.context.stream(xmp, {
-Type: 'Metadata',
-Subtype: 'XML',
-Length: xmp.length,
-})
-);
+const metadataStream = pdfDoc.context.stream(xmp);
+metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
+metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
+const metadataRef = pdfDoc.context.register(metadataStream);
+pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 console.log(" XMP metadata embedded" );
 // 2. Embed ICC color profile
 await embedIccProfile(pdfDoc);
@@ -265,14 +262,11 @@ afRelationship: 'Alternative',
 });
 // Embed XMP Metadata
 const xmp = generatePdfA3bXmp(invoiceData);
-pdfDoc.catalog.set(
-PDFName.of('Metadata'),
-pdfDoc.context.stream(xmp, {
-Type: 'Metadata',
-Subtype: 'XML',
-Length: xmp.length,
-})
-);
+const metadataStream = pdfDoc.context.stream(xmp);
+metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
+metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
+const metadataRef = pdfDoc.context.register(metadataStream);
+pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
 return Buffer.from(pdfBytes);
 }
