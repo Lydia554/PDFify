@@ -186,6 +186,8 @@ console.log(" ICC profile embedded successfully" );
 // 5. Add XMP metadata
 const xmp = generatePdfA3bXmp(invoiceData);
 const metadataStream = pdfDoc.context.stream(xmp);
+metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
+metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
 const metadataRef = pdfDoc.context.register(metadataStream);
 pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 console.log(" XMP metadata embedded successfully" );
