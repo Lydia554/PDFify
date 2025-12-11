@@ -297,14 +297,11 @@ async function convertToPdfA3b_v2(pdfBuffer, invoiceData) {
 
     // Embed XMP Metadata
     const xmp = generatePdfA3bXmp(invoiceData);
-    pdfDoc.catalog.set(
-        PDFName.of('Metadata'),
-        pdfDoc.context.stream(xmp, {
-            Type: 'Metadata',
-            Subtype: 'XML',
-            Length: xmp.length,
-        })
-    );
+    const metadataStream = pdfDoc.context.stream(xmp);
+    metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
+    metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
+    const metadataRef = pdfDoc.context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
     return Buffer.from(pdfBytes);
