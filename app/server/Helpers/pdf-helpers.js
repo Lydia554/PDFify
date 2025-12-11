@@ -130,7 +130,7 @@ async function embedIccProfile(pdfDoc) {
   const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
 
   if (!fs.existsSync(iccProfilePath)) {
-    console.warn(" ICC profile not found, skipping OutputIntent" );
+    console.warn("⚠️ ICC profile not found, skipping OutputIntent");
     return;
   }
 
@@ -146,13 +146,12 @@ async function embedIccProfile(pdfDoc) {
     Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
     DestOutputProfile: iccRef
   });
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"),
-    pdfDoc.context.obj([outputIntent]));
-  console.log(" ICC color profile embedded" );
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
+  console.log("✅ ICC color profile embedded");
 }
 
 async function embedZugferdXml(pdfDoc, invoiceData) {
-  console.log(" Embedding ZUGFeRD XML for order:" , invoiceData.orderId);
+  console.log("🟢 Embedding ZUGFeRD XML for order:", invoiceData.orderId);
   const xmlString = generateZugferdXml(invoiceData);
   const zugferdFilename = `factur-x.xml`;
   const xmlBytes = Buffer.from(xmlString, "utf8");
@@ -165,14 +164,14 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
     description: "Factur-X (ZUGFeRD) Invoice",
   });
   
-  console.log(" ZUGFeRD XML embedded successfully" );
+  console.log("✅ ZUGFeRD XML embedded successfully");
 }
 
 // -----------------------------
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log(" Using FULL finalizePdf function (v9 - Page-copying strategy)");
+  console.log("📄 Using FULL finalizePdf function (v9 - Page-copying strategy) ✨📄");
 
   // 1. Load the source PDF from Puppeteer
   const sourcePdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
@@ -182,10 +181,9 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.registerFontkit(fontkit);
 
   // 3. Copy pages from the source to the new document
-  const copiedPageIndices = await pdfDoc.copyPages(sourcePdfDoc,
-    sourcePdfDoc.getPageIndices());
+  const copiedPageIndices = await pdfDoc.copyPages(sourcePdfDoc, sourcePdfDoc.getPageIndices());
   copiedPageIndices.forEach((page) => pdfDoc.addPage(page));
-  console.log(` Copied📄 ${copiedPageIndices.length} pages to new PDF document.`);
+  console.log(`📄 Copied ${copiedPageIndices.length} pages to new PDF document.`);
 
   // 4. Embed ICC profile
   const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
@@ -201,27 +199,22 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
     Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
     DestOutputProfile: iccRef,
   });
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"),
-    pdfDoc.context.obj([outputIntent]));
-  console.log(" ICC color profile embedded successfully" );
+  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
+  console.log("✅ ICC profile embedded successfully");
 
   // 5. Add XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
-  const metadataStream = pdfDoc.context.stream(xmp, {
-    Type: PDFName.of('Metadata'),
-    Subtype: PDFName.of('XML'),
-    Length: xmp.length,
-  });
+  const metadataStream = pdfDoc.context.stream(xmp);
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-  console.log(" XMP metadata embedded successfully" );
+  console.log("✅ XMP metadata embedded successfully");
 
   // 6. Embed ZUGFeRD XML
   await embedZugferdXml(pdfDoc, invoiceData);
   
   // 7. Mark as tagged PDF (important for accessibility and PDF/A)
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
-  console.log(" PDF marked as tagged" );
+  console.log("✅ PDF marked as tagged");
 
   // 8. Set PDF Info Dictionary (Producer, Creator, Dates)
   // This is good practice and helps ensure a valid structure.
@@ -234,7 +227,7 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   // useObjectStreams: false is required for PDF/A-3b compatibility
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
   
-  console.log(" PDF finalization complete with page-copying strategy." );
+  console.log("✅ PDF finalization complete with page-copying strategy.");
   return Buffer.from(pdfBytes);
 }
 
@@ -242,7 +235,7 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
  * Main function: Convert PDF to PDF/A-3b + ZUGFeRD
  */
 async function convertToPdfA3b(pdfBuffer, invoiceData) {
-  console.log(" Converting to PDF/A-3b + ZUGFeRD using pdf-lib (v3)..." );
+  console.log("🔄 Converting to PDF/A-3b + ZUGFeRD using pdf-lib (v3)...");
 
   const pdfDoc = await PDFDocument.load(pdfBuffer);
 
@@ -256,7 +249,7 @@ async function convertToPdfA3b(pdfBuffer, invoiceData) {
       Length: xmp.length,
     })
   );
-  console.log(" XMP metadata embedded" );
+  console.log("✅ XMP metadata embedded");
 
   // 2. Embed ICC color profile
   await embedIccProfile(pdfDoc);
@@ -267,19 +260,18 @@ async function convertToPdfA3b(pdfBuffer, invoiceData) {
   // 4. Save with PDF/A-3b compatible settings
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
 
-  console.log(" PDF/A-3b conversion complete" );
+  console.log("✅ PDF/A-3b conversion complete");
   return Buffer.from(pdfBytes);
 }
 
 async function convertToPdfA3b_v2(pdfBuffer, invoiceData) {
-    console.log(" Converting to PDF/A-3b using pdf-lib (v4 - fresh attempt)..." );
+    console.log("🔄 Converting to PDF/A-3b using pdf-lib (v4 - fresh attempt)...");
     
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     pdfDoc.registerFontkit(fontkit);
 
     // Embed fonts
-    const fontBytes = fs.readFileSync(path.join(__dirname,
-      '../../templates/fonts/LiberationSans-Regular.ttf'));
+    const fontBytes = fs.readFileSync(path.join(__dirname, '../../templates/fonts/LiberationSans-Regular.ttf'));
     await pdfDoc.embedFont(fontBytes);
 
     // Embed ICC Profile
@@ -294,8 +286,7 @@ async function convertToPdfA3b_v2(pdfBuffer, invoiceData) {
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
         DestOutputProfile: iccRef
     });
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"),
-      pdfDoc.context.obj([outputIntent]));
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
 
     // Embed ZUGFeRD XML
     const xmlString = generateZugferdXml(invoiceData);
@@ -315,6 +306,7 @@ async function convertToPdfA3b_v2(pdfBuffer, invoiceData) {
             Length: xmp.length,
         })
     );
+
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
     return Buffer.from(pdfBytes);
 }
