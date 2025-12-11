@@ -205,8 +205,6 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   // 5. Add XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
   const metadataStream = pdfDoc.context.stream(xmp);
-  metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
-  metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
   console.log("✅ XMP metadata embedded successfully");
@@ -243,11 +241,14 @@ async function convertToPdfA3b(pdfBuffer, invoiceData) {
 
   // 1. Embed XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
-  const metadataStream = pdfDoc.context.stream(xmp);
-  metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
-  metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
-  const metadataRef = pdfDoc.context.register(metadataStream);
-  pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+  pdfDoc.catalog.set(
+    PDFName.of('Metadata'),
+    pdfDoc.context.stream(xmp, {
+      Type: 'Metadata',
+      Subtype: 'XML',
+      Length: xmp.length,
+    })
+  );
   console.log("✅ XMP metadata embedded");
 
   // 2. Embed ICC color profile
@@ -297,11 +298,14 @@ async function convertToPdfA3b_v2(pdfBuffer, invoiceData) {
 
     // Embed XMP Metadata
     const xmp = generatePdfA3bXmp(invoiceData);
-    const metadataStream = pdfDoc.context.stream(xmp);
-    metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
-    metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+    pdfDoc.catalog.set(
+        PDFName.of('Metadata'),
+        pdfDoc.context.stream(xmp, {
+            Type: 'Metadata',
+            Subtype: 'XML',
+            Length: xmp.length,
+        })
+    );
 
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
     return Buffer.from(pdfBytes);
