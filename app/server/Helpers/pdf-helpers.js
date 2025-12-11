@@ -176,28 +176,14 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v11 - Correct Array Creation) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v12 - Final Correct Version) ✨📄");
 
-  // 1. Load the source PDF from Puppeteer
+  // 1. Load the source PDF from Puppeteer. This is the "in-place" strategy.
   const pdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
   pdfDoc.registerFontkit(fontkit);
 
   // 2. Embed ICC profile
-  const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
-  const iccProfileBytes = fs.readFileSync(iccProfilePath);
-  const iccStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
-  const iccRef = pdfDoc.context.register(iccStream);
-
-  const outputIntent = pdfDoc.context.obj({
-    Type: PDFName.of("OutputIntent"),
-    S: PDFName.of("GTS_PDFA1"),
-    OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-    RegistryName: PDFHexString.fromText("http://www.color.org"),
-    Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
-    DestOutputProfile: iccRef,
-  });
-  pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
-  console.log("✅ ICC profile embedded successfully");
+  await embedIccProfile(pdfDoc);
 
   // 3. Add XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
@@ -221,17 +207,19 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
 
   // 7. Create a unique ID for the file trailer (required for PDF/A)
   const id = crypto.randomBytes(16);
+  // Correctly create the array using the document context
   const idArray = pdfDoc.context.obj([
     PDFHexString.of(id.toString('hex').toUpperCase()),
     PDFHexString.of(id.toString('hex').toUpperCase()),
   ]);
+  // Set the ID on the trailer. This works because we loaded the document.
   pdfDoc.trailer.set(PDFName.of('ID'), idArray);
   console.log("✅ PDF trailer ID set successfully");
   
   // 8. Save the document
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
   
-  console.log("✅ PDF finalization complete with in-place strategy.");
+  console.log("✅ PDF finalization complete with correct in-place strategy.");
   return Buffer.from(pdfBytes);
 }
 
