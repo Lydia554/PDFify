@@ -176,7 +176,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v12 - Final Correct Version) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v13 - Debugging Trailer) ✨📄");
 
   // 1. Load the source PDF from Puppeteer. This is the "in-place" strategy.
   const pdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
@@ -206,13 +206,19 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setModificationDate(new Date());
 
   // 7. Create a unique ID for the file trailer (required for PDF/A)
+  console.log('[DEBUG] Inspecting trailer before setting ID...');
+  console.log(`[DEBUG] pdfDoc.trailer exists: ${!!pdfDoc.trailer}`);
+  if (pdfDoc.trailer) {
+    console.log(`[DEBUG] pdfDoc.trailer keys: ${pdfDoc.trailer.keys().map(k => k.toString())}`);
+  } else {
+    console.log('[DEBUG] pdfDoc.trailer is null or undefined.');
+  }
+
   const id = crypto.randomBytes(16);
-  // Correctly create the array using the document context
   const idArray = pdfDoc.context.obj([
     PDFHexString.of(id.toString('hex').toUpperCase()),
     PDFHexString.of(id.toString('hex').toUpperCase()),
   ]);
-  // Set the ID on the trailer. This works because we loaded the document.
   pdfDoc.trailer.set(PDFName.of('ID'), idArray);
   console.log("✅ PDF trailer ID set successfully");
   
