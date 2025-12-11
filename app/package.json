@@ -46,7 +46,8 @@
     "tmp": "^0.2.5",
     "web-streams-polyfill": "^4.2.0",
     "xmlbuilder2": "^3.1.1",
-    "xmldom": "^0.6.0"
+    "xmldom": "^0.6.0",
+    "muhammara-recipe": "^6.0.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
