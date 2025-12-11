@@ -346,7 +346,7 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
     // Generate ZIP buffer
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-    res..set({
+    res.set({
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename=Invoices_${from || "start"}_to_${to || "end"}.zip`,
     });
