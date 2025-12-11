@@ -176,56 +176,62 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-  console.log("📄 Using FULL finalizePdf function (v13 - Debugging Trailer) ✨📄");
+  console.log("📄 Using FULL finalizePdf function (v14 - Save and Reload) ✨📄");
 
-  // 1. Load the source PDF from Puppeteer. This is the "in-place" strategy.
-  const pdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
+  // Step 1: First pass to launder the PDF and create a valid structure
+  console.log('[DEBUG] First pass: Loading and saving to create a clean PDF structure.');
+  const dirtyPdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
+  const firstPassBytes = await dirtyPdfDoc.save({ useObjectStreams: false });
+
+  // Step 2: Load the clean, well-structured PDF. The trailer is guaranteed to exist now.
+  console.log('[DEBUG] Second pass: Loading the clean PDF.');
+  const pdfDoc = await PDFDocument.load(firstPassBytes);
   pdfDoc.registerFontkit(fontkit);
 
-  // 2. Embed ICC profile
+  // Step 3: Apply all PDF/A modifications to the clean document
   await embedIccProfile(pdfDoc);
 
-  // 3. Add XMP metadata
   const xmp = generatePdfA3bXmp(invoiceData);
   const metadataStream = pdfDoc.context.stream(xmp);
   const metadataRef = pdfDoc.context.register(metadataStream);
   pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
   console.log("✅ XMP metadata embedded successfully");
 
-  // 4. Embed ZUGFeRD XML
   await embedZugferdXml(pdfDoc, invoiceData);
   
-  // 5. Mark as tagged PDF (important for accessibility and PDF/A)
   pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
   console.log("✅ PDF marked as tagged");
 
-  // 6. Set PDF Info Dictionary (Producer, Creator, Dates)
   pdfDoc.setProducer('PDFify with pdf-lib');
   pdfDoc.setCreator('PDFify Application');
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  // 7. Create a unique ID for the file trailer (required for PDF/A)
-  console.log('[DEBUG] Inspecting trailer before setting ID...');
-  console.log(`[DEBUG] pdfDoc.trailer exists: ${!!pdfDoc.trailer}`);
-  if (pdfDoc.trailer) {
-    console.log(`[DEBUG] pdfDoc.trailer keys: ${pdfDoc.trailer.keys().map(k => k.toString())}`);
-  } else {
-    console.log('[DEBUG] pdfDoc.trailer is null or undefined.');
-  }
+  // Step 4: Update the trailer ID. It will exist after the first save.
+  console.log('[DEBUG] Final pass: Updating the trailer ID.');
+  const newId = crypto.randomBytes(16);
+  const existingIdArray = pdfDoc.trailer.get(PDFName.of('ID'));
 
-  const id = crypto.randomBytes(16);
-  const idArray = pdfDoc.context.obj([
-    PDFHexString.of(id.toString('hex').toUpperCase()),
-    PDFHexString.of(id.toString('hex').toUpperCase()),
-  ]);
-  pdfDoc.trailer.set(PDFName.of('ID'), idArray);
-  console.log("✅ PDF trailer ID set successfully");
+  let newIdArray;
+  if (existingIdArray instanceof PDFArray) {
+      const firstId = existingIdArray.get(0);
+      newIdArray = pdfDoc.context.obj([
+          firstId,
+          PDFHexString.of(newId.toString('hex').toUpperCase())
+      ]);
+  } else {
+      newIdArray = pdfDoc.context.obj([
+          PDFHexString.of(newId.toString('hex').toUpperCase()),
+          PDFHexString.of(newId.toString('hex').toUpperCase())
+      ]);
+  }
+  pdfDoc.trailer.set(PDFName.of('ID'), newIdArray);
+  console.log("✅ PDF trailer ID updated/set successfully");
   
-  // 8. Save the document
+  // Step 5: Save the final document
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
   
-  console.log("✅ PDF finalization complete with correct in-place strategy.");
+  console.log("✅ PDF finalization complete with Save and Reload strategy.");
   return Buffer.from(pdfBytes);
 }
 
