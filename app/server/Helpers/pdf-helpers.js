@@ -1,7 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
+const {
+  PDFDocument,
+  PDFName,
+  PDFHexString,
+  PDFArray,
+} = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
@@ -223,10 +228,17 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  // 9. Save the document
-  // useObjectStreams: false is required for PDF/A-3b compatibility
-  const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+    // 9. Create a unique ID for the file trailer (required for PDF/A)
+    const id = crypto.randomBytes(16);
+    pdfDoc.trailer.set(
+      PDFName.of('ID'),
+      pdfDoc.context.obj([PDFHexString.of(id.toString('hex')), PDFHexString.of(id.toString('hex'))])
+    );
+    console.log("✅ PDF trailer ID set successfully");
   
+    // 10. Save the document
+    // useObjectStreams: false is required for PDF/A-3b compatibility
+    const pdfBytes = await pdfDoc.save({ useObjectStreams: false });  
   console.log("✅ PDF finalization complete with page-copying strategy.");
   return Buffer.from(pdfBytes);
 }
@@ -317,4 +329,5 @@ module.exports = {
   convertToPdfA3b_v2,
   embedZugferdXml,
   finalizePdf,
+  PDFArray,
 };
