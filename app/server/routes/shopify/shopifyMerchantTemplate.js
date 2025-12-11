@@ -71,6 +71,7 @@ async function createMerchantPdf(invoiceData) {
       format: "A4",
       printBackground: true,
       margin: { top: 40, bottom: 40, left: 40, right: 40 },
+      tagged: true,
     });
     await browser.close();
 

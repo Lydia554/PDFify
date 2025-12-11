@@ -154,6 +154,7 @@ try {
       format: "A4",
       printBackground: true,
       margin: { top: 40, bottom: 40, left: 40, right: 40 },
+      tagged: true,
     });
 
     await browser.close();
@@ -345,7 +346,7 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
     // Generate ZIP buffer
     const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
 
-    res.set({
+    res..set({
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename=Invoices_${from || "start"}_to_${to || "end"}.zip`,
     });
