@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+const fontkit = require("@pdf-lib/fontkit");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
 // ---------------------
@@ -61,6 +62,7 @@ async function createMerchantPdf(invoiceData) {
 
   try {
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
     
     // Embed Liberation Sans font
     const fontBytes = fs.readFileSync(path.join(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
