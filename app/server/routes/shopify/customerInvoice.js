@@ -94,7 +94,7 @@ const premiumTemplate = `
 
    
 .summary {
-  margin-top: 50px;
+  margin-top: 80px;
   clear: both;
   border-top: 2px solid #cbd2e1;
   padding-top: 15px;
