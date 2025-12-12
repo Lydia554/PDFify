@@ -149,8 +149,23 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([id, id]);
 
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-    console.log(" PDF finalization complete.");
-    return Buffer.from(pdfBytes);
+    console.log(" PDF finalization complete. Starting post-processing for validation compliance.");
+
+    // Post-processing step to fix validator incompatibility
+    const reloadedPdfDoc = await PDFDocument.load(pdfBytes);
+    const reloadedMetadataRef = reloadedPdfDoc.catalog.get(PDFName.of('Metadata'));
+    if (reloadedMetadataRef) {
+      const metadataStream = reloadedPdfDoc.context.lookup(reloadedMetadataRef);
+      if (metadataStream && metadataStream.dict) {
+        metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
+        metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
+        console.log(" Successfully added Type and Subtype to metadata stream dictionary.");
+      }
+    }
+
+    const finalPdfBytes = await reloadedPdfDoc.save({ useObjectStreams: false });
+    console.log(" Post-processing complete.");
+    return Buffer.from(finalPdfBytes);
 }
 
 module.exports = {
