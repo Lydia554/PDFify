@@ -156,7 +156,7 @@ console.log(" ZUGFeRD XML embedded successfully" );
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-console.log(" Using FULL finalizePdf function (v9 - Page-copying strategy)" );
+console.log(" Using FULL finalizePdf function (v10 - Page-copying strategy without manual ID)" );
 // 1. Load the source PDF from Puppeteer
 const sourcePdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
 // 2. Create a new PDF document
@@ -168,21 +168,7 @@ sourcePdfDoc.getPageIndices());
 copiedPageIndices.forEach((page) => pdfDoc.addPage(page));
 console.log(` Copied ${copiedPageIndices.length} pages to new PDF document.`);
 // 4. Embed ICC profile
-const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
-const iccProfileBytes = fs.readFileSync(iccProfilePath);
-const iccStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
-const iccRef = pdfDoc.context.register(iccStream);
-const outputIntent = pdfDoc.context.obj({
-Type: PDFName.of("OutputIntent"),
-S: PDFName.of("GTS_PDFA1"),
-OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-RegistryName: PDFHexString.fromText("http://www.color.org"),
-Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
-DestOutputProfile: iccRef,
-});
-pdfDoc.catalog.set(PDFName.of("OutputIntents"),
-pdfDoc.context.obj([outputIntent]));
-console.log(" ICC profile embedded successfully" );
+await embedIccProfile(pdfDoc);
 // 5. Add XMP metadata
 const xmp = generatePdfA3bXmp(invoiceData);
 const metadataStream = pdfDoc.context.stream(xmp);
@@ -195,89 +181,19 @@ await embedZugferdXml(pdfDoc, invoiceData);
 pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 console.log(" PDF marked as tagged" );
 // 8. Set PDF Info Dictionary (Producer, Creator, Dates)
-// This is good practice and helps ensure a valid structure.
 pdfDoc.setProducer('PDFify with pdf-lib');
 pdfDoc.setCreator('PDFify Application');
 pdfDoc.setCreationDate(new Date());
 pdfDoc.setModificationDate(new Date());
 // 9. Save the document
-// useObjectStreams: false is required for PDF/A-3b compatibility
+// We are relying on pdf-lib to automatically generate a compliant /ID.
 const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
 console.log(" PDF finalization complete with page-copying strategy." );
 return Buffer.from(pdfBytes);
 }
-/**
-* Main function: Convert PDF to PDF/A-3b + ZUGFeRD
-*/
-async function convertToPdfA3b(pdfBuffer, invoiceData) {
-console.log(" Converting to PDF/A-3b + ZUGFeRD using pdf-lib (v3)..." );
-const pdfDoc = await PDFDocument.load(pdfBuffer);
-// 1. Embed XMP metadata
-const xmp = generatePdfA3bXmp(invoiceData);
-pdfDoc.catalog.set(
-PDFName.of('Metadata'),
-pdfDoc.context.stream(xmp, {
-Type: 'Metadata',
-Subtype: 'XML',
-Length: xmp.length,
-})
-);
-console.log(" XMP metadata embedded" );
-// 2. Embed ICC color profile
-await embedIccProfile(pdfDoc);
-// 3. Embed ZUGFeRD XML
-await embedZugferdXml(pdfDoc, invoiceData);
-// 4. Save with PDF/A-3b compatible settings
-const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-console.log(" PDF/A-3b conversion complete" );
-return Buffer.from(pdfBytes);
-}
-async function convertToPdfA3b_v2(pdfBuffer, invoiceData) {
-console.log(" Converting to PDF/A-3b using pdf-lib (v4 - fresh attempt)..." );
-const pdfDoc = await PDFDocument.load(pdfBuffer);
-pdfDoc.registerFontkit(fontkit);
-// Embed fonts
-const fontBytes = fs.readFileSync(path.join(__dirname,
-'../../templates/fonts/LiberationSans-Regular.ttf'));
-await pdfDoc.embedFont(fontBytes);
-// Embed ICC Profile
-const iccProfileBytes = fs.readFileSync(path.join(__dirname, "sRGB2014.icc"));
-const iccStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
-const iccRef = pdfDoc.context.register(iccStream);
-const outputIntent = pdfDoc.context.obj({
-Type: PDFName.of("OutputIntent"),
-S: PDFName.of("GTS_PDFA1"),
-OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-RegistryName: PDFHexString.fromText("http://www.color.org"),
-Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
-DestOutputProfile: iccRef
-});
-pdfDoc.catalog.set(PDFName.of("OutputIntents"),
-pdfDoc.context.obj([outputIntent]));
-// Embed ZUGFeRD XML
-const xmlString = generateZugferdXml(invoiceData);
-const xmlBytes = Buffer.from(xmlString, "utf8");
-await pdfDoc.attach(xmlBytes, 'factur-x.xml', {
-mimeType: 'application/xml',
-afRelationship: 'Alternative',
-});
-// Embed XMP Metadata
-const xmp = generatePdfA3bXmp(invoiceData);
-pdfDoc.catalog.set(
-PDFName.of('Metadata'),
-pdfDoc.context.stream(xmp, {
-Type: 'Metadata',
-Subtype: 'XML',
-Length: xmp.length,
-})
-);
-const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-return Buffer.from(pdfBytes);
-}
+
 module.exports = {
-convertToPdfA3b,
 generatePdfA3bXmp,
-convertToPdfA3b_v2,
 embedZugferdXml,
 finalizePdf,
 };
