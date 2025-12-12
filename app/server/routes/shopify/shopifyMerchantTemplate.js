@@ -57,7 +57,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF (using pdf-lib)
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING PDF-LIB-BASED PDF GENERATION (v11 - Styled) 🚀");
+  console.log("🚀 STARTING PDF-LIB-BASED PDF GENERATION (v12 - Layout Fix) 🚀");
   console.log("🟢 Starting createMerchantPdf with pdf-lib");
 
   try {
@@ -105,7 +105,7 @@ async function createMerchantPdf(invoiceData) {
     // Table Header
     const tableTop = y;
     const tableHeaders = ["Item", "Quantity", "Price", "Net", "Tax", "Total"];
-    const colWidths = [200, 70, 70, 70, 70, 70];
+    const colWidths = [220, 60, 60, 60, 60, 70];
     let x = margin;
 
     page.drawRectangle({ x: margin, y: y - 25, width: colWidths.reduce((a,b) => a+b, 0), height: 25, color: rgb(0.9, 0.9, 0.9) });
@@ -136,6 +136,7 @@ async function createMerchantPdf(invoiceData) {
      y+=20;
 
     // Totals
+    const totalsX = 380;
     const totals = [
       { label: "Subtotal", value: invoiceData.subtotal },
       { label: `Tax (${invoiceData.vatRate || "21"}%)`, value: invoiceData.tax },
@@ -143,8 +144,8 @@ async function createMerchantPdf(invoiceData) {
     ];
     
     totals.forEach(({ label, value }) => {
-      page.drawText(label, { x: margin + 350, y, font: customFontBold, size: 12, color: fontColor });
-      page.drawText(String(value), { x: margin + 480, y, font: customFont, size: 12, color: fontColor, align: 'right' });
+      page.drawText(label, { x: totalsX, y, font: customFontBold, size: 12, color: fontColor });
+      page.drawText(String(value), { x: width - margin - 70, y, font: customFont, size: 12, color: fontColor });
       y -= 20;
     });
     y -= 20;
