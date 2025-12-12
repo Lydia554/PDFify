@@ -79,7 +79,7 @@ const premiumTemplate = `
         h1 {
           font-family: 'Playfair Display', serif;
           font-size: 32px;
-          color: #04754aff;;
+          color: #04754aff;
           text-align: center;
         }
 
@@ -107,9 +107,10 @@ const premiumTemplate = `
 .summary-line {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 12px;
   font-weight: 600;
-  color: ##95BF47;;
+  color: #95BF47;
   letter-spacing: 0.02em;
 }
 
@@ -117,13 +118,10 @@ const premiumTemplate = `
   font-size: 1.25em;
   border-top: 1px solid #a3aed8;
   padding-top: 12px;
+  padding-bottom: 12px;
   margin-top: 14px;
   font-weight: 700;
-  color: #04754aff;;
-}
-
-
-.summary-line.total {
+  color: #04754aff;
   background: #e9f0ff;
   border-radius: 4px;
   padding-left: 10px;
