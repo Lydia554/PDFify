@@ -178,8 +178,15 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 async function finalizePdf(originalPdfBuffer, invoiceData) {
   console.log("📄 Using FULL finalizePdf function (v15 - Stable In-Place) ✨📄");
 
-  // 1. Load the source PDF from Puppeteer.
-  const pdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
+  // To work around issues with malformed PDFs from Puppeteer, we first
+  // "clean" the PDF by loading and saving it with pdf-lib.
+  console.log("🧼 Cleaning PDF by re-saving with pdf-lib...");
+  const cleanedPdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
+  const cleanedPdfBytes = await cleanedPdfDoc.save({ useObjectStreams: false });
+  console.log("🧼 PDF cleaning complete.");
+
+  // 1. Load the "cleaned" PDF from the temporary buffer.
+  const pdfDoc = await PDFDocument.load(cleanedPdfBytes);
   pdfDoc.registerFontkit(fontkit);
 
   // 2. Embed ICC profile
@@ -205,7 +212,7 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  // Manually create and set the PDF /ID entry in the trailer.
+  // 7. Manually create and set the PDF /ID entry in the trailer.
   console.log("Trailer debug: pdfDoc.trailerRef:", pdfDoc.trailerRef);
   console.log("Trailer debug: pdfDoc.context.trailer:", pdfDoc.context.trailer);
   const trailer = pdfDoc.trailerRef ? pdfDoc.context.lookup(pdfDoc.trailerRef) : undefined;
