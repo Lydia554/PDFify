@@ -116,8 +116,8 @@ function generateZugferdXml(invoiceData) {
     // Monetary Summary & VAT Breakdown
     doc.ele('ram:ApplicableHeaderTradeSettlement')
         .ele('ram:InvoiceCurrencyCode').txt(currency).up()
-        // Payment Means
-        .ele('ram:PaymentMeans')
+        // Payment Means - must be wrapped in SpecifiedTradeSettlementPaymentMeans
+        .ele('ram:SpecifiedTradeSettlementPaymentMeans')
             .ele('ram:TypeCode').txt('30').up() // 30 = Credit Transfer
             .ele('ram:PayeeFinancialAccount')
                 .ele('ram:IBANID').txt(iban || 'DE12345678901234567890').up()
