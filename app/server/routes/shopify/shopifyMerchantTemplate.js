@@ -63,7 +63,7 @@ async function createMerchantPdf(invoiceData) {
     const pdfDoc = await PDFDocument.create();
     
     // Embed Liberation Sans font
-    const fontBytes = fs.readFileSync(path.join(__dirname, "../../templates/fonts/LiberationSans-Regular.ttf"));
+    const fontBytes = fs.readFileSync(path.join(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
     const customFont = await pdfDoc.embedFont(fontBytes);
 
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
