@@ -57,8 +57,8 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF (using pdf-lib)
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING PDF-LIB-BASED PDF GENERATION (v12 - Layout Fix) 🚀");
-  console.log("🟢 Starting createMerchantPdf with pdf-lib");
+  console.log(" STARTING PDF-LIB-BASED PDF GENERATION (v - Layout Fix) ");
+  console.log(" Starting createMerchantPdf with pdf-lib");
 
   try {
     const pdfDoc = await PDFDocument.create();

@@ -5,7 +5,7 @@ function formatPrice(amount, currency = "EUR", locale = "de-DE") {
 
 
 function generateCustomerInvoiceHTML(invoiceData, isPremium, lang, t) {
-  console.log("--- Executing generateCustomerInvoiceHTML with FLEXBOX layout ---");
+
 const {
   shopName,
   date,
