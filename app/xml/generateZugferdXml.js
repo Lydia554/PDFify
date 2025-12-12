@@ -106,6 +106,13 @@ function generateZugferdXml(invoiceData) {
         .up()
     .up();
 
+    // Delivery - Add a minimal compliant delivery section.
+    doc.ele('ram:ApplicableHeaderTradeDelivery')
+        .ele('ram:ShipToTradeParty')
+            .ele('ram:Name').txt(customerName).up()
+        .up()
+    .up();
+
     // Monetary Summary & VAT Breakdown
     doc.ele('ram:ApplicableHeaderTradeSettlement')
         .ele('ram:InvoiceCurrencyCode').txt(currency).up()
