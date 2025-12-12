@@ -2,7 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const { finalizePdf } = require("../../Helpers/pdf-helpers");
+const { finalizePdf_Pass2 } = require("../../Helpers/pdf-helpers");
 
 // ---------------------
 // Map Shopify order → PDF data
@@ -57,7 +57,7 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF (using pdf-lib)
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING PDF-LIB-BASED PDF GENERATION (v12 - Layout Fix) 🚀");
+  console.log("🚀 STARTING PDF-LIB-BASED PDF GENERATION (v19 - 2 Pass) 🚀");
   console.log("🟢 Starting createMerchantPdf with pdf-lib");
 
   try {
@@ -159,13 +159,17 @@ async function createMerchantPdf(invoiceData) {
       color: fontColor
     });
 
-    // Finalize the PDF with PDF/A-3b compliance and ZUGFeRD embedding
-    const finalPdfBuffer = await finalizePdf(pdfDoc, invoiceData);
+    // Save the PDF to a buffer for the first pass
+    const pass1Buffer = await pdfDoc.save();
+
+    // Finalize the PDF with a second pass
+    const finalPdfBuffer = await finalizePdf_Pass2(pass1Buffer, invoiceData);
 
     console.log("✅ PDF/A-3b generation with ZUGFeRD complete. Returning final PDF.");
     return finalPdfBuffer;
     
-  } catch (err) {
+  } catch (err)
+ {
     console.error("❌ createMerchantPdf failed:", err);
     throw err;
   }
