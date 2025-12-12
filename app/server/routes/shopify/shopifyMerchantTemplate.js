@@ -133,7 +133,7 @@ async function createMerchantPdf(invoiceData) {
       });
       y -= 30;
     });
-     y+=20;
+     y -= 40;
 
     // Totals
     const totalsX = 380;
