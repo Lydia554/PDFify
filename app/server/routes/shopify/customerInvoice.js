@@ -94,12 +94,18 @@ const premiumTemplate = `
 
    
 .summary {
-  margin-top: 80px;
+  margin-top: 30px;
   clear: both;
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.summary-box {
   border-top: 2px solid #cbd2e1;
   padding-top: 15px;
   max-width: 400px;
-  margin-left: auto;
+  width: 100%;
   font-size: 1em;
   font-family: 'Open Sans', sans-serif;
   color: #95BF47;
@@ -288,9 +294,11 @@ const premiumTemplate = `
 
     <!-- 💰 Summary Section -->
     <div class="summary">
-      <div class="summary-line"><span>${t.subtotal}:</span><span>${formattedSubtotal}</span></div>
-      <div class="summary-line"><span>${t.taxTotal}:</span><span>${formattedTaxTotal}</span></div>
-      <div class="summary-line total"><strong>${t.totalGross}:</strong><strong>${formattedTotal}</strong></div>
+      <div class="summary-box">
+        <div class="summary-line"><span>${t.subtotal}:</span><span>${formattedSubtotal}</span></div>
+        <div class="summary-line"><span>${t.taxTotal}:</span><span>${formattedTaxTotal}</span></div>
+        <div class="summary-line total"><strong>${t.totalGross}:</strong><strong>${formattedTotal}</strong></div>
+      </div>
     </div>
 
 
