@@ -109,7 +109,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v12)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v13 - Final Fix)");
 
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
     const iccProfileBytes = fs.readFileSync(iccProfilePath);
@@ -131,6 +131,8 @@ async function finalizePdf(pdfDoc, invoiceData) {
     
     const xmp = generatePdfA3bXmp(invoiceData, documentId, instanceId);
     const metadataStream = pdfDoc.context.stream(xmp);
+    metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
+    metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
     const metadataRef = pdfDoc.context.register(metadataStream);
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
     console.log(" XMP metadata embedded successfully");
