@@ -129,10 +129,12 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const documentId = `uuid:${generateUuid()}`;
     const instanceId = `uuid:${generateUuid()}`;
     
-    const xmp = generatePdfA3bXmp(invoiceData, documentId, instanceId);
-    const metadataStream = pdfDoc.context.stream(xmp);
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+    const xmp = generatePdfA3bXmp(invoiceData, documentId, instanceId);
+    const metadataStream = pdfDoc.context.flateStream(xmp); // Use flateStream for compression
+    metadataStream.dict.set(PDFName.of('Type'), PDFName.of('Metadata'));
+    metadataStream.dict.set(PDFName.of('Subtype'), PDFName.of('XML'));
+    const metadataRef = pdfDoc.context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
     console.log(" XMP metadata embedded successfully");
 
     await embedZugferdXml(pdfDoc, invoiceData);
