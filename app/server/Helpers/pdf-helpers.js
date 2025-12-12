@@ -178,15 +178,8 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 async function finalizePdf(originalPdfBuffer, invoiceData) {
   console.log("📄 Using FULL finalizePdf function (v15 - Stable In-Place) ✨📄");
 
-  // To work around issues with malformed PDFs from Puppeteer, we first
-  // "clean" the PDF by loading and saving it with pdf-lib.
-  console.log("🧼 Cleaning PDF by re-saving with pdf-lib...");
-  const cleanedPdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
-  const cleanedPdfBytes = await cleanedPdfDoc.save({ useObjectStreams: false });
-  console.log("🧼 PDF cleaning complete.");
-
-  // 1. Load the "cleaned" PDF from the temporary buffer.
-  const pdfDoc = await PDFDocument.load(cleanedPdfBytes);
+  // 1. Load the source PDF from Puppeteer.
+  const pdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
   pdfDoc.registerFontkit(fontkit);
 
   // 2. Embed ICC profile
@@ -213,22 +206,16 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setModificationDate(new Date());
 
   // 7. Manually create and set the PDF /ID entry in the trailer.
-  console.log("Trailer debug: pdfDoc.trailerRef:", pdfDoc.trailerRef);
-  console.log("Trailer debug: pdfDoc.context.trailer:", pdfDoc.context.trailer);
-  const trailer = pdfDoc.trailerRef ? pdfDoc.context.lookup(pdfDoc.trailerRef) : undefined;
-  console.log("Trailer debug: looked up trailer:", trailer);
-
-  if (trailer) {
-    const uniqueId = crypto.randomBytes(16).toString('hex').toUpperCase();
-    const idArray = pdfDoc.context.obj([
-      PDFHexString.of(uniqueId),
-      PDFHexString.of(uniqueId),
-    ]);
-    trailer.set(PDFName.of('ID'), idArray);
-    console.log(`✅ Manually set PDF trailer ID: ${uniqueId}`);
-  } else {
-    console.warn("⚠️ Could not find PDF trailer. Skipping manual ID embedding.");
-  }
+  // This is required for PDF/A-3b compliance and is not always correctly
+  // handled by pdf-lib automatically. The ID is an array of two unique
+  // byte strings. For new files, both can be the same.
+  const uniqueId = crypto.randomBytes(16).toString('hex').toUpperCase();
+  const idArray = pdfDoc.context.obj([
+    PDFHexString.of(uniqueId),
+    PDFHexString.of(uniqueId),
+  ]);
+  pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
+  console.log(`✅ Manually set PDF trailer ID: ${uniqueId}`);
 
   // 8. Save the document.
   const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
