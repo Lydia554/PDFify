@@ -205,12 +205,23 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setCreationDate(new Date());
   pdfDoc.setModificationDate(new Date());
 
-  // 7. Save the document. We are intentionally NOT setting the /ID manually.
-  // We will rely on pdf-lib to generate it on save. This avoids the runtime error.
-  const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-  
-  console.log("✅ PDF finalization complete with stable in-place strategy.");
-  return Buffer.from(pdfBytes);
+  // 7. Manually create and set the PDF /ID entry in the trailer.
+  // This is required for PDF/A-3b compliance and is not always correctly
+  // handled by pdf-lib automatically. The ID is an array of two unique
+  // byte strings. For new files, both can be the same.
+  const uniqueId = crypto.randomBytes(16).toString('hex').toUpperCase();
+  const idArray = pdfDoc.context.obj([
+    PDFHexString.of(uniqueId),
+    PDFHexString.of(uniqueId),
+  ]);
+  pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
+  console.log(`✅ Manually set PDF trailer ID: ${uniqueId}`);
+
+  // 8. Save the document.
+  const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+  
+  console.log("✅ PDF finalization complete with stable in-place strategy.");
+  return Buffer.from(pdfBytes);
 }
 
 /**
