@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+const { PDFDocument, rgb } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const { finalizePdf } = require("../../Helpers/pdf-helpers");
 
@@ -57,16 +57,18 @@ function mapOrderToPdfData(order, shopConfig = {}) {
 // Create Merchant PDF (using pdf-lib)
 // ---------------------
 async function createMerchantPdf(invoiceData) {
-  console.log("🚀 STARTING NEW PDF-LIB-BASED PDF GENERATION 🚀");
+  console.log("🚀 STARTING PDF-LIB-BASED PDF GENERATION (v11 - Styled) 🚀");
   console.log("🟢 Starting createMerchantPdf with pdf-lib");
 
   try {
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
     
-    // Embed Liberation Sans font
+    // Embed Liberation Sans fonts
     const fontBytes = fs.readFileSync(path.join(__dirname, "../../../templates/fonts/LiberationSans-Regular.ttf"));
+    const fontBytesBold = fs.readFileSync(path.join(__dirname, "../../../templates/fonts/LiberationSans-Bold.ttf"));
     const customFont = await pdfDoc.embedFont(fontBytes);
+    const customFontBold = await pdfDoc.embedFont(fontBytesBold);
 
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 size
     const { width, height } = page.getSize();
@@ -78,7 +80,7 @@ async function createMerchantPdf(invoiceData) {
     page.drawText(`Invoice for ${invoiceData.customerName || "Customer"}`, {
       x: margin,
       y,
-      font: customFont,
+      font: customFontBold,
       size: 24,
       color: fontColor,
     });
@@ -86,16 +88,16 @@ async function createMerchantPdf(invoiceData) {
 
     // Header Info
     const headerText = [
-      `Order ID: ${invoiceData.orderId || ""}`,
-      `Date: ${invoiceData.date || ""}`,
-      `Customer: ${invoiceData.customerName || ""}`,
-      `Email: ${invoiceData.customerEmail || ""}`,
-      `IBAN: ${invoiceData.iban || ""}`,
-      `BIC: ${invoiceData.bic || ""}`,
-      `Payment Terms: ${invoiceData.paymentTerms || ""}`,
+      {label: "Order ID:", value: invoiceData.orderId || ""},
+      {label: "Date:", value: invoiceData.date || ""},
+      {label: "Customer:", value: invoiceData.customerName || ""},
+      {label: "Email:", value: invoiceData.customerEmail || ""},
+      {label: "IBAN:", value: invoiceData.iban || ""},
+      {label: "BIC:", value: invoiceData.bic || ""},
+      {label: "Payment Terms:", value: invoiceData.paymentTerms || ""},
     ];
-    headerText.forEach(text => {
-      page.drawText(text, { x: margin, y, font: customFont, size: 12, color: fontColor });
+    headerText.forEach(item => {
+      page.drawText(`${item.label} ${item.value}`, { x: margin, y, font: customFont, size: 11, color: fontColor });
       y -= 20;
     });
     y -= 20;
@@ -106,8 +108,10 @@ async function createMerchantPdf(invoiceData) {
     const colWidths = [200, 70, 70, 70, 70, 70];
     let x = margin;
 
+    page.drawRectangle({ x: margin, y: y - 25, width: colWidths.reduce((a,b) => a+b, 0), height: 25, color: rgb(0.9, 0.9, 0.9) });
+
     tableHeaders.forEach((header, i) => {
-      page.drawText(header, { x: x + 5, y: y - 15, font: customFont, size: 12, color: fontColor });
+      page.drawText(header, { x: x + 5, y: y - 17, font: customFontBold, size: 11, color: fontColor });
       x += colWidths[i];
     });
     y -= 30;
@@ -124,25 +128,12 @@ async function createMerchantPdf(invoiceData) {
       ];
       x = margin;
       row.forEach((cell, i) => {
-        page.drawText(cell, { x: x + 5, y: y - 15, font: customFont, size: 12, color: fontColor });
+        page.drawText(cell, { x: x + 5, y: y - 15, font: customFont, size: 10, color: fontColor });
         x += colWidths[i];
       });
       y -= 30;
     });
-
-    // Draw table lines
-    const tableBottom = y + 10;
-    x = margin;
-    page.drawRectangle({
-        x: margin,
-        y: tableBottom,
-        width: colWidths.reduce((a,b) => a+b, 0),
-        height: tableTop - tableBottom,
-        borderColor: fontColor,
-        borderWidth: 1,
-    });
-
-    y -= 30; // space for totals
+     y+=20;
 
     // Totals
     const totals = [
@@ -152,8 +143,8 @@ async function createMerchantPdf(invoiceData) {
     ];
     
     totals.forEach(({ label, value }) => {
-      page.drawText(label, { x: margin + 350, y, font: customFont, size: 12, color: fontColor });
-      page.drawText(String(value), { x: margin + 480, y, font: customFont, size: 12, color: fontColor });
+      page.drawText(label, { x: margin + 350, y, font: customFontBold, size: 12, color: fontColor });
+      page.drawText(String(value), { x: margin + 480, y, font: customFont, size: 12, color: fontColor, align: 'right' });
       y -= 20;
     });
     y -= 20;
@@ -162,15 +153,13 @@ async function createMerchantPdf(invoiceData) {
     page.drawText(`Total Amount Due: ${invoiceData.total || ""}`, {
       x: margin,
       y,
-      font: customFont,
+      font: customFontBold,
       size: 14,
       color: fontColor
     });
 
-    const pdfLibBuffer = await pdfDoc.save();
-
     // Finalize the PDF with PDF/A-3b compliance and ZUGFeRD embedding
-    const finalPdfBuffer = await finalizePdf(pdfLibBuffer, invoiceData);
+    const finalPdfBuffer = await finalizePdf(pdfDoc, invoiceData);
 
     console.log("✅ PDF/A-3b generation with ZUGFeRD complete. Returning final PDF.");
     return finalPdfBuffer;
