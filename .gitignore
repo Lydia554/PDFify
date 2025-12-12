@@ -1,41 +1,23 @@
-# Node.js dependencies
-node_modules/
+# Logs and temporary files
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-package-lock.json
-
-# Environment variables
-.env
-
-# Logs
-logs
-*.log
-*.log.*
-
-# Docker
-*.pid
-*.seed
-*.pid.lock
-docker-compose.override.yml
-.dockerignore
-
-# OS-generated files
 .DS_Store
-Thumbs.db
-
-# IDEs and editors
-.vscode/
+.env
 .idea/
+.vscode/
 
-# Build and output
+# Build artifacts
 dist/
 build/
 
-# Others
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Node modules
+node_modules/
 
-mongo-data
+# PDF files
+*.pdf
+app/pdfs/
+app/debug_steps_pdfa_test/
+
+# Local test files
+test-invoice.pdf
+pro-invoice.pdf
+test-pro-feature.sh
