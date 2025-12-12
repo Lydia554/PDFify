@@ -119,7 +119,7 @@ function generateZugferdXml(invoiceData) {
         // Payment Means - must be wrapped in SpecifiedTradeSettlementPaymentMeans
         .ele('ram:SpecifiedTradeSettlementPaymentMeans')
             .ele('ram:TypeCode').txt('30').up() // 30 = Credit Transfer
-            .ele('ram:PayeeFinancialAccount')
+            .ele('ram:PayeePartyCreditorFinancialAccount')
                 .ele('ram:IBANID').txt(iban || 'DE12345678901234567890').up()
             .up()
         .up()
