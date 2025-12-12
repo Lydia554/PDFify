@@ -206,10 +206,11 @@ async function finalizePdf(originalPdfBuffer, invoiceData) {
   pdfDoc.setModificationDate(new Date());
 
   // Manually create and set the PDF /ID entry in the trailer.
-  // This is required for PDF/A-3b compliance and is not always correctly
-  // handled by pdf-lib automatically. The ID is an array of two unique
-  // byte strings. For new files, both can be the same.
-  const trailer = pdfDoc.context.lookup(pdfDoc.trailerRef);
+  console.log("Trailer debug: pdfDoc.trailerRef:", pdfDoc.trailerRef);
+  console.log("Trailer debug: pdfDoc.context.trailer:", pdfDoc.context.trailer);
+  const trailer = pdfDoc.trailerRef ? pdfDoc.context.lookup(pdfDoc.trailerRef) : undefined;
+  console.log("Trailer debug: looked up trailer:", trailer);
+
   if (trailer) {
     const uniqueId = crypto.randomBytes(16).toString('hex').toUpperCase();
     const idArray = pdfDoc.context.obj([
