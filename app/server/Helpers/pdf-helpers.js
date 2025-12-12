@@ -156,7 +156,7 @@ console.log(" ZUGFeRD XML embedded successfully" );
 // Finalize PDF: Full PDF/A-3b Implementation
 // -----------------------------
 async function finalizePdf(originalPdfBuffer, invoiceData) {
-console.log(" Using FULL finalizePdf function (v10 - Page-copying strategy without manual ID)" );
+console.log(" Using FULL finalizePdf function (v11 - Page-copying with manual ID and metadata fix)" );
 // 1. Load the source PDF from Puppeteer
 const sourcePdfDoc = await PDFDocument.load(cleanPdfBuffer(originalPdfBuffer));
 // 2. Create a new PDF document
@@ -171,7 +171,11 @@ console.log(` Copied ${copiedPageIndices.length} pages to new PDF document.`);
 await embedIccProfile(pdfDoc);
 // 5. Add XMP metadata
 const xmp = generatePdfA3bXmp(invoiceData);
-const metadataStream = pdfDoc.context.stream(xmp);
+const metadataStream = pdfDoc.context.stream(xmp, {
+  Type: 'Metadata',
+  Subtype: 'XML',
+  Length: xmp.length,
+});
 const metadataRef = pdfDoc.context.register(metadataStream);
 pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 console.log(" XMP metadata embedded successfully" );
@@ -185,8 +189,17 @@ pdfDoc.setProducer('PDFify with pdf-lib');
 pdfDoc.setCreator('PDFify Application');
 pdfDoc.setCreationDate(new Date());
 pdfDoc.setModificationDate(new Date());
-// 9. Save the document
-// We are relying on pdf-lib to automatically generate a compliant /ID.
+
+// 9. Manually create and set the PDF /ID entry in the trailer.
+const uniqueId = crypto.randomBytes(16).toString('hex').toUpperCase();
+const idArray = pdfDoc.context.obj([
+  PDFHexString.of(uniqueId),
+  PDFHexString.of(uniqueId),
+]);
+pdfDoc.context.trailer.set(PDFName.of('ID'), idArray);
+console.log(` Manually set PDF trailer ID: ${uniqueId}`);
+
+// 10. Save the document
 const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
 console.log(" PDF finalization complete with page-copying strategy." );
 return Buffer.from(pdfBytes);
