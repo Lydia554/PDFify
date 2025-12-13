@@ -101,6 +101,19 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 if (isMerchant) {
 try {
   console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
+  
+  console.log(`[Shopify Merchant Invoice] Using shopDomain: ${shopDomain}`);
+  if (shopConfig) {
+      console.log(`[Shopify Merchant Invoice] Found shopConfig for ${shopDomain}.`);
+      if (shopConfig.customLogoUrl) {
+          console.log(`[Shopify Merchant Invoice] Logo URL found: ${shopConfig.customLogoUrl}`);
+      } else {
+          console.log(`[Shopify Merchant Invoice] No customLogoUrl found in shopConfig.`);
+      }
+  } else {
+      console.log(`[Shopify Merchant Invoice] No shopConfig found for ${shopDomain}.`);
+  }
+  
   const invoiceData = mapOrderToPdfData(order, shopConfig, user);
   
   // Fetch and add logo data if it exists
