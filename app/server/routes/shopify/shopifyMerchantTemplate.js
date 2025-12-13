@@ -229,7 +229,8 @@ async function createMerchantPdf(invoiceData) {
     const partyLabelSize = 12;
     const partyTextSize = 10;
     const partyLineHeight = 15;
-    
+    const partiesTop = y; // Y position for the top of this section
+
     // "From" (Seller)
     page.drawText("From", { x: margin, y, font: fontBold, size: partyLabelSize, color: colors.secondary });
     y -= partyLineHeight;
