@@ -1,121 +1,49 @@
+# 📄 PDFify API
 
+**PDFify** is an enterprise-grade PDF generation service. This repository showcases a powerful, pure Node.js engine that transforms Shopify order data into **standards-compliant merchant invoices**.
 
-# 📄 PDFify
-
-**PDFify** is a modern PDF generation service and backend engine that transforms structured data (JSON, HTML, or CSV) into beautifully branded, standards-compliant PDF documents — including **receipts, invoices, packing slips, confirmations, reports, and more**.  
-
-It supports both developers and non-technical users with flexible API access, **Shopify and WooCommerce integrations**, and premium pre-built templates.  
-Built for performance, compliance, and modern e-commerce use cases — PDFify powers **customer-facing invoices** and **merchant-facing tax-compliant documents**.  
+The key innovation is the creation of **PDF/A-3b** and **ZUGFeRD 2.3** compliant invoices using only Node.js libraries, removing the need for external dependencies like headless browsers or Java for the core compliance workflow.
 
 ---
 
-## 🚀 What It Does
+## 🚀 Core Feature: Standards-Compliant Invoice Generation
 
-- 📎 Accepts **JSON, HTML, or CSV input** via REST API  
-- 🖨️ Returns **styled, production-ready PDFs** on the fly  
-- 🛒 Integrated with **Shopify & WooCommerce** (via webhooks & APIs, no plugin/app install required)  
-- 🎨 Generates **styled customer invoices** with branding, product images, and multilingual formatting  
-- 🔐 Outputs **compliant merchant PDFs** (PDF/A-3b + ZUGFeRD XML) for B2B and tax authority workflows  
-- 🧑‍💻 Built for developers, but includes a **Friendly Mode UI** for non-coders  
+This engine specializes in converting raw Shopify order data into professional, machine-readable invoices suitable for long-term archival and automated B2B processing.
 
----
-
-## 🔍 Key Features
-
-### 🧾 Customer-Facing Documents
-- Branded, styled invoices and receipts (logos, product images, custom colors, fonts)  
-- Multilingual formatting and localized currency display  
-- Per-item tax numbers, VAT breakdowns, discounts, totals  
-- Responsive layouts optimized for A4 and mobile viewing  
-
-### 📁 Merchant-Facing Compliance
-- **PDF/A-3b archival compliance** with Ghostscript validation  
-- **ZUGFeRD 2.3 XML embedding** handled natively (via `pdf-lib` + XML builders)  
-- ICC output intent profiles for color compliance  
-- XMP metadata embedding + sanitization pipeline  
-- **VeraPDF-ready local copies** for archival and tax authority compatibility  
-
-### 📦 Shopify & WooCommerce Integration
-- Real-time order processing via Shopify webhooks & WooCommerce REST API  
-- Converts live order data into **customer-facing invoices** and **merchant-facing compliant PDFs**  
-- **Bulk ZIP export** of invoices/receipts for batch processing  
-- **Date-range filtering** for generating PDFs across specific sales periods  
-- Flexible product-to-PDF mapping  
-- Multi-shop support with per-store usage tracking  
-
-### 🧑‍💻 Developer Mode Enhancements
-- Accepts **CSV input** for structured bulk document generation  
-- Raw HTML injection for complete template control  
-- Metadata inspection & debug logging  
-- Ideal for SaaS integrations, testing, and automation pipelines  
-
-### 🎨 Modular Templates & Dual Rendering Modes
-- **Developer Mode** → granular control over layouts and raw HTML/CSV input  
-- **Friendly Mode** → pre-built templates (invoices, receipts, packing slips, shop orders, therapy reports, custom docs)  
-- Powered by **Puppeteer** for modular HTML → PDF rendering  
-
-### 📊 Usage Tracking & Access Control
-- Premium/pro features with per-user and per-store metering  
-- Document logs with metadata storage  
-- Multi-tenant access control  
+-   ✅ **Pure Node.js Solution:** Generates complex PDFs without relying on external binaries or headless browsers.
+-   ✅ **PDF/A-3b Compliance:** Creates PDFs that meet the ISO 19005-3 standard for long-term electronic document preservation.
+-   ✅ **ZUGFeRD 2.3 E-Invoicing:** Embeds a structured XML invoice directly within the PDF, making it a "hybrid" document that can be read by both humans and machines.
+-   ✅ **Dynamic & On-the-Fly:** Generates documents in real-time via API calls.
 
 ---
 
-## 🧰 Tech Stack
+## 🧰 Tech Stack & Key Modules
 
-**Backend & Frameworks**  
-- Node.js + Express — Core backend  
-- Mongoose (MongoDB ODM)  
-- express-session + connect-mongo — Session handling  
+The compliance engine is powered by a carefully selected stack of JavaScript libraries, demonstrating a sophisticated approach to PDF manipulation in Node.js.
 
-**PDF Generation & Compliance**  
-- Puppeteer — HTML → PDF rendering  
-- pdf-lib — Low-level PDF editing (metadata, ICC, ZUGFeRD XML)  
-- Ghostscript — PDF/A-3b compliance validation  
+**Core Libraries:**
+-   **`pdf-lib`**: The foundation of the engine. Used for low-level, programmatic creation of the PDF document structure, text, graphics, and font embedding.
+-   **`xmlbuilder2`**: Creates the structured ZUGFeRD 2.3 XML data from Shopify order information.
+-   **`fontkit`**: Handles font subsetting and embedding, a critical requirement for PDF/A compliance.
 
-**E-commerce Integrations**  
-- Shopify Webhooks API  
-- WooCommerce REST API  
-
-**Bulk & Export Tools**  
-- CSV parsing (Developer Mode)  
-- archiver — Multi-document ZIP exports  
-- Date-range filtering for batch generation  
-
-**Payments & Email**  
-- Stripe — Payments & feature gating  
-- nodemailer — Email delivery  
-
-**Security**  
-- JWT — Token-based authentication  
-- bcrypt/bcryptjs — Password hashing  
-
-**Other Utilities**  
-- node-cron — Background cleanup/validations  
-- xmlbuilder2, xmldom — XML generation/parsing  
-- diff — Metadata comparison  
-- web-streams-polyfill — PDF stream compatibility  
+**Key Application Modules:**
+-   `app/server/routes/shopify/`: This directory contains the primary business logic.
+    -   `shopifyApiRoutes.js`: Exposes the API endpoint that receives an order ID.
+    -   `shopifyMerchantTemplate.js`: The core template that uses `pdf-lib` to draw the invoice layout, text, and tables from scratch. It also orchestrates data mapping.
+    -   `shopifyHelpers.js`: Includes the logic to fetch order data and the store's logo directly from the Shopify API.
+-   `app/server/xml/generateZugferdXml.js`: A dedicated module responsible for transforming a JSON order object into a fully compliant ZUGFeRD 2.3 XML string.
+-   `app/server/Helpers/pdf-helpers.js`: The heart of the compliance engine. This crucial helper takes a `pdf-lib` document and performs the final steps to achieve compliance:
+    1.  Embeds an ICC color profile for consistent color reproduction.
+    2.  Adds the required XMP metadata to identify the document as PDF/A-3b and ZUGFeRD-compatible.
+    3.  Attaches and embeds the generated ZUGFeRD XML file into the PDF structure.
 
 ---
 
 ## 🚧 Source Code
 
-This repository is for **public showcase purposes only**.  
+This repository is for **public showcase purposes only**.
 
-📩 Interested in a demo, technical deep-dive, or collaboration? → Reach out!  
-
----
-
-## 🔗 Demo / Preview
-
-🎥 Video demo coming soon.  
-
----
-
----
-
-### 📦 PDFify Architecture / Branding
-![PDFify Banner](./assets/pdfify-banner.png)  
+📩 Interested in a demo, technical deep-dive, or collaboration? → Reach out!
 
 ---
 
