@@ -168,6 +168,7 @@ echo "📦 Dependency Tests"
 echo "-------------------"
 
 run_test "Puppeteer dependencies installed" "docker exec pdf-api-app which chromium || docker exec pdf-api-app which google-chrome"
+run_test "Ghostscript installed" "docker exec pdf-api-app which gs"
 run_test "Node.js version correct" "docker exec pdf-api-app node --version | grep -q 'v20'"
 
 echo ""

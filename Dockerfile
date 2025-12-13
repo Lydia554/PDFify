@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     libxss1 \
     libxtst6 \
     xdg-utils \
+    ghostscript \
     build-essential \
     python3 \
     --no-install-recommends \
