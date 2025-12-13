@@ -15,7 +15,6 @@ services:
       - SYS_ADMIN
     depends_on:
       - mongo
-      - python-service
     networks:
       - pdf-api-network
       
@@ -24,16 +23,6 @@ services:
     container_name: pdf-api-mongo
     volumes:
       - mongo-data:/data/db
-    networks:
-      - pdf-api-network
-      
-  python-service:
-    build:
-      context: ./python-service
-    image: pdf-api-python
-    volumes:
-      - ./python-service:/app
-    restart: unless-stopped
     networks:
       - pdf-api-network
    
