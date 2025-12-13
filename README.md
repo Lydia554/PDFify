@@ -1,49 +1,174 @@
-# 📄 PDFify API
+# 📄 PDFify API: Enterprise-Grade Document Generation
 
-**PDFify** is an enterprise-grade PDF generation service. This repository showcases a powerful, pure Node.js engine that transforms Shopify order data into **standards-compliant merchant invoices**.
+**PDFify** is a production-ready, enterprise-grade PDF generation service, offering a versatile suite of tools to create a wide range of documents—from standards-compliant e-invoices for E-Commerce to branded recipes and reports. It features a powerful pure Node.js engine for high-compliance documents and a flexible HTML-to-PDF engine for general-purpose use.
 
-The key innovation is the creation of **PDF/A-3b** and **ZUGFeRD 2.3** compliant invoices using only Node.js libraries, removing the need for external dependencies like headless browsers or Java for the core compliance workflow.
-
----
-
-## 🚀 Core Feature: Standards-Compliant Invoice Generation
-
-This engine specializes in converting raw Shopify order data into professional, machine-readable invoices suitable for long-term archival and automated B2B processing.
-
--   ✅ **Pure Node.js Solution:** Generates complex PDFs without relying on external binaries or headless browsers.
--   ✅ **PDF/A-3b Compliance:** Creates PDFs that meet the ISO 19005-3 standard for long-term electronic document preservation.
--   ✅ **ZUGFeRD 2.3 E-Invoicing:** Embeds a structured XML invoice directly within the PDF, making it a "hybrid" document that can be read by both humans and machines.
--   ✅ **Dynamic & On-the-Fly:** Generates documents in real-time via API calls.
+This project is a complete, multi-tenant SaaS solution, including user authentication, API key management, subscription plans, and Stripe integration.
 
 ---
 
-## 🧰 Tech Stack & Key Modules
+## ✨ Core Features
 
-The compliance engine is powered by a carefully selected stack of JavaScript libraries, demonstrating a sophisticated approach to PDF manipulation in Node.js.
+PDFify is more than just a single-purpose tool; it's a complete platform with a dual-engine architecture to meet diverse PDF generation needs.
 
-**Core Libraries:**
--   **`pdf-lib`**: The foundation of the engine. Used for low-level, programmatic creation of the PDF document structure, text, graphics, and font embedding.
--   **`xmlbuilder2`**: Creates the structured ZUGFeRD 2.3 XML data from Shopify order information.
--   **`fontkit`**: Handles font subsetting and embedding, a critical requirement for PDF/A compliance.
+-   ### **Dual PDF Engines**
+    -   **🚀 Compliant Engine (`pdf-lib`):** A high-performance, pure Node.js engine for creating standards-compliant documents from scratch. It offers unparalleled control and performance by programmatically building PDFs without external dependencies like headless browsers.
+    -   **🌐 Legacy Engine (`puppeteer`):** A flexible engine that renders HTML and CSS into beautiful PDFs using a headless Chrome instance. Ideal for creating visually rich documents from web-standard technologies.
 
-**Key Application Modules:**
--   `app/server/routes/shopify/`: This directory contains the primary business logic.
-    -   `shopifyApiRoutes.js`: Exposes the API endpoint that receives an order ID.
-    -   `shopifyMerchantTemplate.js`: The core template that uses `pdf-lib` to draw the invoice layout, text, and tables from scratch. It also orchestrates data mapping.
-    -   `shopifyHelpers.js`: Includes the logic to fetch order data and the store's logo directly from the Shopify API.
--   `app/server/xml/generateZugferdXml.js`: A dedicated module responsible for transforming a JSON order object into a fully compliant ZUGFeRD 2.3 XML string.
--   `app/server/Helpers/pdf-helpers.js`: The heart of the compliance engine. This crucial helper takes a `pdf-lib` document and performs the final steps to achieve compliance:
-    1.  Embeds an ICC color profile for consistent color reproduction.
-    2.  Adds the required XMP metadata to identify the document as PDF/A-3b and ZUGFeRD-compatible.
-    3.  Attaches and embeds the generated ZUGFeRD XML file into the PDF structure.
+-   ### **E-Commerce Integration**
+    -   **🛍️ Shopify:** Deep integration for generating compliant merchant invoices, customer-facing invoices, packing slips, and more directly from order data. Supports bulk-generation and ZIP file creation.
+    -   **🛒 WooCommerce:** Connect your WooCommerce store to generate customer invoices and bulk-download them in a ZIP archive.
+
+-   ### **Standards-Compliant E-Invoicing**
+    -   **✅ PDF/A-3b Compliance:** Creates PDFs that meet the **ISO 19005-3** standard for long-term electronic document preservation, ensuring your invoices are future-proof.
+    -   **✅ ZUGFeRD 2.3 E-Invoicing:** Embeds a structured XML invoice directly within the PDF, creating a "hybrid" document that is both human-readable and machine-parseable for automated B2B and B2G processing.
+
+-   ### **Flexible Generation Modes**
+    -   **👩‍⚖️ Compliant Mode:** The flagship feature for generating PDF/A-3b and ZUGFeRD 2.3 merchant invoices for Shopify.
+    -   **😊 Friendly Mode:** For non-developers. Generate beautiful PDFs (invoices, recipes) from simple JSON data using pre-built server-side templates. It even includes ZUGFeRD support for Pro plan users!
+    -   **Developer Mode:** For developers. Send raw HTML content and get a pixel-perfect PDF back, complete with optional branding and watermarking based on your plan.
+
+-   ### **Wide Variety of Templates**
+    -   The platform is built to be extensible and supports various document types beyond e-commerce, including:
+        -   Invoices
+        -   Packing Slips
+        -   Shop Orders
+        -   Recipes
+        -   Therapy Reports
+        -   And more...
+
+-   ### **Full-Fledged Platform Features**
+    -   **Multi-Tenancy:** Supports multiple user accounts with isolated configurations.
+    -   **Authentication:** Secure user and API access via JWT and session management.
+    -   **API Key Management:** Users can manage their own API keys.
+    -   **Subscription Tiers:** Built-in logic for `free`, `premium`, and `pro` plans with different feature access.
+    -   **Billing Integration:** Fully integrated with **Stripe** for handling payments and subscriptions.
 
 ---
 
-## 🚧 Source Code
+## 🧰 Tech Stack
 
-This repository is for **public showcase purposes only**.
+-   **Backend:** Node.js, Express.js
+-   **Database:** MongoDB with Mongoose
+-   **PDF Engines:**
+    -   **Compliant:** `pdf-lib`, `@pdf-lib/fontkit`
+    -   **Legacy:** `puppeteer`
+-   **E-Invoicing:** `xmlbuilder2`, `fast-xml-parser`
+-   **Authentication:** `jsonwebtoken`, `bcryptjs`, `express-session`
+-   **E-Commerce:** `@woocommerce/woocommerce-rest-api` for WooCommerce; `axios`/`node-fetch` for Shopify.
+-   **Payments:** `stripe`
+-   **Deployment:** Docker Compose
 
-📩 Interested in a demo, technical deep-dive, or collaboration? → Reach out!
+---
+
+## 🚀 Getting Started
+
+This project is set up for easy local development using Docker.
+
+### Prerequisites
+-   Docker Desktop
+-   Git
+-   A shell environment (like WSL on Windows)
+
+### Local Setup
+
+1.  **Clone the repository:**
+    ```bash
+    git clone <repository-url>
+    cd PDF-API
+    ```
+
+2.  **Run the setup script:**
+    This will create the necessary environment files.
+    ```bash
+    chmod +x setup-local-env.sh
+    ./setup-local-env.sh
+    ```
+
+3.  **Start the services:**
+    ```bash
+    docker compose up -d
+    ```
+
+4.  **Verify the setup:**
+    The application should now be running. You can run the test script to verify.
+    ```bash
+    ./test-local-env.sh
+    ```
+
+---
+
+## 🏗️ Project Structure
+
+```
+app/
+├── server/
+│   ├── index.js              # Main application entry point
+│   ├── routes/               # API route definitions for each feature
+│   │   ├── shopify/          # Shopify-specific logic
+│   │   ├── woocommerce/      # WooCommerce-specific logic
+│   │   ├── friendlyMode.js   # "No-code" JSON to PDF routes
+│   │   └── htmlRoutes.js     # Raw HTML to PDF routes
+│   ├── Helpers/
+│   │   └── pdf-helpers.js    # Core compliance logic (ZUGFeRD, PDF/A)
+│   ├── models/               # Mongoose schemas (User, ShopConfig)
+│   ├── middleware/           # Authentication and other middleware
+│   └── templates-friendly-mode/ # Server-side templates for Friendly Mode
+└── package.json
+```
+
+---
+
+## 🔌 API Usage & Endpoints
+
+Authentication is handled via a **Bearer Token** passed in the `Authorization` header. You can get a token by signing up and generating one in the user dashboard.
+
+### Shopify: Compliant Merchant Invoice
+Generate a PDF/A-3b and ZUGFeRD 2.3 compliant invoice.
+
+`POST /api/shopify/invoice?merchant=true`
+```bash
+curl -X POST http://localhost:3002/api/shopify/invoice?merchant=true \
+-H "Authorization: Bearer YOUR_API_KEY" \
+-H "Content-Type: application/json" \
+-d 
+'{ "shopDomain": "your-store.myshopify.com", "orderId": "1234567890" }'
+```
+
+### WooCommerce: Customer Invoice
+Generate a standard customer invoice.
+
+`POST /api/woocommerce/invoice`
+```bash
+curl -X POST http://localhost:3002/api/woocommerce/invoice \
+-H "Authorization: Bearer YOUR_API_KEY" \
+-H "Content-Type: application/json" \
+-d 
+'{ "shopDomain": "your-store.com", "orderId": "1234" }'
+```
+
+### Friendly Mode: JSON to PDF
+Generate an invoice from simple JSON data using a pre-built template.
+
+`POST /api/friendly/generate`
+```bash
+curl -X POST http://localhost:3002/api/friendly/generate \
+-H "Authorization: Bearer YOUR_API_KEY" \
+-H "Content-Type: application/json" \
+-d 
+'{ "template": "invoice", "orderId": "INV-2025-001", "customerName": "John Doe", "items": "Item 1,1,100\nItem 2,2,50" }'
+```
+
+### Developer Mode: Raw HTML to PDF
+Generate a PDF directly from an HTML string.
+
+`POST /api/html/generate-pdf-from-html`
+```bash
+curl -X POST http://localhost:3002/api/html/generate-pdf-from-html \
+-H "Authorization: Bearer YOUR_API_KEY" \
+-H "Content-Type: application/json" \
+-d 
+'{ "html": "<h1>Hello, World!</h1><p>This is my PDF.</p>" }'
+```
 
 ---
 
