@@ -19,6 +19,7 @@ const {
   customerName,
   shippingAddress,
   billingAddress,
+  orderId
 } = invoiceData;
 
   const basicTemplate = `
@@ -46,277 +47,227 @@ const {
     </html>
   `;
 
-const premiumTemplate = `
-  <html>
+  // The new, professional premium template
+  const premiumTemplate = `
+    <html>
     <head>
       <meta charset="UTF-8" />
       <title>Invoice</title>
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&display=swap');
-
+        :root {
+          --font-family: 'Liberation Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          --primary-color: #0d1b2a; /* Deep Navy Blue */
+          --secondary-color: #415a77; /* Shadow Blue */
+          --accent-color: #1b998b; /* Muted Teal */
+          --background-color: #f8f9fa;
+          --text-color: #343a40;
+          --light-gray: #e9ecef;
+          --border-color: #dee2e6;
+        }
         body {
-          font-family: 'Open Sans', sans-serif;
-          color: #333;
-          background: #f4f7fb;
+          font-family: var(--font-family);
+          color: var(--text-color);
+          background: #fff;
           margin: 0;
           padding: 0;
+          font-size: 14px;
         }
-
-        .container {
+        .invoice-container {
           max-width: 800px;
-          margin: 20px auto;
-          padding: 30px 40px 160px;
-          background: linear-gradient(to bottom right, #ffffff, #f8fbff);
-          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-          border-radius: 16px;
+          margin: 40px auto;
+          padding: 40px;
+          border: 1px solid var(--border-color);
+          background: #fff;
         }
-
-        .logo {
-          width: 150px;
-          margin-bottom: 20px;
-        }
-
-        h1 {
-          font-family: 'Playfair Display', serif;
-          font-size: 32px;
-          color: #04754aff;
-          text-align: center;
-        }
-
         .invoice-header {
           display: flex;
           justify-content: space-between;
-          margin-bottom: 30px;
-          padding-bottom: 20px;
-          border-bottom: 2px solid #04754aff;
+          align-items: flex-start;
+          padding-bottom: 30px;
+          border-bottom: 2px solid var(--primary-color);
+          margin-bottom: 40px;
         }
-
-
-   
-.summary {
-  margin-top: 30px;
-  clear: both;
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-.summary-box {
-  border-top: 2px solid #cbd2e1;
-  padding-top: 15px;
-  max-width: 400px;
-  width: 100%;
-  font-size: 1em;
-  font-family: 'Open Sans', sans-serif;
-  color: #95BF47;
-}
-
-.summary-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  font-weight: 600;
-  color: #95BF47;
-  letter-spacing: 0.02em;
-}
-
-.summary-line.total {
-  font-size: 1.25em;
-  border-top: 1px solid #a3aed8;
-  padding-top: 12px;
-  padding-bottom: 12px;
-  margin-top: 14px;
-  font-weight: 700;
-  color: #04754aff;
-  background: #e9f0ff;
-  border-radius: 4px;
-  padding-left: 10px;
-  padding-right: 10px;
-}
-
-
-.customer-info {
-  margin: 30px 0;
-  padding: 20px 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(23, 177, 118, 0.15);
-  font-family: 'Open Sans', sans-serif;
-  color: #010201ff;
-  font-size: 1em;
-  line-height: 1.5;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  transition: box-shadow 0.3s ease;
-}
-
-.customer-info:hover {
-  box-shadow: 0 8px 24px rgba(4, 87, 18, 0.3);
-}
-
-.customer-info p {
-  margin: 6px 0;
-}
-
-
-.shipping-info {
-  background: linear-gradient(135deg, #e0ffe8 0%, #c8f7df 100%);
-  border-left: 6px solid #04754aff; 
-}
-
-
-.billing-info {
-  background: linear-gradient(135deg, #fffbe6 0%, #fff4c2 100%);
-  border-left: 6px solid #95BF47;
-}
-
-
-
-.table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 8px; /* vertical spacing between rows */
-  font-family: 'Open Sans', sans-serif;
-}
-
-.table th,
-.table td {
-  padding: 14px 18px;
-  border: none;
-  background-color: #f7faff;
-  vertical-align: middle;
-  color: #036b32ff;
-  box-shadow: inset 0 -1px 0 #95BF47;
-  border-radius: 8px;
-}
-
-.table th {
-  background-color: #dbe7ff;
-  font-weight: 700;
-  color: #04754aff;
-  text-align: left;
-}
-
-.table tbody tr:hover td {
-  background-color: #e6f0ff;
-  cursor: default;
-}
-
-
-       
-
+        .logo {
+          max-height: 80px;
+          max-width: 200px;
+        }
+        .invoice-title-section {
+          text-align: right;
+        }
+        .invoice-title {
+          font-size: 36px;
+          font-weight: 700;
+          color: var(--primary-color);
+          margin: 0 0 10px 0;
+        }
+        .invoice-meta p {
+          margin: 0;
+          line-height: 1.5;
+          font-size: 14px;
+          color: var(--secondary-color);
+        }
+        .invoice-meta p strong {
+          color: var(--primary-color);
+        }
+        .parties-section {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 40px;
+        }
+        .party {
+          width: 48%;
+        }
+        .party h3 {
+          font-size: 16px;
+          font-weight: 700;
+          color: var(--secondary-color);
+          border-bottom: 1px solid var(--border-color);
+          padding-bottom: 8px;
+          margin: 0 0 8px 0;
+        }
+        .party p {
+          margin: 0;
+          line-height: 1.6;
+        }
+        .invoice-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+        }
+        .invoice-table thead {
+          background-color: var(--primary-color);
+          color: #fff;
+        }
+        .invoice-table th {
+          font-weight: 700;
+          padding: 15px;
+          text-align: left;
+        }
+        .invoice-table td {
+          padding: 15px;
+          border-bottom: 1px solid var(--border-color);
+        }
+        .invoice-table tbody tr:nth-child(even) {
+          background-color: var(--background-color);
+        }
+        .invoice-table .text-right {
+          text-align: right;
+        }
         .product-image {
-          width: 60px;
-          height: 60px;
-          object-fit: contain;
-          border-radius: 8px;
-          border: 1px solid #ccc;
+          width: 50px;
+          height: 50px;
+          object-fit: cover;
+          border-radius: 4px;
           background: white;
         }
-
-    
-
-        .chart-container {
-          margin-top: 30px;
-          text-align: center;
+        .totals-section {
+          display: flex;
+          justify-content: flex-end;
         }
-
+        .totals-table {
+          width: 50%;
+          max-width: 350px;
+        }
+        .totals-table td {
+          padding: 12px 15px;
+        }
+        .totals-table .label {
+          font-weight: 700;
+          color: var(--secondary-color);
+        }
+        .totals-table .amount {
+          text-align: right;
+        }
+        .amount-due-row .label, .amount-due-row .amount {
+          font-size: 1.2em;
+          font-weight: 700;
+          color: var(--accent-color);
+          border-top: 2px solid var(--accent-color);
+          padding-top: 15px;
+        }
         .footer {
-          max-width: 800px;
-          margin: 40px auto 10px auto;
-          padding: 10px 20px;
-          background-color: #f0f2f7;
-          color: #555;
+          border-top: 1px solid var(--border-color);
+          padding-top: 20px;
+          margin-top: 40px;
           text-align: center;
-          font-size: 11px;
-          border-top: 2px solid #cbd2e1;
-          border-radius: 0 0 16px 16px;
-          position: static;
+          font-size: 12px;
+          color: #888;
         }
       </style>
+    </head>
+    <body>
+      <div class="invoice-container">
+        <header class="invoice-header">
+          <div>
+            ${customLogoUrl ? `<img src="${customLogoUrl}" alt="Company Logo" class="logo">` : `<h1>${shopName}</h1>`}
+          </div>
+          <div class="invoice-title-section">
+            <p class="invoice-title">${t.invoiceTitle || "INVOICE"}</p>
+            <div class="invoice-meta">
+              <p><strong>${t.orderId || "Invoice #"}:</strong> ${orderId || ""}</p>
+              <p><strong>${t.date || "Date"}:</strong> ${date || ""}</p>
+            </div>
+          </div>
+        </header>
 
-      </head>
-<body>
-  <div class="container">
-    <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
+        <section class="parties-section">
+          <div class="party">
+            <h3>${t.from || "From"}</h3>
+            <p><strong>${shopName}</strong></p>
+          </div>
+          <div class="party">
+            <h3>${t.to || "To"}</h3>
+            <p><strong>${customerName}</strong></p>
+            <p>${billingAddress}</p>
+          </div>
+        </section>
 
-    <h1>${t.invoiceTitle}</h1>
-
-    <div class="invoice-header">
-      <div><strong>${t.from}</strong><br>${shopName}</div>
-      <div><strong>${t.date}</strong><br>${date}</div>
-    </div>
-
- <!-- 👤 Customer Info -->
-<div class="customer-info shipping-info">
-  <p><strong>${t.customerName}:</strong> ${customerName}</p>
-  <p><strong>${t.shippingAddress}:</strong> ${shippingAddress}</p>
-</div>
-
-<div class="customer-info billing-info">
-  <p><strong>${t.billingAddress}:</strong> ${billingAddress}</p>
-</div>
-
-
-    <!-- 🛒 Item Table -->
-    <table class="table">
-      <thead>
-        <tr>
-          <th>${t.image}</th>
-          <th>${t.item}</th>
-          <th>${t.quantity}</th>
-          <th>${t.price}</th>
-          <th>${t.taxIncluded}</th>
-        </tr>
-      </thead>
-
-
-      <tbody>
-        ${items
-          .map(
-            (item) => `
+        <table class="invoice-table">
+          <thead>
             <tr>
-              <td>${
-                item.imageUrl
-                  ? `<img src="${item.imageUrl}" class="product-image" />`
-                  : ""
-              }</td>
-              <td>${item.name}</td>
-              <td>${item.quantity}</td>
-              <td>${item.formattedPrice}</td>
-              <td>${t.taxIncluded}</td>
+              <th>${t.item || "Item"}</th>
+              <th class="text-right">${t.quantity || "Quantity"}</th>
+              <th class="text-right">${t.price || "Price"}</th>
+              <th class="text-right">${t.total || "Total"}</th>
             </tr>
-          `
-          )
-          .join("")}
-      </tbody>
-    </table>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td>${item.name || ""}</td>
+                <td class="text-right">${item.quantity}</td>
+                <td class="text-right">${item.formattedPrice}</td>
+                <td class="text-right">${item.formattedTotal}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
 
-    <!-- 💰 Summary Section -->
-    <div class="summary">
-      <div class="summary-box">
-        <div class="summary-line"><span>${t.subtotal}:</span><span>${formattedSubtotal}</span></div>
-        <div class="summary-line"><span>${t.taxTotal}:</span><span>${formattedTaxTotal}</span></div>
-        <div class="summary-line total"><strong>${t.totalGross}:</strong><strong>${formattedTotal}</strong></div>
+        <section class="totals-section">
+          <table class="totals-table">
+            <tbody>
+              <tr>
+                <td class="label">${t.subtotal || "Subtotal"}</td>
+                <td class="amount">${formattedSubtotal}</td>
+              </tr>
+              <tr>
+                <td class="label">${t.taxTotal || "Tax"}</td>
+                <td class="amount">${formattedTaxTotal}</td>
+              </tr>
+              <tr class="amount-due-row">
+                <td class="label">${t.totalGross || "Total Due"}</td>
+                <td class="amount">${formattedTotal}</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <footer class="footer">
+          <p>${t.footerNote || "Thank you for your business!"}</p>
+          <p><a href="https://pdfify.pro/">${t.visitSite || "pdfify.pro"}</a></p>
+        </footer>
       </div>
-    </div>
-
-
-
-    ${
-      showChart
-        ? `<div class="chart-container"><h2>${t.spendingOverview}</h2><img src="https://via.placeholder.com/400x200?text=Chart" /></div>`
-        : ""
-    }
-  </div>
-
-  <div class="footer">
-    <p>${t.footerNote}</p>
-    <p><a href="https://pdfify.pro/">${t.visitSite}</a></p>
-  </div>
-</body>
-
+    </body>
     </html>
   `;
 
