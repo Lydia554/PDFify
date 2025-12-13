@@ -76,6 +76,12 @@ async function getShopLogoUrl(shopDomain, token) {
     });
     
     const settingsData = JSON.parse(settingsResponse.data.asset.value);
+
+    // --- DIAGNOSTIC LOGGING ---
+    console.log("---------- [DEBUG] Shopify Theme Settings Data ----------");
+    console.log("WARNING: This contains theme configuration. Do not share publicly.");
+    console.log(JSON.stringify(settingsData, null, 2));
+    console.log("-------------------------------------------------------");
     
     // 4. Find the logo filename in settings
     const logoFilename = settingsData?.current?.logo || settingsData?.current?.sections?.header?.settings?.logo;
