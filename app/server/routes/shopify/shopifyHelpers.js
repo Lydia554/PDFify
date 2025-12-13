@@ -76,6 +76,11 @@ async function getShopLogoUrl(shopDomain, token) {
     });
     
     const settingsData = JSON.parse(settingsResponse.data.asset.value);
+
+    // --- DIAGNOSTIC LOGGING V2 ---
+    console.log("--- PLEASE COPY AND PASTE THE FOLLOWING JSON BLOCK ---");
+    console.log(JSON.stringify(settingsData));
+    console.log("--- END OF JSON BLOCK ---");
     
     // 4. Find the logo filename in settings
     const presetName = settingsData.current;
