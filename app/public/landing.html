@@ -201,26 +201,68 @@
     </div>
 
     <!-- Right Column: Invoice explanation -->
-    <div class="flex flex-col items-center">
-      <h2 class="text-2xl font-bold mb-4 self-start">Unmatched Compliance & Quality</h2>
-      <p class="text-gray-500 dark:text-gray-400 mb-4">
-        The result is a "hybrid" invoice that's both human-readable and machine-parseable, meeting the highest standards for e-invoicing and long-term archiving.
-      </p>
-      <div class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
-        <img src="/demo/Order_10348230934851.jpg"
-             alt="Compliant Shopify Merchant Invoice Example"
-             class="rounded shadow-lg border border-gray-300 dark:border-gray-600 w-full max-w-xl object-contain mb-4" />
-        <h3 class="font-bold text-lg mb-2">The Anatomy of a Compliant Merchant Invoice:</h3>
-        <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-2 mb-4 text-left">
-            <li><strong>PDF/A-3b Compliant:</strong> For long-term electronic archiving (ISO 19005-3).</li>
-            <li><strong>ZUGFeRD 2.3 Embedded:</strong> Contains a machine-readable XML invoice for automated processing.</li>
-            <li><strong>Branded & Professional:</strong> Includes your logo and store details automatically.</li>
-        </ul>
-        <a href="/demo/Order_10348230934851.pdf" target="_blank" rel="noopener noreferrer"
-           class="inline-block w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition transform hover:scale-105">
-          📄 Download Sample Merchant Invoice
-        </a>
-      </div>
+    <div class="relative flex flex-col items-center p-4 rounded-2xl overflow-hidden">
+        <!-- Background glow -->
+        <div class="absolute -inset-2 bg-gradient-to-r from-purple-600 to-pink-600 opacity-20 blur-2xl rounded-full"></div>
+        
+        <div class="relative z-10 w-full">
+            <h2 class="text-3xl font-extrabold mb-4 self-start"><span class="gradient-text">Unmatched Compliance & Quality</span></h2>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">
+                Our engine generates a "hybrid" merchant invoice that's both beautiful for humans and perfectly structured for machines, meeting the highest standards for e-invoicing and long-term archiving.
+            </p>
+            
+            <div class="w-full bg-white dark:bg-gray-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700/60 rounded-xl shadow-2xl p-6 transition-all hover:shadow-purple-500/20">
+                <img src="/demo/Shopify-Invoice-Premium-1.jpg"
+                     alt="Compliant Shopify Merchant Invoice Example"
+                     class="rounded-lg shadow-lg border border-gray-300 dark:border-gray-600 w-full max-w-xl object-contain mb-6" />
+                
+                <h3 class="font-bold text-xl mb-4 text-gray-900 dark:text-white">The Anatomy of a Compliant Merchant Invoice:</h3>
+                
+                <div class="space-y-4 mb-6">
+                    <!-- Feature 1 -->
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 h-6 w-6 mt-1 mr-3">
+                            <svg class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800 dark:text-gray-200">PDF/A-3b Compliant</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">For long-term electronic archiving (ISO 19005-3).</p>
+                        </div>
+                    </div>
+                    <!-- Feature 2 -->
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 h-6 w-6 mt-1 mr-3">
+                            <svg class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l-4 4-4-4" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800 dark:text-gray-200">ZUGFeRD 2.3 Embedded</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Machine-readable XML for automated B2B and B2G processing.</p>
+                        </div>
+                    </div>
+                    <!-- Feature 3 -->
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 h-6 w-6 mt-1 mr-3">
+                            <svg class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800 dark:text-gray-200">Branded & Professional</p>
+                            <p class="text-sm text-gray-600 dark:text-gray-400">Includes your logo and store details automatically.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <a href="/demo/Order_10348230934851.pdf" target="_blank" rel="noopener noreferrer"
+                   class="group inline-block w-full text-center bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold px-6 py-4 rounded-lg shadow-lg transition-transform transform hover:scale-105">
+                  <span class="group-hover:drop-shadow-lg">📄 Download Sample Merchant Invoice</span>
+                </a>
+            </div>
+        </div>
     </div>
   </div>
 </section>
