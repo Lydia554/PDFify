@@ -55,44 +55,56 @@ async function enrichLineItemsWithImages(lineItems, shopDomain, token) {
 
 async function getShopLogoUrl(shopDomain, token) {
   try {
-    const query = `
-      query {
-        shop {
-          brand {
-            logo {
-              image {
-                url
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    const response = await axios.post(
-      `https://${shopDomain}/admin/api/2024-04/graphql.json`, // Using a recent, stable API version
-      { query },
-      {
-        headers: {
-          "X-Shopify-Access-Token": token,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    const logoUrl = response.data?.data?.shop?.brand?.logo?.image?.url;
-    if (logoUrl) {
-      console.log(`[getShopLogoUrl] Found logo URL: ${logoUrl}`);
-    } else {
-      console.log(`[getShopLogoUrl] Logo URL not found in GraphQL response.`);
+    console.log('[getShopLogoUrl] Attempting to find logo via Theme API...');
+    
+    // 1. Get all themes
+    const themesResponse = await axios.get(`https://${shopDomain}/admin/api/2024-04/themes.json`, {
+      headers: { 'X-Shopify-Access-Token': token },
+    });
+    
+    // 2. Find the main theme
+    const mainTheme = themesResponse.data.themes.find(theme => theme.role === 'main');
+    if (!mainTheme) {
+      console.log('[getShopLogoUrl] Could not find a main theme.');
+      return null;
     }
+    console.log(`[getShopLogoUrl] Found main theme: ${mainTheme.name} (${mainTheme.id})`);
+    
+    // 3. Get the theme's settings data
+    const settingsResponse = await axios.get(`https://${shopDomain}/admin/api/2024-04/themes/${mainTheme.id}/assets.json?asset[key]=config/settings_data.json`, {
+      headers: { 'X-Shopify-Access-Token': token },
+    });
+    
+    const settingsData = JSON.parse(settingsResponse.data.asset.value);
+    
+    // 4. Find the logo filename in settings
+    const logoFilename = settingsData?.current?.logo || settingsData?.current?.sections?.header?.settings?.logo;
+    
+    if (!logoFilename) {
+      console.log('[getShopLogoUrl] Could not find logo filename in theme settings.');
+      return null;
+    }
+    console.log(`[getShopLogoUrl] Found logo filename: ${logoFilename}`);
+
+    // 5. Get the public URL for the asset
+    const assetResponse = await axios.get(`https://${shopDomain}/admin/api/2024-04/themes/${mainTheme.id}/assets.json?asset[key]=assets/${logoFilename}`, {
+        headers: { 'X-Shopify-Access-Token': token },
+    });
+
+    const logoUrl = assetResponse.data.asset.public_url;
+    if (logoUrl) {
+        console.log(`[getShopLogoUrl] Successfully retrieved public logo URL: ${logoUrl}`);
+    } else {
+        console.log('[getShopLogoUrl] Could not retrieve public URL for the logo asset.');
+    }
+
     return logoUrl || null;
 
   } catch (err) {
-    if (err.response && err.response.data && err.response.data.errors) {
-      console.error("❌ Error fetching shop logo via GraphQL:", JSON.stringify(err.response.data.errors, null, 2));
+    if (err.response) {
+      console.error("❌ Error fetching shop logo via Theme API:", JSON.stringify(err.response.data, null, 2));
     } else {
-      console.error("❌ Error fetching shop logo via GraphQL:", err.message);
+      console.error("❌ Error fetching shop logo via Theme API:", err.message);
     }
     return null;
   }
