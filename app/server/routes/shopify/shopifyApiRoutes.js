@@ -8,7 +8,7 @@ const ShopConfig = require("../../models/ShopConfig");
 const User = require("../../models/User");
 const authenticate = require("../../middleware/authenticate");
 const dualAuth = require("../../middleware/dualAuth");
-const { resolveShopifyToken } = require("./shopifyHelpers");
+const { resolveShopifyToken, getShopLogoUrl } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
@@ -34,10 +34,11 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 
     let orderId = req.body.orderId;
     let order = req.body.order || null;
+    let token;
 
     // Fetch Shopify order if not provided
     if (!order && orderId) {
-      const token = await resolveShopifyToken(req, shopDomain);
+      token = await resolveShopifyToken(req, shopDomain);
       if (!token) return res.status(400).json({ error: "Missing Shopify access token" });
 
       if (typeof orderId === "string" && orderId.startsWith("gid://")) {
@@ -102,23 +103,16 @@ if (isMerchant) {
 try {
   console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
   
-  console.log(`[Shopify Merchant Invoice] Using shopDomain: ${shopDomain}`);
-  if (shopConfig) {
-      console.log(`[Shopify Merchant Invoice] Found shopConfig for ${shopDomain}.`);
-      if (shopConfig.customLogoUrl) {
-          console.log(`[Shopify Merchant Invoice] Logo URL found: ${shopConfig.customLogoUrl}`);
-      } else {
-          console.log(`[Shopify Merchant Invoice] No customLogoUrl found in shopConfig.`);
-      }
-  } else {
-      console.log(`[Shopify Merchant Invoice] No shopConfig found for ${shopDomain}.`);
-  }
-  
   const invoiceData = mapOrderToPdfData(order, shopConfig, user);
   
-  // Fetch and add logo data if it exists
-  if (shopConfig.customLogoUrl) {
-    invoiceData.logoData = await getBase64Image(shopConfig.customLogoUrl);
+  // Fetch logo from Shopify directly
+  if (!token) token = await resolveShopifyToken(req, shopDomain);
+  const logoUrl = await getShopLogoUrl(shopDomain, token);
+  if (logoUrl) {
+      console.log(`[Shopify Merchant Invoice] Fetched logo URL from Shopify: ${logoUrl}`);
+      invoiceData.logoData = await getBase64Image(logoUrl);
+  } else {
+      console.log(`[Shopify Merchant Invoice] Could not fetch logo URL from Shopify.`);
   }
 
   const pdfBuffer = await createMerchantPdf(invoiceData);
