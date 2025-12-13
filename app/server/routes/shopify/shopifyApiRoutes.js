@@ -12,7 +12,7 @@ const { resolveShopifyToken } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
-const { mapOrderToPdfData, createMerchantPdf } = require("./shopifyMerchantTemplate");
+const { mapOrderToPdfData, createMerchantPdf, getBase64Image } = require("./shopifyMerchantTemplate");
 
 
 
@@ -102,6 +102,12 @@ if (isMerchant) {
 try {
   console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
   const invoiceData = mapOrderToPdfData(order, shopConfig);
+  
+  // Fetch and add logo data if it exists
+  if (shopConfig.customLogoUrl) {
+    invoiceData.logoData = await getBase64Image(shopConfig.customLogoUrl);
+  }
+
   const pdfBuffer = await createMerchantPdf(invoiceData);
   console.log(`📄 Merchant PDF generated, size: ${pdfBuffer.length} bytes`);
 
