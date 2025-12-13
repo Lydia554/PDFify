@@ -101,7 +101,7 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 if (isMerchant) {
 try {
   console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
-  const invoiceData = mapOrderToPdfData(order, shopConfig);
+  const invoiceData = mapOrderToPdfData(order, shopConfig, user);
   
   // Fetch and add logo data if it exists
   if (shopConfig.customLogoUrl) {
