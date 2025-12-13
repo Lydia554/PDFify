@@ -26,94 +26,187 @@ async function getBase64Image(url) {
 
 /**
  * Generate HTML invoice for Puppeteer PDF rendering
- * Black-and-white, PDF/A-3b safe, EN16931-compliant
  * @param {Object} data 
  * @returns {Promise<string>}
  */
 async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
+  const seller = data.seller || { name: data.shopName, address: " ", email: " " };
+  const buyer = data.buyer || { name: data.customerName, address: " " };
+  const logoUrl = data.customLogoUrl || ""; 
 
   return `
 <html>
   <head>
+    <meta charset="UTF-8" />
+    <title>Invoice</title>
     <style>
+      :root {
+        --font-family: 'Liberation Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        --primary-color: #0d1b2a; /* Deep Navy Blue */
+        --secondary-color: #415a77; /* Shadow Blue */
+        --accent-color: #1b998b; /* Muted Teal */
+        --background-color: #f8f9fa;
+        --text-color: #343a40;
+        --light-gray: #e9ecef;
+        --border-color: #dee2e6;
+      }
       body {
-        font-family: 'Liberation Sans', sans-serif;
-        color: #000;
+        font-family: var(--font-family);
+        color: var(--text-color);
         background: #fff;
         margin: 0;
         padding: 0;
-        min-height: 100vh;
+        font-size: 14px;
       }
-      .container {
+      .invoice-container {
         max-width: 800px;
-        margin: 20px auto;
-        padding: 30px 40px 40px;
+        margin: 40px auto;
+        padding: 40px;
+        border: 1px solid var(--border-color);
         background: #fff;
-        border: 1px solid #000;
       }
-      h1, h2, h3, p, td, th {
-        color: #000;
+      .invoice-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-bottom: 30px;
+        border-bottom: 2px solid var(--primary-color);
+        margin-bottom: 40px;
       }
-      .table {
+      .logo {
+        max-height: 80px;
+        max-width: 200px;
+      }
+      .invoice-title-section {
+        text-align: right;
+      }
+      .invoice-title {
+        font-size: 36px;
+        font-weight: 700;
+        color: var(--primary-color);
+        margin: 0 0 10px 0;
+      }
+      .invoice-meta p {
+        margin: 0;
+        line-height: 1.5;
+        font-size: 14px;
+        color: var(--secondary-color);
+      }
+      .invoice-meta p strong {
+        color: var(--primary-color);
+      }
+      .parties-section {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 40px;
+      }
+      .party {
+        width: 48%;
+      }
+      .party h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--secondary-color);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 8px;
+        margin: 0 0 8px 0;
+      }
+      .party p {
+        margin: 0;
+        line-height: 1.6;
+      }
+      .invoice-table {
         width: 100%;
         border-collapse: collapse;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
       }
-      .table th, .table td {
-        padding: 10px;
-        border: 1px solid #000;
+      .invoice-table thead {
+        background-color: var(--primary-color);
+        color: #fff;
+      }
+      .invoice-table th {
+        font-weight: 700;
+        padding: 15px;
         text-align: left;
-        background-color: #fff; /* strictly white */
-        color: #000;
       }
-      .table th {
-        font-weight: bold;
+      .invoice-table td {
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color);
       }
-      .table tfoot td {
-        font-weight: bold;
-        background-color: #fff; /* strictly white */
+      .invoice-table tbody tr:nth-child(even) {
+        background-color: var(--background-color);
       }
-      .total p {
-        font-weight: bold;
-        color: #000;
-        font-size: 1.1em;
+      .invoice-table .text-right {
+        text-align: right;
+      }
+      .totals-section {
+        display: flex;
+        justify-content: flex-end;
+      }
+      .totals-table {
+        width: 50%;
+        max-width: 350px;
+      }
+      .totals-table td {
+        padding: 12px 15px;
+      }
+      .totals-table .label {
+        font-weight: 700;
+        color: var(--secondary-color);
+      }
+      .totals-table .amount {
+        text-align: right;
+      }
+      .amount-due-row .label, .amount-due-row .amount {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: var(--accent-color);
+        border-top: 2px solid var(--accent-color);
+        padding-top: 15px;
       }
       .footer {
-        text-align: center;
+        border-top: 1px solid var(--border-color);
+        padding-top: 20px;
         margin-top: 40px;
-        padding: 10px;
-        font-size: 11px;
-        color: #000;
-        border-top: 1px solid #000;
+        text-align: center;
+        font-size: 12px;
+        color: #888;
       }
-      .pdfa-clean .watermark { display: none !important; }
     </style>
   </head>
-  <body class="pdfa-clean">
-    <div class="container">
-      <h1>${locale.invoiceTitle || "Invoice for"} ${data.customerName || "Customer"}</h1>
-
-      <div class="invoice-header">
-        <p><strong>${locale.orderId || "Order ID"}:</strong> ${data.orderId || ""}</p>
-        <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
-        <p><strong>${locale.customer || "Customer"}:</strong> ${data.customerName || ""}</p>
-        <p><strong>${locale.email || "Email"}:</strong> ${data.customerEmail || ""}</p>
-        <p><strong>IBAN:</strong> ${data.iban || ""}</p>
-        <p><strong>BIC:</strong> ${data.bic || ""}</p>
-        <p><strong>Payment Terms:</strong> ${data.paymentTerms || ""}</p>
-      </div>
-
-      <table class="table">
+  <body>
+    <div class="invoice-container">
+      <header class="invoice-header">
+        <div>
+          ${logoUrl ? `<img src="${logoUrl}" alt="Company Logo" class="logo">` : `<h1>${seller.name}</h1>`}
+        </div>
+        <div class="invoice-title-section">
+          <p class="invoice-title">${locale.invoiceTitle || "INVOICE"}</p>
+          <div class="invoice-meta">
+            <p><strong>${locale.orderId || "Invoice #"}:</strong> ${data.orderId || ""}</p>
+            <p><strong>${locale.date || "Date"}:</strong> ${data.date || ""}</p>
+          </div>
+        </div>
+      </header>
+      <section class="parties-section">
+        <div class="party">
+          <h3>From</h3>
+          <p><strong>${seller.name}</strong></p>
+        </div>
+        <div class="party">
+          <h3>To</h3>
+          <p><strong>${buyer.name}</strong></p>
+        </div>
+      </section>
+      <table class="invoice-table">
         <thead>
           <tr>
             <th>${locale.item || "Item"}</th>
-            <th>${locale.quantity || "Quantity"}</th>
-            <th>${locale.price || "Price"}</th>
-            <th>${locale.net || "Net"}</th>
-            <th>${locale.tax || "Tax"}</th>
-            <th>${locale.total || "Total"}</th>
+            <th class="text-right">${locale.quantity || "Quantity"}</th>
+            <th class="text-right">${locale.price || "Price"}</th>
+            <th class="text-right">${locale.total || "Total"}</th>
           </tr>
         </thead>
         <tbody>
@@ -122,40 +215,41 @@ async function generateInvoiceHTML(data) {
               ? items.map(item => `
                 <tr>
                   <td>${item.name || ""}</td>
-                  <td>${item.quantity || ""}</td>
-                  <td>${item.price || ""}</td>
-                  <td>${item.net || "-"}</td>
-                  <td>${item.tax || "-"}</td>
-                  <td>${item.total || ""}</td>
+                  <td class="text-right">${item.quantity}</td>
+                  <td class="text-right">${item.price}</td>
+                  <td class="text-right">${item.total}</td>
                 </tr>`).join("")
-              : `<tr><td colspan="6">${locale.noItemsAvailable || "No items available"}</td></tr>`
+              : `<tr><td colspan="4">No items available</td></tr>`
           }
         </tbody>
-        <tfoot>
-          <tr>
-            <td colspan="5">${locale.subtotal || "Subtotal"}</td>
-            <td>${data.subtotal || ""}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.tax || "Tax"} (${data.taxRate || "21%"})</td>
-            <td>${data.tax || ""}</td>
-          </tr>
-          <tr>
-            <td colspan="5">${locale.total || "Total"}</td>
-            <td>${data.total || ""}</td>
-          </tr>
-        </tfoot>
       </table>
-
-      <div class="total">
-        <p>${locale.totalAmountDue || "Total Amount Due"}: ${data.total || ""}</p>
-      </div>
+      <section class="totals-section">
+        <table class="totals-table">
+          <tbody>
+            <tr>
+              <td class="label">${locale.subtotal || "Subtotal"}</td>
+              <td class="amount">${data.subtotal}</td>
+            </tr>
+            <tr>
+              <td class="label">${locale.tax || "Tax"}</td>
+              <td class="amount">${data.tax}</td>
+            </tr>
+            <tr class="amount-due-row">
+              <td class="label">${locale.total || "Total Due"}</td>
+              <td class="amount">${data.total}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+      <footer class="footer">
+          <p><strong>${locale.thanks || "Thank you for your business!"}</strong></p>
+          <p>&copy; 2025 ${seller.name}. ${locale.copyright || "All rights reserved."}</p>
+      </footer>
     </div>
-
-
   </body>
 </html>
   `;
 }
 
 module.exports = { generateInvoiceHTML, getBase64Image };
+
