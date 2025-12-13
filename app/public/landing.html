@@ -17,16 +17,10 @@
 <section class="bg-gray-900 text-white py-20 text-center px-4">
   <div class="max-w-3xl mx-auto">
 <h1 class="text-5xl md:text-6xl font-extrabold mb-6 drop-shadow-lg leading-tight">
-      Turn <span class="gradient-text">JSON</span> or <span class="gradient-text">HTML</span> into <br />Custom PDFs — <span class="gradient-text">Instantly</span>
+      Automated Invoicing for <span class="gradient-text">Shopify & WooCommerce</span>
     </h1>
-    <p class="text-xl max-w-3xl mx-auto mb-8 drop-shadow-md tracking-wide">
-      No libraries. No design struggles. Just a <strong>simple API</strong> that gives you beautiful PDFs for invoices, receipts, and more.
-    </p>
-    <p class="text-lg max-w-3xl mx-auto mb-12 drop-shadow-md tracking-wide font-medium">
-     💚 Perfect for Shopify: Connect your store and automatically send PDF invoices to customers. 
-     Customers receive colorful PDFs if the merchant enables them. 
-     Pro merchants can generate official compliant PDFs for legal/official purposes. 
-     Everything is handled via your dashboard — simple setup, full control, no code changes.
+    <p class="text-xl max-w-3xl mx-auto mb-12 drop-shadow-md tracking-wide">
+      Finally, a developer-first platform to generate professional, standards-compliant e-invoices for your E-Commerce store. One API call, zero hassle.
     </p>
     <div class="flex justify-center gap-4 mt-6">
       <a href="#pricing" class="bg-blue-600 px-6 py-3 rounded text-white font-bold hover:bg-blue-700">See Plans</a>
@@ -166,50 +160,52 @@
   </div>
 </section>
 
-<!-- Developer Preview -->
+<!-- Powered by a Pure Node.js Engine -->
 <section class="py-16 bg-white dark:bg-gray-900">
   <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+    <!-- Left Column: API Example -->
     <div>
-      <h2 class="text-2xl font-bold mb-4">Simple API Call</h2>
-      <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-x-auto">
-        <pre class="text-sm whitespace-pre"><code>POST /api/generate-invoice
-Authorization: Bearer YOUR_API_KEY
-Content-Type: application/json
-
-{
- "data": {
-          "customerName": "Anna Moore",
-          "customerEmail": "anna@example.com",
-          "orderId": "12345",
-          "country": "uk",
-          "date": "2025-03-25",
-          "items": [
-            {"name":"PDF Template","quantity":"1","price":"10.00","net":"8.40","tax":"1.60","total":"10.00","position":"1"},
-            {"name":"Extra Support","quantity":"1","price":"5.00","net":"4.20","tax":"0.80","total":"5.00","position":"2"}
-          ],
-          "subtotal":"12.60",
-          "taxRate":"19%",
-          "tax":"2.40",
-          "total":"15.00",
-          "iban":"DE89370400440532013000",
-          "bic":"COBADEFFXXX",
-          "paymentTerms":"Due within 14 days",
-          "customLogoUrl":"",
-          "showChart":true,
-          "isPremium":true
-        }
-}</code></pre>
+      <h2 class="text-2xl font-bold mb-4">One API Call, Endless Possibilities</h2>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">
+        A simple <code>POST</code> request is all it takes. Provide your Shopify domain and Order ID to get a compliant PDF back instantly. WooCommerce and other platforms follow a similar, developer-friendly pattern.
+      </p>
+      <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-x-auto mb-8">
+        <pre class="text-sm whitespace-pre"><code>curl -X POST http://localhost:3002/api/shopify/invoice \
+-H "Authorization: Bearer YOUR_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{ 
+  "shopDomain": "your-store.myshopify.com",
+  "orderId": "1234567890",
+  "merchant": true
+}'</code></pre>
       </div>
+       <h2 class="text-2xl font-bold mb-4">A Modern, Pure Node.js PDF Engine</h2>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">
+        We've engineered a powerful, pure Node.js engine for creating our highly-compliant merchant invoices. Unlike traditional HTML-to-PDF converters that rely on slow, resource-heavy headless browsers, our new engine uses the blazingly fast <a href="https://pdf-lib.js.org/" target="_blank" rel="noopener noreferrer" class="text-purple-700 dark:text-purple-400 hover:underline"><code>pdf-lib</code></a> library to programmatically build documents from the ground up. This approach gives us unparalleled control over the PDF structure, resulting in perfectly compliant, lightweight, and professional invoices every time.
+      </p>
     </div>
+
+    <!-- Right Column: Invoice explanation -->
     <div class="flex flex-col items-center">
-      <h2 class="text-2xl font-bold mb-4 self-start">PDF Output</h2>
-      <img src="/demo/Invoice-Dev-Premium-1.jpg?v=2" ... 
-           alt="Invoice Example"
-           class="rounded shadow border border-gray-300 dark:border-gray-600 w-full max-w-xl object-contain mb-2" />
-      <a href="/demo/Invoice-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer"
-         class="inline-block text-purple-700 dark:text-purple-400 hover:underline font-semibold text-sm">
-        📄 Preview PDF
-      </a>
+      <h2 class="text-2xl font-bold mb-4 self-start">Unmatched Compliance & Quality</h2>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">
+        The result is a "hybrid" invoice that's both human-readable and machine-parseable, meeting the highest standards for e-invoicing and long-term archiving.
+      </p>
+      <div class="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+        <img src="/demo/Shopify-Invoice-Premium-1.jpg"
+             alt="Shopify Compliant Invoice Example"
+             class="rounded shadow-lg border border-gray-300 dark:border-gray-600 w-full max-w-xl object-contain mb-4" />
+        <h3 class="font-bold text-lg mb-2">The Anatomy of a Compliant Invoice:</h3>
+        <ul class="list-disc list-inside text-gray-600 dark:text-gray-400 space-y-2 mb-4 text-left">
+            <li><strong>PDF/A-3b Compliant:</strong> For long-term electronic archiving (ISO 19005-3).</li>
+            <li><strong>ZUGFeRD 2.3 Embedded:</strong> Contains a machine-readable XML invoice for automated processing.</li>
+            <li><strong>Branded & Professional:</strong> Includes your logo and store details automatically.</li>
+        </ul>
+        <a href="/demo/Order_10348230934851.pdf" target="_blank" rel="noopener noreferrer"
+           class="inline-block w-full text-center bg-purple-600 hover:bg-purple-700 text-white font-semibold px-6 py-3 rounded-lg shadow-lg transition transform hover:scale-105">
+          📄 Download Sample & Inspect
+        </a>
+      </div>
     </div>
   </div>
 </section>
