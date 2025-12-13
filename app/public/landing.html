@@ -180,23 +180,13 @@
   <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
     <!-- Left Column: API Example -->
     <div>
-      <h2 class="text-2xl font-bold mb-4">One API Call, Endless Possibilities</h2>
-      <p class="text-gray-500 dark:text-gray-400 mb-4">
-        A simple <code>POST</code> request is all it takes. Provide your Shopify domain and Order ID to get a compliant PDF back instantly. WooCommerce and other platforms follow a similar, developer-friendly pattern.
-      </p>
-      <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-x-auto mb-8">
-        <pre class="text-sm whitespace-pre"><code>curl -X POST http://localhost:3002/api/shopify/invoice \
--H "Authorization: Bearer YOUR_API_KEY" \
--H "Content-Type: application/json" \
--d '{ 
-  "shopDomain": "your-store.myshopify.com",
-  "orderId": "1234567890",
-  "merchant": true
-}'</code></pre>
-      </div>
+    
        <h2 class="text-2xl font-bold mb-4">A Modern, Pure Node.js PDF Engine</h2>
       <p class="text-gray-500 dark:text-gray-400 mb-4">
-        We've engineered a powerful, pure Node.js engine for creating our highly-compliant merchant invoices. Unlike traditional HTML-to-PDF converters that rely on slow, resource-heavy headless browsers, our new engine uses the blazingly fast <a href="https://pdf-lib.js.org/" target="_blank" rel="noopener noreferrer" class="text-purple-700 dark:text-purple-400 hover:underline"><code>pdf-lib</code></a> library to programmatically build documents from the ground up. This approach gives us unparalleled control over the PDF structure, resulting in perfectly compliant, lightweight, and professional invoices every time.
+        We've engineered a powerful, pure Node.js engine for creating our highly-compliant merchant invoices. 
+        Unlike traditional HTML-to-PDF converters that rely on slow, resource-heavy headless browsers, our new engine uses the blazingly fast <a href="https://pdf-lib.js.org/" target="_blank" rel="noopener noreferrer" class="text-purple-700 dark:text-purple-400 hover:underline"><code>pdf-lib</code></a> 
+        library to programmatically build documents from the ground up. 
+        This approach gives us unparalleled control over the PDF structure, resulting in perfectly compliant, lightweight, and professional invoices every time.
       </p>
     </div>
 
