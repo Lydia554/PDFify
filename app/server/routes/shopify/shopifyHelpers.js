@@ -76,14 +76,18 @@ async function getShopLogoUrl(shopDomain, token) {
     });
     
     const settingsData = JSON.parse(settingsResponse.data.asset.value);
-
-    // --- DIAGNOSTIC LOGGING ---
-    console.log("--- START THEME SETTINGS ---");
-    console.log(JSON.stringify(settingsData, null, 2));
-    console.log("--- END THEME SETTINGS ---");
     
     // 4. Find the logo filename in settings
-    const logoFilename = settingsData?.current?.logo || settingsData?.current?.sections?.header?.settings?.logo;
+    const presetName = settingsData.current;
+    const currentSettings = settingsData.presets[presetName];
+
+    if (!currentSettings) {
+        console.log('[getShopLogoUrl] Could not find settings for the current preset.');
+        return null;
+    }
+
+    const headerSettings = currentSettings.sections?.header?.settings || {};
+    const logoFilename = currentSettings.logo || headerSettings.logo;
     
     if (!logoFilename) {
       console.log('[getShopLogoUrl] Could not find logo filename in theme settings.');
