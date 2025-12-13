@@ -47,9 +47,8 @@ echo "📦 Docker Services"
 echo "------------------"
 
 run_test "Docker daemon is running" "docker ps"
-run_test "App container is running" "docker ps | grep -q pdfify-app"
-run_test "MongoDB container is running" "docker ps | grep -q pdfify-mongo"
-run_test "Python service container is running" "docker ps | grep -q pdfify-python-service"
+run_test "App container is running" "docker ps | grep -q pdf-api-app"
+run_test "MongoDB container is running" "docker ps | grep -q pdf-api-mongo"
 
 echo ""
 
@@ -59,7 +58,6 @@ echo "-----------------------"
 
 run_test "API responds to HTTP requests" "curl -s -o /dev/null -w '%{http_code}' http://localhost:3002/ | grep -q '200\|301\|302'"
 run_test "MongoDB port is accessible" "nc -zv localhost 27017"
-run_test "Python service port is accessible" "nc -zv localhost 5000"
 
 echo ""
 
@@ -67,9 +65,9 @@ echo ""
 echo "💾 Database Tests"
 echo "-----------------"
 
-run_test "MongoDB connection works" "docker exec pdfify-mongo-1 mongosh --eval 'db.version()'"
-run_test "PDFify database exists or can be created" "docker exec pdfify-mongo-1 mongosh pdfify --eval 'db.getName()'"
-run_test "Can create collections" "docker exec pdfify-mongo-1 mongosh pdfify --eval 'db.test.insertOne({test:true})'"
+run_test "MongoDB connection works" "docker exec pdf-api-mongo mongosh --eval 'db.version()'"
+run_test "PDFify database exists or can be created" "docker exec pdf-api-mongo mongosh pdfify --eval 'db.getName()'"
+run_test "Can create collections" "docker exec pdf-api-mongo mongosh pdfify --eval 'db.test.insertOne({test:true})'"
 
 echo ""
 
@@ -154,23 +152,7 @@ fi
 
 echo ""
 
-# Test 5: Python Service
-echo "🐍 Python Service Tests"
-echo "-----------------------"
-
-echo -n "Testing: Python service health... "
-PYTHON_RESPONSE=$(curl -s http://localhost:5000/ || echo "error")
-if [ "$PYTHON_RESPONSE" != "error" ]; then
-    print_success "PASSED"
-    ((PASSED_TESTS++))
-else
-    print_error "FAILED"
-    ((FAILED_TESTS++))
-fi
-
-echo ""
-
-# Test 6: File System & Permissions
+# Test 5: File System & Permissions
 echo "📁 File System Tests"
 echo "--------------------"
 
@@ -181,23 +163,21 @@ run_test "Templates directory exists" "test -d ./app/templates"
 
 echo ""
 
-# Test 7: Dependencies
+# Test 6: Dependencies
 echo "📦 Dependency Tests"
 echo "-------------------"
 
-run_test "Puppeteer dependencies installed" "docker exec pdfify-app-1 which chromium || docker exec pdfify-app-1 which google-chrome"
-run_test "Ghostscript installed" "docker exec pdfify-app-1 which gs"
-run_test "Node.js version correct" "docker exec pdfify-app-1 node --version | grep -q 'v20'"
-run_test "Python version correct" "docker exec pdfify-python-service-1 python --version | grep -q 'Python 3'"
+run_test "Puppeteer dependencies installed" "docker exec pdf-api-app which chromium || docker exec pdf-api-app which google-chrome"
+run_test "Node.js version correct" "docker exec pdf-api-app node --version | grep -q 'v20'"
 
 echo ""
 
-# Test 8: Container Health
+# Test 7: Container Health
 echo "💓 Container Health"
 echo "-------------------"
 
 echo -n "Testing: App container CPU usage... "
-CPU_USAGE=$(docker stats --no-stream pdfify-app-1 --format "{{.CPUPerc}}" | sed 's/%//')
+CPU_USAGE=$(docker stats --no-stream pdf-api-app --format "{{.CPUPerc}}" | sed 's/%//')
 if (( $(echo "$CPU_USAGE < 100" | bc -l) )); then
     print_success "PASSED (${CPU_USAGE}%)"
     ((PASSED_TESTS++))
@@ -207,7 +187,7 @@ else
 fi
 
 echo -n "Testing: MongoDB container memory... "
-MEM_USAGE=$(docker stats --no-stream pdfify-mongo-1 --format "{{.MemUsage}}")
+MEM_USAGE=$(docker stats --no-stream pdf-api-mongo --format "{{.MemUsage}}")
 print_success "PASSED ($MEM_USAGE)"
 ((PASSED_TESTS++))
 
