@@ -1,0 +1,15 @@
+{
+  "name": "PDFify",
+  "version": "1.0.0",
+  "description": "**PDFify** is a production-ready, enterprise-grade PDF generation service, offering a versatile suite of tools to create a wide range of documents—from standards-compliant e-invoices for E-Commerce to branded recipes and reports. It features a powerful pure Node.js engine for high-compliance documents and a flexible HTML-to-PDF engine for general-purpose use.",
+  "main": "inspect-xmp.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
+}

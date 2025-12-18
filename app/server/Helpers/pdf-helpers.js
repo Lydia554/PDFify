@@ -29,7 +29,8 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
         xmlns:dc="http://purl.org/dc/elements/1.1/"
         xmlns:xmp="http://ns.adobe.com/xap/1.0/"
         xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
-        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+        xmlns:af="http://ns.adobe.com/xap/1.0/af/">
 
       <fx:ConformanceLevel>EN 16931</fx:ConformanceLevel>
       <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>

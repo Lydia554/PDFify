@@ -21,3 +21,11 @@ app/debug_steps_pdfa_test/
 test-invoice.pdf
 pro-invoice.pdf
 test-pro-feature.sh
+
+# Exclude packages folder
+packages/
+
+# Project specific files
+PROJECT_DEEP_DIVE.md
+inspect-xmp.js
+app/inspect-pdf.js
