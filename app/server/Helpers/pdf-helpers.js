@@ -39,6 +39,7 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
 
       <pdfaid:part>3</pdfaid:part>
       <pdfaid:conformance>B</pdfaid:conformance>
+      <pdfaid:amd>A1</pdfaid:amd>
 
       <dc:format>application/pdf</dc:format>
       <dc:title>
@@ -88,6 +89,14 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
           </rdf:li>
         </rdf:Bag>
       </pdfaExtension:schemas>
+      <af:relationships>
+        <rdf:Bag>
+          <rdf:li rdf:parseType="Resource">
+            <af:AFRelationship>Alternative</af:AFRelationship>
+            <rdf:resource>factur-x.xml</rdf:resource>
+          </rdf:li>
+        </rdf:Bag>
+      </af:relationships>
     </rdf:Description>
   </rdf:RDF>
 </x:xmpmeta>
@@ -118,7 +127,7 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const iccRef = pdfDoc.context.register(iccStream);
     const outputIntent = pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
-        S: PDFName.of("GTS_PDFA1"),
+        S: PDFName.of("GTS_PDFA2"),
         OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
         RegistryName: PDFHexString.fromText("http://www.color.org"),
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
@@ -132,8 +141,8 @@ async function finalizePdf(pdfDoc, invoiceData) {
     
     const xmp = generatePdfA3bXmp(invoiceData, documentId, instanceId);
     const metadataStream = pdfDoc.context.stream(xmp, {
-      Type: 'Metadata',
-      Subtype: 'XML',
+      Type: PDFName.of('Metadata'),
+      Subtype: PDFName.of('XML'),
     });
     const metadataRef = pdfDoc.context.register(metadataStream);
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
@@ -144,8 +153,8 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
     console.log(" PDF marked as tagged");
 
-    pdfDoc.setProducer('PDFify with pdf-lib');
-    pdfDoc.setCreator('PDFify Application');
+    pdfDoc.setProducer('PDFify');
+    pdfDoc.setCreator('PDFify');
     pdfDoc.setCreationDate(new Date());
     pdfDoc.setModificationDate(new Date());
 
