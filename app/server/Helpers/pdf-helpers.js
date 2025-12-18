@@ -131,7 +131,10 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const instanceId = `uuid:${generateUuid()}`;
     
     const xmp = generatePdfA3bXmp(invoiceData, documentId, instanceId);
-    const metadataStream = pdfDoc.context.stream(xmp);
+    const metadataStream = pdfDoc.context.stream(xmp, {
+      Type: 'Metadata',
+      Subtype: 'XML',
+    });
     const metadataRef = pdfDoc.context.register(metadataStream);
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
     console.log(" XMP metadata embedded successfully");
