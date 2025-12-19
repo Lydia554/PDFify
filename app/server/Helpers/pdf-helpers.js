@@ -145,11 +145,8 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const xmpDocumentId = `uuid:${pdfTrailerId1.toLowerCase()}`;
     const xmpInstanceId = `uuid:${pdfTrailerId2.toLowerCase()}`;
 
-    // Now, pass these IDs to generatePdfA3bXmp and use them consistently
-    let xmp = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
-
-    // Add BOM for UTF-8
-    xmp = '\uFEFF' + xmp;
+    // No BOM needed
+    const xmp = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
 
     const metadataStream = pdfDoc.context.stream(xmp, {
       Type: PDFName.of('Metadata'),
