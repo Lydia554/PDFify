@@ -30,6 +30,7 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+
 COPY ./app/package*.json ./
 RUN npm install
 
@@ -43,12 +44,6 @@ COPY ./app/xml ./xml
 COPY ./app/pdfs ./pdfs
 COPY ./app/debug_steps_pdfa_test ./debug_steps_pdfa_test
 COPY ./app/.env.example ./.env.example
-
-# ICC Profile & PDF/A Definition are copied with ./app/server
-# No need for separate copy commands if they are inside the server directory.
-# Ensuring pdfa_def.ps is in the correct location relative to the app root
 COPY ./app/server/routes/pdfa_def.ps ./server/routes/pdfa_def.ps
 
-
 CMD ["node", "server/index.js"]
-
