@@ -120,6 +120,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
+    console.log("✨ finalizePdf function called.");
     console.log(" Finalizing PDF document for PDF/A-3b compliance (v12)");
 
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
