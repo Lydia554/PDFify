@@ -17,7 +17,8 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   const creationDate = now.substring(0, now.length - 5) + 'Z';
   const orderId = invoiceData.orderId || 'UNKNOWN';
 
-  return `<?xpacket begin="�" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.160451, 2017/05/06-01:08:21        ">
   <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <rdf:Description rdf:about=""
@@ -136,30 +137,40 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
     console.log(" ICC profile embedded successfully");
 
-    const documentId = `uuid:${generateUuid()}`;
-    const instanceId = `uuid:${generateUuid()}`;
-    
-    const xmp = generatePdfA3bXmp(invoiceData, documentId, instanceId);
-    const metadataStream = pdfDoc.context.stream(xmp, {
+    const pdfTrailerId1 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    const pdfTrailerId2 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(pdfTrailerId1), PDFHexString.of(pdfTrailerId2)]);
+
+    // Construct XMP documentId and instanceId using the generated trailer IDs
+    const xmpDocumentId = `uuid:${pdfTrailerId1.toLowerCase()}`;
+    const xmpInstanceId = `uuid:${pdfTrailerId2.toLowerCase()}`;
+
+    // Now, pass these IDs to generatePdfA3bXmp and use them consistently
+    let xmp = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
+
+    // Add BOM for UTF-8
+    xmp = '\uFEFF' + xmp;
+
+    const metadataStream = pdfDoc.context.stream(xmp, {
       Type: PDFName.of('Metadata'),
       Subtype: PDFName.of('XML'),
     });
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-    console.log(" XMP metadata embedded successfully");
+    const metadataRef = pdfDoc.context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+    console.log(" XMP metadata embedded successfully");
 
-    await embedZugferdXml(pdfDoc, invoiceData);
+    // Also update invoiceData with the new IDs for embedZugferdXml if needed
+    invoiceData.documentId = xmpDocumentId;
+    invoiceData.instanceId = xmpInstanceId;
+
+    await embedZugferdXml(pdfDoc, invoiceData);
 
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
-    console.log(" PDF marked as tagged");
 
     pdfDoc.setProducer('PDFify');
     pdfDoc.setCreator('PDFify');
     pdfDoc.setCreationDate(new Date());
     pdfDoc.setModificationDate(new Date());
-
-    const id = PDFHexString.of(crypto.randomBytes(16).toString('hex'));
-    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([id, id]);
 
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
     console.log(" PDF finalization complete.");
@@ -168,4 +179,5 @@ async function finalizePdf(pdfDoc, invoiceData) {
 
 module.exports = {
   finalizePdf,
+  generatePdfA3bXmp,
 };

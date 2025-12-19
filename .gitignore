@@ -27,5 +27,5 @@ packages/
 
 # Project specific files
 PROJECT_DEEP_DIVE.md
-inspect-xmp.js
+xmp-passthrough.test.js
 app/inspect-pdf.js
