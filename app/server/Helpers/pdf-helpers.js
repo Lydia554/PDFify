@@ -138,6 +138,7 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
     console.log(" ICC profile embedded successfully");
 
+
     const pdfTrailerId1 = crypto.randomBytes(16).toString('hex').toUpperCase();
     const pdfTrailerId2 = crypto.randomBytes(16).toString('hex').toUpperCase();
     pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(pdfTrailerId1), PDFHexString.of(pdfTrailerId2)]);
