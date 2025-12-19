@@ -33,14 +33,22 @@ WORKDIR /app
 COPY ./app/package*.json ./
 RUN npm install
 
-COPY ./app ./
+COPY ./app/server ./server
+COPY ./app/public ./public
+COPY ./app/locales ./locales
+COPY ./app/locales-friendly ./locales-friendly
+COPY ./app/locales-shopify ./locales-shopify
+COPY ./app/templates ./templates
+COPY ./app/xml ./xml
+COPY ./app/pdfs ./pdfs
+COPY ./app/debug_steps_pdfa_test ./debug_steps_pdfa_test
+COPY ./app/.env.example ./.env.example
 
-RUN mkdir -p /app/server/Helpers
+# ICC Profile & PDF/A Definition are copied with ./app/server
+# No need for separate copy commands if they are inside the server directory.
+# Ensuring pdfa_def.ps is in the correct location relative to the app root
+COPY ./app/server/routes/pdfa_def.ps ./server/routes/pdfa_def.ps
 
-# ICC Profile
-COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
-
-COPY ./app/server/routes/pdfa_def.ps ./pdfa_def.ps
 
 CMD ["node", "server/index.js"]
 
