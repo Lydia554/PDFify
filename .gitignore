@@ -21,6 +21,8 @@ app/debug_steps_pdfa_test/
 test-invoice.pdf
 pro-invoice.pdf
 test-pro-feature.sh
+app/test/
+*.xml
 
 # Exclude packages folder
 packages/
