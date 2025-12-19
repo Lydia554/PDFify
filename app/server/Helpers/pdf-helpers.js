@@ -129,7 +129,7 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const iccRef = pdfDoc.context.register(iccStream);
     const outputIntent = pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
-        S: PDFName.of("GTS_PDFA2"),
+        S: PDFName.of("GTS_PDFA1"),
         OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
         RegistryName: PDFHexString.fromText("http://www.color.org"),
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
