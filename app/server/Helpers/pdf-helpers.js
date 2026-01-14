@@ -6,40 +6,45 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * BYTE-PERFECT OVERWRITE (v30 - Fixed Hex-break)
- * Finds the Hex Spacer we hid inside the OutputIntent and overwrites it.
- * We close the hex string immediately with '>' to prevent structural errors.
+ * BYTE-PERFECT OVERWRITE (v31 - The Clean Sweep)
+ * Overwrites the entire <HEX> block including delimiters.
  */
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
     const pdfString = pdfBuffer.toString('latin1');
     
-    // 1. Locate the hex spacer <73524742...>
-    const hexSpacerRegex = /<[0-9a-fA-F]{20,}>/g;
+    // 1. Locate the ENTIRE hex spacer including < and >
+    // It looks like <73524742...>
+    const hexSpacerRegex = /<[0-9a-fA-F]{50,}>/g; 
     const matches = [...pdfString.matchAll(hexSpacerRegex)];
 
     if (matches.length < 1) {
-        console.error("❌ Critical: Hex Spacer not found.");
+        console.error("❌ Critical: Hex Spacer not found. Overwrite failed.");
         return pdfBuffer;
     }
 
     const match = matches[0];
-    const targetIndex = match.index;
-    const targetLength = match[0].length;
+    const targetIndex = match.index; // Index of '<'
+    const targetLength = match[0].length; // Total length including < and >
 
-    // 2. Prepare the injection
-    // We CLOSE the HexString immediately with '>', then inject our keys.
-    // The rest of the space will be filled with ' ' (ignored by PDF parsers inside a dictionary)
-    const injection = `> /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
+    // 2. Prepare the injection as a "Key Value" pair that fits the dictionary.
+    // We replace the entire <HEX> value with: ( ) /Metadata ...
+    // The ( ) is a valid empty string value for the previous key (OutputConditionIdentifier).
+    const injection = `( ) /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
     
-    // 3. Perform the Overwrite
-    // We pad with spaces to ensure the total length remains EXACTLY targetLength.
-    // This preserves file size and avoids creating invalid '>>' sequences.
+    if (injection.length > targetLength) {
+        console.error("❌ Injection too long for available space.");
+        return pdfBuffer;
+    }
+
+    // 3. Pad with spaces to match EXACT length
+    // We ensure the very last character of our overwrite is NOT a '>' or '/' 
+    // to avoid confusing the parser.
     const paddedInjection = injection.padEnd(targetLength, ' ');
 
     const resultBuffer = Buffer.from(pdfBuffer);
     resultBuffer.write(paddedInjection, targetIndex, 'latin1');
 
-    console.log("💉 PDF surgically patched. Hex-break error fixed.");
+    console.log("💉 PDF surgically patched (v31). Byte-offsets and structure preserved.");
     return resultBuffer;
 }
 
@@ -105,7 +110,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
-    console.log("✨ finalizePdf (v29 - Byte-Perfect Overwrite)");
+    console.log("✨ finalizePdf (v31 - The Clean Sweep)");
 
     // 1. Set IDs
     const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
@@ -124,7 +129,8 @@ async function finalizePdf(pdfDoc, invoiceData) {
         S: PDFName.of("GTS_PDFA1"),
         // This creates a huge block of hex in the Catalog we can safely overwrite
         // The hex string for spaces (0x20) will be our target.
-        OutputConditionIdentifier: PDFHexString.fromText("sRGB" + " ".repeat(250)), 
+        // We increase padding slightly to 300 to be safe.
+        OutputConditionIdentifier: PDFHexString.fromText("sRGB" + " ".repeat(300)), 
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
         DestOutputProfile: iccRef,
     });
