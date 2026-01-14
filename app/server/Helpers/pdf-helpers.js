@@ -6,50 +6,47 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys
- * (Metadata, MarkInfo, StructTreeRoot) into the Document Catalog.
- *
- * Strategy: "Surgical Overwrite" (v24 - /ZF HexString Anchor)
- * We locate the /ZF key which contains a PDF Hex String spacer < ... >.
- * We then overwrite that ENTIRE block with our metadata keys.
- * This ensures the total file size and all XREF offsets remain IDENTICAL.
- * Using a Hex String avoids the 127-byte limit for PDF Name objects and prevents 
- * pdf-lib from mangling characters.
- *
- * @param {Buffer} pdfBuffer - The raw PDF bytes from pdf-lib.
- * @param {string} metadataRef - The object reference for the XMP Metadata stream (e.g., "15 0 R").
- * @param {string} structTreeRef - The object reference for the StructTreeRoot (e.g., "12 0 R").
- * @returns {Buffer} The patched PDF buffer.
+ * HIJACK PATCHER (v26)
+ * Finds the Metadata stream object and replaces its contents with our clean XMP.
+ * This preserves object numbers AND byte-offsets.
  */
-function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
+function patchPdfBuffer(pdfBuffer, xmpString) {
   const pdfString = pdfBuffer.toString('latin1');
   
-  // Look for our ZF key and its hex string value < ... >
-  const spacerMatch = pdfString.match(/\/ZF\s*<([0-9a-fA-F]+)>/);
+  // 1. Find the Metadata stream object
+  // It looks like: [Number] [Gen] obj << /Type /Metadata ... >> stream ... endstream
+  const metadataMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Metadata[^>]*>>\s*stream/);
   
-  if (!spacerMatch) {
-    console.error("❌ Critical: Spacer /ZF not found. Patching failed.");
+  if (!metadataMatch) {
+    console.error("❌ Critical: Metadata stream not found. Hijack failed.");
     return pdfBuffer;
   }
 
-  const targetIndex = spacerMatch.index;
-  const targetLength = spacerMatch[0].length;
+  const streamStartIndex = pdfString.indexOf('stream', metadataMatch.index) + 6;
+  // Move past the newline after 'stream' (usually \r\n or \n)
+  let contentStart = streamStartIndex;
+  if (pdfBuffer[contentStart] === 0x0D) contentStart++; // \r
+  if (pdfBuffer[contentStart] === 0x0A) contentStart++; // \n
 
-  // Overwrite the WHOLE "/ZF ( ... )" block with our compliance keys
-  const injection = `/Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
-  
-  if (injection.length > targetLength) {
-    console.error("❌ Critical: Injection string too long for spacer.");
+  const endStreamIndex = pdfString.indexOf('endstream', contentStart);
+  const originalLength = endStreamIndex - contentStart;
+
+  // 2. Prepare our XMP (Must be padded to match original length exactly)
+  const xmpBytes = new TextEncoder().encode(xmpString);
+  if (xmpBytes.length > originalLength) {
+    console.error(`❌ XMP too large. Need ${xmpBytes.length}, have ${originalLength}.`);
     return pdfBuffer;
   }
 
-  // Pad with spaces to ensure byte-perfection
-  const paddedInjection = injection.padEnd(targetLength, ' ');
+  // Create a buffer of the exact original length filled with spaces
+  const paddedXmp = Buffer.alloc(originalLength, 0x20); 
+  paddedXmp.set(xmpBytes);
 
+  // 3. Perform the overwrite
   const resultBuffer = Buffer.from(pdfBuffer);
-  resultBuffer.write(paddedInjection, targetIndex, 'latin1');
+  paddedXmp.copy(resultBuffer, contentStart);
 
-  console.log("💉 PDF surgically patched. Offsets preserved. Name limits respected.");
+  console.log("💉 Ghost Metadata hijacked and overwritten. Byte-offsets preserved.");
   return resultBuffer;
 }
 
@@ -115,24 +112,12 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
-    console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v23 - Surgical Overwrite)");
+    console.log("✨ finalizePdf (v26 - The Hijack)");
 
-    // 0. PURGE GHOST METADATA
-    // Ensure pdf-lib doesn't create a conflicting Metadata object
-    pdfDoc.catalog.delete(PDFName.of('Metadata'));
-
-    // 1. Manually Set Info Dictionary
-    const now = new Date();
-    const infoDict = pdfDoc.context.obj({
-        Producer: 'PDFify',
-        Creator: 'PDFify',
-        CreationDate: PDFString.fromDate(now),
-        ModDate: PDFString.fromDate(now),
-    });
-    // Overwrite the existing Info reference or create a new one
-    pdfDoc.context.trailerInfo.Info = pdfDoc.context.register(infoDict);
-    console.log(" Info dictionary set manually.");
+    // 1. Standard PDF/A requirements
+    const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
 
     // 2. Embed ICC Profile & OutputIntents
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
@@ -150,73 +135,35 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
     console.log(" ICC profile embedded successfully");
 
-    // 3. Generate IDs for Trailer and XMP
-    const pdfTrailerId1 = crypto.randomBytes(16).toString('hex').toUpperCase();
-    const pdfTrailerId2 = crypto.randomBytes(16).toString('hex').toUpperCase();
-    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(pdfTrailerId1), PDFHexString.of(pdfTrailerId2)]);
-
-    const xmpDocumentId = `uuid:${pdfTrailerId1.toLowerCase()}`;
-    const xmpInstanceId = `uuid:${pdfTrailerId2.toLowerCase()}`;
-    invoiceData.documentId = xmpDocumentId;
-    invoiceData.instanceId = xmpInstanceId;
-
-    // 4. Attach ZUGFeRD XML
+    // 3. Attach ZUGFeRD
     await embedZugferdXml(pdfDoc, invoiceData);
-
-    // 5. Mark as Tagged & Add StructTreeRoot (Required for PDF/A-3b)
+    
+    // 3.1. Mark as Tagged & Add StructTreeRoot (Required for PDF/A-3b)
+    // pdf-lib might not add these automatically, so we ensure they are present.
     const structTreeRoot = pdfDoc.context.obj({
       Type: PDFName.of('StructTreeRoot'),
     });
     const structTreeRootRef = pdfDoc.context.register(structTreeRoot);
-    // Note: We register it here to get the reference, but we will forcefully inject it later via patcher
-    // because pdf-lib might drop it from the catalog.
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRootRef);
-    // MarkInfo is also handled by the patcher, but setting it here doesn't hurt.
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
-    // 6. Generate XMP Metadata stream and register it
-    const xmpString = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
-    const xmpBytes = new TextEncoder().encode(xmpString);
+    // 4. TRIGGER THE GHOST: Use pdf-lib's built-in setter to ensure 
+    // it creates the /Metadata key and stream for us to hijack.
+    // We provide a massive string of spaces so the "Ghost" is big enough.
+    const initialPadding = " ".repeat(4000);
+    pdfDoc.setKeywords([initialPadding]); 
 
-    const metadataStream = pdfDoc.context.stream(xmpBytes, {
-      Type: PDFName.of('Metadata'),
-      Subtype: PDFName.of('XML'),
-    });
-    // IMPORTANT: Force Uncompressed Stream for PDF/A-3b Compliance
-    metadataStream.dict.delete(PDFName.of('Filter'));
-
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    
-    // We try to set it normally, but the patcher ensures it sticks.
-    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-    console.log(" XMP metadata registered (Uncompressed).");
-
-    // 7. Pre-flight: Inject Spacer for Surgical Patching
-    // We use /ZF which is a short key.
-    // We use a Hex String < ... > to avoid the 127-byte limit of PDF Names and avoid mangling.
-    pdfDoc.catalog.set(
-      PDFName.of('ZF'), 
-      PDFHexString.fromText(" ".repeat(150)) // This writes <202020...>
-    );
-    console.log(" Spacer injected into Catalog via /ZF Hex String.");
-
-    // 8. Save the PDF (without default metadata to keep it clean)
+    // 5. Save (pdf-lib will compress this, but we will overwrite it with uncompressed text)
     const pdfBytes = await pdfDoc.save({ 
-      useObjectStreams: false,
-      addDefaultMetadata: false 
+        useObjectStreams: false, 
+        addDefaultMetadata: true // We WANT the ghost now
     });
-    const pdfBuffer = Buffer.from(pdfBytes);
 
-    // 9. NUCLEAR OPTION: Patch the buffer directly
-    const metadataRefTag = metadataRef.tag; 
-    const structTreeRefTag = structTreeRootRef.tag;
+    // 6. Generate our REAL XMP
+    const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
 
-    console.log(` Patching with references - Metadata: ${metadataRefTag}, StructTree: ${structTreeRefTag}`);
-    
-    const finalBuffer = patchPdfBuffer(pdfBuffer, metadataRefTag, structTreeRefTag);
-
-    console.log(" PDF finalization complete (Bulletproof Patch Applied).");
-    return finalBuffer;
+    // 7. Hijack the buffer
+    return patchPdfBuffer(Buffer.from(pdfBytes), xmpString);
 }
 
 module.exports = {
