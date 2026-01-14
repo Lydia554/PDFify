@@ -6,43 +6,45 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * CATALOG SURGEON (v28 - The OutputIntent Overwrite)
- * Finds the Document Catalog and surgically injects the /Metadata and /StructTreeRoot keys
- * by overwriting the space we reserved inside the /OutputIntents array.
+ * BYTE-PERFECT OVERWRITE (v29)
+ * Finds the Hex Spacer we hid inside the OutputIntent and overwrites it
+ * with our metadata keys. This preserves the file size and all XREF offsets perfectly.
  */
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
     const pdfString = pdfBuffer.toString('latin1');
     
-    // Look for the Catalog and its OutputIntents key
-    // The catalog will look something like: << /Type /Catalog ... /OutputIntents [ ... ] ... >>
-    // We use [\s\S]*? to match any character (including newlines) non-greedily until OutputIntents
-    const catalogRegex = /(\d+ \d+ obj)\s*<<[\s\S]*?\/Type\s*\/Catalog[\s\S]*?\/OutputIntents/;
-    const match = pdfString.match(catalogRegex);
-    
-    if (!match) {
-        console.error("❌ Critical: Catalog OutputIntents not found. Patching failed.");
+    // 1. Locate the spacer we hid inside the OutputIntent HexString
+    // It looks like <735247422049454336313936362d322e31202020...> (hex for "sRGB ...")
+    // We look for a long sequence of '20' (spaces) in hex to identify our landing zone.
+    const hexSpacerRegex = /<[0-9a-fA-F]{20,}>/g;
+    const matches = [...pdfString.matchAll(hexSpacerRegex)];
+
+    if (matches.length < 1) {
+        console.error("❌ Critical: Hex Spacer not found. Overwrite failed.");
         return pdfBuffer;
     }
 
-    // We find the '<<' opener of the Catalog dictionary to know where to start injecting
-    const openerIndex = pdfString.indexOf('<<', match.index) + 2;
+    // We take the first large hex match (OutputConditionIdentifier)
+    const match = matches[0];
+    const targetIndex = match.index;
+    const targetLength = match[0].length;
 
-    // We inject the Metadata and StructTree tags
-    // We use extra spaces to ensure we don't accidentally "merge" with existing keys
-    const injection = ` /Metadata ${metadataRef} /MarkInfo << /Marked true >> /StructTreeRoot ${structTreeRef} `;
-
-    // For PDF/A byte-integrity, we MUST NOT shift offsets if possible.
-    // However, since we are using 'addDefaultMetadata: false', the Catalog is small.
-    // We will perform a clean injection and accept the offset shift.
-    // VeraPDF only crashes on offset shifts if the file is massive or complex.
+    // 2. Prepare the injection
+    // Instead of <hex>, we overwrite this whole area with the PDF keys.
+    // We close the previous entry with '>' then add our keys, then start a new spacer 
+    // (using /ZF <) to consume the rest of the available bytes.
+    const injection = `> /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef} /ZF <`;
     
-    const patchedString = 
-        pdfString.slice(0, openerIndex) + 
-        injection + 
-        pdfString.slice(openerIndex);
+    // 3. Perform the Overwrite
+    // We pad with spaces to ensure the total length remains EXACTLY targetLength.
+    // This is the magic that prevents "Root cannot be null" errors.
+    const paddedInjection = injection.padEnd(targetLength, ' ');
 
-    console.log("💉 PDF Catalog successfully patched via OutputIntents anchor.");
-    return Buffer.from(patchedString, 'latin1');
+    const resultBuffer = Buffer.from(pdfBuffer);
+    resultBuffer.write(paddedInjection, targetIndex, 'latin1');
+
+    console.log("💉 PDF surgically patched. File size preserved perfectly.");
+    return resultBuffer;
 }
 
 /**
@@ -107,56 +109,51 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
-    console.log("✨ finalizePdf (v28 - The OutputIntent Overwrite)");
+    console.log("✨ finalizePdf (v29 - Byte-Perfect Overwrite)");
 
     // 1. Set IDs
     const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
     const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
     pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
 
-    // 2. Embed ICC & Create OutputIntent
+    // 2. Create OutputIntent with a massive HexString spacer
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
-    const iccStream = pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 });
-    const iccRef = pdfDoc.context.register(iccStream);
+    // We register the ICC stream manually to ensure it has a reference
+    const iccRef = pdfDoc.context.register(
+        pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 })
+    );
     
-    // We wrap OutputIntent in a way that gives us a lot of byte space in the Catalog
-    // Note: We use HexString spacers to ensure we have room, though the v28 patcher 
-    // is currently doing a direct injection which shifts offsets. 
-    // The spacers are here if we ever want to do a "pure" overwrite in v29.
     const outputIntent = pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
         S: PDFName.of("GTS_PDFA1"),
-        OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1" + " ".repeat(150)), // SPACER 1
-        Info: PDFHexString.fromText("sRGB IEC61966-2.1" + " ".repeat(150)), // SPACER 2
+        // This creates a huge block of hex in the Catalog we can safely overwrite
+        // The hex string for spaces (0x20) will be our target.
+        OutputConditionIdentifier: PDFHexString.fromText("sRGB" + " ".repeat(250)), 
+        Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
         DestOutputProfile: iccRef,
     });
     pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
 
-    // 3. Register our REAL XMP Metadata (Uncompressed)
+    // 3. Register our REAL XMP Metadata (Uncompressed) & StructTreeRoot
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
-    const xmpBytes = new TextEncoder().encode(xmpString);
-    const metadataStream = pdfDoc.context.stream(xmpBytes, {
+    const metadataStream = pdfDoc.context.stream(new TextEncoder().encode(xmpString), {
         Type: PDFName.of('Metadata'),
         Subtype: PDFName.of('XML'),
     });
-    // CRITICAL: Ensure no compression filter
-    metadataStream.dict.delete(PDFName.of('Filter')); 
+    metadataStream.dict.delete(PDFName.of('Filter'));
     const metadataRef = pdfDoc.context.register(metadataStream);
 
-    // 4. Register StructTreeRoot
-    const structTreeRoot = pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') });
-    const structTreeRef = pdfDoc.context.register(structTreeRoot);
+    const structTreeRef = pdfDoc.context.register(
+        pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') })
+    );
 
-    // 5. Attach ZUGFeRD
+    // 4. Attach ZUGFeRD
     await embedZugferdXml(pdfDoc, invoiceData);
 
-    // 6. Save (No optimization, no default metadata to keep it clean)
-    // We use addDefaultMetadata: FALSE because we are manually creating the XMP stream above
+    // 5. Save (No optimization, no default metadata to keep it clean)
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
     
-    // 7. SURGICAL OVERWRITE
-    // We inject the references to the metadata and struct tree we created above
-    // directly into the Catalog dictionary string.
+    // 6. Overwrite (This keeps file size identical)
     return patchPdfBuffer(Buffer.from(pdfBytes), metadataRef.tag, structTreeRef.tag);
 }
 
