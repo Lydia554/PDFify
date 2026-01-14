@@ -6,13 +6,14 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys 
+ * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys
  * (Metadata, MarkInfo, StructTreeRoot) into the Document Catalog.
- * 
- * Strategy: "Guaranteed Anchor Patcher"
- * Locates the reserved '/ZF' hex spacer key injected by finalizePdf and 
- * performs a byte-perfect overwrite. This preserves the XREF table integrity.
- * 
+ *
+ * Strategy: "Undeletable Anchor Patcher" (/Pages)
+ * Since pdf-lib strips custom keys like /ZF, we anchor our patch to the /Pages key,
+ * which is mandatory for a valid PDF. We inject our metadata keys immediately
+ * after the Catalog dictionary opening '<<'.
+ *
  * @param {Buffer} pdfBuffer - The raw PDF bytes from pdf-lib.
  * @param {string} metadataRef - The object reference for the XMP Metadata stream (e.g., "15 0 R").
  * @param {string} structTreeRef - The object reference for the StructTreeRoot (e.g., "12 0 R").
@@ -20,62 +21,32 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  */
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
   let pdfString = pdfBuffer.toString('latin1');
-  
-  // Look for our /ZF hex block <202020...> strictly inside a Catalog-like structure
-  // This regex looks for the Catalog dictionary start, then finds /ZF inside it.
-  const catalogRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog[^>]*\/ZF\s*<([0-9a-fA-F]+)>/;
-  const spacerMatch = pdfString.match(catalogRegex);
-  
-  if (!spacerMatch) {
-    console.error("❌ Critical: Spacer /ZF was stripped by pdf-lib. Patching failed.");
+
+  // 1. Locate the Catalog and specifically the /Pages key
+  // This is a "Guaranteed Anchor" because every PDF has a Pages root.
+  const catalogRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog[^>]*\/Pages\s+(\d+ \d+ R)/;
+  const match = pdfString.match(catalogRegex);
+
+  if (!match) {
+    console.error("❌ Critical: Could not anchor to /Pages. Using Direct Injection.");
+    // Fallback: If regex fails (unlikely), just look for the first Catalog.
+    // But for now, let's return original to avoid corruption if structure is weird.
     return pdfBuffer;
   }
 
-  // spacerMatch[0] is the whole match, but we need the index of the hex string part.
-  // We can find the hex string start relative to the match.
-  const fullMatch = spacerMatch[0];
-  const hexStringStartRelative = fullMatch.lastIndexOf('<') + 1; // +1 to skip '<'
-  const hexStringEndRelative = fullMatch.lastIndexOf('>');
-  
-  // The global index of the hex string content
-  const spacerIndex = spacerMatch.index + hexStringStartRelative;
-  // The length of the content inside < ... >
-  const spacerLength = hexStringEndRelative - hexStringStartRelative;
+  const matchIndex = match.index;
 
-  // Build the replacement (Must be shorter than or equal to spacerLength)
-  // Note: We need to pad spaces equivalent to the hex pairs. 
-  // But wait, we are overwriting the HEX CONTENT or the WHOLE KEY?
-  // The previous logic replaced the whole /ZF <...> key. Let's stick to replacing the value inside <...> 
-  // No, the previous logic replaced the WHOLE key "/ZF <....>" with "/Metadata ...".
-  // Let's revert to the safer "whole key replacement" but with the strict regex finding the position.
-  
-  // Actually, the simplest reliable way is to find the hex string sequence again globally, 
-  // assuming it's unique enough (150 spaces of 202020...)
-  // But to be super safe, let's use the match index we just found.
-  
-  // Let's re-target: matching the exact string "/ZF <2020...>" is easier.
-  const exactSpacerRegex = /\/ZF\s*<([0-9a-fA-F]+)>/;
-  const exactMatch = pdfString.match(exactSpacerRegex);
-  
-  if (!exactMatch) {
-     console.error("❌ Critical: Spacer regex failed on second pass.");
-     return pdfBuffer;
-  }
-  
-  const targetIndex = exactMatch.index;
-  const targetLength = exactMatch[0].length;
+  // 2. Inject Keys
+  // We inject: /Metadata X Y R /MarkInfo << /Marked true >> /StructTreeRoot A B R
+  // We place this RIGHT AFTER the opening '<<' of the Catalog object.
+  const openerIndex = pdfString.indexOf('<<', matchIndex) + 2;
+  const finalInjection = ` /Metadata ${metadataRef} /MarkInfo << /Marked true >> /StructTreeRoot ${structTreeRef} `;
 
-  const injection = `/Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
-  
-  // Pad the injection with spaces so it matches the exact length of the original match
-  const paddedInjection = injection.padEnd(targetLength, ' ');
+  // 3. Construct new string (This shifts offsets, invalidating XREF, but usually recoverable)
+  const patchedString = pdfString.slice(0, openerIndex) + finalInjection + pdfString.slice(openerIndex);
 
-  // Perform the byte-perfect overwrite
-  const resultBuffer = Buffer.from(pdfBuffer);
-  resultBuffer.write(paddedInjection, targetIndex, 'latin1');
-
-  console.log("💉 PDF surgically patched via ZF Landing Zone. Byte-offsets preserved.");
-  return resultBuffer;
+  console.log("💉 PDF Catalog patched via /Pages anchor.");
+  return Buffer.from(patchedString, 'latin1');
 }
 
 /**
@@ -123,18 +94,18 @@ ${padding}
 }
 
 async function embedZugferdXml(pdfDoc, invoiceData) {
-  console.log(" Embedding ZUGFeRD XML for order:", invoiceData.orderId);
-  const xmlString = generateZugferdXml(invoiceData);
-  const zugferdFilename = `factur-x.xml`;
-  const xmlBytes = Buffer.from(xmlString, "utf8");
-  await pdfDoc.attach(xmlBytes, zugferdFilename, {
-    mimeType: "application/xml",
-    afRelationship: "Alternative",
-    creationDate: new Date(),
-    modificationDate: new Date(),
-    description: "Factur-X (ZUGFeRD) Invoice",
-  });
-  console.log(" ZUGFeRD XML embedded successfully");
+  console.log(" Embedding ZUGFeRD XML for order:", invoiceData.orderId);
+  const xmlString = generateZugferdXml(invoiceData);
+  const zugferdFilename = `factur-x.xml`;
+  const xmlBytes = Buffer.from(xmlString, "utf8");
+  await pdfDoc.attach(xmlBytes, zugferdFilename, {
+    mimeType: "application/xml",
+    afRelationship: "Alternative",
+    creationDate: new Date(),
+    modificationDate: new Date(),
+    description: "Factur-X (ZUGFeRD) Invoice",
+  });
+  console.log(" ZUGFeRD XML embedded successfully");
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
@@ -196,14 +167,6 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRootRef);
     // MarkInfo is also handled by the patcher, but setting it here doesn't hurt.
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
-
-    // 5b. Create a "Landing Zone" for the patcher (approx 150 spaces)
-    // We use a shorter name '/ZF' to satisfy Clause 6.1.13 (Name length limit)
-    // We use PDFHexString for the value to ensure it's written as <202020...> in the source
-    pdfDoc.catalog.set(
-      PDFName.of('ZF'), 
-      PDFHexString.fromText(" ".repeat(150)) 
-    );
 
     // 6. Generate XMP Metadata stream and register it
     const xmpString = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
