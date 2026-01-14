@@ -9,10 +9,9 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys 
  * (Metadata, MarkInfo, StructTreeRoot) into the Document Catalog.
  * 
- * Strategy: "Direct Catalog Patcher"
- * Finds the Document Catalog object by its signature and directly injects 
- * the required keys. This bypasses pdf-lib's serialization which might strip 
- * custom spacer keys.
+ * Strategy: "Guaranteed Anchor Patcher"
+ * Locates the reserved '/ZF' hex spacer key injected by finalizePdf and 
+ * performs a byte-perfect overwrite. This preserves the XREF table integrity.
  * 
  * @param {Buffer} pdfBuffer - The raw PDF bytes from pdf-lib.
  * @param {string} metadataRef - The object reference for the XMP Metadata stream (e.g., "15 0 R").
@@ -22,33 +21,29 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
   let pdfString = pdfBuffer.toString('latin1');
   
-  // 1. Locate the Catalog Object (the root of the PDF)
-  // We look for the standard PDF Catalog header
-  const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<\s*\/Type\s*\/Catalog/);
+  // Look for our /ZF hex block <202020...>
+  const spacerMatch = pdfString.match(/\/ZF\s*<([0-9a-fA-F]+)>/);
   
-  if (!catalogMatch) {
-    console.error("❌ Critical: Could not find Document Catalog. Buffer remains unpatched.");
+  if (!spacerMatch) {
+    console.error("❌ Critical: Spacer /ZF was stripped by pdf-lib. Patching failed.");
     return pdfBuffer;
   }
 
-  const catalogStart = catalogMatch.index;
-  // Find the opener '<<' of the Catalog dictionary
-  const openerIndex = pdfString.indexOf('<<', catalogStart) + 2;
+  const spacerIndex = spacerMatch.index;
+  const spacerLength = spacerMatch[0].length;
 
-  // 2. Prepare the injection
-  // We include Metadata, MarkInfo (Tagged PDF), and StructTreeRoot
-  const injection = ` /Metadata ${metadataRef} /MarkInfo << /Marked true >> /StructTreeRoot ${structTreeRef} `;
+  // Build the replacement (Must be shorter than or equal to spacerLength)
+  const injection = `/Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
+  
+  // Pad the injection with spaces so it matches the exact length of the original spacer match
+  const paddedInjection = injection.padEnd(spacerLength, ' ');
 
-  // 3. Perform the injection
-  // WARNING: This shifts byte offsets, so we must be careful with the XREF table.
-  // However, most modern readers (and VeraPDF) can handle small shifts if the XREF is updated.
-  const patchedString = 
-    pdfString.slice(0, openerIndex) + 
-    injection + 
-    pdfString.slice(openerIndex);
+  // Perform the byte-perfect overwrite
+  const resultBuffer = Buffer.from(pdfBuffer);
+  resultBuffer.write(paddedInjection, spacerIndex, 'latin1');
 
-  console.log("💉 PDF Catalog successfully patched with Metadata link.");
-  return Buffer.from(patchedString, 'latin1');
+  console.log("💉 PDF surgically patched via ZF Landing Zone. Byte-offsets preserved.");
+  return resultBuffer;
 }
 
 /**
@@ -175,7 +170,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v18 - Direct Catalog Patch)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v19 - Guaranteed Anchor Patcher)");
 
     // 1. Manually Set Info Dictionary
     const now = new Date();
@@ -229,7 +224,13 @@ async function finalizePdf(pdfDoc, invoiceData) {
     // MarkInfo is also handled by the patcher, but setting it here doesn't hurt.
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
-    // 5b. ZF Spacer removed (we are injecting directly into catalog now)
+    // 5b. Create a "Landing Zone" for the patcher (approx 150 spaces)
+    // We use a shorter name '/ZF' to satisfy Clause 6.1.13 (Name length limit)
+    // We use PDFHexString for the value to ensure it's written as <202020...> in the source
+    pdfDoc.catalog.set(
+      PDFName.of('ZF'), 
+      PDFHexString.fromText(" ".repeat(150)) 
+    );
 
     // 6. Generate XMP Metadata stream and register it
     const xmpString = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
@@ -263,7 +264,7 @@ async function finalizePdf(pdfDoc, invoiceData) {
     
     const finalBuffer = patchPdfBuffer(pdfBuffer, metadataRefTag, structTreeRefTag);
 
-    console.log(" PDF finalization complete (Direct Catalog Patch Applied).");
+    console.log(" PDF finalization complete (ZF Overwrite Applied).");
     return finalBuffer;
 }
 
