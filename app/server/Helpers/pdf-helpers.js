@@ -79,10 +79,10 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   const padding = " ".repeat(2000);
 
   const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140">
- <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+<x:xmpmeta xmlns:x="adobe:ns:meta/">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
   
-  <rdf:Description rdf:about="">
+  <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
    <pdfaid:part>3</pdfaid:part>
    <pdfaid:conformance>B</pdfaid:conformance>
   </rdf:Description>
@@ -188,7 +188,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v16 - ZF Patcher)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v17 - ZF + Raw XMP)");
 
     // 1. Manually Set Info Dictionary
     const now = new Date();
@@ -258,11 +258,14 @@ async function finalizePdf(pdfDoc, invoiceData) {
       Type: PDFName.of('Metadata'),
       Subtype: PDFName.of('XML'),
     });
+    // IMPORTANT: Force Uncompressed Stream for PDF/A-3b Compliance
+    metadataStream.dict.delete(PDFName.of('Filter'));
+
     const metadataRef = pdfDoc.context.register(metadataStream);
     
     // We try to set it normally, but the patcher ensures it sticks.
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-    console.log(" XMP metadata registered.");
+    console.log(" XMP metadata registered (Uncompressed).");
 
     // 7. Save the PDF (without default metadata to keep it clean)
     const pdfBytes = await pdfDoc.save({ 
