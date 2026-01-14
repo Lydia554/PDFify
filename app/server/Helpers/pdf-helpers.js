@@ -6,48 +6,84 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * HIJACK PATCHER (v26)
+ * FALLBACK ANCHOR PATCH (v27)
+ * Used if the Metadata stream is completely missing.
+ * Relies on the /ZF spacer being present in the Catalog.
+ */
+function fallbackAnchorPatch(pdfBuffer, xmpString) {
+    console.log("⚠️ Metadata stream missing. Attempting fallback anchor patch...");
+    const pdfString = pdfBuffer.toString('latin1');
+    
+    // Look for our ZF key and its hex string value < ... >
+    const spacerMatch = pdfString.match(/\/ZF\s*<([0-9a-fA-F]+)>/);
+    
+    if (!spacerMatch) {
+        console.error("❌ Critical: Spacer /ZF not found either. Patching failed.");
+        return pdfBuffer;
+    }
+
+    const targetIndex = spacerMatch.index;
+    const targetLength = spacerMatch[0].length;
+    
+    // We can't easily inject a full stream here without shifting offsets.
+    // This is a last resort. We will try to inject a simple Metadata ref if we can find space.
+    // But for now, let's just log the error as the "Hijack" is the primary strategy.
+    console.error("❌ Fallback strategy requires complex object shifting. Aborting to prevent corruption.");
+    return pdfBuffer;
+}
+
+/**
+ * HIJACK PATCHER (v27 - Flexible Hijacker)
  * Finds the Metadata stream object and replaces its contents with our clean XMP.
  * This preserves object numbers AND byte-offsets.
  */
 function patchPdfBuffer(pdfBuffer, xmpString) {
-  const pdfString = pdfBuffer.toString('latin1');
-  
-  // 1. Find the Metadata stream object
-  // It looks like: [Number] [Gen] obj << /Type /Metadata ... >> stream ... endstream
-  const metadataMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Metadata[^>]*>>\s*stream/);
-  
-  if (!metadataMatch) {
-    console.error("❌ Critical: Metadata stream not found. Hijack failed.");
-    return pdfBuffer;
-  }
+    const pdfString = pdfBuffer.toString('latin1');
+    
+    // 1. More flexible regex to find the Metadata object
+    // Looking for an object that contains /Type /Metadata
+    const metadataRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Metadata[^>]*>>\s*stream/i;
+    const match = pdfString.match(metadataRegex);
+    
+    if (!match) {
+        console.error("❌ Critical: Metadata stream not found. Library stripped it.");
+        return fallbackAnchorPatch(pdfBuffer, xmpString);
+    }
 
-  const streamStartIndex = pdfString.indexOf('stream', metadataMatch.index) + 6;
-  // Move past the newline after 'stream' (usually \r\n or \n)
-  let contentStart = streamStartIndex;
-  if (pdfBuffer[contentStart] === 0x0D) contentStart++; // \r
-  if (pdfBuffer[contentStart] === 0x0A) contentStart++; // \n
+    const streamStartIndex = pdfString.indexOf('stream', match.index) + 6;
+    let contentStart = streamStartIndex;
+    
+    // Check for CR/LF after 'stream' keyword
+    if (pdfBuffer[contentStart] === 0x0D) contentStart++; 
+    if (pdfBuffer[contentStart] === 0x0A) contentStart++; 
 
-  const endStreamIndex = pdfString.indexOf('endstream', contentStart);
-  const originalLength = endStreamIndex - contentStart;
+    const endStreamIndex = pdfString.indexOf('endstream', contentStart);
+    const originalLength = endStreamIndex - contentStart;
 
-  // 2. Prepare our XMP (Must be padded to match original length exactly)
-  const xmpBytes = new TextEncoder().encode(xmpString);
-  if (xmpBytes.length > originalLength) {
-    console.error(`❌ XMP too large. Need ${xmpBytes.length}, have ${originalLength}.`);
-    return pdfBuffer;
-  }
+    const xmpBytes = new TextEncoder().encode(xmpString);
+    const resultBuffer = Buffer.from(pdfBuffer);
+    
+    // Overwrite with our XMP and pad with spaces to keep length exactly the same
+    const paddedXmp = Buffer.alloc(originalLength, 0x20); 
+    paddedXmp.set(xmpBytes);
+    paddedXmp.copy(resultBuffer, contentStart);
 
-  // Create a buffer of the exact original length filled with spaces
-  const paddedXmp = Buffer.alloc(originalLength, 0x20); 
-  paddedXmp.set(xmpBytes);
+    // 2. IMPORTANT: Remove the Compression Filter if present
+    // If the ghost was compressed, we must wipe the '/Filter /FlateDecode' text
+    const dictStartIndex = pdfString.lastIndexOf('<<', contentStart);
+    const dictEndIndex = pdfString.indexOf('>>', dictStartIndex);
+    const dictText = pdfString.slice(dictStartIndex, dictEndIndex);
+    
+    if (dictText.includes('/Filter')) {
+        const filterMatch = dictText.match(/\/Filter\s*\/FlateDecode/);
+        if (filterMatch) {
+            const filterOffset = dictStartIndex + filterMatch.index;
+            resultBuffer.write(" ".repeat(filterMatch[0].length), filterOffset, 'latin1');
+        }
+    }
 
-  // 3. Perform the overwrite
-  const resultBuffer = Buffer.from(pdfBuffer);
-  paddedXmp.copy(resultBuffer, contentStart);
-
-  console.log("💉 Ghost Metadata hijacked and overwritten. Byte-offsets preserved.");
-  return resultBuffer;
+    console.log("💉 Ghost Metadata successfully hijacked.");
+    return resultBuffer;
 }
 
 /**
@@ -112,7 +148,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
-    console.log("✨ finalizePdf (v26 - The Hijack)");
+    console.log("✨ finalizePdf (v27 - The Visible Ghost)");
 
     // 1. Standard PDF/A requirements
     const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
@@ -147,19 +183,20 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRootRef);
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
-    // 4. TRIGGER THE GHOST: Use pdf-lib's built-in setter to ensure 
-    // it creates the /Metadata key and stream for us to hijack.
-    // We provide a massive string of spaces so the "Ghost" is big enough.
-    const initialPadding = " ".repeat(4000);
-    pdfDoc.setKeywords([initialPadding]); 
+    // 4. FORCE THE GHOST
+    // We set a long keyword string. This forces pdf-lib to create a Metadata 
+    // stream and link it in the Catalog to store this info.
+    const longString = "PDF-A-COMPLIANCE-BUFFER-" + " ".repeat(4000);
+    pdfDoc.setKeywords([longString]); 
+    pdfDoc.setSubject(longString);
 
-    // 5. Save (pdf-lib will compress this, but we will overwrite it with uncompressed text)
+    // 5. Save with defaults
+    // We MUST use addDefaultMetadata: true so pdf-lib builds the XMP structure for us.
     const pdfBytes = await pdfDoc.save({ 
         useObjectStreams: false, 
-        addDefaultMetadata: true // We WANT the ghost now
+        addDefaultMetadata: true 
     });
 
-    // 6. Generate our REAL XMP
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
 
     // 7. Hijack the buffer
