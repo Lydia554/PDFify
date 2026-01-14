@@ -21,26 +21,58 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
   let pdfString = pdfBuffer.toString('latin1');
   
-  // Look for our /ZF hex block <202020...>
-  const spacerMatch = pdfString.match(/\/ZF\s*<([0-9a-fA-F]+)>/);
+  // Look for our /ZF hex block <202020...> strictly inside a Catalog-like structure
+  // This regex looks for the Catalog dictionary start, then finds /ZF inside it.
+  const catalogRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog[^>]*\/ZF\s*<([0-9a-fA-F]+)>/;
+  const spacerMatch = pdfString.match(catalogRegex);
   
   if (!spacerMatch) {
     console.error("❌ Critical: Spacer /ZF was stripped by pdf-lib. Patching failed.");
     return pdfBuffer;
   }
 
-  const spacerIndex = spacerMatch.index;
-  const spacerLength = spacerMatch[0].length;
+  // spacerMatch[0] is the whole match, but we need the index of the hex string part.
+  // We can find the hex string start relative to the match.
+  const fullMatch = spacerMatch[0];
+  const hexStringStartRelative = fullMatch.lastIndexOf('<') + 1; // +1 to skip '<'
+  const hexStringEndRelative = fullMatch.lastIndexOf('>');
+  
+  // The global index of the hex string content
+  const spacerIndex = spacerMatch.index + hexStringStartRelative;
+  // The length of the content inside < ... >
+  const spacerLength = hexStringEndRelative - hexStringStartRelative;
 
   // Build the replacement (Must be shorter than or equal to spacerLength)
+  // Note: We need to pad spaces equivalent to the hex pairs. 
+  // But wait, we are overwriting the HEX CONTENT or the WHOLE KEY?
+  // The previous logic replaced the whole /ZF <...> key. Let's stick to replacing the value inside <...> 
+  // No, the previous logic replaced the WHOLE key "/ZF <....>" with "/Metadata ...".
+  // Let's revert to the safer "whole key replacement" but with the strict regex finding the position.
+  
+  // Actually, the simplest reliable way is to find the hex string sequence again globally, 
+  // assuming it's unique enough (150 spaces of 202020...)
+  // But to be super safe, let's use the match index we just found.
+  
+  // Let's re-target: matching the exact string "/ZF <2020...>" is easier.
+  const exactSpacerRegex = /\/ZF\s*<([0-9a-fA-F]+)>/;
+  const exactMatch = pdfString.match(exactSpacerRegex);
+  
+  if (!exactMatch) {
+     console.error("❌ Critical: Spacer regex failed on second pass.");
+     return pdfBuffer;
+  }
+  
+  const targetIndex = exactMatch.index;
+  const targetLength = exactMatch[0].length;
+
   const injection = `/Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
   
-  // Pad the injection with spaces so it matches the exact length of the original spacer match
-  const paddedInjection = injection.padEnd(spacerLength, ' ');
+  // Pad the injection with spaces so it matches the exact length of the original match
+  const paddedInjection = injection.padEnd(targetLength, ' ');
 
   // Perform the byte-perfect overwrite
   const resultBuffer = Buffer.from(pdfBuffer);
-  resultBuffer.write(paddedInjection, spacerIndex, 'latin1');
+  resultBuffer.write(paddedInjection, targetIndex, 'latin1');
 
   console.log("💉 PDF surgically patched via ZF Landing Zone. Byte-offsets preserved.");
   return resultBuffer;
@@ -51,44 +83,42 @@ function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
  * Uses strict RDF structure with separate Description blocks for better validator compatibility.
  */
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
-  const now = new Date().toISOString();
-  // Ensure strict format YYYY-MM-DDThh:mm:ssZ
-  const creationDate = now.substring(0, 19) + 'Z'; 
+  // Use simple ISO string, no millis to be safe
+  const now = new Date().toISOString().split('.')[0] + 'Z'; 
   const orderId = invoiceData.orderId || 'Unknown';
   
   // Padding for XMP (approx 2KB of whitespace)
   const padding = " ".repeat(2000);
 
-  // NO NEWLINES OR SPACES before the first tag
-  // Simplified namespaces and structure for VeraPDF compatibility
+  // NO INDENTATION in the template literal below to prevent hidden chars
   return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
- <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-  <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
-   <pdfaid:part>3</pdfaid:part>
-   <pdfaid:conformance>B</pdfaid:conformance>
-  </rdf:Description>
-  <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
-   <dc:format>application/pdf</dc:format>
-   <dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title>
-  </rdf:Description>
-  <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">
-   <xmp:CreateDate>${creationDate}</xmp:CreateDate>
-   <xmp:ModifyDate>${creationDate}</xmp:ModifyDate>
-  </rdf:Description>
-  <rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">
-   <xmpMM:DocumentID>${documentId}</xmpMM:DocumentID>
-   <xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>
-  </rdf:Description>
-  <rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">
-   <fx:ConformanceLevel>COMFORT</fx:ConformanceLevel>
-   <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
-   <fx:DocumentType>INVOICE</fx:DocumentType>
-   <fx:Version>1.0</fx:Version>
-  </rdf:Description>
- </rdf:RDF>
-${padding}
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+<pdfaid:part>3</pdfaid:part>
+<pdfaid:conformance>B</pdfaid:conformance>
+</rdf:Description>
+<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<dc:format>application/pdf</dc:format>
+<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title>
+</rdf:Description>
+<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">
+<xmp:CreateDate>${now}</xmp:CreateDate>
+<xmp:ModifyDate>${now}</xmp:ModifyDate>
+</rdf:Description>
+<rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">
+<xmpMM:DocumentID>${documentId}</xmpMM:DocumentID>
+<xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>
+</rdf:Description>
+<rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">
+<fx:ConformanceLevel>COMFORT</fx:ConformanceLevel>
+<fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
+<fx:DocumentType>INVOICE</fx:DocumentType>
+<fx:Version>1.0</fx:Version>
+</rdf:Description>
+</rdf:RDF>
 </x:xmpmeta>
+${padding}
 <?xpacket end="w"?>`.trim(); 
 }
 
@@ -109,7 +139,11 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v20 - Final Boss)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v21 - Bulletproof XMP & Ghost Purge)");
+
+    // 0. PURGE GHOST METADATA
+    // Ensure pdf-lib doesn't create a conflicting Metadata object
+    pdfDoc.catalog.delete(PDFName.of('Metadata'));
 
     // 1. Manually Set Info Dictionary
     const now = new Date();
@@ -203,7 +237,7 @@ async function finalizePdf(pdfDoc, invoiceData) {
     
     const finalBuffer = patchPdfBuffer(pdfBuffer, metadataRefTag, structTreeRefTag);
 
-    console.log(" PDF finalization complete (ZF Overwrite Applied).");
+    console.log(" PDF finalization complete (Bulletproof Patch Applied).");
     return finalBuffer;
 }
 
