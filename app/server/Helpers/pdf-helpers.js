@@ -6,6 +6,46 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
+ * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys 
+ * (Metadata, MarkInfo, StructTreeRoot) into the Document Catalog.
+ * This bypasses pdf-lib's internal logic which may strip these keys during serialization.
+ * 
+ * @param {Buffer} pdfBuffer - The raw PDF bytes from pdf-lib.
+ * @param {string} metadataRef - The object reference for the XMP Metadata stream (e.g., "15 0 R").
+ * @param {string} structTreeRef - The object reference for the StructTreeRoot (e.g., "12 0 R").
+ * @returns {Buffer} The patched PDF buffer.
+ */
+function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
+  let pdfString = pdfBuffer.toString('latin1');
+  
+  // 1. Find the Document Catalog (Root)
+  // Looks for strict pattern like "1 0 obj << /Type /Catalog"
+  const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<\s*\/Type\s*\/Catalog/);
+  if (!catalogMatch) {
+    console.warn("⚠️ Could not locate Document Catalog for patching. Returning original buffer.");
+    return pdfBuffer;
+  }
+
+  const catalogStart = catalogMatch.index;
+  
+  // 2. Build our "Compliance Injection" string
+  // We manually force the Metadata, MarkInfo, and StructTreeRoot keys into the catalog.
+  const injection = ` /Metadata ${metadataRef} /MarkInfo << /Marked true >> /StructTreeRoot ${structTreeRef}`;
+  
+  // 3. Inject it right after the Catalog object opener '<<'
+  // We find the first '<<' after the catalog start position.
+  const openerIndex = pdfString.indexOf('<<', catalogStart) + 2;
+  
+  const patchedString = 
+    pdfString.slice(0, openerIndex) + 
+    injection + 
+    pdfString.slice(openerIndex);
+
+  console.log("💉 PDF Buffer manually patched with PDF/A-3b structure.");
+  return Buffer.from(patchedString, 'latin1');
+}
+
+/**
  * Generates the raw XMP metadata string for PDF/A-3b compliance.
  * Uses strict RDF structure with separate Description blocks for better validator compatibility.
  */
@@ -59,7 +99,7 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
       xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/" 
       xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#" 
       xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#">
-   <fx:ConformanceLevel>EN 16931</fx:ConformanceLevel>
+   <fx:ConformanceLevel>COMFORT</fx:ConformanceLevel>
    <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
    <fx:DocumentType>INVOICE</fx:DocumentType>
    <fx:Version>1.0</fx:Version>
@@ -128,12 +168,9 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v14 - Manual Info Dict)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v15 - Nuclear Patcher)");
 
     // 1. Manually Set Info Dictionary
-    // We avoid using pdfDoc.setProducer/setCreator/etc. because they might
-    // trigger an internal "dirty" flag that causes pdf-lib to re-generate (and overwrite)
-    // our custom XMP metadata during save().
     const now = new Date();
     const infoDict = pdfDoc.context.obj({
         Producer: 'PDFify',
@@ -143,7 +180,7 @@ async function finalizePdf(pdfDoc, invoiceData) {
     });
     // Overwrite the existing Info reference or create a new one
     pdfDoc.context.trailerInfo.Info = pdfDoc.context.register(infoDict);
-    console.log(" Info dictionary set manually (bypassing auto-XMP trigger)");
+    console.log(" Info dictionary set manually.");
 
     // 2. Embed ICC Profile & OutputIntents
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
@@ -179,10 +216,13 @@ async function finalizePdf(pdfDoc, invoiceData) {
       Type: PDFName.of('StructTreeRoot'),
     });
     const structTreeRootRef = pdfDoc.context.register(structTreeRoot);
+    // Note: We register it here to get the reference, but we will forcefully inject it later via patcher
+    // because pdf-lib might drop it from the catalog.
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRootRef);
+    // MarkInfo is also handled by the patcher, but setting it here doesn't hurt.
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
 
-    // 6. LAST STEP: Inject custom XMP Metadata stream
+    // 6. Generate XMP Metadata stream and register it
     const xmpString = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
     const xmpBytes = new TextEncoder().encode(xmpString);
 
@@ -191,15 +231,31 @@ async function finalizePdf(pdfDoc, invoiceData) {
       Subtype: PDFName.of('XML'),
     });
     const metadataRef = pdfDoc.context.register(metadataStream);
+    
+    // We try to set it normally, but the patcher ensures it sticks.
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-    console.log(" XMP metadata injected as the final structural step");
+    console.log(" XMP metadata registered.");
 
+    // 7. Save the PDF (without default metadata to keep it clean)
     const pdfBytes = await pdfDoc.save({ 
       useObjectStreams: false,
       addDefaultMetadata: false 
     });
-    console.log(" PDF finalization complete.");
-    return Buffer.from(pdfBytes);
+    const pdfBuffer = Buffer.from(pdfBytes);
+
+    // 8. NUCLEAR OPTION: Patch the buffer directly
+    // We need to format the references as strings "objNum objGen R" e.g., "12 0 R"
+    // pdf-lib references object structure: { objectNumber: 12, generationNumber: 0, tag: '12 0 R' }
+    // We can access the string tag directly.
+    const metadataRefTag = metadataRef.tag; 
+    const structTreeRefTag = structTreeRootRef.tag;
+
+    console.log(` Patching with references - Metadata: ${metadataRefTag}, StructTree: ${structTreeRefTag}`);
+    
+    const finalBuffer = patchPdfBuffer(pdfBuffer, metadataRefTag, structTreeRefTag);
+
+    console.log(" PDF finalization complete (Nuclear Patch Applied).");
+    return finalBuffer;
 }
 
 module.exports = {
