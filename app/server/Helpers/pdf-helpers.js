@@ -6,45 +6,45 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * BYTE-PERFECT OVERWRITE (v31 - The Clean Sweep)
- * Overwrites the entire <HEX> block including delimiters.
+ * CATALOG SURGEON (v32 - The Persistent Anchor)
+ * 1. Finds the /ZF <...> spacer in the Catalog.
+ * 2. Overwrites it with /Metadata and /StructTreeRoot links.
+ * 3. Relies on /PieceInfo to keep the objects alive during save.
  */
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
     const pdfString = pdfBuffer.toString('latin1');
     
-    // 1. Locate the ENTIRE hex spacer including < and >
-    // It looks like <73524742...>
-    const hexSpacerRegex = /<[0-9a-fA-F]{50,}>/g; 
-    const matches = [...pdfString.matchAll(hexSpacerRegex)];
+    // 1. Locate the /ZF spacer key-value pair in the Catalog
+    // It looks like /ZF <202020...>
+    const zfRegex = /\/ZF\s*<[0-9a-fA-F]{50,}>/g;
+    const matches = [...pdfString.matchAll(zfRegex)];
 
     if (matches.length < 1) {
-        console.error("❌ Critical: Hex Spacer not found. Overwrite failed.");
+        console.error("❌ Critical: /ZF Spacer not found in Catalog. Patching failed.");
         return pdfBuffer;
     }
 
     const match = matches[0];
-    const targetIndex = match.index; // Index of '<'
-    const targetLength = match[0].length; // Total length including < and >
+    const targetIndex = match.index;
+    const targetLength = match[0].length;
 
-    // 2. Prepare the injection as a "Key Value" pair that fits the dictionary.
-    // We replace the entire <HEX> value with: ( ) /Metadata ...
-    // The ( ) is a valid empty string value for the previous key (OutputConditionIdentifier).
-    const injection = `( ) /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
+    // 2. Prepare the injection
+    // We replace "/ZF <...>" with "/Metadata ... /StructTreeRoot ..."
+    // We pad with spaces to ensure exact length match.
+    const injection = `/Metadata ${metadataRef} /StructTreeRoot ${structTreeRef} /MarkInfo<</Marked true>>`;
     
     if (injection.length > targetLength) {
         console.error("❌ Injection too long for available space.");
         return pdfBuffer;
     }
 
-    // 3. Pad with spaces to match EXACT length
-    // We ensure the very last character of our overwrite is NOT a '>' or '/' 
-    // to avoid confusing the parser.
     const paddedInjection = injection.padEnd(targetLength, ' ');
 
+    // 3. Perform the Overwrite
     const resultBuffer = Buffer.from(pdfBuffer);
     resultBuffer.write(paddedInjection, targetIndex, 'latin1');
 
-    console.log("💉 PDF surgically patched (v31). Byte-offsets and structure preserved.");
+    console.log("💉 PDF surgically patched (v32). Metadata linked in Catalog Root.");
     return resultBuffer;
 }
 
@@ -110,33 +110,28 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
-    console.log("✨ finalizePdf (v31 - The Clean Sweep)");
+    console.log("✨ finalizePdf (v32 - The Persistent Anchor)");
 
     // 1. Set IDs
     const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
     const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
     pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
 
-    // 2. Create OutputIntent with a massive HexString spacer
+    // 2. OutputIntents (Standard)
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
-    // We register the ICC stream manually to ensure it has a reference
     const iccRef = pdfDoc.context.register(
         pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 })
     );
-    
     const outputIntent = pdfDoc.context.obj({
         Type: PDFName.of("OutputIntent"),
         S: PDFName.of("GTS_PDFA1"),
-        // This creates a huge block of hex in the Catalog we can safely overwrite
-        // The hex string for spaces (0x20) will be our target.
-        // We increase padding slightly to 300 to be safe.
-        OutputConditionIdentifier: PDFHexString.fromText("sRGB" + " ".repeat(300)), 
+        OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"), 
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
         DestOutputProfile: iccRef,
     });
     pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
 
-    // 3. Register our REAL XMP Metadata (Uncompressed) & StructTreeRoot
+    // 3. Register Objects
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
     const metadataStream = pdfDoc.context.stream(new TextEncoder().encode(xmpString), {
         Type: PDFName.of('Metadata'),
@@ -149,13 +144,29 @@ async function finalizePdf(pdfDoc, invoiceData) {
         pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') })
     );
 
-    // 4. Attach ZUGFeRD
+    // 4. THE ANCHOR: Keep objects alive using standard /PieceInfo
+    // This forces pdf-lib to write the metadataStream and structTreeRoot to the file
+    // because they are referenced by a reachable object (the Catalog).
+    const pieceInfo = pdfDoc.context.obj({
+        PDFifyData: pdfDoc.context.obj({
+            PrivateM: metadataRef,
+            PrivateS: structTreeRef
+        })
+    });
+    pdfDoc.catalog.set(PDFName.of("PieceInfo"), pieceInfo);
+
+    // 5. THE LANDING ZONE: A big spacer in the Catalog
+    // We will overwrite this with the real /Metadata links later.
+    // 300 spaces is plenty.
+    pdfDoc.catalog.set(PDFName.of("ZF"), PDFHexString.fromText(" ".repeat(300)));
+
+    // 6. Attach ZUGFeRD
     await embedZugferdXml(pdfDoc, invoiceData);
 
-    // 5. Save (No optimization, no default metadata to keep it clean)
+    // 7. Save
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
     
-    // 6. Overwrite (This keeps file size identical)
+    // 8. Patch
     return patchPdfBuffer(Buffer.from(pdfBytes), metadataRef.tag, structTreeRef.tag);
 }
 
