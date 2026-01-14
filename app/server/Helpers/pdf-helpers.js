@@ -9,10 +9,11 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys
  * (Metadata, MarkInfo, StructTreeRoot) into the Document Catalog.
  *
- * Strategy: "Surgical Overwrite" (/Version)
- * We locate the /Version key which we pre-filled with spaces in finalizePdf.
- * We then overwrite those spaces with our metadata keys.
+ * Strategy: "Surgical Overwrite" (v23 - /ZF String Anchor)
+ * We locate the /ZF key which contains a PDF String spacer ( ... ).
+ * We then overwrite that ENTIRE block with our metadata keys.
  * This ensures the total file size and all XREF offsets remain IDENTICAL.
+ * Using a String avoids the 127-byte limit for PDF Name objects.
  *
  * @param {Buffer} pdfBuffer - The raw PDF bytes from pdf-lib.
  * @param {string} metadataRef - The object reference for the XMP Metadata stream (e.g., "15 0 R").
@@ -22,35 +23,32 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
   const pdfString = pdfBuffer.toString('latin1');
   
-  // Look for the Version key followed by our spacer spaces
-  // It usually looks like: /Version /1.7           /
-  const versionRegex = /\/Version\s*\/1\.7\s+/;
-  const match = pdfString.match(versionRegex);
+  // Look for our ZF key and its string value ( ... )
+  const spacerMatch = pdfString.match(/\/ZF\s*\(\s+\)/);
   
-  if (!match) {
-    console.error("❌ Critical: Version spacer not found. Overwrite failed.");
+  if (!spacerMatch) {
+    console.error("❌ Critical: Spacer /ZF not found. Patching failed.");
     return pdfBuffer;
   }
 
-  const targetIndex = match.index;
-  const targetLength = match[0].length;
+  const targetIndex = spacerMatch.index;
+  const targetLength = spacerMatch[0].length;
 
-  // Build the replacement - we MUST keep /Version /1.7 to keep the PDF valid
-  const injection = `/Version /1.7 /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
+  // Overwrite the WHOLE "/ZF ( ... )" block with our compliance keys
+  const injection = `/Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
   
   if (injection.length > targetLength) {
     console.error("❌ Critical: Injection string too long for spacer.");
     return pdfBuffer;
   }
 
-  // Pad the injection with spaces to match the EXACT length of the original match
+  // Pad with spaces to ensure byte-perfection
   const paddedInjection = injection.padEnd(targetLength, ' ');
 
-  // Perform the byte-perfect overwrite
   const resultBuffer = Buffer.from(pdfBuffer);
   resultBuffer.write(paddedInjection, targetIndex, 'latin1');
 
-  console.log("💉 PDF surgically patched via /Version anchor. Byte-offsets preserved.");
+  console.log("💉 PDF surgically patched. Offsets preserved. Name limits respected.");
   return resultBuffer;
 }
 
@@ -67,7 +65,7 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   const padding = " ".repeat(2000);
 
   // NO INDENTATION in the template literal below to prevent hidden chars
-  return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
@@ -95,7 +93,9 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
 </rdf:RDF>
 </x:xmpmeta>
 ${padding}
-<?xpacket end="w"?>`.trim(); 
+<?xpacket end="w"?>`;
+
+  return xmp.trim();
 }
 
 async function embedZugferdXml(pdfDoc, invoiceData) {
@@ -115,7 +115,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v22 - Surgical Overwrite)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v23 - Surgical Overwrite)");
 
     // 0. PURGE GHOST METADATA
     // Ensure pdf-lib doesn't create a conflicting Metadata object
@@ -191,13 +191,13 @@ async function finalizePdf(pdfDoc, invoiceData) {
     console.log(" XMP metadata registered (Uncompressed).");
 
     // 7. Pre-flight: Inject Spacer for Surgical Patching
-    // We use /Version which is a standard PDF Catalog key.
-    // We fill it with enough spaces (150) to fit our metadata refs.
+    // We use /ZF which is a short key.
+    // We use a String ( ... ) to avoid the 127-byte limit of PDF Names.
     pdfDoc.catalog.set(
-      PDFName.of('Version'), 
-      PDFName.of('1.7' + " ".repeat(150)) 
+      PDFName.of('ZF'), 
+      pdfDoc.context.obj(`(${ " ".repeat(200) })`) 
     );
-    console.log(" Spacer injected into Catalog via /Version.");
+    console.log(" Spacer injected into Catalog via /ZF String.");
 
     // 8. Save the PDF (without default metadata to keep it clean)
     const pdfBytes = await pdfDoc.save({ 
