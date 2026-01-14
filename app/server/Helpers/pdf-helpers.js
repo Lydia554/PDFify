@@ -23,8 +23,8 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
   const pdfString = pdfBuffer.toString('latin1');
   
-  // Look for our ZF key and its string value ( ... )
-  const spacerMatch = pdfString.match(/\/ZF\s*\(\s+\)/);
+  // Look for our ZF key and its hex string value < ... >
+  const spacerMatch = pdfString.match(/\/ZF\s*<([0-9a-fA-F]+)>/);
   
   if (!spacerMatch) {
     console.error("❌ Critical: Spacer /ZF not found. Patching failed.");
@@ -192,12 +192,12 @@ async function finalizePdf(pdfDoc, invoiceData) {
 
     // 7. Pre-flight: Inject Spacer for Surgical Patching
     // We use /ZF which is a short key.
-    // We use a String ( ... ) to avoid the 127-byte limit of PDF Names.
+    // We use a Hex String < ... > to avoid the 127-byte limit of PDF Names and avoid mangling.
     pdfDoc.catalog.set(
       PDFName.of('ZF'), 
-      pdfDoc.context.obj(`(${ " ".repeat(200) })`) 
+      PDFHexString.fromText(" ".repeat(150)) // This writes <202020...>
     );
-    console.log(" Spacer injected into Catalog via /ZF String.");
+    console.log(" Spacer injected into Catalog via /ZF Hex String.");
 
     // 8. Save the PDF (without default metadata to keep it clean)
     const pdfBytes = await pdfDoc.save({ 
