@@ -9,11 +9,12 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys
  * (Metadata, MarkInfo, StructTreeRoot) into the Document Catalog.
  *
- * Strategy: "Surgical Overwrite" (v23 - /ZF String Anchor)
- * We locate the /ZF key which contains a PDF String spacer ( ... ).
+ * Strategy: "Surgical Overwrite" (v24 - /ZF HexString Anchor)
+ * We locate the /ZF key which contains a PDF Hex String spacer < ... >.
  * We then overwrite that ENTIRE block with our metadata keys.
  * This ensures the total file size and all XREF offsets remain IDENTICAL.
- * Using a String avoids the 127-byte limit for PDF Name objects.
+ * Using a Hex String avoids the 127-byte limit for PDF Name objects and prevents 
+ * pdf-lib from mangling characters.
  *
  * @param {Buffer} pdfBuffer - The raw PDF bytes from pdf-lib.
  * @param {string} metadataRef - The object reference for the XMP Metadata stream (e.g., "15 0 R").
@@ -219,6 +220,6 @@ async function finalizePdf(pdfDoc, invoiceData) {
 }
 
 module.exports = {
-  finalizePdf,
-  generatePdfA3bXmp,
+  finalizePdf,
+  generatePdfA3bXmp,
 };
