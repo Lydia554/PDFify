@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
+const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
@@ -14,12 +14,15 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   // Ensure strict format YYYY-MM-DDThh:mm:ssZ
   const creationDate = now.substring(0, 19) + 'Z'; 
   const orderId = invoiceData.orderId || 'Unknown';
+  
+  // Padding for XMP (approx 2KB of whitespace)
+  const padding = " ".repeat(2000);
 
   const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140">
- <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
   
-  <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+  <rdf:Description rdf:about="">
    <pdfaid:part>3</pdfaid:part>
    <pdfaid:conformance>B</pdfaid:conformance>
   </rdf:Description>
@@ -101,10 +104,11 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   </rdf:Description>
 
  </rdf:RDF>
+${padding}
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 
-  return xmp.trim();
+  return xmp.trim(); // Still trim the start/end, but padding is inside
 }
 
 async function embedZugferdXml(pdfDoc, invoiceData) {
@@ -124,13 +128,22 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v14)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v14 - Manual Info Dict)");
 
-    // 1. Set Basic Info FIRST (so pdf-lib doesn't overwrite our Metadata later)
-    pdfDoc.setProducer('PDFify');
-    pdfDoc.setCreator('PDFify');
-    pdfDoc.setCreationDate(new Date());
-    pdfDoc.setModificationDate(new Date());
+    // 1. Manually Set Info Dictionary
+    // We avoid using pdfDoc.setProducer/setCreator/etc. because they might
+    // trigger an internal "dirty" flag that causes pdf-lib to re-generate (and overwrite)
+    // our custom XMP metadata during save().
+    const now = new Date();
+    const infoDict = pdfDoc.context.obj({
+        Producer: 'PDFify',
+        Creator: 'PDFify',
+        CreationDate: PDFString.fromDate(now),
+        ModDate: PDFString.fromDate(now),
+    });
+    // Overwrite the existing Info reference or create a new one
+    pdfDoc.context.trailerInfo.Info = pdfDoc.context.register(infoDict);
+    console.log(" Info dictionary set manually (bypassing auto-XMP trigger)");
 
     // 2. Embed ICC Profile & OutputIntents
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
@@ -181,7 +194,10 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
     console.log(" XMP metadata injected as the final structural step");
 
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+    const pdfBytes = await pdfDoc.save({ 
+      useObjectStreams: false,
+      addDefaultMetadata: false 
+    });
     console.log(" PDF finalization complete.");
     return Buffer.from(pdfBytes);
 }
