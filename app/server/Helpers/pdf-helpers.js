@@ -16,33 +16,32 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  * @returns {Buffer} The patched PDF buffer.
  */
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
+  // Use 'latin1' to preserve binary byte integrity
   let pdfString = pdfBuffer.toString('latin1');
   
-  // 1. Find the Document Catalog (Root)
-  // Looks for strict pattern like "1 0 obj << /Type /Catalog"
-  const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<\s*\/Type\s*\/Catalog/);
-  if (!catalogMatch) {
-    console.warn("⚠️ Could not locate Document Catalog for patching. Returning original buffer.");
+  // Find the Spacer we injected
+  const spacerMatch = pdfString.match(/\/Spacer\s*\(( +)\)/);
+  if (!spacerMatch) {
+    console.warn("⚠️ Could not locate Spacer for patching.");
     return pdfBuffer;
   }
 
-  const catalogStart = catalogMatch.index;
-  
-  // 2. Build our "Compliance Injection" string
-  // We manually force the Metadata, MarkInfo, and StructTreeRoot keys into the catalog.
-  const injection = ` /Metadata ${metadataRef} /MarkInfo << /Marked true >> /StructTreeRoot ${structTreeRef}`;
-  
-  // 3. Inject it right after the Catalog object opener '<<'
-  // We find the first '<<' after the catalog start position.
-  const openerIndex = pdfString.indexOf('<<', catalogStart) + 2;
-  
-  const patchedString = 
-    pdfString.slice(0, openerIndex) + 
-    injection + 
-    pdfString.slice(openerIndex);
+  const spacerIndex = spacerMatch.index;
+  const spacerLength = spacerMatch[0].length;
 
-  console.log("💉 PDF Buffer manually patched with PDF/A-3b structure.");
-  return Buffer.from(patchedString, 'latin1');
+  // Build the replacement (Must be shorter than or equal to spacerLength)
+  // We use '/Metadata' and '/MarkInfo' to replace the '/Spacer' text
+  const injection = `/Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
+  
+  // Pad the injection with spaces so it matches the exact length of the original spacer match
+  const paddedInjection = injection.padEnd(spacerLength, ' ');
+
+  // Perform the byte-perfect overwrite
+  const resultBuffer = Buffer.from(pdfBuffer);
+  resultBuffer.write(paddedInjection, spacerIndex, 'latin1');
+
+  console.log("💉 PDF Buffer surgically patched. Byte-offsets preserved.");
+  return resultBuffer;
 }
 
 /**
@@ -221,6 +220,13 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRootRef);
     // MarkInfo is also handled by the patcher, but setting it here doesn't hurt.
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+
+    // 5b. Create a "Landing Zone" for the patcher (approx 200 spaces)
+    // This ensures we have a block of bytes we can safely overwrite without shifting the file.
+    pdfDoc.catalog.set(
+      PDFName.of('Spacer'), 
+      pdfDoc.context.obj(" ".repeat(200)) 
+    );
 
     // 6. Generate XMP Metadata stream and register it
     const xmpString = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
