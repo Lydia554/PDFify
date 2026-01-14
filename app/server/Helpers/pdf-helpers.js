@@ -9,10 +9,10 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  * Manually patches the PDF buffer to inject strict PDF/A-3b structural keys
  * (Metadata, MarkInfo, StructTreeRoot) into the Document Catalog.
  *
- * Strategy: "Undeletable Anchor Patcher" (/Pages)
- * Since pdf-lib strips custom keys like /ZF, we anchor our patch to the /Pages key,
- * which is mandatory for a valid PDF. We inject our metadata keys immediately
- * after the Catalog dictionary opening '<<'.
+ * Strategy: "Surgical Overwrite" (/Version)
+ * We locate the /Version key which we pre-filled with spaces in finalizePdf.
+ * We then overwrite those spaces with our metadata keys.
+ * This ensures the total file size and all XREF offsets remain IDENTICAL.
  *
  * @param {Buffer} pdfBuffer - The raw PDF bytes from pdf-lib.
  * @param {string} metadataRef - The object reference for the XMP Metadata stream (e.g., "15 0 R").
@@ -20,33 +20,38 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  * @returns {Buffer} The patched PDF buffer.
  */
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
-  let pdfString = pdfBuffer.toString('latin1');
-
-  // 1. Locate the Catalog and specifically the /Pages key
-  // This is a "Guaranteed Anchor" because every PDF has a Pages root.
-  const catalogRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog[^>]*\/Pages\s+(\d+ \d+ R)/;
-  const match = pdfString.match(catalogRegex);
-
+  const pdfString = pdfBuffer.toString('latin1');
+  
+  // Look for the Version key followed by our spacer spaces
+  // It usually looks like: /Version /1.7           /
+  const versionRegex = /\/Version\s*\/1\.7\s+/;
+  const match = pdfString.match(versionRegex);
+  
   if (!match) {
-    console.error("❌ Critical: Could not anchor to /Pages. Using Direct Injection.");
-    // Fallback: If regex fails (unlikely), just look for the first Catalog.
-    // But for now, let's return original to avoid corruption if structure is weird.
+    console.error("❌ Critical: Version spacer not found. Overwrite failed.");
     return pdfBuffer;
   }
 
-  const matchIndex = match.index;
+  const targetIndex = match.index;
+  const targetLength = match[0].length;
 
-  // 2. Inject Keys
-  // We inject: /Metadata X Y R /MarkInfo << /Marked true >> /StructTreeRoot A B R
-  // We place this RIGHT AFTER the opening '<<' of the Catalog object.
-  const openerIndex = pdfString.indexOf('<<', matchIndex) + 2;
-  const finalInjection = ` /Metadata ${metadataRef} /MarkInfo << /Marked true >> /StructTreeRoot ${structTreeRef} `;
+  // Build the replacement - we MUST keep /Version /1.7 to keep the PDF valid
+  const injection = `/Version /1.7 /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
+  
+  if (injection.length > targetLength) {
+    console.error("❌ Critical: Injection string too long for spacer.");
+    return pdfBuffer;
+  }
 
-  // 3. Construct new string (This shifts offsets, invalidating XREF, but usually recoverable)
-  const patchedString = pdfString.slice(0, openerIndex) + finalInjection + pdfString.slice(openerIndex);
+  // Pad the injection with spaces to match the EXACT length of the original match
+  const paddedInjection = injection.padEnd(targetLength, ' ');
 
-  console.log("💉 PDF Catalog patched via /Pages anchor.");
-  return Buffer.from(patchedString, 'latin1');
+  // Perform the byte-perfect overwrite
+  const resultBuffer = Buffer.from(pdfBuffer);
+  resultBuffer.write(paddedInjection, targetIndex, 'latin1');
+
+  console.log("💉 PDF surgically patched via /Version anchor. Byte-offsets preserved.");
+  return resultBuffer;
 }
 
 /**
@@ -110,7 +115,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v21 - Bulletproof XMP & Ghost Purge)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v22 - Surgical Overwrite)");
 
     // 0. PURGE GHOST METADATA
     // Ensure pdf-lib doesn't create a conflicting Metadata object
@@ -185,14 +190,23 @@ async function finalizePdf(pdfDoc, invoiceData) {
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
     console.log(" XMP metadata registered (Uncompressed).");
 
-    // 7. Save the PDF (without default metadata to keep it clean)
+    // 7. Pre-flight: Inject Spacer for Surgical Patching
+    // We use /Version which is a standard PDF Catalog key.
+    // We fill it with enough spaces (150) to fit our metadata refs.
+    pdfDoc.catalog.set(
+      PDFName.of('Version'), 
+      PDFName.of('1.7' + " ".repeat(150)) 
+    );
+    console.log(" Spacer injected into Catalog via /Version.");
+
+    // 8. Save the PDF (without default metadata to keep it clean)
     const pdfBytes = await pdfDoc.save({ 
       useObjectStreams: false,
       addDefaultMetadata: false 
     });
     const pdfBuffer = Buffer.from(pdfBytes);
 
-    // 8. NUCLEAR OPTION: Patch the buffer directly
+    // 9. NUCLEAR OPTION: Patch the buffer directly
     const metadataRefTag = metadataRef.tag; 
     const structTreeRefTag = structTreeRootRef.tag;
 
