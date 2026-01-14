@@ -59,98 +59,37 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   // Padding for XMP (approx 2KB of whitespace)
   const padding = " ".repeat(2000);
 
-  // Ensure no whitespace before <?xpacket
-  const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+  // NO NEWLINES OR SPACES before the first tag
+  // Simplified namespaces and structure for VeraPDF compatibility
+  return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
 <x:xmpmeta xmlns:x="adobe:ns:meta/">
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-  
   <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
    <pdfaid:part>3</pdfaid:part>
    <pdfaid:conformance>B</pdfaid:conformance>
   </rdf:Description>
-
-  <rdf:Description rdf:about="" 
-      xmlns:dc="http://purl.org/dc/elements/1.1/" 
-      xmlns:xmp="http://ns.adobe.com/xap/1.0/" 
-      xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">
+  <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">
    <dc:format>application/pdf</dc:format>
-   <dc:title>
-    <rdf:Alt>
-     <rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li>
-    </rdf:Alt>
-   </dc:title>
+   <dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title>
+  </rdf:Description>
+  <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">
    <xmp:CreateDate>${creationDate}</xmp:CreateDate>
    <xmp:ModifyDate>${creationDate}</xmp:ModifyDate>
+  </rdf:Description>
+  <rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">
    <xmpMM:DocumentID>${documentId}</xmpMM:DocumentID>
    <xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>
   </rdf:Description>
-
-  <rdf:Description rdf:about="" xmlns:af="http://ns.adobe.com/xap/1.0/af/">
-    <af:relationships>
-      <rdf:Bag>
-        <rdf:li rdf:parseType="Resource">
-          <af:AFRelationship>Alternative</af:AFRelationship>
-          <rdf:resource>factur-x.xml</rdf:resource>
-        </rdf:li>
-      </rdf:Bag>
-    </af:relationships>
-  </rdf:Description>
-
-  <rdf:Description rdf:about="" 
-      xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#" 
-      xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/" 
-      xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#" 
-      xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#">
+  <rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">
    <fx:ConformanceLevel>COMFORT</fx:ConformanceLevel>
    <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
    <fx:DocumentType>INVOICE</fx:DocumentType>
    <fx:Version>1.0</fx:Version>
-   
-   <pdfaExtension:schemas>
-    <rdf:Bag>
-     <rdf:li rdf:parseType="Resource">
-      <pdfaSchema:schema>Factur-X PDF/A Extension Schema</pdfaSchema:schema>
-      <pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
-      <pdfaSchema:prefix>fx</pdfaSchema:prefix>
-      <pdfaSchema:property>
-       <rdf:Seq>
-        <rdf:li rdf:parseType="Resource">
-         <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
-         <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-         <pdfaProperty:category>external</pdfaProperty:category>
-         <pdfaProperty:description>The conformance level of the embedded Factur-X XML.</pdfaProperty:description>
-        </rdf:li>
-        <rdf:li rdf:parseType="Resource">
-         <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
-         <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-         <pdfaProperty:category>external</pdfaProperty:category>
-         <pdfaProperty:description>The name of the embedded XML document.</pdfaProperty:description>
-        </rdf:li>
-        <rdf:li rdf:parseType="Resource">
-         <pdfaProperty:name>DocumentType</pdfaProperty:name>
-         <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-         <pdfaProperty:category>external</pdfaProperty:category>
-         <pdfaProperty:description>The type of the hybrid document.</pdfaProperty:description>
-        </rdf:li>
-        <rdf:li rdf:parseType="Resource">
-         <pdfaProperty:name>Version</pdfaProperty:name>
-         <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-         <pdfaProperty:category>external</pdfaProperty:category>
-         <pdfaProperty:description>The version of the Factur-X standard.</pdfaProperty:description>
-        </rdf:li>
-       </rdf:Seq>
-      </pdfaSchema:property>
-     </rdf:li>
-    </rdf:Bag>
-   </pdfaExtension:schemas>
   </rdf:Description>
-
  </rdf:RDF>
 ${padding}
 </x:xmpmeta>
-<?xpacket end="w"?>`;
-
-  return xmp.trim(); // Still trim the start/end, but padding is inside
+<?xpacket end="w"?>`.trim(); 
 }
 
 async function embedZugferdXml(pdfDoc, invoiceData) {
@@ -170,7 +109,7 @@ async function embedZugferdXml(pdfDoc, invoiceData) {
 
 async function finalizePdf(pdfDoc, invoiceData) {
     console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v19 - Guaranteed Anchor Patcher)");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v20 - Final Boss)");
 
     // 1. Manually Set Info Dictionary
     const now = new Date();
