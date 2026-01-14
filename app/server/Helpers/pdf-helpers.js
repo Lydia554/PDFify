@@ -5,42 +5,57 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * DETERMINISTIC PATCHER (v34)
- * Finds the /PieceInfo anchor in the Catalog and overwrites it 
- * with the mandatory PDF/A-3b keys.
+ * THE HIJACKER (v35)
+ * This function finds the Metadata stream object and replaces its bytes.
+ * It also wipes out the /Filter key so the validator knows it's uncompressed.
  */
-function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
+function patchPdfBuffer(pdfBuffer, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
     
-    // Look for our anchor: /PieceInfo << /PDFify < ... > >>
-    // This is guaranteed to be in the Catalog because we set it in finalizePdf
-    const anchorRegex = /\/PieceInfo\s*<<[^>]*\/PDFify\s*<([0-9a-fA-F]+)>[^>]*>>/;
-    const match = pdfString.match(anchorRegex);
+    // 1. Find the Metadata stream object
+    const metadataRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Metadata[^>]*>>\s*stream/i;
+    const match = pdfString.match(metadataRegex);
     
     if (!match) {
-        console.error("❌ Critical: Anchor /PieceInfo not found. pdf-lib stripped the Catalog link.");
+        console.error("❌ Critical: Metadata ghost not found.");
         return pdfBuffer;
     }
 
-    const targetIndex = match.index;
-    const targetLength = match[0].length;
-
-    // Inject the real PDF/A-3b keys
-    const injection = `/Metadata ${metadataRef} /StructTreeRoot ${structTreeRef} /MarkInfo<</Marked true>>`;
+    const streamStartIndex = pdfString.indexOf('stream', match.index) + 6;
+    let contentStart = streamStartIndex;
     
-    // Pad with spaces to preserve EXACT byte offsets
-    const paddedInjection = injection.padEnd(targetLength, ' ');
+    // Normalize: Skip exactly one newline (can be \r\n or \n)
+    if (pdfBuffer[contentStart] === 0x0D) contentStart++; 
+    if (pdfBuffer[contentStart] === 0x0A) contentStart++; 
 
+    const endStreamIndex = pdfString.indexOf('endstream', contentStart);
+    const originalLength = endStreamIndex - contentStart;
+
+    const xmpBytes = Buffer.from(xmpString, 'utf8');
     const resultBuffer = Buffer.from(pdfBuffer);
-    resultBuffer.write(paddedInjection, targetIndex, 'latin1');
+    
+    // Fill the area with spaces, then drop the XMP at the start
+    resultBuffer.fill(0x20, contentStart, endStreamIndex);
+    xmpBytes.copy(resultBuffer, contentStart);
 
-    console.log("💉 PDF surgically patched (v34). Byte-offsets preserved.");
+    // 2. WIPE THE FILTER (Fixes Test 5)
+    const headerStart = match.index;
+    const headerEnd = streamStartIndex;
+    const headerText = pdfString.slice(headerStart, headerEnd);
+    
+    const filterMatch = headerText.match(/\/Filter\s*\/FlateDecode/);
+    if (filterMatch) {
+        const globalFilterPos = headerStart + filterMatch.index;
+        resultBuffer.write(" ".repeat(filterMatch[0].length), globalFilterPos, 'latin1');
+    }
+
+    console.log("💉 PDF/A-3b Compliance Hijack Complete.");
     return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
-    const padding = " ".repeat(2000);
+    const padding = " ".repeat(4000); // Massive padding
     return [
         '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>',
         '<x:xmpmeta xmlns:x="adobe:ns:meta/">',
@@ -75,12 +90,10 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
-    // 1. Trailer IDs
     const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
     const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
     pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
     
-    // 2. ICC Profile & OutputIntents
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
     const iccRef = pdfDoc.context.register(pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 }));
     pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{ 
@@ -89,35 +102,22 @@ async function finalizePdf(pdfDoc, invoiceData) {
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 3. Register our XMP Metadata stream (Explicitly Uncompressed)
-    const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
-    const metadataStream = pdfDoc.context.stream(Buffer.from(xmpString, 'utf8'), {
-        Type: PDFName.of('Metadata'),
-        Subtype: PDFName.of('XML'),
-    });
-    metadataStream.dict.delete(PDFName.of('Filter'));
-    const metadataRef = pdfDoc.context.register(metadataStream);
+    // Structural Tags
+    pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+    pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') })));
 
-    // 4. Register StructTreeRoot
-    const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
-
-    // 5. THE ANCHOR: We use PieceInfo to "carry" our object references through the save process
-    // This creates a reachable path for the objects so pdf-lib doesn't garbage collect them.
-    const anchor = pdfDoc.context.obj({
-        PDFify: PDFHexString.fromText(" ".repeat(250)) // Huge spacer
-    });
-    pdfDoc.catalog.set(PDFName.of("PieceInfo"), anchor);
-
+    // THE TRICK: Force pdf-lib to create a huge metadata stream for us to hijack
+    pdfDoc.setKeywords([" ".repeat(6000)]); 
+    
     await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
         mimeType: "application/xml", afRelationship: "Alternative"
     });
 
-    // 6. SAVE (Wait for pdf-lib to finish)
-    // We use addDefaultMetadata: FALSE to ensure we have total control
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
+    // 4. SAVE with default metadata TRUE so the library builds the Catalog link for us
+    const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: true });
     
-    // 7. PATCH using the tags registered in step 3 and 4
-    return patchPdfBuffer(Buffer.from(pdfBytes), metadataRef.tag, structTreeRef.tag);
+    const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
+    return patchPdfBuffer(Buffer.from(pdfBytes), xmpString);
 }
 
 module.exports = { finalizePdf };
