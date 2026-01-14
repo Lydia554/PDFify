@@ -11,99 +11,59 @@ function generateUuid() {
     return v.toString(16);
   });
 }
-
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
-  const now = new Date().toISOString();
-  const creationDate = now.substring(0, now.length - 5) + 'Z';
-  const orderId = invoiceData.orderId || 'UNKNOWN';
+  const now = new Date().toISOString();
+  const creationDate = now.substring(0, 19) + 'Z'; // Standard ISO format
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
-<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.160451, 2017/05/06-01:08:21        ">
-  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-    <rdf:Description rdf:about=""
-        xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"
-        xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
-        xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
-        xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
-        xmlns:pdfaType="http://www.aiim.org/pdfa/ns/type#"
-        xmlns:dc="http://purl.org/dc/elements/1.1/"
-        xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-        xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
-        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
-        xmlns:af="http://ns.adobe.com/xap/1.0/af/">
+  return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140">
+ <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">
+   <pdfaid:part>3</pdfaid:part>
+   <pdfaid:conformance>B</pdfaid:conformance>
+  </rdf:Description>
 
-      <fx:ConformanceLevel>EN 16931</fx:ConformanceLevel>
-      <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
-      <fx:DocumentType>INVOICE</fx:DocumentType>
-      <fx:Version>1.0</fx:Version>
+  <rdf:Description rdf:about="" 
+    xmlns:dc="http://purl.org/dc/elements/1.1/" 
+    xmlns:xmp="http://ns.adobe.com/xap/1.0/" 
+    xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">
+   <dc:format>application/pdf</dc:format>
+   <dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${invoiceData.orderId}</rdf:li></rdf:Alt></dc:title>
+   <xmp:CreateDate>${creationDate}</xmp:CreateDate>
+   <xmp:ModifyDate>${creationDate}</xmp:ModifyDate>
+   <xmpMM:DocumentID>${documentId}</xmpMM:DocumentID>
+   <xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>
+  </rdf:Description>
 
-      <pdfaid:part>3</pdfaid:part>
-      <pdfaid:conformance>B</pdfaid:conformance>
-      <pdfaid:amd>A1</pdfaid:amd>
-
-      <dc:format>application/pdf</dc:format>
-      <dc:title>
-        <rdf:Alt>
-          <rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li>
-        </rdf:Alt>
-      </dc:title>
-      <xmp:CreateDate>${creationDate}</xmp:CreateDate>
-      <xmp:ModifyDate>${creationDate}</xmp:ModifyDate>
-      <xmpMM:DocumentID>${documentId}</xmpMM:DocumentID>
-      <xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>
-
-      <pdfaExtension:schemas>
-        <rdf:Bag>
-          <rdf:li rdf:parseType="Resource">
-            <pdfaSchema:schema>Factur-X PDF/A Extension Schema</pdfaSchema:schema>
-            <pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
-            <pdfaSchema:prefix>fx</pdfaSchema:prefix>
-            <pdfaSchema:property>
-              <rdf:Seq>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>The conformance level of the embedded Factur-X XML.</pdfaProperty:description>
-                </rdf:li>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>The filename of the embedded Factur-X XML invoice.</pdfaProperty:description>
-                </rdf:li>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>DocumentType</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>The type of the document (e.g., INVOICE).</pdfaProperty:description>
-                </rdf:li>
-                <rdf:li rdf:parseType="Resource">
-                  <pdfaProperty:name>Version</pdfaProperty:name>
-                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
-                  <pdfaProperty:category>external</pdfaProperty:category>
-                  <pdfaProperty:description>The version of the Factur-X standard used.</pdfaProperty:description>
-                </rdf:li>
-              </rdf:Seq>
-            </pdfaSchema:property>
-          </rdf:li>
-        </rdf:Bag>
-      </pdfaExtension:schemas>
-      <af:relationships>
-        <rdf:Bag>
-          <rdf:li rdf:parseType="Resource">
-            <af:AFRelationship>Alternative</af:AFRelationship>
-            <rdf:resource>factur-x.xml</rdf:resource>
-          </rdf:li>
-        </rdf:Bag>
-      </af:relationships>
-    </rdf:Description>
-  </rdf:RDF>
+  <rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#" xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/" xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#" xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#">
+   <fx:ConformanceLevel>EN 16931</fx:ConformanceLevel>
+   <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
+   <fx:DocumentType>INVOICE</fx:DocumentType>
+   <fx:Version>1.0</fx:Version>
+   <pdfaExtension:schemas>
+    <rdf:Bag>
+     <rdf:li rdf:parseType="Resource">
+      <pdfaSchema:schema>Factur-X PDF/A Extension Schema</pdfaSchema:schema>
+      <pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
+      <pdfaSchema:prefix>fx</pdfaSchema:prefix>
+      <pdfaSchema:property>
+       <rdf:Seq>
+        <rdf:li rdf:parseType="Resource">
+         <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
+         <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+         <pdfaProperty:category>external</pdfaProperty:category>
+         <pdfaProperty:description>The conformance level of the embedded Factur-X XML.</pdfaProperty:description>
+        </rdf:li>
+       </rdf:Seq>
+      </pdfaSchema:property>
+     </rdf:li>
+    </rdf:Bag>
+   </pdfaExtension:schemas>
+  </rdf:Description>
+ </rdf:RDF>
 </x:xmpmeta>
 <?xpacket end="w"?>`;
 }
-
 async function embedZugferdXml(pdfDoc, invoiceData) {
   console.log(" Embedding ZUGFeRD XML for order:", invoiceData.orderId);
   const xmlString = generateZugferdXml(invoiceData);
