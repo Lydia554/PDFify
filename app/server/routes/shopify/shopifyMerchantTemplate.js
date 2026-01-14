@@ -120,7 +120,7 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
 // ---------------------
 
 async function createMerchantPdf(invoiceData) {
-  console.log("🎨 Starting professional PDF-LIB generation (merchant invoice)...");
+  console.log(" Starting professional PDF-LIB generation (merchant invoice)...");
 
   try {
     const pdfDoc = await PDFDocument.create();
