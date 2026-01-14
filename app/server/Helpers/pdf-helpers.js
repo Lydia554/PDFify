@@ -6,44 +6,40 @@ const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * BYTE-PERFECT OVERWRITE (v29)
- * Finds the Hex Spacer we hid inside the OutputIntent and overwrites it
- * with our metadata keys. This preserves the file size and all XREF offsets perfectly.
+ * BYTE-PERFECT OVERWRITE (v30 - Fixed Hex-break)
+ * Finds the Hex Spacer we hid inside the OutputIntent and overwrites it.
+ * We close the hex string immediately with '>' to prevent structural errors.
  */
 function patchPdfBuffer(pdfBuffer, metadataRef, structTreeRef) {
     const pdfString = pdfBuffer.toString('latin1');
     
-    // 1. Locate the spacer we hid inside the OutputIntent HexString
-    // It looks like <735247422049454336313936362d322e31202020...> (hex for "sRGB ...")
-    // We look for a long sequence of '20' (spaces) in hex to identify our landing zone.
+    // 1. Locate the hex spacer <73524742...>
     const hexSpacerRegex = /<[0-9a-fA-F]{20,}>/g;
     const matches = [...pdfString.matchAll(hexSpacerRegex)];
 
     if (matches.length < 1) {
-        console.error("❌ Critical: Hex Spacer not found. Overwrite failed.");
+        console.error("❌ Critical: Hex Spacer not found.");
         return pdfBuffer;
     }
 
-    // We take the first large hex match (OutputConditionIdentifier)
     const match = matches[0];
     const targetIndex = match.index;
     const targetLength = match[0].length;
 
     // 2. Prepare the injection
-    // Instead of <hex>, we overwrite this whole area with the PDF keys.
-    // We close the previous entry with '>' then add our keys, then start a new spacer 
-    // (using /ZF <) to consume the rest of the available bytes.
-    const injection = `> /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef} /ZF <`;
+    // We CLOSE the HexString immediately with '>', then inject our keys.
+    // The rest of the space will be filled with ' ' (ignored by PDF parsers inside a dictionary)
+    const injection = `> /Metadata ${metadataRef} /MarkInfo<</Marked true>> /StructTreeRoot ${structTreeRef}`;
     
     // 3. Perform the Overwrite
     // We pad with spaces to ensure the total length remains EXACTLY targetLength.
-    // This is the magic that prevents "Root cannot be null" errors.
+    // This preserves file size and avoids creating invalid '>>' sequences.
     const paddedInjection = injection.padEnd(targetLength, ' ');
 
     const resultBuffer = Buffer.from(pdfBuffer);
     resultBuffer.write(paddedInjection, targetIndex, 'latin1');
 
-    console.log("💉 PDF surgically patched. File size preserved perfectly.");
+    console.log("💉 PDF surgically patched. Hex-break error fixed.");
     return resultBuffer;
 }
 
