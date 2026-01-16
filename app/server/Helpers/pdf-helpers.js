@@ -5,14 +5,14 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE DETERMINISTIC HIJACKER (v36)
- * Instead of searching for a ghost, we find the specific object we registered.
+ * THE BYTE-MATCH SURGEON (v37)
+ * Overwrites stream content and renames /Keywords to /Metadata.
+ * This preserves exact byte alignment (both keys are 9 chars).
  */
 function patchPdfBuffer(pdfBuffer, metadataTag, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
     
     // 1. Find the object by its ID (e.g., "12 0 obj")
-    // We look for the start of the stream inside that specific object
     const objectHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objectHeader);
     
@@ -27,39 +27,32 @@ function patchPdfBuffer(pdfBuffer, metadataTag, xmpString) {
     if (pdfBuffer[contentStart] === 0x0A) contentStart++; 
 
     const endStreamIndex = pdfString.indexOf('endstream', contentStart);
-    const originalLength = endStreamIndex - contentStart;
-
-    const xmpBytes = Buffer.from(xmpString, 'utf8');
-    const resultBuffer = Buffer.from(pdfBuffer);
     
-    // 2. Overwrite Content
+    const resultBuffer = Buffer.from(pdfBuffer);
+    const xmpBytes = Buffer.from(xmpString, 'utf8');
+    
+    // 2. Overwrite Content (fill with spaces first to be safe)
     resultBuffer.fill(0x20, contentStart, endStreamIndex);
     xmpBytes.copy(resultBuffer, contentStart);
 
-    // 3. WIPE THE FILTER & ADD METADATA TAGS
-    // We find the dictionary for this object and inject /Type/Metadata
-    // And remove /Filter/FlateDecode
+    // 3. WIPE THE FILTER
+    // We search for /Filter within the object header area
     const dictStart = pdfString.lastIndexOf('<<', contentStart);
-    const dictEnd = pdfString.indexOf('>>', dictStart);
-    const dictText = pdfString.slice(dictStart, dictEnd);
-
-    if (dictText.includes('/Filter')) {
-        const filterMatch = dictText.match(/\/Filter\s*\/FlateDecode/);
-        if (filterMatch) {
-            const filterPos = dictStart + filterMatch.index;
-            resultBuffer.write(" ".repeat(filterMatch[0].length), filterPos, 'latin1');
-        }
+    const headerArea = pdfString.slice(dictStart, contentStart);
+    const filterMatch = headerArea.match(/\/Filter\s*\/FlateDecode/);
+    if (filterMatch) {
+        const filterPos = dictStart + filterMatch.index;
+        resultBuffer.write(" ".repeat(filterMatch[0].length), filterPos, 'latin1');
     }
 
-    // 4. CATALOG LINKING (The Final Move)
-    // We find where we hid '/ZF' in the Catalog and change it to '/Metadata'
-    const catalogMatch = pdfString.match(/\/ZF\s+(\d+ \d+ R)/);
-    if (catalogMatch) {
-        const zfPos = catalogMatch.index;
-        resultBuffer.write("/Metadata", zfPos, 'latin1');
+    // 4. PRECISION OVERWRITE (The v37 Fix)
+    // Rename /Keywords to /Metadata (Both are 9 characters). Zero byte shift.
+    const keywordMatch = pdfString.match(/\/Keywords\s+(\d+ \d+ R)/);
+    if (keywordMatch) {
+        resultBuffer.write("/Metadata", keywordMatch.index, 'latin1');
     }
 
-    console.log("💉 PDF/A-3b Deterministic Hijack Complete.");
+    console.log("💉 PDF/A-3b Precision Overwrite Complete. Byte-alignment preserved.");
     return resultBuffer;
 }
 
@@ -115,8 +108,8 @@ async function finalizePdf(pdfDoc, invoiceData) {
     });
     const metadataRef = pdfDoc.context.register(metadataStream);
 
-    // 2. Hide it in the Catalog under a name pdf-lib won't delete immediately
-    pdfDoc.catalog.set(PDFName.of('ZF'), metadataRef);
+    // 2. THE PRECISION ANCHOR: Keywords is exactly 9 bytes, just like /Metadata
+    pdfDoc.catalog.set(PDFName.of('Keywords'), metadataRef);
     
     // 3. Mark Info and StructTree
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
