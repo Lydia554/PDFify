@@ -14,50 +14,50 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     let pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
 
-    // 1. Locate Metadata Object
+    // 1. Find the Attached File Object (factur-x.xml)
+    // We need this for the mandatory /AF array in PDF/A-3
+    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<[^>]*\/F\s*\(factur-x\.xml\)/);
+    let afArray = "";
+    if (fileSpecMatch) {
+        const fileRef = fileSpecMatch[1].replace(' obj', ' R');
+        afArray = `/AF [${fileRef}]`;
+    }
+
+    // 2. Surgical Metadata Object Fix
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
-    if (objIndex === -1) return pdfBuffer;
-
     const streamStart = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // 2. WIPE THE DICTIONARY & REMOVE FILTERS
-    // We explicitly exclude /Filter to ensure Test 5 (UTF-8) passes
+    // Hard-overwrite the dictionary header
     resultBuffer.fill(0x20, dictStart, streamStart); 
-    const newObjDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >>`;
-    resultBuffer.write(newObjDict, dictStart, 'latin1');
+    resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // 3. WIPE & FILL STREAM
+    // Overwrite stream content + mandatory EOL
     const streamDataStart = streamStart + 6 + (pdfBuffer[streamStart+6] === 0x0D ? 2 : 1);
     const endstream = pdfString.indexOf('endstream', streamDataStart);
-
     resultBuffer.fill(0x20, streamDataStart, endstream);
-    resultBuffer[endstream - 1] = 0x0A; // Mandatory EOL for PDF/A
-    
-    // Write XMP as raw bytes
-    const xmpBytes = Buffer.from(xmpString, 'utf8');
-    xmpBytes.copy(resultBuffer, streamDataStart);
+    resultBuffer[endstream - 1] = 0x0A; 
+    Buffer.from(xmpString, 'utf8').copy(resultBuffer, streamDataStart);
 
-    // 4. CATALOG LINKING
+    // 3. CATALOG INJECTION
     const spacerRegex = /\/PDFify\s*<[0-9a-fA-F]{100,}>/;
     const spacerMatch = pdfString.match(spacerRegex);
     if (spacerMatch) {
-        // We also inject /MarkInfo here to be safe
-        const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} /MarkInfo << /Marked true >> `;
+        // We inject Metadata, StructTree, AF (Associated Files), and MarkInfo
+        const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
         const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
         resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
     }
 
-    // 5. THE NUCLEAR OPTION: Sanitize any other /Metadata strings
-    // If pdf-lib snuck in another metadata object, this renames it so the validator ignores it
-    let finalString = resultBuffer.toString('latin1');
-    // Rename all /Metadata that are NOT followed by our specific object tag
+    // 4. THE NUCLEAR CLEANUP: Rename any OTHER /Metadata strings
+    let finalPdf = resultBuffer.toString('latin1');
+    // Rename all /Metadata that are NOT our specific object reference
     const globalSanitize = new RegExp(`\\/Metadata(?!\\s+${metadataTag})`, 'g');
-    finalString = finalString.replace(globalSanitize, '/OldMeta');
+    finalPdf = finalPdf.replace(globalSanitize, '/OldMeta');
 
-    console.log("💉 PDF/A-3b Surgery v47: Global sanitization and filter removal complete.");
-    return Buffer.from(finalString, 'latin1');
+    console.log("💉 PDF/A-3b Surgery v48 complete. All conflicts resolved.");
+    return Buffer.from(finalPdf, 'latin1');
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
@@ -103,33 +103,30 @@ async function finalizePdf(pdfDoc, invoiceData) {
 
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
     const iccRef = pdfDoc.context.register(pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 }));
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{ 
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{
         Type: PDFName.of("OutputIntent"), S: PDFName.of("GTS_PDFA1"),
         OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 1. Create the Metadata stream with a MASSIVE pre-allocated dictionary header
+    // 1. Pre-allocate Metadata stream with "Padding" to keep the header long
     const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { 
         Length: 6000,
-        // This dummy key "Padding" ensures the << >> block is long enough for our surgery
-        Padding: " ".repeat(100) 
+        Padding: " ".repeat(150) 
     });
     const metadataRef = pdfDoc.context.register(metadataStream);
-
-    // 2. Register StructTree
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
 
-    // 3. THE LANDING ZONE: A long Hex String in the Catalog
-    // We use a custom name /PDFify. pdf-lib will preserve this.
-    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(200)));
+    // 2. Catalog Spacer (Bigger to hold the new /AF array)
+    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(500)));
 
-    // Standard structural markers
-    pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
-    pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRef);
-
+    // 3. Attach ZUGFeRD
     await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
-        mimeType: "application/xml", afRelationship: "Alternative"
+        mimeType: "application/xml", 
+        afRelationship: "Alternative",
+        description: "Factur-X Invoice",
+        creationDate: new Date(),
+        modificationDate: new Date()
     });
 
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
@@ -137,5 +134,4 @@ async function finalizePdf(pdfDoc, invoiceData) {
     
     return patchPdfBuffer(Buffer.from(pdfBytes), metadataRef.tag, structTreeRef.tag, xmpString);
 }
-
 module.exports = { finalizePdf };
