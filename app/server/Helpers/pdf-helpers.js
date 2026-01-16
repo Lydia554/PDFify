@@ -127,17 +127,15 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const metadataRef = pdfDoc.context.register(metadataStream);
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
 
-    // 2. Bigger Landing Zone in Catalog
-    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(600)));
+    // IMPORTANT: Make the Catalog Spacer even larger to be safe
+    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(800)));
 
-    // 3. Attach with explicit PDF-LIB AFRelationship support
+    // Attach with all possible metadata to help the validator
     const xmlBuffer = Buffer.from(generateZugferdXml(invoiceData), "utf8");
     await pdfDoc.attach(xmlBuffer, 'factur-x.xml', {
         mimeType: "application/xml", 
         afRelationship: "Alternative",
         description: "Factur-X Invoice",
-        creationDate: new Date(),
-        modificationDate: new Date()
     });
 
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
