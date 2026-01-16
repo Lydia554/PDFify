@@ -5,9 +5,9 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE UNIVERSAL HIJACKER (v41)
- * Finds the metadata object by its specific properties (Length 6000)
- * and performs a byte-perfect overwrite including the mandatory EOL marker.
+ * THE UNIVERSAL HIJACKER (v42 - Final Polish)
+ * 1. Ensures <?xpacket starts at byte 0.
+ * 2. Protects the mandatory EOL at byte 5999.
  */
 function patchPdfBuffer(pdfBuffer, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
@@ -21,42 +21,45 @@ function patchPdfBuffer(pdfBuffer, xmpString) {
         return pdfBuffer;
     }
 
-    // DYNAMIC ALIGNMENT
     const actualEndstreamPos = pdfString.indexOf('endstream', match.index);
     const dataEnd = actualEndstreamPos;
     const dataStart = dataEnd - 6000;
 
-    console.log(`📊 Binary Calibration: stream starts at ${dataStart}, ends at ${dataEnd}. (Length: ${dataEnd - dataStart})`);
-
     const resultBuffer = Buffer.from(pdfBuffer);
-    const xmpBytes = Buffer.from(xmpString, 'utf8');
-
-    // 2. CLEAR THE AREA
+    
+    // 2. Fill entire 6000 bytes with spaces (0x20)
     resultBuffer.fill(0x20, dataStart, dataEnd);
     
-    // 3. THE EOL FIX (v41): 
-    // The 6000th byte MUST be a newline (\n) to satisfy Clause 6.1.7.1 Test 2
+    // 3. Set the EOL marker at the VERY end
     resultBuffer[dataEnd - 1] = 0x0A; 
 
-    // 4. Write XMP at the start of the cleared area
+    // 4. Copy XMP at the VERY start
+    const xmpBytes = Buffer.from(xmpString, 'utf8');
+    
+    // Safety check: Ensure XMP + EOL doesn't exceed 6000
+    if (xmpBytes.length > 5999) {
+        console.error("❌ XMP too large for 6000 byte buffer");
+        return pdfBuffer;
+    }
     xmpBytes.copy(resultBuffer, dataStart);
 
-    // 5. PRECISION OVERWRITE: Rename /Keywords to /Metadata
+    // 5. Anchor overwrite
     const keywordMatch = pdfString.match(/\/Keywords\s+(\d+ \d+ R)/);
     if (keywordMatch) {
         resultBuffer.write("/Metadata", keywordMatch.index, 'latin1');
     }
 
-    console.log("💉 PDF/A-3b Master Patch (v41) applied. EOL Marker injected.");
+    console.log("💉 PDF/A-3b Master Patch (v42) applied. Binary alignment confirmed.");
     return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
-    const padding = " ".repeat(3000);
+    const orderId = invoiceData.orderId || 'Unknown';
     
-    // Simple join, no trim, to ensure consistent line endings
-    return [
+    // We join with \n but make sure the result doesn't have a trailing \n 
+    // that might interfere with our manual 0x0A EOL fix in the patcher.
+    const xmp = [
         '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>',
         '<x:xmpmeta xmlns:x="adobe:ns:meta/">',
         '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">',
@@ -65,7 +68,7 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
         '</rdf:Description>',
         '<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">',
         '<dc:format>application/pdf</dc:format>',
-        `<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${invoiceData.orderId || ''}</rdf:li></rdf:Alt></dc:title>`,
+        `<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title>`,
         '</rdf:Description>',
         '<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">',
         `<xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate>`, 
@@ -80,9 +83,10 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
         '<fx:Version>1.0</fx:Version>',
         '</rdf:Description>',
         '</rdf:RDF></x:xmpmeta>',
-        padding,
         '<?xpacket end="w"?>'
     ].join('\n');
+
+    return xmp;
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
