@@ -14,22 +14,22 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     let pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
 
-    // 1. Find the Attached File Object (factur-x.xml)
-    // We need this for the mandatory /AF array in PDF/A-3
-    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<[^>]*\/F\s*\(factur-x\.xml\)/);
+    // 1. FIND THE EMBEDDED FILE SPEC (Essential for AFRelationship)
+    // We need the object ID of the file specification for factur-x.xml
+    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     let afArray = "";
     if (fileSpecMatch) {
         const fileRef = fileSpecMatch[1].replace(' obj', ' R');
         afArray = `/AF [${fileRef}]`;
     }
 
-    // 2. Surgical Metadata Object Fix
+    // 2. SURGICAL METADATA OBJECT FIX
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
     const streamStart = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // Hard-overwrite the dictionary header
+    // Hard-overwrite the dictionary header to be absolute
     resultBuffer.fill(0x20, dictStart, streamStart); 
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
@@ -40,24 +40,24 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     resultBuffer[endstream - 1] = 0x0A; 
     Buffer.from(xmpString, 'utf8').copy(resultBuffer, streamDataStart);
 
-    // 3. CATALOG INJECTION
+    // 3. CATALOG INJECTION (Linking Metadata, StructTree, and AF Array)
     const spacerRegex = /\/PDFify\s*<[0-9a-fA-F]{100,}>/;
     const spacerMatch = pdfString.match(spacerRegex);
     if (spacerMatch) {
-        // We inject Metadata, StructTree, AF (Associated Files), and MarkInfo
+        // We inject every required PDF/A-3b root key here
         const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
         const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
         resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
     }
 
-    // 4. THE NUCLEAR CLEANUP: Rename any OTHER /Metadata strings
-    let finalPdf = resultBuffer.toString('latin1');
-    // Rename all /Metadata that are NOT our specific object reference
+    // 4. THE CLEANUP
+    // Rename all other /Metadata occurrences to prevent validator confusion
+    let finalPdfStr = resultBuffer.toString('latin1');
     const globalSanitize = new RegExp(`\\/Metadata(?!\\s+${metadataTag})`, 'g');
-    finalPdf = finalPdf.replace(globalSanitize, '/OldMeta');
+    finalPdfStr = finalPdfStr.replace(globalSanitize, '/OldMeta');
 
-    console.log("💉 PDF/A-3b Surgery v48 complete. All conflicts resolved.");
-    return Buffer.from(finalPdf, 'latin1');
+    console.log("💉 PDF/A-3b Surgery v49: Metadata & AF Array injected.");
+    return Buffer.from(finalPdfStr, 'latin1');
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
@@ -109,19 +109,20 @@ async function finalizePdf(pdfDoc, invoiceData) {
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 1. Pre-allocate Metadata stream with "Padding" to keep the header long
+    // 1. Metadata Pre-allocation
     const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { 
         Length: 6000,
-        Padding: " ".repeat(150) 
+        Padding: " ".repeat(200) 
     });
     const metadataRef = pdfDoc.context.register(metadataStream);
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
 
-    // 2. Catalog Spacer (Bigger to hold the new /AF array)
-    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(500)));
+    // 2. Bigger Landing Zone in Catalog
+    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(600)));
 
-    // 3. Attach ZUGFeRD
-    await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
+    // 3. Attach with explicit PDF-LIB AFRelationship support
+    const xmlBuffer = Buffer.from(generateZugferdXml(invoiceData), "utf8");
+    await pdfDoc.attach(xmlBuffer, 'factur-x.xml', {
         mimeType: "application/xml", 
         afRelationship: "Alternative",
         description: "Factur-X Invoice",
