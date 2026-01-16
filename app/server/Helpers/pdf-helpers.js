@@ -5,9 +5,9 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE UNIVERSAL HIJACKER (v40)
+ * THE UNIVERSAL HIJACKER (v41)
  * Finds the metadata object by its specific properties (Length 6000)
- * and performs a byte-perfect overwrite using dynamic alignment.
+ * and performs a byte-perfect overwrite including the mandatory EOL marker.
  */
 function patchPdfBuffer(pdfBuffer, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
@@ -21,9 +21,7 @@ function patchPdfBuffer(pdfBuffer, xmpString) {
         return pdfBuffer;
     }
 
-    // DYNAMIC ALIGNMENT (v40)
-    // Instead of guessing if it's 1 or 2 bytes after 'stream',
-    // we find 'endstream' and look EXACTLY 6000 bytes backwards.
+    // DYNAMIC ALIGNMENT
     const actualEndstreamPos = pdfString.indexOf('endstream', match.index);
     const dataEnd = actualEndstreamPos;
     const dataStart = dataEnd - 6000;
@@ -33,19 +31,23 @@ function patchPdfBuffer(pdfBuffer, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const xmpBytes = Buffer.from(xmpString, 'utf8');
 
-    // 2. Wipe the 6000 bytes with spaces (0x20)
+    // 2. CLEAR THE AREA
     resultBuffer.fill(0x20, dataStart, dataEnd);
     
-    // 3. Write XMP at the start of the cleared area
+    // 3. THE EOL FIX (v41): 
+    // The 6000th byte MUST be a newline (\n) to satisfy Clause 6.1.7.1 Test 2
+    resultBuffer[dataEnd - 1] = 0x0A; 
+
+    // 4. Write XMP at the start of the cleared area
     xmpBytes.copy(resultBuffer, dataStart);
 
-    // 4. PRECISION OVERWRITE: Rename /Keywords to /Metadata
+    // 5. PRECISION OVERWRITE: Rename /Keywords to /Metadata
     const keywordMatch = pdfString.match(/\/Keywords\s+(\d+ \d+ R)/);
     if (keywordMatch) {
         resultBuffer.write("/Metadata", keywordMatch.index, 'latin1');
     }
 
-    console.log("💉 PDF/A-3b Master Patch (v40) applied. Binary alignment 100% matched.");
+    console.log("💉 PDF/A-3b Master Patch (v41) applied. EOL Marker injected.");
     return resultBuffer;
 }
 
