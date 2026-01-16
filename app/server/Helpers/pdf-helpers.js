@@ -42,7 +42,7 @@ function patchPdfBuffer(pdfBuffer, metadataTag, xmpString) {
     // 4. WIPE THE FILTER
     const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     const headerArea = pdfString.slice(dictStart, streamMarker);
-    const filterMatch = headerArea.match(/\/Filter\s*\/FlateDecode);
+    const filterMatch = headerArea.match(/\/Filter\s*\/FlateDecode/);
     if (filterMatch) {
         const filterPos = dictStart + filterMatch.index;
         resultBuffer.write(" ".repeat(filterMatch[0].length), filterPos, 'latin1');
