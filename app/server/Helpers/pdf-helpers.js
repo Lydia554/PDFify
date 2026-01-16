@@ -5,63 +5,60 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE MASTER PATCHER (v38)
- * 1. Overwrites stream content while preserving EOL markers.
- * 2. Renames /Keywords to /Metadata (Zero-Shift).
+ * THE UNIVERSAL HIJACKER (v39)
+ * Finds the metadata object by its specific properties (Length 6000)
+ * and performs a byte-perfect overwrite.
  */
-function patchPdfBuffer(pdfBuffer, metadataTag, xmpString) {
+function patchPdfBuffer(pdfBuffer, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
     
-    // 1. Find the object by its ID (e.g., "12 0 obj")
-    const objectHeader = `${metadataTag.replace(' R', '')} obj`;
-    const objIndex = pdfString.indexOf(objectHeader);
+    // 1. Find the object that we specifically gave a Length of 6000
+    const metadataRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Metadata[^>]*\/Length\s+6000[^>]*>>\s*stream/i;
+    const match = pdfString.match(metadataRegex);
     
-    if (objIndex === -1) {
-        console.error(`❌ Critical: Metadata Object ${objectHeader} not found in buffer.`);
+    if (!match) {
+        console.error("❌ Critical: Metadata object with Length 6000 not found.");
         return pdfBuffer;
     }
 
-    // Locate the exact start of the data after 'stream'
-    // PDF/A-3b requires a newline immediately after 'stream'
-    const streamMarker = pdfString.indexOf('stream', objIndex);
-    let dataStart = streamMarker + 6;
-    if (pdfBuffer[dataStart] === 0x0D) dataStart++; // CR
-    if (pdfBuffer[dataStart] === 0x0A) dataStart++; // LF
+    const streamStartIndex = pdfString.indexOf('stream', match.index) + 6;
+    let dataStart = streamStartIndex;
+    
+    // Strict PDF/A-3b EOL Check
+    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
+    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
 
-    const endMarker = pdfString.indexOf('endstream', dataStart);
+    // The validator expects EXACTLY 6000 bytes here
+    const dataEnd = dataStart + 6000;
+    
+    // Binary alignment logging
+    const actualEndstreamPos = pdfString.indexOf('endstream', dataStart);
+    console.log(`📊 Binary Check: DataStart: ${dataStart}, ExpectedEnd: ${dataEnd}, ActualEndstream: ${actualEndstreamPos}`);
+
     const resultBuffer = Buffer.from(pdfBuffer);
-
-    // 2. Wipe the area with spaces (0x20)
-    // We leave the EOL marker before endstream untouched
-    resultBuffer.fill(0x20, dataStart, endMarker);
-
-    // 3. Write the XMP
     const xmpBytes = Buffer.from(xmpString, 'utf8');
+
+    // 2. Wipe the 6000 bytes with spaces (0x20)
+    resultBuffer.fill(0x20, dataStart, dataEnd);
+    
+    // 3. Write the XMP at the start of the cleared area
     xmpBytes.copy(resultBuffer, dataStart);
 
-    // 4. WIPE THE FILTER
-    const dictStart = pdfString.lastIndexOf('<<', streamMarker);
-    const headerArea = pdfString.slice(dictStart, streamMarker);
-    const filterMatch = headerArea.match(/\/Filter\s*\/FlateDecode/);
-    if (filterMatch) {
-        const filterPos = dictStart + filterMatch.index;
-        resultBuffer.write(" ".repeat(filterMatch[0].length), filterPos, 'latin1');
-    }
-
-    // 5. PRECISION OVERWRITE: Rename /Keywords to /Metadata
+    // 4. PRECISION OVERWRITE: Rename /Keywords to /Metadata
     const keywordMatch = pdfString.match(/\/Keywords\s+(\d+ \d+ R)/);
     if (keywordMatch) {
         resultBuffer.write("/Metadata", keywordMatch.index, 'latin1');
     }
 
-    console.log("💉 PDF/A-3b Master Patch applied. Lengths and EOLs preserved.");
+    console.log("💉 PDF/A-3b Master Patch (v39) applied. Byte-offsets preserved.");
     return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
     const padding = " ".repeat(3000);
-    // Remove .trim() from the join to keep it clean
+    
+    // Simple join, no trim, to ensure consistent line endings
     return [
         '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>',
         '<x:xmpmeta xmlns:x="adobe:ns:meta/">',
@@ -104,18 +101,16 @@ async function finalizePdf(pdfDoc, invoiceData) {
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 1. Create a RAW stream with a hardcoded Length of 6000
-    // We do NOT use pdf-lib's automatic length calculation
+    // 1. Create the Metadata Stream with hardcoded Length 6000
     const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), {
         Type: PDFName.of('Metadata'),
         Subtype: PDFName.of('XML'),
-        Length: 6000, // <--- EXPLICIT FIXED LENGTH
+        Length: 6000,
     });
-    // Ensure no Filter (no compression)
     metadataStream.dict.delete(PDFName.of('Filter'));
     const metadataRef = pdfDoc.context.register(metadataStream);
 
-    // 2. The Anchor (9 chars)
+    // 2. The Anchor
     pdfDoc.catalog.set(PDFName.of('Keywords'), metadataRef);
     
     // 3. Mark Info and StructTree
@@ -127,12 +122,16 @@ async function finalizePdf(pdfDoc, invoiceData) {
         mimeType: "application/xml", afRelationship: "Alternative"
     });
 
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
+    const pdfBytes = await pdfDoc.save({
+        useObjectStreams: false, 
+        addDefaultMetadata: false,
+        updateFieldAppearances: false
+    });
     
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
     
-    // We pass the Tag so the patcher knows EXACTLY which object to look for
-    return patchPdfBuffer(Buffer.from(pdfBytes), metadataRef.tag, xmpString);
+    // Deterministic search in the buffer
+    return patchPdfBuffer(Buffer.from(pdfBytes), xmpString);
 }
 
 module.exports = { finalizePdf };
