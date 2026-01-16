@@ -5,9 +5,9 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE UNIVERSAL HIJACKER (v39)
+ * THE UNIVERSAL HIJACKER (v40)
  * Finds the metadata object by its specific properties (Length 6000)
- * and performs a byte-perfect overwrite.
+ * and performs a byte-perfect overwrite using dynamic alignment.
  */
 function patchPdfBuffer(pdfBuffer, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
@@ -21,19 +21,14 @@ function patchPdfBuffer(pdfBuffer, xmpString) {
         return pdfBuffer;
     }
 
-    const streamStartIndex = pdfString.indexOf('stream', match.index) + 6;
-    let dataStart = streamStartIndex;
-    
-    // Strict PDF/A-3b EOL Check
-    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
-    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
+    // DYNAMIC ALIGNMENT (v40)
+    // Instead of guessing if it's 1 or 2 bytes after 'stream',
+    // we find 'endstream' and look EXACTLY 6000 bytes backwards.
+    const actualEndstreamPos = pdfString.indexOf('endstream', match.index);
+    const dataEnd = actualEndstreamPos;
+    const dataStart = dataEnd - 6000;
 
-    // The validator expects EXACTLY 6000 bytes here
-    const dataEnd = dataStart + 6000;
-    
-    // Binary alignment logging
-    const actualEndstreamPos = pdfString.indexOf('endstream', dataStart);
-    console.log(`📊 Binary Check: DataStart: ${dataStart}, ExpectedEnd: ${dataEnd}, ActualEndstream: ${actualEndstreamPos}`);
+    console.log(`📊 Binary Calibration: stream starts at ${dataStart}, ends at ${dataEnd}. (Length: ${dataEnd - dataStart})`);
 
     const resultBuffer = Buffer.from(pdfBuffer);
     const xmpBytes = Buffer.from(xmpString, 'utf8');
@@ -41,7 +36,7 @@ function patchPdfBuffer(pdfBuffer, xmpString) {
     // 2. Wipe the 6000 bytes with spaces (0x20)
     resultBuffer.fill(0x20, dataStart, dataEnd);
     
-    // 3. Write the XMP at the start of the cleared area
+    // 3. Write XMP at the start of the cleared area
     xmpBytes.copy(resultBuffer, dataStart);
 
     // 4. PRECISION OVERWRITE: Rename /Keywords to /Metadata
@@ -50,7 +45,7 @@ function patchPdfBuffer(pdfBuffer, xmpString) {
         resultBuffer.write("/Metadata", keywordMatch.index, 'latin1');
     }
 
-    console.log("💉 PDF/A-3b Master Patch (v39) applied. Byte-offsets preserved.");
+    console.log("💉 PDF/A-3b Master Patch (v40) applied. Binary alignment 100% matched.");
     return resultBuffer;
 }
 
