@@ -5,61 +5,57 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE UNIVERSAL HIJACKER (v42 - Final Polish)
- * 1. Ensures <?xpacket starts at byte 0.
- * 2. Protects the mandatory EOL at byte 5999.
+ * THE TOTAL ECLIPSE HIJACKER (v44)
  */
 function patchPdfBuffer(pdfBuffer, xmpString) {
-    const pdfString = pdfBuffer.toString('latin1');
+    // 1. Convert to string to perform global sanitization
+    let pdfString = pdfBuffer.toString('latin1');
     
-    // 1. Find the object that we specifically gave a Length of 6000
-    const metadataRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Metadata[^>]*\/Length\s+6000[^>]*>>\s*stream/i;
+    // 2. KILL ALL GHOSTS: Rename every instance of "/Metadata" to "/OldMeta"
+    // This ensures no conflicting metadata objects exist.
+    pdfString = pdfString.replace(/\/Metadata/g, '/OldMeta');
+
+    // 3. FIND OUR TARGET: The object we created with Length 6000
+    const metadataRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Length\s+6000[^>]*>>\s*stream/i;
     const match = pdfString.match(metadataRegex);
     
     if (!match) {
-        console.error("❌ Critical: Metadata object with Length 6000 not found.");
+        console.error("❌ Critical: Metadata container not found.");
         return pdfBuffer;
     }
 
-    const actualEndstreamPos = pdfString.indexOf('endstream', match.index);
+    const objHeaderStart = match.index;
+    const streamMarkerIndex = pdfString.indexOf('stream', objHeaderStart);
+    const actualEndstreamPos = pdfString.indexOf('endstream', streamMarkerIndex);
     const dataEnd = actualEndstreamPos;
     const dataStart = dataEnd - 6000;
 
-    const resultBuffer = Buffer.from(pdfBuffer);
-    
-    // 2. Fill entire 6000 bytes with spaces (0x20)
-    resultBuffer.fill(0x20, dataStart, dataEnd);
-    
-    // 3. Set the EOL marker at the VERY end
-    resultBuffer[dataEnd - 1] = 0x0A; 
+    let resultBuffer = Buffer.from(pdfString, 'latin1');
 
-    // 4. Copy XMP at the VERY start
+    // 4. HEADER SURGERY: Make this object the OFFICIAL Metadata object
+    // We inject /Type /Metadata /Subtype /XML
+    const newHeader = `${match[1]} << /Type /Metadata /Subtype /XML /Length 6000 >>`.padEnd(streamMarkerIndex - objHeaderStart, ' ');
+    resultBuffer.write(newHeader, objHeaderStart, 'latin1');
+
+    // 5. DATA SURGERY: Inject XMP and mandatory EOL
+    resultBuffer.fill(0x20, dataStart, dataEnd);
+    resultBuffer[dataEnd - 1] = 0x0A; 
     const xmpBytes = Buffer.from(xmpString, 'utf8');
-    
-    // Safety check: Ensure XMP + EOL doesn't exceed 6000
-    if (xmpBytes.length > 5999) {
-        console.error("❌ XMP too large for 6000 byte buffer");
-        return pdfBuffer;
-    }
     xmpBytes.copy(resultBuffer, dataStart);
 
-    // 5. Anchor overwrite
+    // 6. CATALOG LINK: Rename our /Keywords anchor to /Metadata
     const keywordMatch = pdfString.match(/\/Keywords\s+(\d+ \d+ R)/);
     if (keywordMatch) {
         resultBuffer.write("/Metadata", keywordMatch.index, 'latin1');
     }
 
-    console.log("💉 PDF/A-3b Master Patch (v42) applied. Binary alignment confirmed.");
+    console.log("💉 PDF/A-3b Total Eclipse Hijack (v44) complete.");
     return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
-    const orderId = invoiceData.orderId || 'Unknown';
-    
-    // We join with \n but make sure the result doesn't have a trailing \n 
-    // that might interfere with our manual 0x0A EOL fix in the patcher.
-    const xmp = [
+    return [
         '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>',
         '<x:xmpmeta xmlns:x="adobe:ns:meta/">',
         '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">',
@@ -68,7 +64,7 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
         '</rdf:Description>',
         '<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">',
         '<dc:format>application/pdf</dc:format>',
-        `<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title>`,
+        `<dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${invoiceData.orderId || ''}</rdf:li></rdf:Alt></dc:title>`,
         '</rdf:Description>',
         '<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">',
         `<xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate>`, 
@@ -85,8 +81,6 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
         '</rdf:RDF></x:xmpmeta>',
         '<?xpacket end="w"?>'
     ].join('\n');
-
-    return xmp;
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
@@ -102,19 +96,13 @@ async function finalizePdf(pdfDoc, invoiceData) {
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 1. Create the Metadata Stream with hardcoded Length 6000
-    const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), {
-        Type: PDFName.of('Metadata'),
-        Subtype: PDFName.of('XML'),
-        Length: 6000,
-    });
-    metadataStream.dict.delete(PDFName.of('Filter'));
+    // 1. Create a stream with Length 6000
+    const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { Length: 6000 });
     const metadataRef = pdfDoc.context.register(metadataStream);
 
     // 2. The Anchor
     pdfDoc.catalog.set(PDFName.of('Keywords'), metadataRef);
     
-    // 3. Mark Info and StructTree
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRef);
@@ -123,15 +111,9 @@ async function finalizePdf(pdfDoc, invoiceData) {
         mimeType: "application/xml", afRelationship: "Alternative"
     });
 
-    const pdfBytes = await pdfDoc.save({
-        useObjectStreams: false, 
-        addDefaultMetadata: false,
-        updateFieldAppearances: false
-    });
-    
+    const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
     
-    // Deterministic search in the buffer
     return patchPdfBuffer(Buffer.from(pdfBytes), xmpString);
 }
 
