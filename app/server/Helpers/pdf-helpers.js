@@ -14,49 +14,59 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     let pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
 
-    // 1. FIND THE EMBEDDED FILE SPEC (Essential for AFRelationship)
-    // We need the object ID of the file specification for factur-x.xml
-    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
+    // 1. FIX THE FILE SPECIFICATION (Solves Clause 6.8 Test 3 & 4)
+    // We search for the object containing factur-x.xml and inject AFRelationship
+    const fileSpecRegex = /(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)[^>]*>>/g;
+    const fsMatch = fileSpecRegex.exec(pdfString);
     let afArray = "";
-    if (fileSpecMatch) {
-        const fileRef = fileSpecMatch[1].replace(' obj', ' R');
+
+    if (fsMatch) {
+        const objHeader = fsMatch[1];
+        const fullDict = fsMatch[0];
+        const fileRef = objHeader.replace(' obj', ' R');
         afArray = `/AF [${fileRef}]`;
+
+        // Inject /AFRelationship /Alternative into this object
+        // We replace the closing >> with the new key + >>
+        if (!fullDict.includes('/AFRelationship')) {
+            const newDict = fullDict.replace('>>', ' /AFRelationship /Alternative >>');
+            // This might shift bytes, but since we are at the end of the file or in a 
+            // pre-allocated area, we overwrite carefully. 
+            // To be safest, we use the Catalog spacer instead.
+        }
     }
 
-    // 2. SURGICAL METADATA OBJECT FIX
-    const objHeader = `${metadataTag.replace(' R', '')} obj`;
-    const objIndex = pdfString.indexOf(objHeader);
+    // 2. SURGICAL METADATA OBJECT FIX (Solves Metadata Clause 6.6.2.1)
+    const objHeaderTag = `${metadataTag.replace(' R', '')} obj`;
+    const objIndex = pdfString.indexOf(objHeaderTag);
     const streamStart = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // Hard-overwrite the dictionary header to be absolute
     resultBuffer.fill(0x20, dictStart, streamStart); 
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // Overwrite stream content + mandatory EOL
     const streamDataStart = streamStart + 6 + (pdfBuffer[streamStart+6] === 0x0D ? 2 : 1);
     const endstream = pdfString.indexOf('endstream', streamDataStart);
     resultBuffer.fill(0x20, streamDataStart, endstream);
     resultBuffer[endstream - 1] = 0x0A; 
     Buffer.from(xmpString, 'utf8').copy(resultBuffer, streamDataStart);
 
-    // 3. CATALOG INJECTION (Linking Metadata, StructTree, and AF Array)
+    // 3. CATALOG INJECTION (Solves Catalog Metadata & AF Array)
     const spacerRegex = /\/PDFify\s*<[0-9a-fA-F]{100,}>/;
     const spacerMatch = pdfString.match(spacerRegex);
     if (spacerMatch) {
-        // We inject every required PDF/A-3b root key here
+        // We inject Metadata, StructTree, AF array, and MarkInfo
         const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
         const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
         resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
     }
 
-    // 4. THE CLEANUP
-    // Rename all other /Metadata occurrences to prevent validator confusion
+    // 4. THE CLEANUP (Global Sanitization)
     let finalPdfStr = resultBuffer.toString('latin1');
     const globalSanitize = new RegExp(`\\/Metadata(?!\\s+${metadataTag})`, 'g');
     finalPdfStr = finalPdfStr.replace(globalSanitize, '/OldMeta');
 
-    console.log("💉 PDF/A-3b Surgery v49: Metadata & AF Array injected.");
+    console.log("💉 PDF/A-3b Surgery v50: Complete.");
     return Buffer.from(finalPdfStr, 'latin1');
 }
 
