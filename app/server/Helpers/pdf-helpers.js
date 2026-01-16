@@ -5,10 +5,20 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
-    let pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
+    const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. FIND THE EMBEDDED FILE SPEC (For /AF array)
+    // 1. LOCATE THE CATALOG (The Root)
+    // We search for our unique spacer /PDFify
+    const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
+    const spacerMatch = pdfString.match(spacerRegex);
+    
+    if (!spacerMatch) {
+        console.error("❌ Critical: Catalog Spacer (/PDFify) not found.");
+        return pdfBuffer;
+    }
+
+    // 2. FIND ATTACHED FILE SPEC (For /AF Array)
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     let afArray = "";
     if (fileSpecMatch) {
@@ -16,45 +26,32 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
         afArray = `/AF [${fileRef}]`;
     }
 
-    // 2. SURGICAL METADATA OBJECT FIX
-    const objHeaderTag = `${metadataTag.replace(' R', '')} obj`;
-    const objIndex = pdfString.indexOf(objHeaderTag);
+    // 3. CATALOG INJECTION
+    // We replace /PDFify <...> with our real keys. 
+    // We pad with spaces to ensure the total byte length is UNCHANGED.
+    const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
+    const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
+    resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
+
+    // 4. METADATA OBJECT SURGERY
+    const objHeader = `${metadataTag.replace(' R', '')} obj`;
+    const objIndex = pdfString.indexOf(objHeader);
     const streamStart = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // Hard-overwrite dictionary: No Filters, No Compression
+    // Rewrite Dictionary Header
     resultBuffer.fill(0x20, dictStart, streamStart); 
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // 3. STREAM DATA OVERWRITE
+    // Overwrite Stream Content
     const streamDataStart = streamStart + 6 + (pdfBuffer[streamStart+6] === 0x0D ? 2 : 1);
     const endstream = pdfString.indexOf('endstream', streamDataStart);
-    
-    // Fill with spaces, but ensure the byte immediately before endstream is a Newline
     resultBuffer.fill(0x20, streamDataStart, endstream);
-    resultBuffer[endstream - 1] = 0x0A; 
+    resultBuffer[endstream - 1] = 0x0A; // Mandatory EOL
+    Buffer.from(xmpString, 'utf8').copy(resultBuffer, streamDataStart);
 
-    // Write XMP starting at byte 0 of the stream
-    const xmpBytes = Buffer.from(xmpString, 'utf8');
-    xmpBytes.copy(resultBuffer, streamDataStart);
-
-    // 4. CATALOG INJECTION (Linking everything)
-    const spacerRegex = /\/PDFify\s*<[0-9a-fA-F]{100,}>/;
-    const spacerMatch = pdfString.match(spacerRegex);
-    if (spacerMatch) {
-        const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
-        const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
-        resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
-    }
-
-    // 5. THE NUCLEAR CLEANUP (Global Sanitization)
-    // Rename all other /Metadata occurrences to prevent validator confusion
-    let finalPdfStr = resultBuffer.toString('latin1');
-    const globalSanitize = new RegExp(`\/Metadata(?!\s+${metadataTag})`, 'g');
-    finalPdfStr = finalPdfStr.replace(globalSanitize, '/OldMeta');
-
-    console.log("💉 PDF/A-3b Surgery v51: Complete.");
-    return Buffer.from(finalPdfStr, 'latin1');
+    console.log("💉 PDF/A-3b Surgery v52: Precision Catalog Linkage Complete.");
+    return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
