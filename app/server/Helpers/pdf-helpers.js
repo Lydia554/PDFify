@@ -5,9 +5,9 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE BYTE-MATCH SURGEON (v37)
- * Overwrites stream content and renames /Keywords to /Metadata.
- * This preserves exact byte alignment (both keys are 9 chars).
+ * THE MASTER PATCHER (v38)
+ * 1. Overwrites stream content while preserving EOL markers.
+ * 2. Renames /Keywords to /Metadata (Zero-Shift).
  */
 function patchPdfBuffer(pdfBuffer, metadataTag, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
@@ -21,44 +21,47 @@ function patchPdfBuffer(pdfBuffer, metadataTag, xmpString) {
         return pdfBuffer;
     }
 
-    const streamStartIndex = pdfString.indexOf('stream', objIndex) + 6;
-    let contentStart = streamStartIndex;
-    if (pdfBuffer[contentStart] === 0x0D) contentStart++; 
-    if (pdfBuffer[contentStart] === 0x0A) contentStart++; 
+    // Locate the exact start of the data after 'stream'
+    // PDF/A-3b requires a newline immediately after 'stream'
+    const streamMarker = pdfString.indexOf('stream', objIndex);
+    let dataStart = streamMarker + 6;
+    if (pdfBuffer[dataStart] === 0x0D) dataStart++; // CR
+    if (pdfBuffer[dataStart] === 0x0A) dataStart++; // LF
 
-    const endStreamIndex = pdfString.indexOf('endstream', contentStart);
-    
+    const endMarker = pdfString.indexOf('endstream', dataStart);
     const resultBuffer = Buffer.from(pdfBuffer);
-    const xmpBytes = Buffer.from(xmpString, 'utf8');
-    
-    // 2. Overwrite Content (fill with spaces first to be safe)
-    resultBuffer.fill(0x20, contentStart, endStreamIndex);
-    xmpBytes.copy(resultBuffer, contentStart);
 
-    // 3. WIPE THE FILTER
-    // We search for /Filter within the object header area
-    const dictStart = pdfString.lastIndexOf('<<', contentStart);
-    const headerArea = pdfString.slice(dictStart, contentStart);
-    const filterMatch = headerArea.match(/\/Filter\s*\/FlateDecode/);
+    // 2. Wipe the area with spaces (0x20)
+    // We leave the EOL marker before endstream untouched
+    resultBuffer.fill(0x20, dataStart, endMarker);
+
+    // 3. Write the XMP
+    const xmpBytes = Buffer.from(xmpString, 'utf8');
+    xmpBytes.copy(resultBuffer, dataStart);
+
+    // 4. WIPE THE FILTER
+    const dictStart = pdfString.lastIndexOf('<<', streamMarker);
+    const headerArea = pdfString.slice(dictStart, streamMarker);
+    const filterMatch = headerArea.match(/\/Filter\s*\/FlateDecode);
     if (filterMatch) {
         const filterPos = dictStart + filterMatch.index;
         resultBuffer.write(" ".repeat(filterMatch[0].length), filterPos, 'latin1');
     }
 
-    // 4. PRECISION OVERWRITE (The v37 Fix)
-    // Rename /Keywords to /Metadata (Both are 9 characters). Zero byte shift.
+    // 5. PRECISION OVERWRITE: Rename /Keywords to /Metadata
     const keywordMatch = pdfString.match(/\/Keywords\s+(\d+ \d+ R)/);
     if (keywordMatch) {
         resultBuffer.write("/Metadata", keywordMatch.index, 'latin1');
     }
 
-    console.log("💉 PDF/A-3b Precision Overwrite Complete. Byte-alignment preserved.");
+    console.log("💉 PDF/A-3b Master Patch applied. Lengths and EOLs preserved.");
     return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
     const padding = " ".repeat(3000);
+    // Remove .trim() from the join to keep it clean
     return [
         '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>',
         '<x:xmpmeta xmlns:x="adobe:ns:meta/">',
@@ -101,14 +104,18 @@ async function finalizePdf(pdfDoc, invoiceData) {
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 1. Create the Metadata Stream manually (Very large so we can overwrite)
+    // 1. Create a RAW stream with a hardcoded Length of 6000
+    // We do NOT use pdf-lib's automatic length calculation
     const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), {
         Type: PDFName.of('Metadata'),
         Subtype: PDFName.of('XML'),
+        Length: 6000, // <--- EXPLICIT FIXED LENGTH
     });
+    // Ensure no Filter (no compression)
+    metadataStream.dict.delete(PDFName.of('Filter'));
     const metadataRef = pdfDoc.context.register(metadataStream);
 
-    // 2. THE PRECISION ANCHOR: Keywords is exactly 9 bytes, just like /Metadata
+    // 2. The Anchor (9 chars)
     pdfDoc.catalog.set(PDFName.of('Keywords'), metadataRef);
     
     // 3. Mark Info and StructTree
