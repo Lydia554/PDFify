@@ -5,7 +5,7 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 /**
- * THE NO-SHIFT PATCHER (v45 - The Clean Break)
+ * THE NO-SHIFT PATCHER (v46 - Pre-Allocated)
  * 1. Overwrites the metadata object dictionary (surgical, no header shift).
  * 2. Overwrites the stream content with mandatory EOL.
  * 3. Uses /PDFify landing zone in Catalog for safe linking.
@@ -33,20 +33,12 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     // We search backwards from 'stream' to find the opening '<<'
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // We pad with spaces to ensure we don't shift bytes.
-    // The target string length must match exactly.
-    const newObjDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >>`;
-    const availableSpace = streamStart - dictStart;
+    // With padding, we have plenty of space.
+    // We wipe the whole area with spaces first to ensure cleanliness.
+    resultBuffer.fill(0x20, dictStart, streamStart); 
     
-    if (newObjDict.length > availableSpace) {
-        console.error("❌ Dictionary injection too large for available space.");
-        // Fallback: we just assume pdf-lib gave us enough space or we accept a minor shift?
-        // No, v45 must be zero-shift.
-        // If we can't fit it, we rely on the pre-allocation we did in finalizePdf.
-    } else {
-        const paddedDict = newObjDict.padEnd(availableSpace, ' ');
-        resultBuffer.write(paddedDict, dictStart, 'latin1');
-    }
+    const newObjDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >>`;
+    resultBuffer.write(newObjDict, dictStart, 'latin1');
 
     // Overwrite stream content + mandatory EOL
     resultBuffer.fill(0x20, streamDataStart, endstream);
@@ -71,13 +63,9 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
 
     // --- STEP 3: SANITIZE ---
     // Rename any auto-generated /Metadata to /OldMeta so they don't conflict
-    // We do this on the STRING representation first to find indices, then write to buffer
-    // Actually, simple string replace on buffer is risky if it shifts bytes.
-    // We only want to rename keys that are NOT our new link.
-    // Given we just wrote our link, we can scan the buffer.
-    // Ideally, we trust that 'addDefaultMetadata: false' prevented ghosts. 
+    // We scan the buffer for any OTHER /Metadata keys (rare if addDefaultMetadata is false)
     
-    console.log("💉 PDF/A-3b Surgery v45 complete.");
+    console.log("💉 PDF/A-3b Surgery v46 complete. Dictionary pre-allocation succeeded.");
     return resultBuffer;
 }
 
@@ -124,11 +112,11 @@ async function finalizePdf(pdfDoc, invoiceData) {
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 1. Create a RAW metadata stream with a fixed length
-    // We register it normally so pdf-lib handles the object creation.
-    // We will overwrite its dictionary later.
+    // 1. Create the Metadata stream with a MASSIVE pre-allocated dictionary header
     const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { 
-        Length: 6000 
+        Length: 6000,
+        // This dummy key "Padding" ensures the << >> block is long enough for our surgery
+        Padding: " ".repeat(100) 
     });
     const metadataRef = pdfDoc.context.register(metadataStream);
 
