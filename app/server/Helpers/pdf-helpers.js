@@ -12,63 +12,69 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. FIND THE REAL METADATA OBJECT BY ITS CONTENT
+    // 1. LOCATE AND SANITIZE THE CATALOG (ROOT) OBJECT
+    // We search for the object header + the Catalog type
+    const catalogRegex = /(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/;
+    const catalogMatch = pdfString.match(catalogRegex);
+    
+    if (catalogMatch) {
+        const catalogStart = catalogMatch.index;
+        const catalogEnd = pdfString.indexOf('>>', catalogStart);
+        const catalogContent = pdfString.slice(catalogStart, catalogEnd);
+
+        // Wipe ANY existing /Metadata link in the Catalog to prevent conflicts
+        const metaLinkRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
+        let m;
+        while ((m = metaLinkRegex.exec(catalogContent)) !== null) {
+            const absolutePos = catalogStart + m.index;
+            // Overwrite with spaces to "delete" it from the dictionary
+            resultBuffer.fill(0x20, absolutePos, absolutePos + m[0].length);
+        }
+    }
+
+    // 2. FIND OUR TARGET METADATA STREAM (Object 9 0 R)
     const metaObjMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Length 6000/);
     if (!metaObjMatch) return pdfBuffer;
     const realMetaTag = metaObjMatch[1].replace(' obj', ' R');
 
-    // 2. NEUTRALIZE THE CATALOG (NO GHOSTS)
-    const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
-    if (catalogMatch) {
-        const catalogStart = catalogMatch.index;
-        const catalogEnd = pdfString.indexOf('>>', catalogStart);
-        let catalogContent = pdfString.slice(catalogStart, catalogEnd);
-
-        // We search for ANY /Metadata key and turn it into /OldMeta
-        // This ensures VeraPDF ONLY sees our /PDFify injection
-        const ghostMetaRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
-        let m;
-        while ((m = ghostMetaRegex.exec(catalogContent)) !== null) {
-            const absolutePos = catalogStart + m.index;
-            resultBuffer.write("/OldMeta ", absolutePos, 'latin1');
-        }
-    }
-
-    // 3. HIJACK THE SPACER (/PDFify)
+    // 3. INJECT INTO THE SPACER (/PDFify)
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
     if (spacerMatch) {
+        // Find factur-x.xml for the /AF array
         const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
         const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
         
-        // Injecting the absolute required keys
+        // This injection MUST contain the Metadata, StructTree, and AF array
         const injection = `/Metadata ${realMetaTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
         const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
         resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
     }
 
-    // 4. THE DICTIONARY SURGERY (With explicit EOLs)
+    // 4. METADATA OBJECT DICTIONARY SURGERY
     const objIndex = metaObjMatch.index;
     const streamMarker = pdfString.indexOf('stream', objIndex);
-    const dictAreaStart = objIndex + metaObjMatch[1].length;
+    const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     
-    resultBuffer.fill(0x20, dictAreaStart, streamMarker);
-    const newDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
-    resultBuffer.write(newDict, dictAreaStart, 'latin1');
+    // Wipe and write the mandatory Type/Subtype
+    resultBuffer.fill(0x20, dictStart, streamMarker);
+    const newDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >> `;
+    resultBuffer.write(newDict, dictStart, 'latin1');
 
-    // 5. DATA START CALIBRATION
+    // 5. DATA CALIBRATION (THE "SQUARE 1" PROTECTION)
     let dataStart = streamMarker + 6; 
-    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) dataStart += 2;
-    else if (pdfBuffer[dataStart] === 0x0A || pdfBuffer[dataStart] === 0x0D) dataStart += 1;
+    if (pdfBuffer[dataStart] === 0x0D) dataStart++; // \r
+    if (pdfBuffer[dataStart] === 0x0A) dataStart++; // \n
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
     resultBuffer.fill(0x20, dataStart, endstreamPos);
     resultBuffer[endstreamPos - 1] = 0x0A; // Mandatory EOL before endstream
 
+    // Write XMP
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v66: Global Catalog Sanitization complete. Target: ${realMetaTag}`);
+    console.log(`💉 v67: Final Buffer Surgery. Catalog Cleaned. Meta linked to ${realMetaTag}`);
     return resultBuffer;
 }
 
@@ -100,7 +106,7 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
 
     // 2. PRE-ALLOCATE THE SPACER IN THE CATALOG
-    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(600)));
+    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(1000)));
 
     // 3. Attach XML
     await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
