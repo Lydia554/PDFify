@@ -12,58 +12,63 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. FIND THE REAL METADATA OBJECT
+    // 1. FIND THE REAL METADATA OBJECT BY ITS CONTENT
     const metaObjMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Length 6000/);
     if (!metaObjMatch) return pdfBuffer;
     const realMetaTag = metaObjMatch[1].replace(' obj', ' R');
 
-    // 2. HIJACK THE CATALOG (FORCE THE SUBTYPES)
+    // 2. NEUTRALIZE THE CATALOG (NO GHOSTS)
+    const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
+    if (catalogMatch) {
+        const catalogStart = catalogMatch.index;
+        const catalogEnd = pdfString.indexOf('>>', catalogStart);
+        let catalogContent = pdfString.slice(catalogStart, catalogEnd);
+
+        // We search for ANY /Metadata key and turn it into /OldMeta
+        // This ensures VeraPDF ONLY sees our /PDFify injection
+        const ghostMetaRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
+        let m;
+        while ((m = ghostMetaRegex.exec(catalogContent)) !== null) {
+            const absolutePos = catalogStart + m.index;
+            resultBuffer.write("/OldMeta ", absolutePos, 'latin1');
+        }
+    }
+
+    // 3. HIJACK THE SPACER (/PDFify)
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
     if (spacerMatch) {
         const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
         const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
+        
+        // Injecting the absolute required keys
         const injection = `/Metadata ${realMetaTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
         const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
         resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
     }
 
-    // 3. THE DICTIONARY SURGERY
+    // 4. THE DICTIONARY SURGERY (With explicit EOLs)
     const objIndex = metaObjMatch.index;
     const streamMarker = pdfString.indexOf('stream', objIndex);
     const dictAreaStart = objIndex + metaObjMatch[1].length;
     
     resultBuffer.fill(0x20, dictAreaStart, streamMarker);
-    // We add \n specifically to ensure the 'stream' keyword is on its own line
     const newDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
     resultBuffer.write(newDict, dictAreaStart, 'latin1');
 
-    // 4. THE "SQUARE 1" KILLER: ABSOLUTE START CALIBRATION
-    // We must find the EXACT byte after 'stream' + EOL
+    // 5. DATA START CALIBRATION
     let dataStart = streamMarker + 6; 
-    
-    // PDF Standard: stream followed by either \n (0x0A) or \r\n (0x0D 0x0A)
-    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) {
-        dataStart += 2; // It's \r\n
-    } else if (pdfBuffer[dataStart] === 0x0A) {
-        dataStart += 1; // It's just \n
-    } else if (pdfBuffer[dataStart] === 0x0D) {
-        dataStart += 1; // It's just \r (rare but possible)
-    }
+    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) dataStart += 2;
+    else if (pdfBuffer[dataStart] === 0x0A || pdfBuffer[dataStart] === 0x0D) dataStart += 1;
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
-    
-    // WIPE THE ENTIRE 6000 BYTES WITH SPACES
     resultBuffer.fill(0x20, dataStart, endstreamPos);
-    
-    // Mandatory EOL right before 'endstream'
-    resultBuffer[endstreamPos - 1] = 0x0A; 
+    resultBuffer[endstreamPos - 1] = 0x0A; // Mandatory EOL before endstream
 
-    // WRITE THE XMP AT THE ABSOLUTE ZERO BYTE
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v65: Absolute Zero Calibration. Data begins at byte ${dataStart}.`);
+    console.log(`💉 v66: Global Catalog Sanitization complete. Target: ${realMetaTag}`);
     return resultBuffer;
 }
 
