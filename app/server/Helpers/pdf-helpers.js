@@ -5,43 +5,41 @@ const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 function patchPdfBuffer(pdfBuffer, xmpString) {
-    const pdfString = pdfBuffer.toString('latin1');
+    // Use Buffer methods directly to avoid encoding corruption
+    const marker = Buffer.from("METADATA_MARKER");
+    const markerPos = pdfBuffer.indexOf(marker);
+    if (markerPos === -1) return pdfBuffer;
+
     const resultBuffer = Buffer.from(pdfBuffer);
 
-    // 1. FIND THE MARKER OBJECT
-    // We search for our unique "METADATA_MARKER" to find the exact object
-    const markerIndex = pdfString.indexOf('METADATA_MARKER');
-    if (markerIndex === -1) return pdfBuffer;
+    // 1. Locate the Dictionary and Stream boundaries
+    // Look backwards from marker for '<<' and 'stream'
+    const streamHeader = Buffer.from("stream");
+    const streamPos = pdfBuffer.lastIndexOf(streamHeader, markerPos);
+    const dictStart = pdfBuffer.lastIndexOf(Buffer.from("<<"), streamPos);
 
-    // Find the object header (e.g., "9 0 obj") and the stream start
-    const objStartIndex = pdfString.lastIndexOf('obj', markerIndex);
-    const streamStartIndex = pdfString.indexOf('stream', objStartIndex);
-    const dictStartIndex = pdfString.lastIndexOf('<<', streamStartIndex);
+    // 2. REWRITE DICTIONARY (Ensuring Type/Subtype are present)
+    // We pad with spaces to keep the exact original byte length of the dictionary area
+    const newDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >>  `;
+    const dictSpace = streamPos - dictStart;
+    resultBuffer.write(newDict.padEnd(dictSpace, ' '), dictStart, 'latin1');
 
-    // 2. SURGICAL DICTIONARY FIX
-    // We rewrite the dictionary to be exactly compliant
-    const cleanDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >>`.padEnd(streamStartIndex - dictStartIndex - 2, ' ');
-    resultBuffer.write(cleanDict, dictStartIndex + 2, 'latin1');
-
-    // 3. DATA ALIGNMENT
-    // Calculate the exact byte after 'stream' + EOL
-    let dataStart = streamStartIndex + 6;
+    // 3. CALIBRATE DATA START
+    let dataStart = streamPos + 6; // skip 'stream'
     if (pdfBuffer[dataStart] === 0x0D) dataStart++; // \r
     if (pdfBuffer[dataStart] === 0x0A) dataStart++; // \n
 
-    const endStreamIndex = pdfString.indexOf('endstream', dataStart);
+    const endstreamPos = pdfBuffer.indexOf(Buffer.from("endstream"), dataStart);
     
-    // Wipe the entire pre-allocated 6000 bytes with spaces (0x20)
-    resultBuffer.fill(0x20, dataStart, endStreamIndex);
-    
-    // Inject the XMP starting exactly at dataStart
+    // 4. WIPE AND INJECT
+    resultBuffer.fill(0x20, dataStart, endstreamPos);
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    // Ensure one mandatory newline before endstream
-    resultBuffer[endStreamIndex - 1] = 0x0A;
+    // Ensure EOL before endstream for Clause 6.1.9
+    resultBuffer[endstreamPos - 1] = 0x0A;
 
-    console.log("💉 v79: Marker-based injection complete.");
+    console.log("💉 v80: Binary-safe Marker injection complete.");
     return resultBuffer;
 }
 
@@ -50,23 +48,27 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
     pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
 
-    // 1. OutputIntent (Color Profile)
+    // Color Space & Output Intent
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
     const iccRef = pdfDoc.context.register(pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 }));
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{
-        Type: PDFName.of("OutputIntent"), S: PDFName.of("GTS_PDFA1"),
-        OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-        Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
-    }]));
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([
+        {
+            Type: PDFName.of("OutputIntent"), S: PDFName.of("GTS_PDFA1"),
+            OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
+            Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
+        }
+    ]));
 
-    // 2. PRE-ALLOCATE METADATA WITH A UNIQUE MARKER
-    // We fill it with 6000 bytes so the library reserves the space
+    // PRE-ALLOCATE METADATA
     const markerBuffer = Buffer.alloc(6000, 0x20);
-    markerBuffer.write("METADATA_MARKER", 0, 'utf8');
-    const metadataRef = pdfDoc.context.register(pdfDoc.context.stream(markerBuffer, { Length: 6000 }));
+    markerBuffer.write("METADATA_MARKER");
+    // Register as a raw stream to prevent the library from compressing it
+    const metadataRef = pdfDoc.context.register(
+        pdfDoc.context.stream(markerBuffer, { Length: 6000 })
+    );
     pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
 
-    // 3. Attachment & Structure
+    // Attachment & Tags
     await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
         mimeType: "application/xml", 
         afRelationship: "Alternative",
@@ -75,10 +77,13 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRef);
 
-    // 4. Save and Patch
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
+    // Save with explicit compression OFF for metadata area
+    const pdfBytes = await pdfDoc.save({
+        useObjectStreams: false, 
+        addDefaultMetadata: false 
+    });
+
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
-    
     return patchPdfBuffer(Buffer.from(pdfBytes), xmpString);
 }
 
