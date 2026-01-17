@@ -13,14 +13,11 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
 
     // 1. NEUTRALIZE THE CATALOG
-    // We find the Catalog object and wipe any existing /Metadata keys inside it.
     const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
     if (catalogMatch) {
         const catalogStart = catalogMatch.index;
         const catalogEnd = pdfString.indexOf('>>', catalogStart);
         let catalogContent = pdfString.slice(catalogStart, catalogEnd);
-
-        // Replace all instances of /Metadata inside the Catalog with spaces
         const metaRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
         let m;
         while ((m = metaRegex.exec(catalogContent)) !== null) {
@@ -29,19 +26,15 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
         }
     }
 
-    // 2. HIJACK THE SPACER (/PDFify)
+    // 2. HIJACK THE SPACER
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
-    if (!spacerMatch) {
-        console.error("❌ Critical: Spacer not found.");
-        return pdfBuffer;
-    }
+    if (!spacerMatch) return pdfBuffer;
 
-    // Find the XML attachment reference
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
 
-    // The "Golden Link": Injects all required keys for PDF/A-3b
+    // WE ADD THE SUBTYPES HERE - NO CHOICE
     const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
     const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
     resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
@@ -52,26 +45,30 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const streamMarker = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     
-    // Force dictionary to be uncompressed and correctly typed
+    // Write the dictionary with subtypes
     resultBuffer.fill(0x20, dictStart, streamMarker); 
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // Calibrate Data Start (Skip EOL after 'stream')
-    let dataStart = streamMarker + 6;
-    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
-    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
+    // 4. THE ZERO-JUNK CALIBRATION
+    // We search for the EXACT start of the data. 
+    // PDF standards say 'stream' is followed by EOL (either \n or \r\n)
+    let dataStart = streamMarker + 6; 
+    if (pdfBuffer[dataStart] === 0x0D) dataStart++; // Skip \r
+    if (pdfBuffer[dataStart] === 0x0A) dataStart++; // Skip \n
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
+    
+    // WIPE EVERYTHING with spaces first
     resultBuffer.fill(0x20, dataStart, endstreamPos);
     
     // Mandatory EOL before endstream
     resultBuffer[endstreamPos - 1] = 0x0A; 
 
-    // Write the raw UTF-8 XMP
-    const xmpBytes = Buffer.from(xmpString, 'utf8');
+    // WRITE XMP - ensure xmpString is trimmed and starts at byte 0
+    const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v60: Nuclear Catalog Cleanup & Injection complete. Target: ${metadataTag}`);
+    console.log(`💉 v61: Nuclear Calibration. Data starts at ${dataStart}.`);
     return resultBuffer;
 }
 
