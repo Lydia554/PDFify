@@ -75,8 +75,8 @@ async function finalizePdf(pdfDoc, invoiceData) {
         OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
-
-    // 2. Metadata Pre-allocation (No Type/Subtype yet, to stay hidden from validator)
+    
+    // 1. Metadata Stream
     const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { 
         Length: 6000,
         Padding: " ".repeat(200) 
@@ -84,8 +84,12 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const metadataRef = pdfDoc.context.register(metadataStream);
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
 
-    // 3. THE LANDING ZONE: 1000 spaces converted to Hex
+    // 2. The ONLY Link Spacer
     pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(500)));
+    
+    // Ensure pdf-lib hasn't snuck a Metadata key into the Catalog
+    pdfDoc.catalog.delete(PDFName.of('Metadata'));
+    pdfDoc.catalog.delete(PDFName.of('Keywords'));
 
     // 4. Standard structural markers
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
