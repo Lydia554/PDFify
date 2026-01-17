@@ -12,51 +12,62 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. RECONSTRUCT THE CATALOG (Fixes Test 1 & Color Space)
+    // 1. FIND THE CATALOG OBJECT (The Root)
     const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
     if (!catalogMatch) return pdfBuffer;
 
+    const catalogHeader = catalogMatch[1];
     const catalogDictStart = pdfString.indexOf('<<', catalogMatch.index);
     const catalogDictEnd = pdfString.indexOf('>>', catalogDictStart);
     const originalCatalog = pdfString.slice(catalogDictStart, catalogDictEnd);
 
+    // CRITICAL: Extract the original Pages reference
     const pagesMatch = originalCatalog.match(/\/Pages\s+\d+\s+\d+\s+R/);
     const pagesRef = pagesMatch ? pagesMatch[0] : "";
 
-    // CLEAN WIPE
+    // 2. THE NUCLEAR WIPE & REBUILD
+    // We wipe the entire dictionary area between << and >>
     resultBuffer.fill(0x20, catalogDictStart + 2, catalogDictEnd);
-    
+
+    // Find the XML attachment for the /AF array
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
 
-    // Injects ColorSpace for Clause 6.2.4.3
-    const rootKeys = `/Type /Catalog ${pagesRef} /Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo << /Marked true >> /ColorSpace << /DefaultRGB /DeviceRGB >>`;
+    // BUILD THE "ONE TRUE CATALOG" 
+    // We add /OutputIntents here MANUALLY to fix the DeviceRGB error 81 times!
+    // We must find the ICC object reference
+    const iccMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/N 3/);
+    const iccRef = iccMatch ? iccMatch[1].replace(' obj', ' R') : "";
+    
+    const outputIntent = `/OutputIntents [<< /Type /OutputIntent /S /GTS_PDFA1 /OutputConditionIdentifier (sRGB IEC61966-2.1) /Info (sRGB IEC61966-2.1) /DestOutputProfile ${iccRef} >>]`;
+
+    const rootKeys = `/Type /Catalog ${pagesRef} /Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo << /Marked true >> ${outputIntent}`;
     resultBuffer.write(rootKeys, catalogDictStart + 2, 'latin1');
 
-    // 2. RECONSTRUCT METADATA OBJECT (Fixes Clause 6.1.9)
+    // 3. METADATA OBJECT SURGERY (Clause 6.1.9)
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
     const streamMarker = pdfString.indexOf('stream', objIndex);
     
-    // Wipe everything between 'obj' and 'stream'
+    // Wipe between 'obj' and 'stream'
     resultBuffer.fill(0x20, objIndex + objHeader.length, streamMarker);
-    // Explicit EOLs (\n) to satisfy the validator's whitespace rules
-    const perfectDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
-    resultBuffer.write(perfectDict, objIndex + objHeader.length, 'latin1');
+    // Write perfectly formatted dictionary with mandatory newlines
+    const cleanDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
+    resultBuffer.write(cleanDict, objIndex + objHeader.length, 'latin1');
 
-    // 3. DATA ALIGNMENT
+    // 4. THE "CONSTANT 3" ZERO-CALIBRATION
     let dataStart = streamMarker + 6; 
-    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
-    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
+    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) dataStart += 2;
+    else if (pdfBuffer[dataStart] === 0x0A || pdfBuffer[dataStart] === 0x0D) dataStart += 1;
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
     resultBuffer.fill(0x00, dataStart, endstreamPos);
-    resultBuffer[endstreamPos - 1] = 0x0A; // EOL before endstream
+    resultBuffer[endstreamPos - 1] = 0x0A; 
 
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v72: Binary Reconstruction Applied. Structural and Color errors targeted.`);
+    console.log(`💉 v73: Absolute Hijack. Catalog, OutputIntent, and Metadata rebuilt.`);
     return resultBuffer;
 }
 
