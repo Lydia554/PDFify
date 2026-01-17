@@ -14,7 +14,7 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const spacerMatch = pdfString.match(spacerRegex);
     
     if (!spacerMatch) {
-        console.error("❌ Critical: Catalog Spacer (/PDFify) not found.");
+        console.error("❌ Critical: Catalog Spacer not found.");
         return pdfBuffer;
     }
 
@@ -36,21 +36,32 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     // 4. METADATA OBJECT SURGERY
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
-    const streamStart = pdfString.indexOf('stream', objIndex);
-    const dictStart = pdfString.lastIndexOf('<<', streamStart);
+    const streamMarker = pdfString.indexOf('stream', objIndex);
+    const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     
     // Rewrite Dictionary Header
-    resultBuffer.fill(0x20, dictStart, streamStart); 
+    resultBuffer.fill(0x20, dictStart, streamMarker); 
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // Overwrite Stream Content
-    const streamDataStart = streamStart + 6 + (pdfBuffer[streamStart+6] === 0x0D ? 2 : 1);
-    const endstream = pdfString.indexOf('endstream', streamDataStart);
-    resultBuffer.fill(0x20, streamDataStart, endstream);
-    resultBuffer[endstream - 1] = 0x0A; // Mandatory EOL
-    Buffer.from(xmpString, 'utf8').copy(resultBuffer, streamDataStart);
+    // 5. DATA START CALIBRATION (The "Square 1" Fix)
+    // We look for the first newline AFTER the word 'stream'
+    let dataStart = streamMarker + 6;
+    if (pdfBuffer[dataStart] === 0x0D) dataStart++; // Skip \r
+    if (pdfBuffer[dataStart] === 0x0A) dataStart++; // Skip \n
 
-    console.log("💉 PDF/A-3b Surgery v52: Precision Catalog Linkage Complete.");
+    const endstreamPos = pdfString.indexOf('endstream', dataStart);
+    
+    // Wipe the 6000 byte area
+    resultBuffer.fill(0x20, dataStart, endstreamPos);
+    
+    // Place a mandatory Newline exactly before 'endstream'
+    resultBuffer[endstreamPos - 1] = 0x0A; 
+
+    // Write the XMP
+    const xmpBytes = Buffer.from(xmpString, 'utf8');
+    xmpBytes.copy(resultBuffer, dataStart);
+
+    console.log(`💉 v53: Stream data starts at byte ${dataStart}. Length calibrated.`);
     return resultBuffer;
 }
 
@@ -58,10 +69,7 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
     const orderId = invoiceData.orderId || 'Unknown';
     
-    // Use a flat string with NO extra spaces or tabs from JS indentation
-    const xmp = `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title></rdf:Description><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate></rdf:Description><rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"><xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID></rdf:Description><rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
-
-    return xmp;
+    return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title></rdf:Description><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate></rdf:Description><rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"><xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID></rdf:Description><rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`.trim();
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
@@ -69,15 +77,16 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
     pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
 
+    // 1. OutputIntents (Standard)
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
     const iccRef = pdfDoc.context.register(pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 }));
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{ 
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{
         Type: PDFName.of("OutputIntent"), S: PDFName.of("GTS_PDFA1"),
         OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
         Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
     }]));
 
-    // 1. Metadata Pre-allocation with large Padding
+    // 2. Metadata Pre-allocation (No Type/Subtype yet, to stay hidden from validator)
     const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { 
         Length: 6000,
         Padding: " ".repeat(200) 
@@ -85,20 +94,26 @@ async function finalizePdf(pdfDoc, invoiceData) {
     const metadataRef = pdfDoc.context.register(metadataStream);
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
 
-    // 2. Large Catalog Spacer
-    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(1000)));
+    // 3. THE LANDING ZONE: 1000 spaces converted to Hex
+    pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(500)));
 
-    // 3. Attach ZUGFeRD
-    const xmlBuffer = Buffer.from(generateZugferdXml(invoiceData), "utf8");
-    await pdfDoc.attach(xmlBuffer, 'factur-x.xml', {
+    // 4. Standard structural markers
+    pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+    pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRef);
+
+    // 5. Attach ZUGFeRD
+    await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
         mimeType: "application/xml", 
         afRelationship: "Alternative",
-        description: "Factur-X Invoice",
     });
 
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
+    // 6. SAVE - Total control mode
+    const pdfBytes = await pdfDoc.save({ 
+        useObjectStreams: false, 
+        addDefaultMetadata: false 
+    });
+
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
-    
     return patchPdfBuffer(Buffer.from(pdfBytes), metadataRef.tag, structTreeRef.tag, xmpString);
 }
 
