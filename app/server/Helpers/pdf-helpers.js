@@ -12,34 +12,34 @@ async function finalizePdf(pdfDoc, invoiceData) {
     // 1. Standard OutputIntent (ICC)
     const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
     const iccRef = pdfDoc.context.register(pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 }));
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{
-        Type: PDFName.of("OutputIntent"), S: PDFName.of("GTS_PDFA1"),
-        OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-        Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
-    }]));
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([
+        {
+            Type: PDFName.of("OutputIntent"), S: PDFName.of("GTS_PDFA1"),
+            OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
+            Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
+        }
+    ]));
 
-    // 2. Attach XML
+    // 2. PRE-ALLOCATE A 6000 BYTE STREAM (The Landing Zone)
+    // This ensures endPos - startPos is large enough for the surgery
+    const dummyRef = pdfDoc.context.register(
+        pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { Length: 6000 })
+    );
+    pdfDoc.catalog.set(PDFName.of('Metadata'), dummyRef);
+
+    // 3. Attach XML & Structure
     await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
         mimeType: "application/xml", 
         afRelationship: "Alternative",
     });
-
-    // 3. Create a Placeholder for Metadata in the Catalog
-    // We use a high object number that likely doesn't exist yet (e.g., 999 0 R)
-    // Actually, we'll let pdf-lib create a dummy object so the XREF is stable
-    const dummyRef = pdfDoc.context.register(pdfDoc.context.obj({ DUMMY: 'MARKER' }));
-    pdfDoc.catalog.set(PDFName.of('Metadata'), dummyRef);
-    
-    // Tagging
     pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
     pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRef);
 
     // 4. Save
     const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
-    
-    // 5. SURGERY: Find the dummy object and overwrite it with a REAL Metadata stream
     const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
+    
     return patchPdfBuffer(Buffer.from(pdfBytes), dummyRef.tag, xmpString);
 }
 
@@ -47,7 +47,6 @@ function patchPdfBuffer(pdfBuffer, dummyTag, xmpString) {
     const pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
 
-    // Find the dummy object (e.g. "8 0 obj")
     const objNum = dummyTag.split(' ')[0];
     const targetHeader = `${objNum} 0 obj`;
     const startPos = pdfString.indexOf(targetHeader);
@@ -55,26 +54,18 @@ function patchPdfBuffer(pdfBuffer, dummyTag, xmpString) {
 
     if (startPos === -1) return pdfBuffer;
 
-    // Build the Real Metadata Stream Object
-    // It must fit exactly or be smaller than the space we occupy
-    // We pad the end with spaces to ensure we don't change the file size
-    const xmp = xmpString.trim();
-    const streamContent = `\n<< /Type /Metadata /Subtype /XML /Length ${xmp.length} >>\nstream\n${xmp}\nendstream\nendobj`;
-    
-    const originalLength = endPos - startPos;
-    
-    // Wipe original
+    // Wipe the entire pre-allocated block with spaces
     resultBuffer.fill(0x20, startPos, endPos);
-    
-    // Write new (if it fits)
-    if (streamContent.length <= originalLength) {
-        resultBuffer.write(streamContent, startPos, 'latin1');
-    } else {
-        // If it doesn't fit, we have to use the "v80" method of pre-allocating a 6000 byte stream
-        console.error("XMP too large for dummy object. Structural failure imminent.");
-    }
 
-    console.log(`💉 v81: Targeted Object Overwrite (${objNum} 0 obj)`);
+    // Build perfect Metadata block
+    const xmp = xmpString.trim();
+    // Use \n (0x0A) strictly for Clause 6.1.9 compliance
+    const streamContent = `${targetHeader}\n<< /Type /Metadata /Subtype /XML /Length ${xmp.length} >>\nstream\n${xmp}\nendstream\nendobj`;
+    
+    // Write into the wiped area
+    resultBuffer.write(streamContent, startPos, 'latin1');
+
+    console.log(`💉 v82: Large-Block Surgery on Object ${objNum}. Total space: ${endPos - startPos} bytes.`);
     return resultBuffer;
 }
 
