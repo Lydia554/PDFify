@@ -5,60 +5,53 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
-    let pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
+    const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. GLOBAL SANITIZATION: Kill every single hidden Metadata key
-    // We rename ALL /Metadata to /OldMeta so the validator is forced to find our new one.
-    pdfString = pdfString.replace(/\/Metadata/g, '/OldMeta');
-    
-    // Convert back to a temporary buffer to keep things synced
-    const cleanBuffer = Buffer.from(pdfString, 'latin1');
-
-    // 2. FIND OUR TARGET (The one with Length 6000)
-    const objSearch = /(\d+ \d+ obj)\s*<<[^>]*\/Length 6000/i;
-    const objMatch = pdfString.match(objSearch);
-    if (!objMatch) return pdfBuffer;
-    
-    const realMetadataTag = objMatch[1].replace(' obj', ' R');
-
-    // 3. CATALOG INJECTION
+    // 1. LOCATE THE CATALOG (The Root)
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
-    if (spacerMatch) {
-        // Find Attached File
-        const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
-        let afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
+    if (!spacerMatch) return pdfBuffer;
 
-        // Inject the ONLY /Metadata tag in the entire file
-        const injection = `/Metadata ${realMetadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
-        const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
-        cleanBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
+    // 2. FIND ATTACHED FILE SPEC (For /AF)
+    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
+    let afArray = "";
+    if (fileSpecMatch) {
+        afArray = `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]`;
     }
 
-    // 4. METADATA OBJECT SURGERY
-    const objIndex = objMatch.index;
+    // 3. CATALOG INJECTION
+    // We overwrite the spacer. This is the ONLY place we write "/Metadata"
+    const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
+    const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
+    resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
+
+    // 4. METADATA OBJECT SURGERY (Object 9 0 R)
+    const objHeader = `${metadataTag.replace(' R', '')} obj`;
+    const objIndex = pdfString.indexOf(objHeader);
     const streamStart = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // Fix Dictionary Header
-    cleanBuffer.fill(0x20, dictStart, streamStart); 
-    cleanBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
+    // Rewrite Dictionary Header - Use the EXACT space provided
+    resultBuffer.fill(0x20, dictStart, streamStart); 
+    resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // Fix Stream Data
+    // 5. STREAM DATA CALIBRATION
     let dataStart = streamStart + 6;
     if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
     if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
-    cleanBuffer.fill(0x20, dataStart, endstreamPos);
-    cleanBuffer[endstreamPos - 1] = 0x0A; 
+    
+    // Clean and fill
+    resultBuffer.fill(0x20, dataStart, endstreamPos);
+    resultBuffer[endstreamPos - 1] = 0x0A; // Mandatory EOL before endstream
 
     const xmpBytes = Buffer.from(xmpString, 'utf8');
-    xmpBytes.copy(cleanBuffer, dataStart);
+    xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v57: Global Metadata sanitization applied. Target: ${realMetadataTag}`);
-    return cleanBuffer;
+    console.log(`💉 v58: Surgical byte-write complete. No XREF corruption. Target: ${metadataTag}`);
+    return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
