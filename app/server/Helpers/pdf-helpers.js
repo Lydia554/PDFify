@@ -12,7 +12,7 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. NEUTRALIZE THE CATALOG (Same as before)
+    // 1. NEUTRALIZE THE CATALOG
     const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
     if (catalogMatch) {
         const catalogStart = catalogMatch.index;
@@ -34,27 +34,26 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
 
-    // The Golden Link
     const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
     const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
     resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
 
-    // 3. STREAM SURGERY (V62 REFINEMENT)
+    // 3. METADATA OBJECT SURGERY (V63 - EOL PRESERVATION)
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
     const streamMarker = pdfString.indexOf('stream', objIndex);
     
-    // Find the dictionary start '<<' more robustly
-    const dictStart = pdfString.lastIndexOf('<<', streamMarker);
+    // THE CRITICAL FIX: Find where the dictionary area actually starts/ends
+    // We leave 1 byte after 'obj' for a newline, and 1 byte before 'stream' for a newline.
+    const dictAreaStart = objIndex + objHeader.length; // Right after "obj"
     
-    // WIPE the area between 'obj' and 'stream' completely to be safe
-    const headerContentStart = objIndex + objHeader.length;
-    resultBuffer.fill(0x20, headerContentStart, streamMarker);
+    // Wipe the area with spaces first
+    resultBuffer.fill(0x20, dictAreaStart, streamMarker);
     
-    // Write the new, perfect dictionary
-    // We place it right after the obj header
-    const newObjDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >>`;
-    resultBuffer.write(newObjDict, headerContentStart + 1, 'latin1');
+    // Inject the dictionary with explicit Newlines (\n)
+    // This satisfies Clause 6.1.9 (obj followed by EOL)
+    const newObjDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
+    resultBuffer.write(newObjDict, dictAreaStart, 'latin1');
 
     // 4. DATA CALIBRATION
     let dataStart = streamMarker + 6; 
@@ -63,12 +62,15 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
     resultBuffer.fill(0x20, dataStart, endstreamPos);
+    
+    // Mandatory EOL before endstream
     resultBuffer[endstreamPos - 1] = 0x0A; 
 
+    // Write XMP
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v62: Precision Dictionary Overwrite. Target: ${metadataTag}`);
+    console.log(`💉 v63: EOL-Safe Surgery applied. Target: ${metadataTag}`);
     return resultBuffer;
 }
 
