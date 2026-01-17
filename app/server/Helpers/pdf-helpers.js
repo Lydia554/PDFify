@@ -9,65 +9,48 @@ const generateZugferdXml = require("../../xml/generateZugferdXml");
  * Manually cleans the Catalog and injects the PDF/A-3b Requirements.
  */
 function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
+    let pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
-    const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. FIND THE CATALOG OBJECT (The Root)
+    // 1. RE-LINK THE CATALOG (Exactly as the validator wants)
     const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
-    if (!catalogMatch) return pdfBuffer;
+    if (catalogMatch) {
+        const catalogStart = pdfString.indexOf('<<', catalogMatch.index);
+        const catalogEnd = pdfString.indexOf('>>', catalogStart);
+        const pagesRef = (pdfString.slice(catalogStart, catalogEnd).match(/\/Pages\s+\d+\s+\d+\s+R/) || [""])[0];
+        
+        resultBuffer.fill(0x20, catalogStart + 2, catalogEnd);
+        const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
+        const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
+        
+        const rootKeys = `/Type /Catalog ${pagesRef} /Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo << /Marked true >>`;
+        resultBuffer.write(rootKeys, catalogStart + 2, 'latin1');
+    }
 
-    const catalogHeader = catalogMatch[1];
-    const catalogDictStart = pdfString.indexOf('<<', catalogMatch.index);
-    const catalogDictEnd = pdfString.indexOf('>>', catalogDictStart);
-    const originalCatalog = pdfString.slice(catalogDictStart, catalogDictEnd);
-
-    // CRITICAL: Extract the original Pages reference
-    const pagesMatch = originalCatalog.match(/\/Pages\s+\d+\s+\d+\s+R/);
-    const pagesRef = pagesMatch ? pagesMatch[0] : "";
-
-    // 2. THE NUCLEAR WIPE & REBUILD
-    // We wipe the entire dictionary area between << and >>
-    resultBuffer.fill(0x20, catalogDictStart + 2, catalogDictEnd);
-
-    // Find the XML attachment for the /AF array
-    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
-    const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
-
-    // BUILD THE "ONE TRUE CATALOG" 
-    // We add /OutputIntents here MANUALLY to fix the DeviceRGB error 81 times!
-    // We must find the ICC object reference
-    const iccMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/N 3/);
-    const iccRef = iccMatch ? iccMatch[1].replace(' obj', ' R') : "";
-    
-    const outputIntent = `/OutputIntents [<< /Type /OutputIntent /S /GTS_PDFA1 /OutputConditionIdentifier (sRGB IEC61966-2.1) /Info (sRGB IEC61966-2.1) /DestOutputProfile ${iccRef} >>]`;
-
-    const rootKeys = `/Type /Catalog ${pagesRef} /Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo << /Marked true >> ${outputIntent}`;
-    resultBuffer.write(rootKeys, catalogDictStart + 2, 'latin1');
-
-    // 3. METADATA OBJECT SURGERY (Clause 6.1.9)
-    const objHeader = `${metadataTag.replace(' R', '')} obj`;
+    // 2. THE NUCLEAR REPLACEMENT (The Metadata Object)
+    const objNum = metadataTag.split(' ')[0];
+    const objHeader = `${objNum} 0 obj`;
     const objIndex = pdfString.indexOf(objHeader);
-    const streamMarker = pdfString.indexOf('stream', objIndex);
+    const endObjIndex = pdfString.indexOf('endobj', objIndex) + 6;
+
+    // We WIPE the entire original object area to zeros
+    resultBuffer.fill(0x00, objIndex, endObjIndex);
+
+    // We build a PERFECT, STATIC PDF OBJECT
+    // No library influence, just raw compliant bytes
+    const trimmedXmp = xmpString.trim();
+    const xmpLength = Buffer.byteLength(trimmedXmp, 'utf8');
     
-    // Wipe between 'obj' and 'stream'
-    resultBuffer.fill(0x20, objIndex + objHeader.length, streamMarker);
-    // Write perfectly formatted dictionary with mandatory newlines
-    const cleanDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
-    resultBuffer.write(cleanDict, objIndex + objHeader.length, 'latin1');
+    // We keep the Length strictly at what we allocated (6000)
+    const manualObject = `${objHeader}\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\nstream\n${trimmedXmp}`;
+    
+    resultBuffer.write(manualObject, objIndex, 'latin1');
+    
+    // We must put 'endstream' and 'endobj' at the original boundary 
+    // to keep the file length identical for the XREF table
+    resultBuffer.write(`\nendstream\nendobj`, endObjIndex - 18, 'latin1');
 
-    // 4. THE "CONSTANT 3" ZERO-CALIBRATION
-    let dataStart = streamMarker + 6; 
-    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) dataStart += 2;
-    else if (pdfBuffer[dataStart] === 0x0A || pdfBuffer[dataStart] === 0x0D) dataStart += 1;
-
-    const endstreamPos = pdfString.indexOf('endstream', dataStart);
-    resultBuffer.fill(0x00, dataStart, endstreamPos);
-    resultBuffer[endstreamPos - 1] = 0x0A; 
-
-    const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
-    xmpBytes.copy(resultBuffer, dataStart);
-
-    console.log(`💉 v73: Absolute Hijack. Catalog, OutputIntent, and Metadata rebuilt.`);
+    console.log(`💉 v77: Block-level reconstruction of Object ${objNum}.`);
     return resultBuffer;
 }
 
