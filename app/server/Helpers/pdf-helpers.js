@@ -2,82 +2,181 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
+const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
-async function finalizePdf(pdfDoc, invoiceData) {
-    const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
-    const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
-    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
-
-    // 1. Setup OutputIntent
-    const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
-    const iccRef = pdfDoc.context.register(pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 }));
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([
-        {
-            Type: PDFName.of("OutputIntent"), S: PDFName.of("GTS_PDFA1"),
-            OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-            Info: PDFHexString.fromText("sRGB IEC61966-2.1"), DestOutputProfile: iccRef,
-        }
-    ]));
-
-    // 2. Add ZUGFeRD Attachment
-    await pdfDoc.attach(Buffer.from(generateZugferdXml(invoiceData), "utf8"), 'factur-x.xml', {
-        mimeType: "application/xml", 
-        afRelationship: "Alternative",
-    });
-
-    // 3. Setup a "Placeholder" in the Catalog
-    // We create a custom key that we can find later to swap for /Metadata
-    pdfDoc.catalog.set(PDFName.of('METADATA_LINK'), PDFHexString.fromText("9999 0 R"));
-    pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
-    const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
-    pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRef);
-
-    // 4. Save (Crucial: No Object Streams)
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: false, addDefaultMetadata: false });
-    const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
-    
-    return patchPdfBuffer(Buffer.from(pdfBytes), xmpString);
-}
-
-function patchPdfBuffer(pdfBuffer, xmpString) {
-    let pdfString = pdfBuffer.toString('latin1');
-    
-    // 1. Find the Catalog
-    const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
-    if (!catalogMatch) return pdfBuffer;
-
-    // 2. Identify a New Object ID (Last Object ID + 1)
-    const allObjs = pdfString.match(/(\d+) 0 obj/g);
-    const lastId = Math.max(...allObjs.map(o => parseInt(o.split(' ')[0])));
-    const newId = lastId + 1;
-
-    // 3. Inject the link into the Catalog
-    // We find our placeholder METADATA_LINK and rename it to /Metadata
-    const placeholder = "/METADATA_LINK <" + Buffer.from("9999 0 R").toString('hex').toUpperCase() + ">";
-    const realLink = ("/Metadata " + newId + " 0 R").padEnd(placeholder.length, ' ');
-    
-    let patchedBuffer = Buffer.from(pdfBuffer);
-    const placeholderPos = pdfString.indexOf(placeholder);
-    if (placeholderPos !== -1) {
-        patchedBuffer.write(realLink, placeholderPos, 'latin1');
-    }
-
-    // 4. Create the New Metadata Object
-    const xmp = xmpString.trim();
-    const newObject = `\n${newId} 0 obj\n<< /Type /Metadata /Subtype /XML /Length ${xmp.length} >>\nstream\n${xmp}\nendstream\nendobj\n`;
-    
-    // 5. Append to the end of the file (Incremental Update style)
-    // This is valid PDF structure and bypasses all library bugs!
-    const finalBuffer = Buffer.concat([patchedBuffer, Buffer.from(newObject, 'latin1')]);
-
-    console.log(`\ud83d\udc8e v84: Pure Node.js Incremental Injection. New Metadata Object: ${newId}`);
-    return finalBuffer;
+function generateUuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
-    const now = new Date().toISOString().split('.')[0] + 'Z';
-    return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${invoiceData.orderId || 'Unknown'}</rdf:li></rdf:Alt></dc:title></rdf:Description><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate></rdf:Description><rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"><xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID></rdf:Description><rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
+  const now = new Date().toISOString();
+  const creationDate = now.substring(0, now.length - 5) + 'Z';
+  const orderId = invoiceData.orderId || 'UNKNOWN';
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>
+<x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 5.6-c140 79.160451, 2017/05/06-01:08:21        ">
+  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <rdf:Description rdf:about=""
+        xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"
+        xmlns:pdfaExtension="http://www.aiim.org/pdfa/ns/extension/"
+        xmlns:pdfaSchema="http://www.aiim.org/pdfa/ns/schema#"
+        xmlns:pdfaProperty="http://www.aiim.org/pdfa/ns/property#"
+        xmlns:pdfaType="http://www.aiim.org/pdfa/ns/type#"
+        xmlns:dc="http://purl.org/dc/elements/1.1/"
+        xmlns:xmp="http://ns.adobe.com/xap/1.0/"
+        xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"
+        xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"
+        xmlns:af="http://ns.adobe.com/xap/1.0/af/">
+
+      <fx:ConformanceLevel>EN 16931</fx:ConformanceLevel>
+      <fx:DocumentFileName>factur-x.xml</fx:DocumentFileName>
+      <fx:DocumentType>INVOICE</fx:DocumentType>
+      <fx:Version>1.0</fx:Version>
+
+      <pdfaid:part>3</pdfaid:part>
+      <pdfaid:conformance>B</pdfaid:conformance>
+      <pdfaid:amd>A1</pdfaid:amd>
+
+      <dc:format>application/pdf</dc:format>
+      <dc:title>
+        <rdf:Alt>
+          <rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li>
+        </rdf:Alt>
+      </dc:title>
+      <xmp:CreateDate>${creationDate}</xmp:CreateDate>
+      <xmp:ModifyDate>${creationDate}</xmp:ModifyDate>
+      <xmpMM:DocumentID>${documentId}</xmpMM:DocumentID>
+      <xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>
+
+      <pdfaExtension:schemas>
+        <rdf:Bag>
+          <rdf:li rdf:parseType="Resource">
+            <pdfaSchema:schema>Factur-X PDF/A Extension Schema</pdfaSchema:schema>
+            <pdfaSchema:namespaceURI>urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#</pdfaSchema:namespaceURI>
+            <pdfaSchema:prefix>fx</pdfaSchema:prefix>
+            <pdfaSchema:property>
+              <rdf:Seq>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>ConformanceLevel</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>The conformance level of the embedded Factur-X XML.</pdfaProperty:description>
+                </rdf:li>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>DocumentFileName</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>The filename of the embedded Factur-X XML invoice.</pdfaProperty:description>
+                </rdf:li>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>DocumentType</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>The type of the document (e.g., INVOICE).</pdfaProperty:description>
+                </rdf:li>
+                <rdf:li rdf:parseType="Resource">
+                  <pdfaProperty:name>Version</pdfaProperty:name>
+                  <pdfaProperty:valueType>Text</pdfaProperty:valueType>
+                  <pdfaProperty:category>external</pdfaProperty:category>
+                  <pdfaProperty:description>The version of the Factur-X standard used.</pdfaProperty:description>
+                </rdf:li>
+              </rdf:Seq>
+            </pdfaSchema:property>
+          </rdf:li>
+        </rdf:Bag>
+      </pdfaExtension:schemas>
+      <af:relationships>
+        <rdf:Bag>
+          <rdf:li rdf:parseType="Resource">
+            <af:AFRelationship>Alternative</af:AFRelationship>
+            <rdf:resource>factur-x.xml</rdf:resource>
+          </rdf:li>
+        </rdf:Bag>
+      </af:relationships>
+    </rdf:Description>
+  </rdf:RDF>
+</x:xmpmeta>
+<?xpacket end="w"?>`;
 }
 
-module.exports = { finalizePdf };
+async function embedZugferdXml(pdfDoc, invoiceData) {
+  console.log(" Embedding ZUGFeRD XML for order:", invoiceData.orderId);
+  const xmlString = generateZugferdXml(invoiceData);
+  const zugferdFilename = `factur-x.xml`;
+  const xmlBytes = Buffer.from(xmlString, "utf8");
+  await pdfDoc.attach(xmlBytes, zugferdFilename, {
+    mimeType: "application/xml",
+    afRelationship: "Alternative",
+    creationDate: new Date(),
+    modificationDate: new Date(),
+    description: "Factur-X (ZUGFeRD) Invoice",
+  });
+  console.log(" ZUGFeRD XML embedded successfully");
+}
+
+async function finalizePdf(pdfDoc, invoiceData) {
+    console.log("✨ finalizePdf function called.");
+    console.log(" Finalizing PDF document for PDF/A-3b compliance (v12)");
+
+    const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
+    const iccProfileBytes = fs.readFileSync(iccProfilePath);
+    const iccStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
+    const iccRef = pdfDoc.context.register(iccStream);
+    const outputIntent = pdfDoc.context.obj({
+        Type: PDFName.of("OutputIntent"),
+        S: PDFName.of("GTS_PDFA1"),
+        OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
+        RegistryName: PDFHexString.fromText("http://www.color.org"),
+        Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
+        DestOutputProfile: iccRef,
+    });
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
+    console.log(" ICC profile embedded successfully");
+
+
+    const pdfTrailerId1 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    const pdfTrailerId2 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(pdfTrailerId1), PDFHexString.of(pdfTrailerId2)]);
+
+    // Construct XMP documentId and instanceId using the generated trailer IDs
+    const xmpDocumentId = `uuid:${pdfTrailerId1.toLowerCase()}`;
+    const xmpInstanceId = `uuid:${pdfTrailerId2.toLowerCase()}`;
+
+    // No BOM needed
+    const xmp = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
+
+    const metadataStream = pdfDoc.context.stream(xmp, {
+      Type: PDFName.of('Metadata'),
+      Subtype: PDFName.of('XML'),
+    });
+    const metadataRef = pdfDoc.context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+    console.log(" XMP metadata embedded successfully");
+
+    // Also update invoiceData with the new IDs for embedZugferdXml if needed
+    invoiceData.documentId = xmpDocumentId;
+    invoiceData.instanceId = xmpInstanceId;
+
+    await embedZugferdXml(pdfDoc, invoiceData);
+
+    pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+
+    pdfDoc.setProducer('PDFify');
+    pdfDoc.setCreator('PDFify');
+    pdfDoc.setCreationDate(new Date());
+    pdfDoc.setModificationDate(new Date());
+
+    const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
+    console.log(" PDF finalization complete.");
+    return Buffer.from(pdfBytes);
+}
+
+module.exports = {
+  finalizePdf,
+  generatePdfA3bXmp,
+};
