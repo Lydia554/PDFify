@@ -14,40 +14,37 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
 
     // 1. FIND THE CATALOG OBJECT
     const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
-    if (!catalogMatch) {
-        console.error("❌ Critical: Catalog not found.");
-        return pdfBuffer;
-    }
+    if (!catalogMatch) return pdfBuffer;
 
-    const catalogObjHeader = catalogMatch[1];
     const catalogDictStart = pdfString.indexOf('<<', catalogMatch.index);
     const catalogDictEnd = pdfString.indexOf('>>', catalogDictStart);
+    const originalCatalog = pdfString.slice(catalogDictStart, catalogDictEnd);
 
-    // 2. NEUTRALIZE THE ENTIRE CATALOG DICTIONARY INTERIOR
-    // We wipe EVERYTHING inside the Catalog << >> and rebuild it surgically.
-    // This removes all ghosts, spacers, and conflicting keys in one go.
+    // 2. EXTRACT THE CRITICAL /PAGES REFERENCE
+    // We MUST keep the link to the pages, or the PDF is "empty"
+    const pagesMatch = originalCatalog.match(/\/Pages\s+\d+\s+\d+\s+R/);
+    const pagesRef = pagesMatch ? pagesMatch[0] : "";
+
+    // 3. NEUTRALIZE AND REBUILD
     resultBuffer.fill(0x20, catalogDictStart + 2, catalogDictEnd);
 
-    // 3. REBUILD THE CATALOG KEYS
-    // We find the factur-x reference first
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
 
-    // Re-inject the essential Root keys
-    const rootKeys = `/Type /Catalog /Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo << /Marked true >> /ViewerPreferences << /DisplayDocTitle true >>`;
+    // Rebuild with the preserved /Pages reference
+    const rootKeys = `/Type /Catalog ${pagesRef} /Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo << /Marked true >> /ViewerPreferences << /DisplayDocTitle true >>`;
     resultBuffer.write(rootKeys, catalogDictStart + 2, 'latin1');
 
-    // 4. METADATA OBJECT SURGERY (Object 9 0 R)
+    // 4. METADATA OBJECT SURGERY
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
     const streamMarker = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     
-    // Wipe and write dictionary with mandatory EOLs
     resultBuffer.fill(0x20, dictStart, streamMarker);
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`, dictStart, 'latin1');
 
-    // 5. DATA START CALIBRATION (THE "CONSTANT 3" PROTECTOR)
+    // 5. DATA CALIBRATION
     let dataStart = streamMarker + 6; 
     if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) dataStart += 2;
     else if (pdfBuffer[dataStart] === 0x0A || pdfBuffer[dataStart] === 0x0D) dataStart += 1;
@@ -59,7 +56,7 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v70: Catalog Rebuilt. Metadata: ${metadataTag}. Data Start: ${dataStart}`);
+    console.log(`💉 v71: Catalog Rebuilt with Pages. Metadata: ${metadataTag}.`);
     return resultBuffer;
 }
 
