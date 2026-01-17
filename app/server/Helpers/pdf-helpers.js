@@ -12,7 +12,7 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. NEUTRALIZE THE CATALOG
+    // 1. NEUTRALIZE THE CATALOG (Same as before)
     const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
     if (catalogMatch) {
         const catalogStart = catalogMatch.index;
@@ -34,41 +34,41 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
 
-    // WE ADD THE SUBTYPES HERE - NO CHOICE
+    // The Golden Link
     const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
     const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
     resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
 
-    // 3. STREAM SURGERY
+    // 3. STREAM SURGERY (V62 REFINEMENT)
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
     const streamMarker = pdfString.indexOf('stream', objIndex);
+    
+    // Find the dictionary start '<<' more robustly
     const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     
-    // Write the dictionary with subtypes
-    resultBuffer.fill(0x20, dictStart, streamMarker); 
-    resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
+    // WIPE the area between 'obj' and 'stream' completely to be safe
+    const headerContentStart = objIndex + objHeader.length;
+    resultBuffer.fill(0x20, headerContentStart, streamMarker);
+    
+    // Write the new, perfect dictionary
+    // We place it right after the obj header
+    const newObjDict = `<< /Type /Metadata /Subtype /XML /Length 6000 >>`;
+    resultBuffer.write(newObjDict, headerContentStart + 1, 'latin1');
 
-    // 4. THE ZERO-JUNK CALIBRATION
-    // We search for the EXACT start of the data. 
-    // PDF standards say 'stream' is followed by EOL (either \n or \r\n)
+    // 4. DATA CALIBRATION
     let dataStart = streamMarker + 6; 
-    if (pdfBuffer[dataStart] === 0x0D) dataStart++; // Skip \r
-    if (pdfBuffer[dataStart] === 0x0A) dataStart++; // Skip \n
+    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
+    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
-    
-    // WIPE EVERYTHING with spaces first
     resultBuffer.fill(0x20, dataStart, endstreamPos);
-    
-    // Mandatory EOL before endstream
     resultBuffer[endstreamPos - 1] = 0x0A; 
 
-    // WRITE XMP - ensure xmpString is trimmed and starts at byte 0
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v61: Nuclear Calibration. Data starts at ${dataStart}.`);
+    console.log(`💉 v62: Precision Dictionary Overwrite. Target: ${metadataTag}`);
     return resultBuffer;
 }
 
@@ -77,7 +77,7 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const orderId = invoiceData.orderId || 'Unknown';
     
     // Strictly flat string to prevent line-ending corruption
-    return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title></rdf:Description><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate></rdf:Description><rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"><xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID></rdf:Description><rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
+    return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang=\"x-default\">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title></rdf:Description><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate></rdf:Description><rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"><xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID></rdf:Description><rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
@@ -116,3 +116,4 @@ async function finalizePdf(pdfDoc, invoiceData) {
 }
 
 module.exports = { finalizePdf };
+
