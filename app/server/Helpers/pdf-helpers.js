@@ -12,63 +12,54 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. NEUTRALIZE THE CATALOG (Remove all existing Metadata pointers)
+    // 1. FIND THE CATALOG OBJECT
     const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
-    if (catalogMatch) {
-        const catalogStart = catalogMatch.index;
-        const catalogEnd = pdfString.indexOf('>>', catalogStart);
-        const metaRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
-        let m;
-        const catalogContent = pdfString.slice(catalogStart, catalogEnd);
-        while ((m = metaRegex.exec(catalogContent)) !== null) {
-            resultBuffer.fill(0x20, catalogStart + m.index, catalogStart + m.index + m[0].length);
-        }
+    if (!catalogMatch) {
+        console.error("❌ Critical: Catalog not found.");
+        return pdfBuffer;
     }
 
-    // 2. HIJACK THE SPACER (Inject our Metadata, AF, and StructTree)
-    const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
-    const spacerMatch = pdfString.match(spacerRegex);
-    if (spacerMatch) {
-        const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
-        const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
-        const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
-        const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
-        resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
-    }
+    const catalogObjHeader = catalogMatch[1];
+    const catalogDictStart = pdfString.indexOf('<<', catalogMatch.index);
+    const catalogDictEnd = pdfString.indexOf('>>', catalogDictStart);
 
-    // 3. THE METADATA OBJECT SURGERY
+    // 2. NEUTRALIZE THE ENTIRE CATALOG DICTIONARY INTERIOR
+    // We wipe EVERYTHING inside the Catalog << >> and rebuild it surgically.
+    // This removes all ghosts, spacers, and conflicting keys in one go.
+    resultBuffer.fill(0x20, catalogDictStart + 2, catalogDictEnd);
+
+    // 3. REBUILD THE CATALOG KEYS
+    // We find the factur-x reference first
+    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
+    const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
+
+    // Re-inject the essential Root keys
+    const rootKeys = `/Type /Catalog /Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo << /Marked true >> /ViewerPreferences << /DisplayDocTitle true >>`;
+    resultBuffer.write(rootKeys, catalogDictStart + 2, 'latin1');
+
+    // 4. METADATA OBJECT SURGERY (Object 9 0 R)
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
     const streamMarker = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     
-    // Wipe and write the mandatory dictionary
+    // Wipe and write dictionary with mandatory EOLs
     resultBuffer.fill(0x20, dictStart, streamMarker);
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`, dictStart, 'latin1');
 
-    // 4. THE "CONSTANT 3" KILLER: FIND BYTE ZERO
-    // We walk through the bytes to find exactly where the stream data begins
-    let dataStart = streamMarker + 6; // length of 'stream'
-    // Standard PDF EOLs: \n (10) or \r\n (13 10)
-    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) {
-        dataStart += 2;
-    } else if (pdfBuffer[dataStart] === 0x0A) {
-        dataStart += 1;
-    }
+    // 5. DATA START CALIBRATION (THE "CONSTANT 3" PROTECTOR)
+    let dataStart = streamMarker + 6; 
+    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) dataStart += 2;
+    else if (pdfBuffer[dataStart] === 0x0A || pdfBuffer[dataStart] === 0x0D) dataStart += 1;
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
-    
-    // WIPE THE ENTIRE BUCKET WITH NULLS (0x00) - Much safer than spaces
     resultBuffer.fill(0x00, dataStart, endstreamPos);
-    
-    // Mandatory EOL right before 'endstream'
     resultBuffer[endstreamPos - 1] = 0x0A; 
 
-    // WRITE THE XMP AT THE ABSOLUTE START
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v69: Absolute Zero Calibration. Data start: ${dataStart}`);
+    console.log(`💉 v70: Catalog Rebuilt. Metadata: ${metadataTag}. Data Start: ${dataStart}`);
     return resultBuffer;
 }
 
@@ -95,11 +86,11 @@ async function finalizePdf(pdfDoc, invoiceData) {
     }]));
 
     // 1. Allocate Metadata & StructTree
-    const metadataStream = pdfDoc.context.stream(Buffer.alloc(6000, 0x20), { Length: 6000 });
-    const metadataRef = pdfDoc.context.register(metadataStream);
+    const metadataStream = Buffer.alloc(6000, 0x20); // Metadata size fixed to 6000
+    const metadataRef = pdfDoc.context.register(pdfDoc.context.stream(metadataStream));
     const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
 
-    // 2. PRE-ALLOCATE THE SPACER IN THE CATALOG
+    // 2. Add our "spacer" for later injection. This MUST be large enough for the injection
     pdfDoc.catalog.set(PDFName.of('PDFify'), PDFHexString.fromText(" ".repeat(1000)));
 
     // 3. Attach XML
@@ -116,4 +107,3 @@ async function finalizePdf(pdfDoc, invoiceData) {
 }
 
 module.exports = { finalizePdf };
-
