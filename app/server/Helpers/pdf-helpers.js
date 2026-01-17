@@ -5,66 +5,92 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
-    // 1. Convert to string to perform global cleanup
-    let pdfString = pdfBuffer.toString('latin1');
+    const resultBuffer = Buffer.from(pdfBuffer);
+    const pdfString = pdfBuffer.toString('latin1');
 
-    // 2. KILL ALL GHOSTS
-    // Rename EVERY instance of "/Metadata" to "/OldMeta". 
-    // This ensures no conflicting metadata objects exist.
-    pdfString = pdfString.replace(/\/Metadata/g, '/OldMeta');
-
-    const resultBuffer = Buffer.from(pdfString, 'latin1');
-
-    // 3. LOCATE THE CATALOG SPACER
-    const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
-    const spacerMatch = pdfString.match(spacerRegex);
-    if (!spacerMatch) {
-        console.error("❌ Critical: Catalog Spacer not found.");
-        return pdfBuffer;
+    // 1. FIND THE CATALOG OBJECT (Root)
+    // We look for where /Type /Catalog is defined to avoid global string corruption
+    const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
+    if (catalogMatch) {
+        const catalogStart = catalogMatch.index;
+        const catalogEnd = pdfString.indexOf('>>', catalogStart);
+        
+        // Find if there is an existing /Metadata inside the Catalog
+        const internalMetaMatch = pdfString.slice(catalogStart, catalogEnd).match(/\/Metadata\s+\d+\s+\d+\s+R/);
+        if (internalMetaMatch) {
+            // Rename only the Catalog's internal Metadata link to avoid conflicts
+            const internalMetaPos = catalogStart + internalMetaMatch.index;
+            resultBuffer.write("/OldMeta ", internalMetaPos, 'latin1');
+        }
     }
 
-    // 4. FIND ATTACHED FILE SPEC
+    // 2. LOCATE THE SPACER (/PDFify)
+    const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
+    const spacerMatch = pdfString.match(spacerRegex);
+    if (!spacerMatch) return pdfBuffer;
+
+    // 3. FIND ATTACHED FILE SPEC (For /AF)
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     let afArray = "";
     if (fileSpecMatch) {
-        const fileRef = fileSpecMatch[1].replace(' obj', ' R');
-        afArray = `/AF [${fileRef}]`;
+        afArray = `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]`;
     }
 
-    // 5. CATALOG INJECTION (This is now the ONLY /Metadata link in the file)
+    // 4. CATALOG INJECTION
     const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
     const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
     resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
 
-    // 6. METADATA OBJECT SURGERY
+    // 5. METADATA OBJECT SURGERY
     const objHeader = `${metadataTag.replace(' R', '')} obj`;
     const objIndex = pdfString.indexOf(objHeader);
-    const streamMarker = pdfString.indexOf('stream', objIndex);
-    const dictStart = pdfString.lastIndexOf('<<', streamMarker);
+    const streamStart = pdfString.indexOf('stream', objIndex);
+    const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // Rewrite Header - We explicitly add /Type /Metadata back here
-    resultBuffer.fill(0x20, dictStart, streamMarker); 
+    resultBuffer.fill(0x20, dictStart, streamStart); 
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // 7. STREAM DATA OVERWRITE
-    let dataStart = streamMarker + 6;
-    if (resultBuffer[dataStart] === 0x0D) dataStart++; 
-    if (resultBuffer[dataStart] === 0x0A) dataStart++; 
+    // 6. STREAM DATA CALIBRATION
+    let dataStart = streamStart + 6;
+    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
+    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
     resultBuffer.fill(0x20, dataStart, endstreamPos);
-    resultBuffer[endstreamPos - 1] = 0x0A; // Mandatory EOL
+    resultBuffer[endstreamPos - 1] = 0x0A; 
 
     const xmpBytes = Buffer.from(xmpString, 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log("💉 v54: Total Metadata Eclipse applied. Conflict resolved.");
+    console.log("💉 v55: Targetted Catalog Hijack applied.");
     return resultBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
-    return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${invoiceData.orderId || 'Unknown'}</rdf:li></rdf:Alt></dc:title></rdf:Description><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate></rdf:Description><rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"><xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID></rdf:Description><rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
+    const orderId = invoiceData.orderId || 'Unknown';
+    
+    // Using a more standard XMP header that satisfies VeraPDF's UTF-8 check
+    const xmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>` +
+        `<x:xmpmeta xmlns:x="adobe:ns:meta/">` +
+        `<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">` +
+        `<rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">` +
+        `<pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance>` +
+        `</rdf:Description>` +
+        `<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">` +
+        `<dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title>` +
+        `</rdf:Description>` +
+        `<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">` +
+        `<xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate>` +
+        `</rdf:Description>` +
+        `<rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">` +
+        `<xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>` +
+        `</rdf:Description>` +
+        `<rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">` +
+        `<fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version>` +
+        `</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
+
+    return xmp;
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
