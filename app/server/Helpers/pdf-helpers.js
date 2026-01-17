@@ -8,28 +8,22 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. FIND THE CATALOG OBJECT (Root)
-    // We look for where /Type /Catalog is defined to avoid global string corruption
-    const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
-    if (catalogMatch) {
-        const catalogStart = catalogMatch.index;
-        const catalogEnd = pdfString.indexOf('>>', catalogStart);
-        
-        // Find if there is an existing /Metadata inside the Catalog
-        const internalMetaMatch = pdfString.slice(catalogStart, catalogEnd).match(/\/Metadata\s+\d+\s+\d+\s+R/);
-        if (internalMetaMatch) {
-            // Rename only the Catalog's internal Metadata link to avoid conflicts
-            const internalMetaPos = catalogStart + internalMetaMatch.index;
-            resultBuffer.write("/OldMeta ", internalMetaPos, 'latin1');
-        }
+    // 1. FIND THE ACTUAL OBJECT NUMBER IN THE BUFFER
+    // This bypasses any mismatch between pdf-lib tags and actual written bytes
+    const objSearch = new RegExp(`(\\d+ \\d+ obj)\\s*<<[^>]*\\/Length 6000`, 'i');
+    const objMatch = pdfString.match(objSearch);
+    if (!objMatch) {
+        console.error("❌ Critical: Object with Length 6000 not found.");
+        return pdfBuffer;
     }
+    const realMetadataTag = objMatch[1].replace(' obj', ' R');
 
-    // 2. LOCATE THE SPACER (/PDFify)
+    // 2. LOCATE THE CATALOG SPACER
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
     if (!spacerMatch) return pdfBuffer;
 
-    // 3. FIND ATTACHED FILE SPEC (For /AF)
+    // 3. FIND ATTACHED FILE SPEC
     const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
     let afArray = "";
     if (fileSpecMatch) {
@@ -37,32 +31,34 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     }
 
     // 4. CATALOG INJECTION
-    const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
+    const injection = `/Metadata ${realMetadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
     const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
     resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
 
     // 5. METADATA OBJECT SURGERY
-    const objHeader = `${metadataTag.replace(' R', '')} obj`;
-    const objIndex = pdfString.indexOf(objHeader);
+    const objIndex = objMatch.index;
     const streamStart = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
+    // Rewrite Header - Strictly forcing No Filter
     resultBuffer.fill(0x20, dictStart, streamStart); 
     resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // 6. STREAM DATA CALIBRATION
+    // 6. STREAM DATA CALIBRATION (CRITICAL)
     let dataStart = streamStart + 6;
     if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
     if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
+    
+    // Wipe with 0x20 (Spaces) - standard for XMP padding
     resultBuffer.fill(0x20, dataStart, endstreamPos);
-    resultBuffer[endstreamPos - 1] = 0x0A; 
+    resultBuffer[endstreamPos - 1] = 0x0A; // Mandatory EOL
 
     const xmpBytes = Buffer.from(xmpString, 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log("💉 v55: Targetted Catalog Hijack applied.");
+    console.log(`💉 v56: Precision Inject into Object ${realMetadataTag}`);
     return resultBuffer;
 }
 
@@ -70,27 +66,8 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
     const now = new Date().toISOString().split('.')[0] + 'Z'; 
     const orderId = invoiceData.orderId || 'Unknown';
     
-    // Using a more standard XMP header that satisfies VeraPDF's UTF-8 check
-    const xmp = `<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?>` +
-        `<x:xmpmeta xmlns:x="adobe:ns:meta/">` +
-        `<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">` +
-        `<rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/">` +
-        `<pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance>` +
-        `</rdf:Description>` +
-        `<rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/">` +
-        `<dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title>` +
-        `</rdf:Description>` +
-        `<rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/">` +
-        `<xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate>` +
-        `</rdf:Description>` +
-        `<rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/">` +
-        `<xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID>` +
-        `</rdf:Description>` +
-        `<rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#">` +
-        `<fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version>` +
-        `</rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
-
-    return xmp;
+    // Using begin="" (No BOM) but keeping everything else perfectly flat
+    return `<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:pdfaid="http://www.aiim.org/pdfa/ns/id/"><pdfaid:part>3</pdfaid:part><pdfaid:conformance>B</pdfaid:conformance></rdf:Description><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:format>application/pdf</dc:format><dc:title><rdf:Alt><rdf:li xml:lang="x-default">Invoice ${orderId}</rdf:li></rdf:Alt></dc:title></rdf:Description><rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"><xmp:CreateDate>${now}</xmp:CreateDate><xmp:ModifyDate>${now}</xmp:ModifyDate></rdf:Description><rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"><xmpMM:DocumentID>${documentId}</xmpMM:DocumentID><xmpMM:InstanceID>${instanceId}</xmpMM:InstanceID></rdf:Description><rdf:Description rdf:about="" xmlns:fx="urn:factur-x:pdfa:CrossIndustryDocument:invoice:1p0#"><fx:ConformanceLevel>COMFORT</fx:ConformanceLevel><fx:DocumentFileName>factur-x.xml</fx:DocumentFileName><fx:DocumentType>INVOICE</fx:DocumentType><fx:Version>1.0</fx:Version></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
 }
 
 async function finalizePdf(pdfDoc, invoiceData) {
