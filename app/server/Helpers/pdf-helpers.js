@@ -2,13 +2,58 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { PDFDocument, PDFName, PDFHexString } = require("pdf-lib");
-const fontkit = require("@pdf-lib/fontkit");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
-/**
- * Generates the raw XMP metadata string for PDF/A-3b compliance.
- * Uses strict RDF structure with separate Description blocks for better validator compatibility.
- */
+async function finalizePdf(pdfDoc, invoiceData) {
+    // 1. Setup ID for Trailer and XMP
+    const id1 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    const id2 = crypto.randomBytes(16).toString('hex').toUpperCase();
+    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(id1), PDFHexString.of(id2)]);
+
+    // 2. Output Intent (ICC Profile)
+    const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
+    const iccRef = pdfDoc.context.register(pdfDoc.context.stream(fs.readFileSync(iccProfilePath), { N: 3 }));
+    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([{
+        Type: PDFName.of("OutputIntent"), 
+        S: PDFName.of("GTS_PDFA1"),
+        OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
+        Info: PDFHexString.fromText("sRGB IEC61966-2.1"), 
+        DestOutputProfile: iccRef,
+    }]));
+
+    // 3. Attach ZUGFeRD XML
+    const xmlString = generateZugferdXml(invoiceData);
+    await pdfDoc.attach(Buffer.from(xmlString, "utf8"), 'factur-x.xml', {
+        mimeType: "application/xml", 
+        afRelationship: "Alternative",
+    });
+
+    // 4. Tagging Requirements
+    pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
+    const structTreeRef = pdfDoc.context.register(pdfDoc.context.obj({ Type: PDFName.of('StructTreeRoot') }));
+    pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRef);
+
+    // 5. INTERNAL METADATA INJECTION (The Fix)
+    const xmpString = generatePdfA3bXmp(invoiceData, `uuid:${id1.toLowerCase()}`, `uuid:${id2.toLowerCase()}`);
+    const xmpBytes = Buffer.from(xmpString, 'utf8');
+
+    // Here we force-feed the Subtype to the stream dictionary
+    const metadataStream = pdfDoc.context.stream(xmpBytes, {
+        Type: PDFName.of('Metadata'),
+        Subtype: PDFName.of('XML'),
+    });
+    const metadataRef = pdfDoc.context.register(metadataStream);
+    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
+
+    // 6. Final Save with strict settings
+    const pdfBytes = await pdfDoc.save({ 
+        useObjectStreams: false, 
+        addDefaultMetadata: false 
+    });
+    
+    return Buffer.from(pdfBytes);
+}
+
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   const now = new Date().toISOString();
   // Ensure strict format YYYY-MM-DDThh:mm:ssZ
@@ -107,86 +152,4 @@ function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
   return xmp.trim();
 }
 
-async function embedZugferdXml(pdfDoc, invoiceData) {
-  console.log(" Embedding ZUGFeRD XML for order:", invoiceData.orderId);
-  const xmlString = generateZugferdXml(invoiceData);
-  const zugferdFilename = `factur-x.xml`;
-  const xmlBytes = Buffer.from(xmlString, "utf8");
-  await pdfDoc.attach(xmlBytes, zugferdFilename, {
-    mimeType: "application/xml",
-    afRelationship: "Alternative",
-    creationDate: new Date(),
-    modificationDate: new Date(),
-    description: "Factur-X (ZUGFeRD) Invoice",
-  });
-  console.log(" ZUGFeRD XML embedded successfully");
-}
-
-async function finalizePdf(pdfDoc, invoiceData) {
-    console.log("✨ finalizePdf function called.");
-    console.log(" Finalizing PDF document for PDF/A-3b compliance (v14)");
-
-    // 1. Set Basic Info FIRST (so pdf-lib doesn't overwrite our Metadata later)
-    pdfDoc.setProducer('PDFify');
-    pdfDoc.setCreator('PDFify');
-    pdfDoc.setCreationDate(new Date());
-    pdfDoc.setModificationDate(new Date());
-
-    // 2. Embed ICC Profile & OutputIntents
-    const iccProfilePath = path.join(__dirname, "sRGB2014.icc");
-    const iccProfileBytes = fs.readFileSync(iccProfilePath);
-    const iccStream = pdfDoc.context.stream(iccProfileBytes, { N: 3 });
-    const iccRef = pdfDoc.context.register(iccStream);
-    const outputIntent = pdfDoc.context.obj({
-        Type: PDFName.of("OutputIntent"),
-        S: PDFName.of("GTS_PDFA1"),
-        OutputConditionIdentifier: PDFHexString.fromText("sRGB IEC61966-2.1"),
-        RegistryName: PDFHexString.fromText("http://www.color.org"),
-        Info: PDFHexString.fromText("sRGB IEC61966-2.1"),
-        DestOutputProfile: iccRef,
-    });
-    pdfDoc.catalog.set(PDFName.of("OutputIntents"), pdfDoc.context.obj([outputIntent]));
-    console.log(" ICC profile embedded successfully");
-
-    // 3. Generate IDs for Trailer and XMP
-    const pdfTrailerId1 = crypto.randomBytes(16).toString('hex').toUpperCase();
-    const pdfTrailerId2 = crypto.randomBytes(16).toString('hex').toUpperCase();
-    pdfDoc.context.trailerInfo.ID = pdfDoc.context.obj([PDFHexString.of(pdfTrailerId1), PDFHexString.of(pdfTrailerId2)]);
-
-    const xmpDocumentId = `uuid:${pdfTrailerId1.toLowerCase()}`;
-    const xmpInstanceId = `uuid:${pdfTrailerId2.toLowerCase()}`;
-    invoiceData.documentId = xmpDocumentId;
-    invoiceData.instanceId = xmpInstanceId;
-
-    // 4. Attach ZUGFeRD XML
-    await embedZugferdXml(pdfDoc, invoiceData);
-
-    // 5. Mark as Tagged & Add StructTreeRoot (Required for PDF/A-3b)
-    const structTreeRoot = pdfDoc.context.obj({
-      Type: PDFName.of('StructTreeRoot'),
-    });
-    const structTreeRootRef = pdfDoc.context.register(structTreeRoot);
-    pdfDoc.catalog.set(PDFName.of('StructTreeRoot'), structTreeRootRef);
-    pdfDoc.catalog.set(PDFName.of('MarkInfo'), pdfDoc.context.obj({ Marked: true }));
-
-    // 6. LAST STEP: Inject custom XMP Metadata stream
-    const xmpString = generatePdfA3bXmp(invoiceData, xmpDocumentId, xmpInstanceId);
-    const xmpBytes = new TextEncoder().encode(xmpString);
-
-    const metadataStream = pdfDoc.context.stream(xmpBytes, {
-      Type: PDFName.of('Metadata'),
-      Subtype: PDFName.of('XML'),
-    });
-    const metadataRef = pdfDoc.context.register(metadataStream);
-    pdfDoc.catalog.set(PDFName.of('Metadata'), metadataRef);
-    console.log(" XMP metadata injected as the final structural step");
-
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: false });
-    console.log(" PDF finalization complete.");
-    return Buffer.from(pdfBytes);
-}
-
-module.exports = {
-  finalizePdf,
-  generatePdfA3bXmp,
-};
+module.exports = { finalizePdf };
