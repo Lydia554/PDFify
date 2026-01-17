@@ -12,65 +12,58 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. NEUTRALIZE THE CATALOG
-    const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
-    if (catalogMatch) {
-        const catalogStart = catalogMatch.index;
-        const catalogEnd = pdfString.indexOf('>>', catalogStart);
-        let catalogContent = pdfString.slice(catalogStart, catalogEnd);
-        const metaRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
-        let m;
-        while ((m = metaRegex.exec(catalogContent)) !== null) {
-            const absolutePos = catalogStart + m.index;
-            resultBuffer.fill(0x20, absolutePos, absolutePos + m[0].length);
-        }
-    }
+    // 1. FIND THE REAL METADATA OBJECT
+    const metaObjMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Length 6000/);
+    if (!metaObjMatch) return pdfBuffer;
+    const realMetaTag = metaObjMatch[1].replace(' obj', ' R');
 
-    // 2. HIJACK THE SPACER
+    // 2. HIJACK THE CATALOG (FORCE THE SUBTYPES)
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
-    if (!spacerMatch) return pdfBuffer;
+    if (spacerMatch) {
+        const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
+        const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
+        const injection = `/Metadata ${realMetaTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
+        const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
+        resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
+    }
 
-    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
-    const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
-
-    const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
-    const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
-    resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
-
-    // 3. METADATA OBJECT SURGERY (V63 - EOL PRESERVATION)
-    const objHeader = `${metadataTag.replace(' R', '')} obj`;
-    const objIndex = pdfString.indexOf(objHeader);
+    // 3. THE DICTIONARY SURGERY
+    const objIndex = metaObjMatch.index;
     const streamMarker = pdfString.indexOf('stream', objIndex);
+    const dictAreaStart = objIndex + metaObjMatch[1].length;
     
-    // THE CRITICAL FIX: Find where the dictionary area actually starts/ends
-    // We leave 1 byte after 'obj' for a newline, and 1 byte before 'stream' for a newline.
-    const dictAreaStart = objIndex + objHeader.length; // Right after "obj"
-    
-    // Wipe the area with spaces first
     resultBuffer.fill(0x20, dictAreaStart, streamMarker);
-    
-    // Inject the dictionary with explicit Newlines (\n)
-    // This satisfies Clause 6.1.9 (obj followed by EOL)
-    const newObjDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
-    resultBuffer.write(newObjDict, dictAreaStart, 'latin1');
+    // We add \n specifically to ensure the 'stream' keyword is on its own line
+    const newDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
+    resultBuffer.write(newDict, dictAreaStart, 'latin1');
 
-    // 4. DATA CALIBRATION
+    // 4. THE "SQUARE 1" KILLER: ABSOLUTE START CALIBRATION
+    // We must find the EXACT byte after 'stream' + EOL
     let dataStart = streamMarker + 6; 
-    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
-    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
+    
+    // PDF Standard: stream followed by either \n (0x0A) or \r\n (0x0D 0x0A)
+    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) {
+        dataStart += 2; // It's \r\n
+    } else if (pdfBuffer[dataStart] === 0x0A) {
+        dataStart += 1; // It's just \n
+    } else if (pdfBuffer[dataStart] === 0x0D) {
+        dataStart += 1; // It's just \r (rare but possible)
+    }
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
+    
+    // WIPE THE ENTIRE 6000 BYTES WITH SPACES
     resultBuffer.fill(0x20, dataStart, endstreamPos);
     
-    // Mandatory EOL before endstream
+    // Mandatory EOL right before 'endstream'
     resultBuffer[endstreamPos - 1] = 0x0A; 
 
-    // Write XMP
+    // WRITE THE XMP AT THE ABSOLUTE ZERO BYTE
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v63: EOL-Safe Surgery applied. Target: ${metadataTag}`);
+    console.log(`💉 v65: Absolute Zero Calibration. Data begins at byte ${dataStart}.`);
     return resultBuffer;
 }
 
