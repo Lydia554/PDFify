@@ -12,68 +12,63 @@ function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
     const resultBuffer = Buffer.from(pdfBuffer);
     const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. NEUTRALIZING THE CATALOG (ROOT) - STEROID VERSION
-    // We search for /Catalog and wipe EVERY /Metadata key in the whole file except ours.
-    // This is the only way to ensure VeraPDF doesn't find a "Ghost"
-    let catalogIdx = pdfString.indexOf('/Type /Catalog');
-    if (catalogIdx !== -1) {
-        // Find the start of the object containing this catalog
-        let objStart = pdfString.lastIndexOf('obj', catalogIdx);
-        let objEnd = pdfString.indexOf('endobj', catalogIdx);
-        
-        // Wipe all /Metadata pointers in this specific object
-        let catalogSlice = pdfString.slice(objStart, objEnd);
-        const metaPointerRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
-        let match;
-        while ((match = metaPointerRegex.exec(catalogSlice)) !== null) {
-            resultBuffer.fill(0x20, objStart + match.index, objStart + match.index + match[0].length);
+    // 1. NEUTRALIZE THE CATALOG (Remove all existing Metadata pointers)
+    const catalogMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Type\s*\/Catalog/);
+    if (catalogMatch) {
+        const catalogStart = catalogMatch.index;
+        const catalogEnd = pdfString.indexOf('>>', catalogStart);
+        const metaRegex = /\/Metadata\s+\d+\s+\d+\s+R/g;
+        let m;
+        const catalogContent = pdfString.slice(catalogStart, catalogEnd);
+        while ((m = metaRegex.exec(catalogContent)) !== null) {
+            resultBuffer.fill(0x20, catalogStart + m.index, catalogStart + m.index + m[0].length);
         }
     }
 
-    // 2. FIND OUR TARGET (LENGTH 6000)
-    const targetMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/Length 6000/);
-    if (!targetMatch) return pdfBuffer;
-    const realMetaTag = targetMatch[1].replace(' obj', ' R');
-
-    // 3. CATALOG INJECTION (VIA SPACER)
+    // 2. HIJACK THE SPACER (Inject our Metadata, AF, and StructTree)
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
     if (spacerMatch) {
         const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
         const afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
-        
-        // This is the one true link VeraPDF must follow
-        const injection = `/Metadata ${realMetaTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
+        const injection = `/Metadata ${metadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<</Marked true>>`;
         const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
         resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
     }
 
-    // 4. THE SURGICAL DICTIONARY FIX
-    const objIndex = targetMatch.index;
-    const streamIdx = pdfString.indexOf('stream', objIndex);
+    // 3. THE METADATA OBJECT SURGERY
+    const objHeader = `${metadataTag.replace(' R', '')} obj`;
+    const objIndex = pdfString.indexOf(objHeader);
+    const streamMarker = pdfString.indexOf('stream', objIndex);
+    const dictStart = pdfString.lastIndexOf('<<', streamMarker);
     
-    // Wipe everything between Object Header and Stream
-    const dictStart = objIndex + targetMatch[1].length;
-    resultBuffer.fill(0x20, dictStart, streamIdx);
-    
-    // Write a mathematically perfect dictionary
-    // We include a leading and trailing newline to satisfy strict structural rules
-    const cleanDict = `\n<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`;
-    resultBuffer.write(cleanDict, dictStart, 'latin1');
+    // Wipe and write the mandatory dictionary
+    resultBuffer.fill(0x20, dictStart, streamMarker);
+    resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>\n`, dictStart, 'latin1');
 
-    // 5. DATA CALIBRATION
-    let dataStart = streamIdx + 6;
-    if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
-    if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
+    // 4. THE "CONSTANT 3" KILLER: FIND BYTE ZERO
+    // We walk through the bytes to find exactly where the stream data begins
+    let dataStart = streamMarker + 6; // length of 'stream'
+    // Standard PDF EOLs: \n (10) or \r\n (13 10)
+    if (pdfBuffer[dataStart] === 0x0D && pdfBuffer[dataStart+1] === 0x0A) {
+        dataStart += 2;
+    } else if (pdfBuffer[dataStart] === 0x0A) {
+        dataStart += 1;
+    }
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
-    resultBuffer.fill(0x20, dataStart, endstreamPos);
+    
+    // WIPE THE ENTIRE BUCKET WITH NULLS (0x00) - Much safer than spaces
+    resultBuffer.fill(0x00, dataStart, endstreamPos);
+    
+    // Mandatory EOL right before 'endstream'
     resultBuffer[endstreamPos - 1] = 0x0A; 
 
+    // WRITE THE XMP AT THE ABSOLUTE START
     const xmpBytes = Buffer.from(xmpString.trim(), 'utf8');
     xmpBytes.copy(resultBuffer, dataStart);
 
-    console.log(`💉 v68: Neutralized Ghosts. Real Meta: ${realMetaTag}. Stream: ${dataStart}`);
+    console.log(`💉 v69: Absolute Zero Calibration. Data start: ${dataStart}`);
     return resultBuffer;
 }
 
