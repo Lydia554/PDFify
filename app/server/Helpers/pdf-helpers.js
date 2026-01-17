@@ -5,61 +5,60 @@ const { PDFDocument, PDFName, PDFHexString, PDFString } = require("pdf-lib");
 const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 function patchPdfBuffer(pdfBuffer, metadataTag, structTreeTag, xmpString) {
+    let pdfString = pdfBuffer.toString('latin1');
     const resultBuffer = Buffer.from(pdfBuffer);
-    const pdfString = pdfBuffer.toString('latin1');
 
-    // 1. FIND THE ACTUAL OBJECT NUMBER IN THE BUFFER
-    // This bypasses any mismatch between pdf-lib tags and actual written bytes
-    const objSearch = new RegExp(`(\\d+ \\d+ obj)\\s*<<[^>]*\\/Length 6000`, 'i');
+    // 1. GLOBAL SANITIZATION: Kill every single hidden Metadata key
+    // We rename ALL /Metadata to /OldMeta so the validator is forced to find our new one.
+    pdfString = pdfString.replace(/\/Metadata/g, '/OldMeta');
+    
+    // Convert back to a temporary buffer to keep things synced
+    const cleanBuffer = Buffer.from(pdfString, 'latin1');
+
+    // 2. FIND OUR TARGET (The one with Length 6000)
+    const objSearch = /(\d+ \d+ obj)\s*<<[^>]*\/Length 6000/i;
     const objMatch = pdfString.match(objSearch);
-    if (!objMatch) {
-        console.error("❌ Critical: Object with Length 6000 not found.");
-        return pdfBuffer;
-    }
+    if (!objMatch) return pdfBuffer;
+    
     const realMetadataTag = objMatch[1].replace(' obj', ' R');
 
-    // 2. LOCATE THE CATALOG SPACER
+    // 3. CATALOG INJECTION
     const spacerRegex = /\/PDFify\s*<([0-9a-fA-F]{100,})>/;
     const spacerMatch = pdfString.match(spacerRegex);
-    if (!spacerMatch) return pdfBuffer;
+    if (spacerMatch) {
+        // Find Attached File
+        const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
+        let afArray = fileSpecMatch ? `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]` : "";
 
-    // 3. FIND ATTACHED FILE SPEC
-    const fileSpecMatch = pdfString.match(/(\d+ \d+ obj)\s*<<[^>]*\/F\s*\(factur-x\.xml\)/);
-    let afArray = "";
-    if (fileSpecMatch) {
-        afArray = `/AF [${fileSpecMatch[1].replace(' obj', ' R')}]`;
+        // Inject the ONLY /Metadata tag in the entire file
+        const injection = `/Metadata ${realMetadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
+        const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
+        cleanBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
     }
 
-    // 4. CATALOG INJECTION
-    const injection = `/Metadata ${realMetadataTag} /StructTreeRoot ${structTreeTag} ${afArray} /MarkInfo<< /Marked true >>`;
-    const paddedInjection = injection.padEnd(spacerMatch[0].length, ' ');
-    resultBuffer.write(paddedInjection, spacerMatch.index, 'latin1');
-
-    // 5. METADATA OBJECT SURGERY
+    // 4. METADATA OBJECT SURGERY
     const objIndex = objMatch.index;
     const streamStart = pdfString.indexOf('stream', objIndex);
     const dictStart = pdfString.lastIndexOf('<<', streamStart);
     
-    // Rewrite Header - Strictly forcing No Filter
-    resultBuffer.fill(0x20, dictStart, streamStart); 
-    resultBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
+    // Fix Dictionary Header
+    cleanBuffer.fill(0x20, dictStart, streamStart); 
+    cleanBuffer.write(`<< /Type /Metadata /Subtype /XML /Length 6000 >>`, dictStart, 'latin1');
 
-    // 6. STREAM DATA CALIBRATION (CRITICAL)
+    // Fix Stream Data
     let dataStart = streamStart + 6;
     if (pdfBuffer[dataStart] === 0x0D) dataStart++; 
     if (pdfBuffer[dataStart] === 0x0A) dataStart++; 
 
     const endstreamPos = pdfString.indexOf('endstream', dataStart);
-    
-    // Wipe with 0x20 (Spaces) - standard for XMP padding
-    resultBuffer.fill(0x20, dataStart, endstreamPos);
-    resultBuffer[endstreamPos - 1] = 0x0A; // Mandatory EOL
+    cleanBuffer.fill(0x20, dataStart, endstreamPos);
+    cleanBuffer[endstreamPos - 1] = 0x0A; 
 
     const xmpBytes = Buffer.from(xmpString, 'utf8');
-    xmpBytes.copy(resultBuffer, dataStart);
+    xmpBytes.copy(cleanBuffer, dataStart);
 
-    console.log(`💉 v56: Precision Inject into Object ${realMetadataTag}`);
-    return resultBuffer;
+    console.log(`💉 v57: Global Metadata sanitization applied. Target: ${realMetadataTag}`);
+    return cleanBuffer;
 }
 
 function generatePdfA3bXmp(invoiceData, documentId, instanceId) {
