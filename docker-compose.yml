@@ -17,6 +17,19 @@ services:
       - mongo
     networks:
       - pdf-api-network
+
+  python-invoice-service:
+    build:
+      context: ./python-invoice-service
+      dockerfile: Dockerfile
+    image: python-invoice-service
+    ports:
+      - "8000:8000"
+    command: uvicorn invoice_service:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./python-invoice-service:/app
+    networks:
+      - pdf-api-network
       
   mongo:
     image: mongo:5.0

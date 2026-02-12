@@ -223,6 +223,84 @@
       <p id="customerPdfResult" class="text-sm mt-3 font-medium"></p>
     </section>
 
+    <!-- PDF/A-3b Validation Section -->
+    <section id="validationSection" class="bg-gradient-to-r from-emerald-700 via-teal-600 to-cyan-700 shadow rounded-2xl p-6 mt-6 text-white">
+      <h2 class="text-xl font-bold mb-4 flex items-center gap-2">✅ PDF/A-3b Validator</h2>
+      <p class="text-sm mb-4 text-gray-100">Validate your PDFs for PDF/A-3b compliance using veraPDF.</p>
+
+      <!-- File Upload -->
+      <div class="mb-4">
+        <label for="pdfValidationFile" class="block text-sm font-semibold mb-2">Upload PDF to Validate</label>
+        <input type="file" id="pdfValidationFile" accept="application/pdf"
+          class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-cyan-600 file:text-white hover:file:bg-cyan-700" />
+      </div>
+
+      <!-- Auto-fix Option -->
+      <div class="flex items-center gap-3 mb-4">
+        <input type="checkbox" id="autoFixCheckbox" class="h-5 w-5 accent-cyan-400">
+        <label for="autoFixCheckbox" class="text-sm font-medium">Attempt auto-fix for common issues (CIDSet, ICC profile)</label>
+      </div>
+
+      <!-- Buttons -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <button id="validatePdfButton" class="bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
+          📊 Validate PDF
+        </button>
+        <button id="validateAndDownloadButton" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow transition duration-200">
+          ✏️ Fix & Download
+        </button>
+      </div>
+
+      <!-- Validation Results -->
+      <div id="validationResults" class="hidden bg-gray-900 rounded-lg p-4 border border-gray-600">
+        <h3 class="font-bold mb-2">Validation Report</h3>
+
+        <!-- Compliance Badge -->
+        <div class="flex items-center gap-2 mb-3">
+          <span id="complianceBadge" class="px-3 py-1 rounded-full text-sm font-bold">Unknown</span>
+          <span id="validationSummary" class="text-sm text-gray-300"></span>
+        </div>
+
+        <!-- Statistics -->
+        <div class="grid grid-cols-3 gap-4 mb-4">
+          <div class="text-center">
+            <p class="text-2xl font-bold text-green-400" id="passCount">-</p>
+            <p class="text-xs text-gray-400">Passed</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-red-400" id="failCount">-</p>
+            <p class="text-xs text-gray-400">Failed</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold text-blue-400" id="compliancePercentage">-</p>
+            <p class="text-xs text-gray-400">Compliance</p>
+          </div>
+        </div>
+
+        <!-- Fix Status -->
+        <div id="fixStatus" class="hidden mb-3 p-3 rounded-lg bg-blue-900 border border-blue-600">
+          <p class="text-sm"><strong>🔧 Auto-Fix Applied:</strong> <span id="fixResult"></span></p>
+        </div>
+
+        <!-- Rules List -->
+        <div class="mb-3">
+          <p class="text-sm font-semibold mb-2">Failed Rules:</p>
+          <div id="rulesList" class="max-h-40 overflow-y-auto text-xs bg-gray-800 rounded p-2">
+            <p class="text-gray-500">No failed rules</p>
+          </div>
+        </div>
+
+        <!-- Download Fixed PDF -->
+        <div id="downloadFixedSection" class="hidden">
+          <button id="downloadFixedPdf" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition duration-200">
+            ⬇️ Download Fixed PDF
+          </button>
+        </div>
+      </div>
+
+      <p id="validationStatus" class="text-sm mt-3 font-medium text-white"></p>
+    </section>
+
 
 <section class="mt-16 text-center border-t border-gray-700 pt-12 pb-16 bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-lg shadow-xl mx-auto max-w-4xl">
   <h3 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 mb-4">
@@ -648,8 +726,169 @@ document.getElementById("downloadAllZip").addEventListener("click", async () => 
   }
 });
 
+// ------------------------------
+// PDF/A-3b Validation
+// ------------------------------
+let currentFixedPdfBuffer = null;
 
- initBuyTokens();
+// Validate PDF button
+document.getElementById("validatePdfButton").addEventListener("click", async () => {
+  const fileInput = document.getElementById("pdfValidationFile");
+  const autoFix = document.getElementById("autoFixCheckbox").checked;
+  const statusEl = document.getElementById("validationStatus");
+  const resultsEl = document.getElementById("validationResults");
+
+  if (!fileInput.files || fileInput.files.length === 0) {
+    statusEl.textContent = "❌ Please select a PDF file to validate.";
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("pdf", file);
+  formData.append("autoFix", autoFix);
+
+  statusEl.textContent = "⏳ Validating PDF...";
+  resultsEl.classList.add("hidden");
+
+  try {
+    const res = await api.post("/shopify/validate-pdfa3b", formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+
+    displayValidationResults(res.data);
+
+    if (res.data.validation?.fixed) {
+      currentFixedPdfBuffer = res.data.validation.fixedPdf;
+      document.getElementById("downloadFixedSection").classList.remove("hidden");
+      document.getElementById("fixStatus").classList.remove("hidden");
+      document.getElementById("fixResult").textContent = `${res.data.validation.afterFix.passCount}/${res.data.validation.afterFix.totalRules} rules passed`;
+    }
+
+    statusEl.textContent = "✅ Validation complete!";
+  } catch (err) {
+    console.error("Validation error:", err);
+    statusEl.textContent = "❌ Validation failed: " + (err.response?.data?.error || err.message);
+  }
+});
+
+// Validate and Download button
+document.getElementById("validateAndDownloadButton").addEventListener("click", async () => {
+  const fileInput = document.getElementById("pdfValidationFile");
+  const statusEl = document.getElementById("validationStatus");
+
+  if (!fileInput.files || fileInput.files.length === 0) {
+    statusEl.textContent = "❌ Please select a PDF file to validate.";
+    return;
+  }
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("pdf", file);
+  formData.append("autoFix", "true");
+
+  statusEl.textContent = "⏳ Validating and fixing PDF...";
+
+  try {
+    const res = await api.post("/shopify/validate-pdfa3b?download=true", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      responseType: "blob"
+    });
+
+    // Download the fixed PDF
+    const blob = new Blob([res.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `validated-${file.name.replace('.pdf', '')}-pdfa3b.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+
+    statusEl.textContent = "✅ Fixed PDF downloaded!";
+  } catch (err) {
+    console.error("Validation/download error:", err);
+    statusEl.textContent = "❌ Failed: " + (err.response?.data?.error || err.message);
+  }
+});
+
+// Download fixed PDF from results
+document.getElementById("downloadFixedPdf").addEventListener("click", () => {
+  if (!currentFixedPdfBuffer) return;
+
+  const blob = new Blob([currentFixedPdfBuffer], { type: "application/pdf" });
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `validated-pdfa3b-${Date.now()}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+});
+
+// Display validation results
+function displayValidationResults(data) {
+  const resultsEl = document.getElementById("validationResults");
+  const validation = data.validation;
+
+  if (!validation) {
+    resultsEl.innerHTML = '<p class="text-red-400">Invalid validation response</p>';
+    resultsEl.classList.remove("hidden");
+    return;
+  }
+
+  // Compliance badge
+  const badgeEl = document.getElementById("complianceBadge");
+  if (validation.compliant) {
+    badgeEl.textContent = "✅ COMPLIANT";
+    badgeEl.className = "px-3 py-1 rounded-full text-sm font-bold bg-green-600 text-white";
+  } else {
+    badgeEl.textContent = "❌ NOT COMPLIANT";
+    badgeEl.className = "px-3 py-1 rounded-full text-sm font-bold bg-red-600 text-white";
+  }
+
+  // Summary
+  document.getElementById("validationSummary").textContent = validation.summary || `${validation.passCount}/${validation.totalRules} rules passed`;
+
+  // Statistics
+  document.getElementById("passCount").textContent = validation.passCount || 0;
+  document.getElementById("failCount").textContent = validation.failCount || 0;
+
+  const percentage = validation.totalRules > 0
+    ? ((validation.passCount / validation.totalRules) * 100).toFixed(1)
+    : 0;
+  document.getElementById("compliancePercentage").textContent = `${percentage}%`;
+
+  // Rules list (failed rules)
+  const rulesListEl = document.getElementById("rulesList");
+  const failedRules = (validation.rules || []).filter(r => r.status === "failed");
+
+  if (failedRules.length > 0) {
+    rulesListEl.innerHTML = failedRules.map(rule => `
+      <div class="mb-2 p-2 bg-red-900 border border-red-700 rounded text-xs">
+        <p><strong>ID:</strong> ${rule.id || 'N/A'}</p>
+        <p><strong>Status:</strong> <span class="text-red-300">${rule.status || 'failed'}</span></p>
+        ${rule.clause ? `<p><strong>Clause:</strong> ${rule.clause}</p>` : ''}
+      </div>
+    `).join('');
+  } else {
+    rulesListEl.innerHTML = '<p class="text-green-400">✅ No failed rules - PDF is fully compliant!</p>';
+  }
+
+  // Hide fix status and download if no fix was applied
+  if (!validation.fixed) {
+    document.getElementById("fixStatus").classList.add("hidden");
+    document.getElementById("downloadFixedSection").classList.add("hidden");
+  }
+
+  resultsEl.classList.remove("hidden");
+}
+
+initBuyTokens();
 
 
 

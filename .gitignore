@@ -24,8 +24,18 @@ test-pro-feature.sh
 app/test/
 *.xml
 
-# Exclude packages folder
-packages/
-
 # Project specific files
 PROJECT_DEEP_DIVE.md
+
+# Documentation folder (keeps repo clean)
+md/
+python-invoice-service/
+test-files/
+
+# Java service build artifacts
+java/target/
+java/*.jar
+*.class
+
+# Old Java service folder (replaced by java/)
+java-pdfa-service/

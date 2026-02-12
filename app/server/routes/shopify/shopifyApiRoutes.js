@@ -13,6 +13,8 @@ const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
 const { mapOrderToPdfData, createMerchantPdf, getBase64Image } = require("./shopifyMerchantTemplate");
+const { validatePdfWithVeraPdf } = require("../../Helpers/verapdf-validator");
+const multer = require('multer');
 
 
 
@@ -21,6 +23,19 @@ const os = require("os");
 const JSZip = require("jszip");
 
 const router = express.Router();
+
+// Multer configuration for file uploads (memory storage)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only PDF files are allowed'));
+    }
+  }
+});
 
 require('dotenv').config();
 
@@ -371,6 +386,119 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
   }
 });
 
+// ----------------------------
+// Validate PDF/A-3b compliance
+// ----------------------------
+router.post("/validate-pdfa3b", upload.single('pdf'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No PDF file uploaded" });
+    }
+
+    const { autoFix = "false" } = req.body;
+    const shouldAutoFix = autoFix === "true" || autoFix === true;
+
+    console.log(`[Validate] PDF/A-3b validation request, size: ${req.file.size} bytes, autoFix: ${shouldAutoFix}`);
+
+    // Validate PDF with veraPDF
+    const result = await validatePdfWithVeraPdf(req.file.buffer, {
+      autoFix: shouldAutoFix
+    });
+
+    // Build response
+    const response = {
+      success: true,
+      validation: {
+        compliant: result.compliant,
+        profileName: result.profileName || 'PDF/A-3b',
+        passCount: result.passCount,
+        failCount: result.failCount,
+        totalRules: result.totalRules,
+        summary: result.summary,
+        rules: result.rules.slice(0, 50), // Limit to first 50 rules for response size
+        hasMoreRules: result.rules.length > 50
+      }
+    };
+
+    // If auto-fix was attempted and successful, include fixed PDF
+    if (result.fixedPdf) {
+      response.validation.fixed = true;
+      response.validation.afterFix = {
+        compliant: result.compliant,
+        passCount: result.passCount,
+        failCount: result.failCount,
+        totalRules: result.totalRules,
+        summary: result.summary
+      };
+    }
+
+    // Return JSON response for API
+    if (req.query.download === "true" && result.fixedPdf) {
+      // Download fixed PDF
+      res.set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "attachment; filename=validated-pdfa3b.pdf",
+      });
+      return res.send(result.fixedPdf);
+    }
+
+    res.json(response);
+
+  } catch (err) {
+    console.error("[Validate] PDF/A-3b validation error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message || "Validation failed"
+    });
+  }
+});
+
+// ----------------------------
+// Batch validate multiple PDFs
+// ----------------------------
+router.post("/validate-batch", upload.array('pdfs', 10), async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "No PDF files uploaded" });
+    }
+
+    console.log(`[Validate] Batch validation request: ${req.files.length} files`);
+
+    const results = [];
+
+    for (const file of req.files) {
+      const result = await validatePdfWithVeraPdf(file.buffer, {
+        autoFix: false
+      });
+
+      results.push({
+        filename: file.originalname,
+        size: file.size,
+        validation: {
+          compliant: result.compliant,
+          passCount: result.passCount,
+          failCount: result.failCount,
+          totalRules: result.totalRules,
+          summary: result.summary
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      totalFiles: req.files.length,
+      compliantCount: results.filter(r => r.validation.compliant).length,
+      results
+    });
+
+  } catch (err) {
+    console.error("[Validate] Batch validation error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message || "Batch validation failed"
+    });
+  }
+});
 
 
 module.exports = router;
