@@ -58,8 +58,6 @@ COPY ./app/locales-friendly ./locales-friendly
 COPY ./app/locales-shopify ./locales-shopify
 COPY ./app/templates ./templates
 COPY ./app/xml ./xml
-COPY ./app/pdfs ./pdfs
-COPY ./app/debug_steps_pdfa_test ./debug_steps_pdfa_test
 COPY ./app/server/routes/pdfa_def.ps ./server/routes/pdfa_def.ps
 
 CMD ["node", "server/index.js"]
