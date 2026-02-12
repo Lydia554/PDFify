@@ -2,7 +2,7 @@ const axios = require("axios");
 const sharp = require("sharp");
 const fs = require("fs");
 const path = require("path");
-const { createPerfectInvoice } = require("../../Helpers/pdf-helpers");
+const { createPdfA3WithJava } = require("../../Helpers/pdf-helpers");
 
 /**
  * Formats a number as a currency string.
@@ -118,18 +118,16 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
 // ---------------------
 
 async function createMerchantPdf(invoiceData) {
-  console.log(" Starting PDFKit generation (merchant invoice)...");
+  console.log("🧾 Generating merchant PDF via Java service...");
 
   try {
-    const outputPath = path.join(__dirname, `../../../pdfs/Invoice_${invoiceData.orderId}_${Date.now()}.pdf`);
-    await createPerfectInvoice(outputPath, invoiceData);
-    
-    const finalPdfBuffer = fs.readFileSync(outputPath);
-    fs.unlinkSync(outputPath); // Clean up the temporary file
+    // Call Java PDF/A-3B service
+    const filename = `Invoice_${invoiceData.orderId}_${Date.now()}.pdf`;
+    const pdfBuffer = await createPdfA3WithJava(invoiceData, filename);
 
-    console.log("✅ PDFKit generation complete.");
-    return finalPdfBuffer;
-    
+    console.log("✅ Java service PDF generation complete.");
+    return pdfBuffer;
+
   } catch (err) {
     console.error("❌ createMerchantPdf failed:", err);
     throw err;

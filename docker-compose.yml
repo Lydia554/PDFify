@@ -1,5 +1,19 @@
 version: "3.9"
 services:
+  java-pdf-service:
+    build:
+      context: ./java
+      dockerfile: Dockerfile
+    image: java-pdfa-service
+    ports:
+      - "8080:8080"
+    environment:
+      - JAVA_OPTS=-Xmx1g
+    networks:
+      - pdf-api-network
+    depends_on:
+      - app
+
   app:
     build:
       context: .
@@ -15,6 +29,7 @@ services:
       - SYS_ADMIN
     depends_on:
       - mongo
+      - java-pdf-service
     networks:
       - pdf-api-network
 
@@ -34,6 +49,10 @@ services:
   mongo:
     image: mongo:5.0
     container_name: pdf-api-mongo
+    networks:
+      - pdf-api-network
+    links:
+      - java-pdf-service
     volumes:
       - mongo-data:/data/db
     networks:
