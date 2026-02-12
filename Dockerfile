@@ -60,7 +60,6 @@ COPY ./app/templates ./templates
 COPY ./app/xml ./xml
 COPY ./app/pdfs ./pdfs
 COPY ./app/debug_steps_pdfa_test ./debug_steps_pdfa_test
-COPY ./app/.env.example ./.env.example
 COPY ./app/server/routes/pdfa_def.ps ./server/routes/pdfa_def.ps
 
 CMD ["node", "server/index.js"]
