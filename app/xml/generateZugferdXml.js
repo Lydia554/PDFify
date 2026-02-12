@@ -53,6 +53,7 @@ function generateZugferdXml(invoiceData) {
             .ele('ram:SpecifiedTradeSettlementLineMonetarySummation')
                 .ele('ram:LineTotalAmount').txt((item.price * item.quantity).toFixed(2)).up().up().up();
     });
+    
 
     // 4. Agreement (Seller/Buyer + Addresses + VAT ID)
     const agreement = transaction.ele('ram:ApplicableHeaderTradeAgreement');
