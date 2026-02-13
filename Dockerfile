@@ -32,10 +32,9 @@ RUN apt-get update && apt-get install -y \
 
 # Install veraPDF
 RUN wget -q "https://software.verapdf.org/releases/1.24/verapdf-greenfield-1.24.3-installer.zip" -O /tmp/verapdf.zip && \
-    mkdir -p /opt/verapdf && \
-    unzip -q /tmp/verapdf.zip -d /tmp/verapdf-installer && \
-    mv /tmp/verapdf-installer/veraPDF-greenfield-1.24.3/* /opt/verapdf/ && \
-    rm -rf /tmp/verapdf.zip /tmp/verapdf-installer && \
+    unzip -q /tmp/verapdf.zip -d /opt && \
+    mv /opt/verapdf* /opt/verapdf 2>/dev/null || true && \
+    rm -f /tmp/verapdf.zip && \
     chmod +x /opt/verapdf/verapdf && \
     ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf
 RUN verapdf --version || echo "veraPDF installed"
