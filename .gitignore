@@ -22,7 +22,10 @@ test-invoice.pdf
 pro-invoice.pdf
 test-pro-feature.sh
 app/test/
+# Ignore XML files except for Maven pom.xml
 *.xml
+!java/pom.xml
+!**/pom.xml
 
 # Project specific files
 PROJECT_DEEP_DIVE.md
