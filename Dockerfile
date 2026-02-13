@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install veraPDF
-RUN wget -q "https://repo1.maven.org/maven2/org/verapdf/verapdf-apps/1.8.1/verapdf-apps-1.8.1.tar.gz" -O /tmp/verapdf.tar.gz && \
+RUN wget -q "https://github.com/verapdf/verapdf-library/releases/download/v1.24.3/verapdf-greenfield-1.24.3.tar.gz" -O /tmp/verapdf.tar.gz && \
     mkdir -p /opt/verapdf && \
     tar -xzf /tmp/verapdf.tar.gz -C /opt/verapdf --strip-components=1 && \
     rm /tmp/verapdf.tar.gz && \
