@@ -1,7 +1,8 @@
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.PDPageContentStream.*;
+import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
@@ -42,18 +43,18 @@ public class CreatePDFA3B {
             doc.addPage(page);
 
             // Create content stream
-            PDPageContentStream content = new PDPageContentStream(doc, page);
+            PDPageContentStream content = new PDPageContentStream(doc, page, AppendMode.APPEND, true);
             content.beginText();
-            content.setFont(Standard14Fonts.HELVETICA_BOLD, 12);
-            content.newLineAtOffset(700, 700);
+            content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 12);
+            content.newLineAtOffset(700f, 700f);
             content.showText("Invoice: INV-2025-001");
-            content.newLineAtOffset(-15);
+            content.newLineAtOffset(0f, -15f);
             content.showText("Date: 2025-02-10");
-            content.newLineAtOffset(-15);
+            content.newLineAtOffset(0f, -15f);
             content.showText("Seller: My Company Ltd");
-            content.newLineAtOffset(-15);
+            content.newLineAtOffset(0f, -15f);
             content.showText("Buyer: John Doe");
-            content.newLineAtOffset(-15);
+            content.newLineAtOffset(0f, -15f);
             content.showText("Total: 1190.00 EUR");
             content.endText();
             content.close();

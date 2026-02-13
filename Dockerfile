@@ -1,75 +1,12 @@
 # Stage 1: Java service builder
 FROM maven:3.9-eclipse-temurin-17 AS java-builder
 
-# Create improved Maven settings with multiple mirrors and fallbacks
-RUN mkdir -p /root/.m2 && \
-    cat > /root/.m2/settings.xml << 'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
-  
-  <!-- Use multiple mirrors for reliability -->
-  <mirrors>
-    <!-- Primary: Aliyun (fast in China) -->
-    <mirror>
-      <id>aliyun</id>
-      <name>Aliyun Maven Mirror</name>
-      <url>https://maven.aliyun.com/repository/public</url>
-      <mirrorOf>central</mirrorOf>
-    </mirror>
-    
-    <!-- Fallback: Maven Central -->
-    <mirror>
-      <id>central</id>
-      <name>Maven Central</name>
-      <url>https://repo.maven.apache.org/maven2</url>
-      <mirrorOf>*,!aliyun</mirrorOf>
-    </mirror>
-  </mirrors>
-  
-  <!-- Plugin repositories -->
-  <pluginRepositories>
-    <pluginRepository>
-      <id>central</id>
-      <name>Maven Central Plugin Repository</name>
-      <url>https://repo.maven.apache.org/maven2</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-    </pluginRepository>
-  </pluginRepositories>
-  
-  <!-- Increase timeout for slow networks -->
-  <servers>
-    <server>
-      <id>central</id>
-      <configuration>
-        <httpConfiguration>
-          <all>
-            <connectionTimeout>120000</connectionTimeout>
-            <readTimeout>120000</readTimeout>
-          </all>
-        </httpConfiguration>
-      </configuration>
-    </server>
-  </servers>
-  
-</settings>
-EOF
+# Copy Maven settings
+COPY java/settings.xml /root/.m2/settings.xml
 
-# Build Java service with retry logic
+# Build Java service
 COPY java /tmp/java
-RUN cd /tmp/java && \
-    # Try with Aliyun first, fall back to Maven Central if needed
-    mvn clean package -q -DskipTests || \
-    (echo "First build attempt failed, retrying with Maven Central..." && \
-     sed -i 's|<mirrorOf>central</mirrorOf>|<mirrorOf>!central</mirrorOf>|' /root/.m2/settings.xml && \
-     mvn clean package -q -DskipTests) && \
-    cp target/pdfa-3b-service-1.0.0.jar /java-pdf-service.jar
+RUN cd /tmp/java && mvn clean package -DskipTests && cp target/pdfa-3b-service-1.0.0.jar /java-pdf-service.jar
 
 # Stage 2: Node.js application
 FROM node:20-slim AS node-builder
