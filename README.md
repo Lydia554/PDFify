@@ -137,3 +137,8 @@ curl -X POST http://localhost:3002/api/html/generate-pdf-from-html \
 ---
 
 © **Lidija Jokić** – Built with care, for modern document automation
+
+---
+
+## 🚀 Deployment Update
+**Latest deployment:** 2026-02-13 18:28:16 - Updated GitHub Actions workflow with increased timeout settings for Docker build (50m command_timeout).
