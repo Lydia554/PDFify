@@ -1,6 +1,7 @@
 FROM node:20-slim
 
 RUN apt-get update && apt-get install -y \
+    openjdk-17-jdk \
     wget \
     unzip \
     ca-certificates \
@@ -24,31 +25,26 @@ RUN apt-get update && apt-get install -y \
     libxtst6 \
     xdg-utils \
     ghostscript \
-    build-essential \
-    python3 \
-    openjdk-17-jre-headless \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Install veraPDF - download and extract with full directory structure preservation
+WORKDIR /app
+
+# Install veraPDF
 RUN wget -q "https://software.verapdf.org/releases/1.24/verapdf-pdfbox-1.24.3-installer.zip" -O /tmp/verapdf.zip && \
     mkdir -p /opt/verapdf && \
     unzip -q -o /tmp/verapdf.zip -d /opt/verapdf && \
-    # The installer extracts a directory, flatten it
     mv /opt/verapdf/verapdf*/* /opt/verapdf/ 2>/dev/null || \
     mv /opt/verapdf/*/* /opt/verapdf/ 2>/dev/null || true && \
     rm -f /tmp/verapdf.zip && \
-    # Find the verapdf script wherever it is
     find /opt/verapdf -type f -name 'verapdf' -exec chmod +x {} \; && \
     VERAPDF_BIN=$(find /opt/verapdf -type f -name 'verapdf' | head -1) && \
     ln -sf "$VERAPDF_BIN" /usr/local/bin/verapdf || \
-    # Fallback: create a wrapper if direct linking fails
     echo '#!/bin/sh' > /usr/local/bin/verapdf && \
     echo 'find /opt/verapdf -name verapdf -type f -exec {} "$@" \;' >> /usr/local/bin/verapdf && \
     chmod +x /usr/local/bin/verapdf
-RUN verapdf --version || echo "veraPDF installed"
 
-# Prepare Java service build context
+# Install Maven for Java service build
 RUN apt-get update && apt-get install -y maven --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # Create Maven settings with multiple mirrors for reliability
@@ -59,11 +55,6 @@ RUN mkdir -p /root/.m2 && \
     echo 'xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">' >> /root/.m2/settings.xml && \
     echo '<mirrors>' >> /root/.m2/settings.xml && \
     echo '<mirror>' >> /root/.m2/settings.xml && \
-    echo '<id>central</id>' >> /root/.m2/settings.xml && \
-    echo '<url>https://repo1.maven.org/maven2</url>' >> /root/.m2/settings.xml && \
-    echo '<mirrorOf>central</mirrorOf>' >> /root/.m2/settings.xml && \
-    echo '</mirror>' >> /root/.m2/settings.xml && \
-    echo '<mirror>' >> /root/.m2/settings.xml && \
     echo '<id>aliyun</id>' >> /root/.m2/settings.xml && \
     echo '<url>https://maven.aliyun.com/repository/public</url>' >> /root/.m2/settings.xml && \
     echo '<mirrorOf>*</mirrorOf>' >> /root/.m2/settings.xml && \
@@ -71,13 +62,20 @@ RUN mkdir -p /root/.m2 && \
     echo '</mirrors>' >> /root/.m2/settings.xml && \
     echo '</settings>' >> /root/.m2/settings.xml
 
+# Build Java service
 COPY java /tmp/java
 RUN cd /tmp/java && \
     mvn clean package -q && \
     cp target/pdfa-3b-service-1.0.0.jar /usr/local/bin/java-pdf-service.jar && \
     rm -rf /tmp/java
 
-# Keep Maven installed in case rebuild is needed
+# Copy Node.js app
+COPY ./app/package*.json ./
+RUN npm install
 
-# Java service will run veraPDF internally for PDF/A-3b creation
-# No need for separate Java service container - everything in one
+COPY ./app ./
+
+RUN mkdir -p /app/server/Helpers
+
+# ICC Profile
+COPY ./app/server/Helpers/sRGB_v4_ICC_preference.icc ./server/Helpers/sRGB_v4_ICC_preference.icc
