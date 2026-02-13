@@ -44,12 +44,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.1</version>
+                <version>3.3.0</version>
                 <configuration>
                     <archive>
                         <manifest>
                             <mainClass>com.pdfa.PDFA3BService</mainClass>
-                        </manifest>
+                        <addClasspath>true</addClasspath>
+                        <classpathPrefix>lib/</classpathPrefix>
+                        <useUniqueVersions>false</useUniqueVersions>
                     </archive>
                 </configuration>
                 <executions>
