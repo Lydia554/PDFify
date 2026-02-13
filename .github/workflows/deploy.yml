@@ -10,6 +10,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest # Use a standard GitHub runner to execute the SSH command
+    timeout-minutes: 45  # Overall job timeout (build + everything else)
 
     steps:
     - name: Deploy to Server via SSH
@@ -19,6 +20,7 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         # port: 22 # Optional, defaults to 22
+        timeout: 35m  # SSH command timeout (35 minutes for build + operations)
         script: |
           set -e  # Exit immediately on any error
           echo "🚀 Connecting to server..."
@@ -44,10 +46,14 @@ jobs:
           echo "Current commit: $(git log --oneline -1)"
           
           echo "🔨 Building Docker images (with logs visible)..."
-          # Build with logs streaming
-          /snap/bin/docker compose build --no-cache --progress=plain
+          echo "⚠️  Build timeout set to 30 minutes"
+          # Build with logs streaming and timeout
+          timeout 30m /snap/bin/docker compose build --no-cache --progress=plain
           
-          if [ $? -ne 0 ]; then
+          if [ $? -eq 124 ]; then
+            echo "❌ Docker build timed out after 30 minutes!"
+            exit 1
+          elif [ $? -ne 0 ]; then
             echo "❌ Docker build failed!"
             exit 1
           fi
