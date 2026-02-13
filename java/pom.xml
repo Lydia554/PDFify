@@ -49,9 +49,10 @@
                     <archive>
                         <manifest>
                             <mainClass>com.pdfa.PDFA3BService</mainClass>
-                        <addClasspath>true</addClasspath>
-                        <classpathPrefix>lib/</classpathPrefix>
-                        <useUniqueVersions>false</useUniqueVersions>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <useUniqueVersions>false</useUniqueVersions>
+                        </manifest>
                     </archive>
                 </configuration>
                 <executions>
