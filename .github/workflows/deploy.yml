@@ -20,17 +20,65 @@ jobs:
         key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
         # port: 22 # Optional, defaults to 22
         script: |
-          echo "Connecting to server..."
+          set -e  # Exit immediately on any error
+          echo "🚀 Connecting to server..."
+          
           cd ${{ secrets.SERVER_APP_PATH }}
-          echo "Changed directory to $(pwd)"
-          echo "Stopping containers..."
-          /snap/bin/docker compose down
-          echo "Fetching latest changes..."
+          echo "📁 Changed directory to: $(pwd)"
+          
+          # Show environment info for debugging
+          echo "🔍 Environment info:"
+          echo "Docker version: $(/snap/bin/docker --version)"
+          echo "Docker Compose version: $(/snap/bin/docker compose version)"
+          echo "Git version: $(git --version)"
+          echo "Disk space: $(df -h . | tail -1)"
+          
+          echo "🛑 Stopping existing containers..."
+          /snap/bin/docker compose down || echo "No containers to stop"
+          
+          echo "📥 Fetching latest changes..."
           git fetch origin
-          echo "Resetting to origin/main (discarding local changes)..."
+          
+          echo "🔄 Resetting to origin/main..."
           git reset --hard origin/main
-          echo "Building and starting containers..."
-          /snap/bin/docker compose up -d --build --no-cache
-          echo "Deployment complete!"
-          # Optional: Prune old images/containers
-          # docker system prune -af
+          echo "Current commit: $(git log --oneline -1)"
+          
+          echo "🔨 Building Docker images (with logs visible)..."
+          # Build with logs streaming
+          /snap/bin/docker compose build --no-cache --progress=plain
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ Docker build failed!"
+            exit 1
+          fi
+          
+          echo "🚀 Starting containers..."
+          /snap/bin/docker compose up -d
+          
+          # Show initial logs
+          echo "📋 Container status:"
+          /snap/bin/docker compose ps
+          
+          echo "📊 Streaming recent logs (tail)..."
+          /snap/bin/docker compose logs --tail=50
+          
+          # Wait a moment and check if containers are healthy
+          echo "⏳ Waiting for containers to stabilize..."
+          sleep 15
+          
+          echo "🔍 Checking container health..."
+          /snap/bin/docker compose ps
+          
+          # Check if any containers exited
+          if /snap/bin/docker compose ps | grep -q "Exit"; then
+            echo "❌ Some containers have exited!"
+            /snap/bin/docker compose logs
+            exit 1
+          fi
+          
+          echo "✅ Deployment complete! Containers are running."
+          
+          # Optional: Show how to view logs
+          echo ""
+          echo "📝 To view live logs, run:"
+          echo "   docker compose logs -f"
