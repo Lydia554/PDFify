@@ -11,6 +11,7 @@ on:
           - restart
           - stop
           - start
+          - logs
           - status
         default: 'restart'
 
@@ -44,6 +45,13 @@ jobs:
             start)
               echo "🚀 Starting containers..."
               /snap/bin/docker compose up -d
+              ;;
+            logs)
+              echo "📜 Fetching logs..."
+              /snap/bin/docker compose logs --tail=100
+              echo ""
+              echo "✅ Done"
+              exit 0
               ;;
             status)
               echo "📊 Container status..."
