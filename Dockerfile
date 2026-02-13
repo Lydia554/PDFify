@@ -30,13 +30,22 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Install veraPDF
-RUN wget -q "https://software.verapdf.org/releases/1.24/verapdf-greenfield-1.24.3-installer.zip" -O /tmp/verapdf.zip && \
-    unzip -q /tmp/verapdf.zip -d /opt && \
-    mv /opt/verapdf* /opt/verapdf 2>/dev/null || true && \
+# Install veraPDF - download and extract with full directory structure preservation
+RUN wget -q "https://software.verapdf.org/releases/1.24/verapdf-pdfbox-1.24.3-installer.zip" -O /tmp/verapdf.zip && \
+    mkdir -p /opt/verapdf && \
+    unzip -q -o /tmp/verapdf.zip -d /opt/verapdf && \
+    # The installer extracts a directory, flatten it
+    mv /opt/verapdf/verapdf*/* /opt/verapdf/ 2>/dev/null || \
+    mv /opt/verapdf/*/* /opt/verapdf/ 2>/dev/null || true && \
     rm -f /tmp/verapdf.zip && \
-    chmod +x /opt/verapdf/verapdf && \
-    ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf
+    # Find the verapdf script wherever it is
+    find /opt/verapdf -type f -name 'verapdf' -exec chmod +x {} \; && \
+    VERAPDF_BIN=$(find /opt/verapdf -type f -name 'verapdf' | head -1) && \
+    ln -sf "$VERAPDF_BIN" /usr/local/bin/verapdf || \
+    # Fallback: create a wrapper if direct linking fails
+    echo '#!/bin/sh' > /usr/local/bin/verapdf && \
+    echo 'find /opt/verapdf -name verapdf -type f -exec {} "$@" \;' >> /usr/local/bin/verapdf && \
+    chmod +x /usr/local/bin/verapdf
 RUN verapdf --version || echo "veraPDF installed"
 
 # Prepare Java service build context
