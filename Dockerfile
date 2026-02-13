@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get install -y \
     wget \
     ca-certificates \
     fonts-noto-color-emoji \
@@ -28,22 +28,3 @@ RUN apt-get update && apt-get install -y \
     openjdk-21-jre-alpine \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
-
-# Install veraPDF
-RUN wget -q "https://repo1.maven.org/maven2/org/verapdf/verapdf-apps/1.8.1/verapdf-apps-1.8.1.tar.gz" -O /tmp/verapdf.tar.gz && \
-    mkdir -p /opt/verapdf && \
-    tar -xzf /tmp/verapdf.tar.gz -C /opt/verapdf --strip-components=1 && \
-    rm /tmp/verapdf.tar.gz && \
-    chmod +x /opt/verapdf/verapdf && \
-    ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf
-RUN verapdf --version || echo "veraPDF installed"
-
-# Prepare Java service build context
-COPY java /tmp/java
-RUN cd /tmp/java && \
-    mvn clean package -q && \
-    cp target/pdfa-3b-service-1.0.0.jar /usr/local/bin/java-pdf-service.jar && \
-    rm -rf /tmp/java
-
-# Java service will run veraPDF internally for PDF/A-3b creation
-# No need for separate Java service container - everything in one
