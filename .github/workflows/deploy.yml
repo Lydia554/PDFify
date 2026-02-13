@@ -25,10 +25,12 @@ jobs:
           echo "Changed directory to $(pwd)"
           echo "Stopping containers..."
           /snap/bin/docker compose down
-          echo "Pulling latest changes..."
-          git pull
+          echo "Fetching latest changes..."
+          git fetch origin
+          echo "Resetting to origin/main (discarding local changes)..."
+          git reset --hard origin/main
           echo "Building and starting containers..."
-          /snap/bin/docker compose up -d --build
+          /snap/bin/docker compose up -d --build --no-cache
           echo "Deployment complete!"
           # Optional: Prune old images/containers
           # docker system prune -af

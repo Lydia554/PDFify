@@ -51,8 +51,7 @@ RUN verapdf --version || echo "veraPDF installed"
 # Prepare Java service build context
 RUN apt-get update && apt-get install -y maven --no-install-recommends && rm -rf /var/lib/apt/lists/*
 COPY java /tmp/java
-RUN ls -la /tmp/java && \
-    cd /tmp/java && \
+RUN cd /tmp/java && \
     mvn clean package -q && \
     cp target/pdfa-3b-service-1.0.0.jar /usr/local/bin/java-pdf-service.jar && \
     rm -rf /tmp/java && \
