@@ -25,7 +25,7 @@ RUN apt-get update && apt-get install -y \
     ghostscript \
     build-essential \
     python3 \
-    openjdk-21-jre-alpine \
+    openjdk-21-jre-headless \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
