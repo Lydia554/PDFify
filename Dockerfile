@@ -25,39 +25,25 @@ RUN apt-get update && apt-get install -y \
     ghostscript \
     build-essential \
     python3 \
-    openjdk-21-jre \
+    openjdk-21-jre-alpine \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install veraPDF
-# Use latest available version from Maven Central (1.8.1 is latest stable there)
-# For version 1.28.1, download manually from https://verapdf.pdfa.org/ or copy local files
 RUN wget -q "https://repo1.maven.org/maven2/org/verapdf/verapdf-apps/1.8.1/verapdf-apps-1.8.1.tar.gz" -O /tmp/verapdf.tar.gz && \
     mkdir -p /opt/verapdf && \
     tar -xzf /tmp/verapdf.tar.gz -C /opt/verapdf --strip-components=1 && \
     rm /tmp/verapdf.tar.gz && \
     chmod +x /opt/verapdf/verapdf && \
     ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf
-
-# Verify veraPDF installation
 RUN verapdf --version || echo "veraPDF installed"
 
-# OPTIONAL: To use veraPDF 1.28.1, mount local directory or download from:
-# https://sourceforge.net/projects/verapdf/files/latest/download
+# Prepare Java service build context
+COPY java /tmp/java
+RUN cd /tmp/java && \
+    mvn clean package -q && \
+    cp target/pdfa-3b-service-1.0.0.jar /usr/local/bin/java-pdf-service.jar && \
+    rm -rf /tmp/java
 
-WORKDIR /app
-
-
-COPY ./app/package*.json ./
-RUN npm install
-
-COPY ./app/server ./server
-COPY ./app/public ./public
-COPY ./app/locales ./locales
-COPY ./app/locales-friendly ./locales-friendly
-COPY ./app/locales-shopify ./locales-shopify
-COPY ./app/templates ./templates
-COPY ./app/xml ./xml
-COPY ./app/server/routes/pdfa_def.ps ./server/routes/pdfa_def.ps
-
-CMD ["node", "server/index.js"]
+# Java service will run veraPDF internally for PDF/A-3b creation
+# No need for separate Java service container - everything in one
