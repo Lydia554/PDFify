@@ -2,6 +2,7 @@ FROM node:20-slim
 
 RUN apt-get update && apt-get install -y \
     wget \
+    unzip \
     ca-certificates \
     fonts-noto-color-emoji \
     fonts-noto \
@@ -30,10 +31,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install veraPDF
-RUN wget -q "https://github.com/verapdf/verapdf-library/releases/download/v1.24.3/verapdf-greenfield-1.24.3.tar.gz" -O /tmp/verapdf.tar.gz && \
+RUN wget -q "https://software.verapdf.org/releases/1.24/verapdf-greenfield-1.24.3-installer.zip" -O /tmp/verapdf.zip && \
     mkdir -p /opt/verapdf && \
-    tar -xzf /tmp/verapdf.tar.gz -C /opt/verapdf --strip-components=1 && \
-    rm /tmp/verapdf.tar.gz && \
+    unzip -q /tmp/verapdf.zip -d /tmp/verapdf-installer && \
+    mv /tmp/verapdf-installer/veraPDF-greenfield-1.24.3/* /opt/verapdf/ && \
+    rm -rf /tmp/verapdf.zip /tmp/verapdf-installer && \
     chmod +x /opt/verapdf/verapdf && \
     ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf
 RUN verapdf --version || echo "veraPDF installed"
