@@ -1,0 +1,61 @@
+name: Docker Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - restart
+          - stop
+          - start
+          - status
+        default: 'restart'
+
+jobs:
+  manage:
+    name: ${{ github.event.inputs.action }} containers
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+    - name: ${{ github.event.inputs.action }} Docker containers via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        timeout: 60s
+        command_timeout: 5m
+        script: |
+          cd ${{ secrets.SERVER_APP_PATH }}
+          
+          case "${{ github.event.inputs.action }}" in
+            restart)
+              echo "🔄 Restarting containers..."
+              /snap/bin/docker compose restart
+              ;;
+            stop)
+              echo "🛑 Stopping containers..."
+              /snap/bin/docker compose down
+              ;;
+            start)
+              echo "🚀 Starting containers..."
+              /snap/bin/docker compose up -d
+              ;;
+            status)
+              echo "📊 Container status..."
+              ;;
+          esac
+          
+          echo ""
+          echo "📋 Current status:"
+          /snap/bin/docker compose ps
+          
+          if [ "${{ github.event.inputs.action }}" = "status" ] || [ "${{ github.event.inputs.action }}" = "restart" ] || [ "${{ github.event.inputs.action }}" = "start" ]; then
+            echo ""
+            echo "📜 Recent logs:"
+            /snap/bin/docker compose logs --tail=30
+          fi
