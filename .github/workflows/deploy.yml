@@ -50,12 +50,13 @@ jobs:
           echo "⚠️  Build timeout set to 45 minutes"
           # Build with logs streaming and timeout
           timeout 45m /snap/bin/docker compose build --no-cache --progress=plain
+          BUILD_EXIT=$?
           
-          if [ $? -eq 124 ]; then
+          if [ $BUILD_EXIT -eq 124 ]; then
             echo "❌ Docker build timed out after 45 minutes!"
             exit 1
-          elif [ $? -ne 0 ]; then
-            echo "❌ Docker build failed!"
+          elif [ $BUILD_EXIT -ne 0 ]; then
+            echo "❌ Docker build failed with exit code $BUILD_EXIT!"
             exit 1
           fi
           
