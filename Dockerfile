@@ -50,12 +50,34 @@ RUN verapdf --version || echo "veraPDF installed"
 
 # Prepare Java service build context
 RUN apt-get update && apt-get install -y maven --no-install-recommends && rm -rf /var/lib/apt/lists/*
+
+# Create Maven settings with multiple mirrors for reliability
+RUN mkdir -p /root/.m2 && \
+    echo '<?xml version="1.0" encoding="UTF-8"?>' > /root/.m2/settings.xml && \
+    echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"' >> /root/.m2/settings.xml && \
+    echo 'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' >> /root/.m2/settings.xml && \
+    echo 'xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">' >> /root/.m2/settings.xml && \
+    echo '<mirrors>' >> /root/.m2/settings.xml && \
+    echo '<mirror>' >> /root/.m2/settings.xml && \
+    echo '<id>central</id>' >> /root/.m2/settings.xml && \
+    echo '<url>https://repo1.maven.org/maven2</url>' >> /root/.m2/settings.xml && \
+    echo '<mirrorOf>central</mirrorOf>' >> /root/.m2/settings.xml && \
+    echo '</mirror>' >> /root/.m2/settings.xml && \
+    echo '<mirror>' >> /root/.m2/settings.xml && \
+    echo '<id>aliyun</id>' >> /root/.m2/settings.xml && \
+    echo '<url>https://maven.aliyun.com/repository/public</url>' >> /root/.m2/settings.xml && \
+    echo '<mirrorOf>*</mirrorOf>' >> /root/.m2/settings.xml && \
+    echo '</mirror>' >> /root/.m2/settings.xml && \
+    echo '</mirrors>' >> /root/.m2/settings.xml && \
+    echo '</settings>' >> /root/.m2/settings.xml
+
 COPY java /tmp/java
 RUN cd /tmp/java && \
     mvn clean package -q && \
     cp target/pdfa-3b-service-1.0.0.jar /usr/local/bin/java-pdf-service.jar && \
-    rm -rf /tmp/java && \
-    apt-get remove -y maven && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+    rm -rf /tmp/java
+
+# Keep Maven installed in case rebuild is needed
 
 # Java service will run veraPDF internally for PDF/A-3b creation
 # No need for separate Java service container - everything in one
