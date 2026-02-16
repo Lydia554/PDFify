@@ -279,7 +279,7 @@ public class HTTPServer {
             }
 
             // To section
-            content.setTextMatrix(pageWidth / 2 + 30, boxY + 55);
+            content.newLineAtOffset(pageWidth / 2 - margin - 30, 0);
             content.setFont(font, 11);
             content.showText("BILL TO:");
             content.newLineAtOffset(0, -15);
@@ -321,13 +321,13 @@ public class HTTPServer {
             content.setFont(font, 10);
             content.newLineAtOffset(margin + 10, tableStartY - 10);
             content.showText("DESCRIPTION");
-            content.setTextMatrix(margin + 300, tableStartY - 10);
+            content.newLineAtOffset(margin + 300 - (margin + 10) - 90, 0);
             content.showText("QTY");
-            content.setTextMatrix(margin + 430, tableStartY - 10);
+            content.newLineAtOffset(margin + 430 - (margin + 300), 0);
             content.showText("UNIT PRICE");
-            content.setTextMatrix(margin + 500, tableStartY - 10);
+            content.newLineAtOffset(margin + 500 - (margin + 430), 0);
             content.showText("TAX");
-            content.setTextMatrix(pageWidth - margin - 80, tableStartY - 10);
+            content.newLineAtOffset(pageWidth - margin - 80 - (margin + 500), 0);
             content.showText("TOTAL");
             content.endText();
 
@@ -350,14 +350,14 @@ public class HTTPServer {
                     content.setFont(font, 9);
                     content.newLineAtOffset(margin + 10, itemY);
                     content.showText(truncateText(item.name, 40));
-                    content.setTextMatrix(margin + 300, itemY);
+                    content.newLineAtOffset(margin + 300 - (margin + 10) - truncateText(item.name, 40).length() * 5, 0);
                     content.showText(String.valueOf(item.quantity));
-                    content.setTextMatrix(margin + 430, itemY);
+                    content.newLineAtOffset(80, 0);
                     content.showText(String.format("%.2f %s", item.price, data.currency));
-                    content.setTextMatrix(margin + 500, itemY);
+                    content.newLineAtOffset(70, 0);
                     double lineTax = item.quantity * item.price * (data.vatRate / 100.0);
                     content.showText(String.format("%.2f", lineTax));
-                    content.setTextMatrix(pageWidth - margin - 80, itemY);
+                    content.newLineAtOffset(pageWidth - margin - 80 - (margin + 500), 0);
                     double lineTotal = item.quantity * item.price;
                     content.showText(String.format("%.2f %s", lineTotal, data.currency));
                     content.endText();
@@ -408,33 +408,33 @@ public class HTTPServer {
             float totalValueX = pageWidth - margin - 10;
 
             content.setFont(font, 10);
-            content.setTextMatrix(totalLabelX, totalsY - 15);
+            content.newLineAtOffset(totalLabelX - margin, 0);
             content.showText("Subtotal:");
-            content.setTextMatrix(totalValueX, totalsY - 15);
+            content.newLineAtOffset(totalValueX - totalLabelX, 0);
             content.showText(String.format("%.2f %s", data.subtotal, data.currency));
 
             if (data.tax > 0) {
-                content.setTextMatrix(totalLabelX, totalsY - 35);
+                content.newLineAtOffset(totalLabelX - totalValueX, 0);
                 content.showText(String.format("VAT (%.0f%%):", data.vatRate));
-                content.setTextMatrix(totalValueX, totalsY - 35);
+                content.newLineAtOffset(totalValueX - totalLabelX, 0);
                 content.showText(String.format("%.2f %s", data.tax, data.currency));
             }
 
             // Total - highlighted
             content.setFont(font, 14);
-            content.setTextMatrix(totalLabelX, totalsY - 60);
+            content.newLineAtOffset(totalLabelX - totalValueX, 0);
             content.showText("TOTAL:");
-            content.setTextMatrix(totalValueX, totalsY - 60);
+            content.newLineAtOffset(totalValueX - totalLabelX, 0);
             content.showText(String.format("%.2f %s", data.total, data.currency));
 
             // ========== PAYMENT INFO ==========
             content.setFont(font, 9);
             float payY = totalsY - 100;
-            content.setTextMatrix(margin, payY);
+            content.newLineAtOffset(-(totalValueX - margin), payY - (totalsY - 60));
             content.showText("Payment Terms: " + data.paymentTerms);
-            content.setTextMatrix(margin, payY - 15);
+            content.newLineAtOffset(0, -15);
             content.showText("IBAN: " + data.iban);
-            content.setTextMatrix(margin, payY - 30);
+            content.newLineAtOffset(0, -15);
             content.showText("BIC: " + data.bic);
 
             content.endText();
