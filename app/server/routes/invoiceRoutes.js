@@ -1,8 +1,6 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
 const archiver = require("archiver");
-const fetch = require("node-fetch");
-if (!globalThis.fetch) globalThis.fetch = fetch;
 
 const router = express.Router();
 const User = require("../models/User");
