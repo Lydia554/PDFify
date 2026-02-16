@@ -7,6 +7,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.color.PDOutputIntent;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
 import org.apache.pdfbox.pdmodel.PDDocumentNameDictionary;
@@ -198,8 +199,16 @@ public class HTTPServer {
             document.addPage(page);
 
             // Load and embed TrueType font from resources
-            InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
-            PDType0Font font = PDType0Font.load(document, fontStream);
+            // Try to load custom font, fallback to standard font if not available
+            org.apache.pdfbox.pdmodel.font.PDFont font;
+            try {
+                InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
+                font = PDType0Font.load(document, fontStream);
+            } catch (Exception e) {
+                // Fallback to standard Helvetica font if custom font fails
+                System.out.println("[" + getTimestamp() + "] Custom font not available, using standard Helvetica font");
+                font = PDType1Font.HELVETICA;
+            }
 
             // Create content stream
             PDPageContentStream content = new PDPageContentStream(document, page);
