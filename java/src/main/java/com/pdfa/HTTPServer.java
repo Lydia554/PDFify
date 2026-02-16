@@ -68,10 +68,11 @@ public class HTTPServer {
         // Status endpoint
         get("/status", (req, res) -> {
             res.type("application/json");
+            long uptime = java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime();
             return gson.toJson(Map.of(
                 "status", "running",
                 "version", "1.0.0",
-                "uptime", Runtime.getRuntime().startTime()
+                "uptime", uptime
             ));
         });
 
