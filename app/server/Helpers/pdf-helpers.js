@@ -36,7 +36,11 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
                 orderId: invoiceData.orderId || 'INV-' + Date.now(),
                 date: invoiceData.date || new Date().toISOString().split('T')[0],
                 customerName: invoiceData.customerName || 'Customer',
+                customerEmail: invoiceData.customerEmail || '',
+                customerAddress: invoiceData.customerAddress || '',
                 companyName: invoiceData.companyName || 'Your Company',
+                shopName: invoiceData.shopName || '',
+                shopAddress: invoiceData.shopAddress || '',
                 items: invoiceData.items || [],
                 subtotal: invoiceData.subtotal || 0,
                 tax: invoiceData.tax || 0,
@@ -56,12 +60,47 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/pdf'
             },
-            responseType: 'arraybuffer'
+            responseType: 'arraybuffer',
+            // Important: Don't throw on error status so we can read the error response
+            validateStatus: function (status) {
+                return status >= 200 && status < 600; // Allow all responses to be read
+            }
         });
 
-        // Check for JSON-RPC error
-        if (response.data && response.data.error) {
-            throw new Error(`Java service error: ${response.data.error.message}`);
+        // Check if the response indicates an error
+        if (response.status !== 200) {
+            // Try to parse error response as JSON
+            let errorMessage = `Java service returned status ${response.status}`;
+
+            try {
+                // The response is an arraybuffer, try to decode it
+                const responseText = Buffer.from(response.data).toString('utf-8');
+                const errorData = JSON.parse(responseText);
+
+                if (errorData.error) {
+                    errorMessage = `Java service error: ${errorData.error}`;
+                }
+            } catch (parseError) {
+                // If we can't parse as JSON, use the status code
+                console.warn('[Java Service] Could not parse error response as JSON');
+            }
+
+            console.error('[Java Service]', errorMessage);
+            throw new Error(errorMessage);
+        }
+
+        // Check for JSON-RPC error in successful response
+        if (response.data && response.data.length > 0) {
+            try {
+                const responseText = Buffer.from(response.data).toString('utf-8');
+                const jsonData = JSON.parse(responseText);
+
+                if (jsonData.error) {
+                    throw new Error(`Java service error: ${jsonData.error}`);
+                }
+            } catch (parseError) {
+                // Not JSON, so it's probably the PDF binary data - this is expected
+            }
         }
 
         console.log(`[Java Service] PDF created successfully, size: ${response.data.length} bytes`);

@@ -79,15 +79,38 @@ public class HTTPServer {
 
         // Create PDF endpoint
         post("/create", (req, res) -> {
+            String requestId = "req-" + System.currentTimeMillis();
+            long startTime = System.currentTimeMillis();
+
             try {
+                log(requestId, "Received PDF creation request");
+
                 // Parse JSON-RPC request
-                JsonObject requestBody = JsonParser.parseString(req.body()).getAsJsonObject();
-                String method = requestBody.get("method").getAsString();
-                JsonObject params = requestBody.getAsJsonObject("params");
+                JsonObject requestBody;
+                try {
+                    requestBody = JsonParser.parseString(req.body()).getAsJsonObject();
+                } catch (Exception e) {
+                    logError(requestId, "Invalid JSON request body", e);
+                    res.status(400);
+                    res.type("application/json");
+                    return createErrorResponse("Invalid JSON: " + e.getMessage());
+                }
+
+                String method = requestBody.has("method") ? requestBody.get("method").getAsString() : "";
+                JsonObject params = requestBody.has("params") && requestBody.get("params").isJsonObject()
+                    ? requestBody.getAsJsonObject("params")
+                    : new JsonObject();
 
                 if (!"createPDFA3B".equals(method)) {
+                    logError(requestId, "Unknown method: " + method, null);
                     res.status(400);
-                    return gson.toJson(Map.of("error", "Unknown method: " + method));
+                    res.type("application/json");
+                    return createErrorResponse("Unknown method: " + method);
+                }
+
+                // Validate required parameters
+                if (params.has("orderId")) {
+                    log(requestId, "Creating PDF for order: " + params.get("orderId").getAsString());
                 }
 
                 // Create invoice data from params
@@ -110,6 +133,12 @@ public class HTTPServer {
                 invoice.paymentTerms = params.has("paymentTerms") ? params.get("paymentTerms").getAsString() : "";
                 invoice.creator = params.has("creator") ? params.get("creator").getAsString() : "";
 
+                // Parse locale (for future use)
+                if (params.has("locale") && params.get("locale").isJsonObject()) {
+                    JsonObject localeObj = params.getAsJsonObject("locale");
+                    invoice.locale = localeObj.has("language") ? localeObj.get("language").getAsString() : "en";
+                }
+
                 // Parse items
                 if (params.has("items") && params.get("items").isJsonArray()) {
                     invoice.items = new ArrayList<>();
@@ -125,8 +154,13 @@ public class HTTPServer {
                     invoice.items = new ArrayList<>();
                 }
 
+                log(requestId, "Invoice data parsed successfully, items: " + invoice.items.size());
+
                 // Generate PDF to byte array
                 byte[] pdfBytes = createPdfA3B(invoice);
+
+                long duration = System.currentTimeMillis() - startTime;
+                log(requestId, "PDF created successfully in " + duration + "ms, size: " + pdfBytes.length + " bytes");
 
                 // Return PDF
                 res.type("application/pdf");
@@ -134,11 +168,11 @@ public class HTTPServer {
                 return pdfBytes;
 
             } catch (Exception e) {
-                e.printStackTrace();
+                long duration = System.currentTimeMillis() - startTime;
+                logError(requestId, "PDF creation failed after " + duration + "ms", e);
                 res.status(500);
-                JsonObject error = new JsonObject();
-                error.addProperty("error", e.getMessage());
-                return error.toString();
+                res.type("application/json");
+                return createErrorResponse(e.getMessage());
             }
         });
 
@@ -463,11 +497,51 @@ public class HTTPServer {
      * Helper method to load resources from classpath
      */
     private static InputStream getResourceAsStream(String resourceName) {
+        System.out.println("[" + getTimestamp() + "] Loading resource: " + resourceName);
         InputStream is = HTTPServer.class.getClassLoader().getResourceAsStream(resourceName);
         if (is == null) {
-            throw new RuntimeException("Resource not found: " + resourceName);
+            String error = "Resource not found: " + resourceName + ". Make sure it's in src/main/resources/";
+            System.err.println("[" + getTimestamp() + "] ERROR: " + error);
+            throw new RuntimeException(error);
         }
+        System.out.println("[" + getTimestamp() + "] Resource loaded successfully: " + resourceName);
         return is;
+    }
+
+    /**
+     * Log informational message
+     */
+    private static void log(String requestId, String message) {
+        System.out.println("[" + getTimestamp() + "] [" + requestId + "] " + message);
+    }
+
+    /**
+     * Log error message with exception
+     */
+    private static void logError(String requestId, String message, Throwable e) {
+        System.err.println("[" + getTimestamp() + "] [" + requestId + "] ERROR: " + message);
+        if (e != null) {
+            System.err.println("[" + getTimestamp() + "] [" + requestId + "] Exception: " + e.getClass().getName() + ": " + e.getMessage());
+            // Print stack trace for debugging
+            e.printStackTrace(System.err);
+        }
+    }
+
+    /**
+     * Get current timestamp for logging
+     */
+    private static String getTimestamp() {
+        return java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS"));
+    }
+
+    /**
+     * Create error response JSON
+     */
+    private static String createErrorResponse(String message) {
+        JsonObject error = new JsonObject();
+        error.addProperty("success", false);
+        error.addProperty("error", message != null && !message.isEmpty() ? message : "Unknown error");
+        return gson.toJson(error);
     }
 
     /**
@@ -492,6 +566,7 @@ public class HTTPServer {
         public String bic;
         public String paymentTerms;
         public String creator;
+        public String locale;
     }
 
     public static class LineItem {
