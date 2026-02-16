@@ -6,8 +6,7 @@ import com.google.gson.JsonParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.color.PDOutputIntent;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
 import org.apache.pdfbox.pdmodel.PDDocumentNameDictionary;
@@ -28,6 +27,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.net.URL;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -92,15 +92,23 @@ public class HTTPServer {
 
                 // Create invoice data from params
                 InvoiceData invoice = new InvoiceData();
-                invoice.orderId = params.get("orderId").getAsString();
+                invoice.orderId = params.has("orderId") ? params.get("orderId").getAsString() : "INV-" + System.currentTimeMillis();
                 invoice.date = params.has("date") ? params.get("date").getAsString() : java.time.LocalDate.now().toString();
                 invoice.customerName = params.has("customerName") ? params.get("customerName").getAsString() : "Customer";
+                invoice.customerEmail = params.has("customerEmail") ? params.get("customerEmail").getAsString() : "";
+                invoice.customerAddress = params.has("customerAddress") ? params.get("customerAddress").getAsString() : "";
                 invoice.companyName = params.has("companyName") ? params.get("companyName").getAsString() : "Your Company";
+                invoice.shopName = params.has("shopName") ? params.get("shopName").getAsString() : "";
+                invoice.shopAddress = params.has("shopAddress") ? params.get("shopAddress").getAsString() : "";
                 invoice.currency = params.has("currency") ? params.get("currency").getAsString() : "USD";
                 invoice.total = params.has("total") ? params.get("total").getAsDouble() : 0.0;
                 invoice.vatRate = params.has("vatRate") ? params.get("vatRate").getAsDouble() : 21.0;
                 invoice.subtotal = params.has("subtotal") ? params.get("subtotal").getAsDouble() : 0.0;
                 invoice.tax = params.has("tax") ? params.get("tax").getAsDouble() : 0.0;
+                invoice.iban = params.has("iban") ? params.get("iban").getAsString() : "";
+                invoice.bic = params.has("bic") ? params.get("bic").getAsString() : "";
+                invoice.paymentTerms = params.has("paymentTerms") ? params.get("paymentTerms").getAsString() : "";
+                invoice.creator = params.has("creator") ? params.get("creator").getAsString() : "";
 
                 // Parse items
                 if (params.has("items") && params.get("items").isJsonArray()) {
@@ -108,11 +116,13 @@ public class HTTPServer {
                     params.getAsJsonArray("items").forEach(item -> {
                         JsonObject itemObj = item.getAsJsonObject();
                         LineItem line = new LineItem();
-                        line.name = itemObj.get("name").getAsString();
+                        line.name = itemObj.has("name") ? itemObj.get("name").getAsString() : "Item";
                         line.quantity = itemObj.has("quantity") ? itemObj.get("quantity").getAsInt() : 1;
                         line.price = itemObj.has("price") ? itemObj.get("price").getAsDouble() : 0.0;
                         invoice.items.add(line);
                     });
+                } else {
+                    invoice.items = new ArrayList<>();
                 }
 
                 // Generate PDF to byte array
@@ -153,104 +163,188 @@ public class HTTPServer {
             PDPage page = new PDPage();
             document.addPage(page);
 
+            // Load and embed TrueType font from resources
+            InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
+            PDType0Font font = PDType0Font.load(document, fontStream);
+
             // Create content stream
             PDPageContentStream content = new PDPageContentStream(document, page);
 
-            // Use built-in Helvetica font to avoid file dependencies
-            PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
-
             // Position tracking
-            float yPosition = 700;
+            float yPosition = 750;
             float leftMargin = 50;
-            float lineHeight = 20;
+            float rightMargin = 400;
+            float lineHeight = 18;
 
             content.beginText();
-            content.setFont(font, 16);
 
-            // Invoice title
+            // ========== HEADER SECTION ==========
+            // Invoice title (top left)
+            content.setFont(font, 24);
             content.newLineAtOffset(leftMargin, yPosition);
             content.showText("INVOICE");
-            yPosition -= lineHeight * 2;
+            yPosition -= 35;
 
-            // Order ID
-            content.setFont(font, 12);
-            content.newLineAtOffset(50, yPosition);
-            content.showText("Order ID: " + data.orderId);
-            yPosition -= lineHeight;
-
-            // Date
-            content.newLineAtOffset(50, yPosition);
-            content.showText("Date: " + data.date);
-            yPosition -= lineHeight * 2;
-
-            // From
-            content.setFont(font, 11);
-            content.newLineAtOffset(50, yPosition);
-            content.showText("FROM:");
-            content.newLineAtOffset(50, yPosition - lineHeight);
-            content.setFont(font, 12);
-            content.showText(data.companyName);
-            yPosition -= lineHeight * 3;
-
-            // To
-            content.setFont(font, 11);
-            content.newLineAtOffset(50, yPosition);
-            content.showText("TO:");
-            content.newLineAtOffset(50, yPosition - lineHeight);
-            content.setFont(font, 12);
-            content.showText(data.customerName);
-            yPosition -= lineHeight * 3;
-
-            // Line items header
-            content.setFont(font, 11);
-            content.newLineAtOffset(50, yPosition);
-            content.showText("--------------------------------------------------------------------------------");
-            yPosition -= lineHeight;
-            content.newLineAtOffset(50, yPosition);
-            content.showText(String.format("%-40s %8s %10s %10s", "Description", "Qty", "Price", "Total"));
-            yPosition -= lineHeight;
-            content.newLineAtOffset(50, yPosition);
-            content.showText("--------------------------------------------------------------------------------");
-
-            // Line items
-            yPosition -= lineHeight;
+            // Order info (top right)
             content.setFont(font, 10);
-            if (data.items != null) {
-                for (LineItem item : data.items) {
-                    content.newLineAtOffset(50, yPosition);
-                    double lineTotal = item.quantity * item.price;
-                    content.showText(String.format("%-40s %8d %10.2f %10.2f",
-                        item.name, item.quantity, item.price, lineTotal));
-                    yPosition -= lineHeight * 1.5;
+            float orderInfoX = 400;
+            float orderInfoY = 750;
+            content.newLineAtOffset(orderInfoX - leftMargin, orderInfoY - yPosition - 35);
+            content.showText("Invoice Number: " + data.orderId);
+            content.newLineAtOffset(0, -lineHeight);
+            content.showText("Date: " + data.date);
+            if (data.creator != null && !data.creator.isEmpty()) {
+                content.newLineAtOffset(0, -lineHeight);
+                content.showText("Created by: " + data.creator);
+            }
+
+            // Reset to left side
+            yPosition = 680;
+
+            // ========== FROM / COMPANY SECTION ==========
+            content.setFont(font, 11);
+            content.newLineAtOffset(leftMargin - orderInfoX, yPosition - 750);
+            content.showText("FROM:");
+            yPosition -= lineHeight;
+
+            content.setFont(font, 11);
+            String companyName = data.companyName != null ? data.companyName : "";
+            content.newLineAtOffset(leftMargin - 400, -lineHeight);
+            content.showText(truncateText(companyName, 50));
+
+            if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
+                yPosition -= lineHeight;
+                content.newLineAtOffset(0, 0);
+                content.showText(truncateText(data.shopAddress, 50));
+            }
+
+            // ========== TO / CUSTOMER SECTION ==========
+            yPosition -= 30;
+            content.setFont(font, 11);
+            content.newLineAtOffset(0, yPosition - 640);
+            content.showText("BILL TO:");
+            yPosition -= lineHeight;
+
+            content.setFont(font, 11);
+            String customerName = data.customerName != null ? data.customerName : "";
+            content.newLineAtOffset(leftMargin - 400, -lineHeight);
+            content.showText(truncateText(customerName, 50));
+
+            if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
+                yPosition -= lineHeight;
+                content.newLineAtOffset(0, 0);
+                // Split address into multiple lines if needed
+                String[] addressLines = splitText(data.customerAddress, 50);
+                for (String line : addressLines) {
+                    content.showText(line);
+                    yPosition -= lineHeight;
+                    if (addressLines.length > 1 && !line.equals(addressLines[addressLines.length - 1])) {
+                        content.newLineAtOffset(0, -lineHeight);
+                    }
                 }
             }
 
-            // Total line
-            yPosition += lineHeight;
-            content.setFont(font, 11);
-            content.newLineAtOffset(50, yPosition);
-            content.showText("--------------------------------------------------------------------------------");
-            yPosition -= lineHeight * 2;
+            if (data.customerEmail != null && !data.customerEmail.isEmpty()) {
+                yPosition -= lineHeight;
+                content.newLineAtOffset(0, 0);
+                content.showText("Email: " + data.customerEmail);
+            }
+
+            // ========== LINE ITEMS SECTION ==========
+            yPosition -= 30;
+
+            // Header line
+            content.setFont(font, 10);
+            content.newLineAtOffset(leftMargin - 400, yPosition - 600);
+            content.showText("====================================================================================================");
+            yPosition -= lineHeight;
+
+            // Column headers
+            content.setFont(font, 10);
+            content.newLineAtOffset(0, yPosition - 585);
+            content.showText(String.format("%-45s %6s %12s %12s %12s", "Description", "Qty", "Unit Price", "Tax", "Total"));
+            yPosition -= lineHeight;
+
+            // Header line
+            content.newLineAtOffset(0, yPosition - 570);
+            content.showText("====================================================================================================");
+            yPosition -= lineHeight;
+
+            // Items
+            content.setFont(font, 9);
+            if (data.items != null && !data.items.isEmpty()) {
+                for (LineItem item : data.items) {
+                    content.newLineAtOffset(leftMargin - 400, yPosition - 555);
+
+                    String name = item.name != null ? item.name : "";
+                    double lineTotal = item.quantity * item.price;
+                    double lineTax = lineTotal * (data.vatRate / 100.0);
+
+                    content.showText(String.format("%-45s %6d %12.2f %12.2f %12.2f",
+                        truncateText(name, 45),
+                        item.quantity,
+                        item.price,
+                        lineTax,
+                        lineTotal));
+                    yPosition -= lineHeight * 1.3;
+                }
+            }
+
+            // Bottom line
+            yPosition += 10;
+            content.setFont(font, 10);
+            content.newLineAtOffset(leftMargin - 400, yPosition - 520);
+            content.showText("====================================================================================================");
+
+            // ========== TOTALS SECTION ==========
+            yPosition -= 30;
 
             // Subtotal
             if (data.subtotal > 0) {
-                content.setFont(font, 12);
-                content.newLineAtOffset(400, yPosition);
-                content.showText(String.format("Subtotal: %.2f %s", data.subtotal, data.currency));
+                content.setFont(font, 10);
+                content.newLineAtOffset(rightMargin, yPosition - 500);
+                content.showText(String.format("Subtotal: %40.2f %s", data.subtotal, data.currency));
                 yPosition -= lineHeight;
             }
 
             // Tax
             if (data.tax > 0) {
-                content.newLineAtOffset(400, yPosition);
-                content.showText(String.format("Tax (%.0f%%): %.2f %s", data.vatRate, data.tax, data.currency));
+                content.newLineAtOffset(0, yPosition - 485);
+                content.showText(String.format("VAT (%.0f%%): %41.2f %s", data.vatRate, data.tax, data.currency));
                 yPosition -= lineHeight;
             }
 
-            // Final total
+            // Total
             content.setFont(font, 14);
-            content.newLineAtOffset(400, yPosition);
-            content.showText(String.format("TOTAL: %.2f %s", data.total, data.currency));
+            content.newLineAtOffset(0, yPosition - 468);
+            content.showText(String.format("TOTAL: %44.2f %s", data.total, data.currency));
+
+            // ========== PAYMENT INFORMATION SECTION ==========
+            yPosition -= 50;
+
+            content.setFont(font, 10);
+            content.newLineAtOffset(leftMargin - rightMargin, yPosition - 420);
+            content.showText("PAYMENT INFORMATION:");
+
+            yPosition -= lineHeight * 1.5;
+            content.setFont(font, 9);
+
+            if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
+                content.newLineAtOffset(leftMargin - 400, yPosition - 405);
+                content.showText("Payment Terms: " + data.paymentTerms);
+                yPosition -= lineHeight;
+            }
+
+            if (data.iban != null && !data.iban.isEmpty()) {
+                content.newLineAtOffset(0, yPosition - 390);
+                content.showText("IBAN: " + data.iban);
+                yPosition -= lineHeight;
+            }
+
+            if (data.bic != null && !data.bic.isEmpty()) {
+                content.newLineAtOffset(0, yPosition - 375);
+                content.showText("BIC/SWIFT: " + data.bic);
+            }
 
             content.endText();
             content.close();
@@ -268,22 +362,54 @@ public class HTTPServer {
     }
 
     /**
+     * Truncate text to fit within maximum width
+     */
+    private static String truncateText(String text, int maxLength) {
+        if (text == null) return "";
+        return text.length() > maxLength ? text.substring(0, maxLength - 3) + "..." : text;
+    }
+
+    /**
+     * Split text into multiple lines
+     */
+    private static String[] splitText(String text, int maxLength) {
+        if (text == null) return new String[0];
+        String[] words = text.split(" ");
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        StringBuilder currentLine = new StringBuilder();
+
+        for (String word : words) {
+            if (currentLine.length() + word.length() + 1 <= maxLength) {
+                if (currentLine.length() > 0) {
+                    currentLine.append(" ");
+                }
+                currentLine.append(word);
+            } else {
+                if (currentLine.length() > 0) {
+                    lines.add(currentLine.toString());
+                }
+                currentLine = new StringBuilder(word);
+            }
+        }
+
+        if (currentLine.length() > 0) {
+            lines.add(currentLine.toString());
+        }
+
+        return lines.toArray(new String[0]);
+    }
+
+    /**
      * Add OutputIntent (ICC profile) for PDF/A-3b compliance
      */
     private static void addOutputIntent(PDDocument document) throws IOException {
-        try {
-            // Try to use sRGB from URL
-            InputStream colorStream = new java.net.URL("https://www.color.org/sRGB.icc").openStream();
-            PDOutputIntent intent = new PDOutputIntent(document, colorStream);
-            intent.setOutputCondition("sRGB IEC61966-2.1");
-            intent.setOutputConditionIdentifier("sRGB IEC61966-2.1");
-            intent.setRegistryName("http://www.color.org");
-            document.getDocumentCatalog().addOutputIntent(intent);
-            System.out.println("OutputIntent added from URL");
-        } catch (Exception e) {
-            System.out.println("WARNING: Could not load ICC profile: " + e.getMessage());
-            // Continue without ICC profile - PDF may not be fully compliant but will still work
-        }
+        InputStream colorStream = getResourceAsStream("sRGB.icc");
+        PDOutputIntent intent = new PDOutputIntent(document, colorStream);
+        intent.setOutputCondition("sRGB IEC61966-2.1");
+        intent.setOutputConditionIdentifier("sRGB IEC61966-2.1");
+        intent.setRegistryName("http://www.color.org");
+        document.getDocumentCatalog().addOutputIntent(intent);
+        System.out.println("OutputIntent added from resources");
     }
 
     /**
@@ -334,19 +460,38 @@ public class HTTPServer {
     }
 
     /**
+     * Helper method to load resources from classpath
+     */
+    private static InputStream getResourceAsStream(String resourceName) {
+        InputStream is = HTTPServer.class.getClassLoader().getResourceAsStream(resourceName);
+        if (is == null) {
+            throw new RuntimeException("Resource not found: " + resourceName);
+        }
+        return is;
+    }
+
+    /**
      * Data class for invoice information
      */
     public static class InvoiceData {
         public String orderId;
         public String date;
         public String customerName;
+        public String customerEmail;
+        public String customerAddress;
         public String companyName;
+        public String shopName;
+        public String shopAddress;
         public List<LineItem> items;
         public double subtotal;
         public double tax;
         public double total;
         public String currency;
         public double vatRate;
+        public String iban;
+        public String bic;
+        public String paymentTerms;
+        public String creator;
     }
 
     public static class LineItem {
