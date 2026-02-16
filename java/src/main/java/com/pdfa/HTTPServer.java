@@ -7,7 +7,6 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.color.PDOutputIntent;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
 import org.apache.pdfbox.pdmodel.PDDocumentNameDictionary;
@@ -198,8 +197,9 @@ public class HTTPServer {
             PDPage page = new PDPage();
             document.addPage(page);
 
-            // Load font - use standard Type1 Times Roman font for reliability (PDFBox 3.x)
-            org.apache.pdfbox.pdmodel.font.PDFont font = org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_ROMAN;
+            // Load TrueType font from resources
+            InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
+            PDType0Font font = PDType0Font.load(document, fontStream);
 
             // Create content stream
             PDPageContentStream content = new PDPageContentStream(document, page);
