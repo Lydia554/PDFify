@@ -198,17 +198,8 @@ public class HTTPServer {
             PDPage page = new PDPage();
             document.addPage(page);
 
-            // Load and embed TrueType font from resources
-            // Try to load custom font, fallback to standard font if not available
-            org.apache.pdfbox.pdmodel.font.PDFont font;
-            try {
-                InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
-                font = PDType0Font.load(document, fontStream);
-            } catch (Exception e) {
-                // Fallback to standard Helvetica font if custom font fails
-                System.out.println("[" + getTimestamp() + "] Custom font not available, using standard Helvetica font");
-                font = PDType1Font.HELVETICA;
-            }
+            // Load font - use standard Type1 Times Roman font for reliability (PDFBox 3.x)
+            org.apache.pdfbox.pdmodel.font.PDFont font = org.apache.pdfbox.pdmodel.font.PDType1Font.TIMES_ROMAN;
 
             // Create content stream
             PDPageContentStream content = new PDPageContentStream(document, page);

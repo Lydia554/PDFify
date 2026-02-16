@@ -1,5 +1,10 @@
 {
   "enabledPlugins": {
     "ralph-wiggum@claude-code-plugins": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)"
+    ]
   }
 }
