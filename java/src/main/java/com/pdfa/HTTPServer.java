@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.graphics.color.PDOutputIntent;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
@@ -156,7 +157,7 @@ public class HTTPServer {
             PDPageContentStream content = new PDPageContentStream(document, page);
 
             // Use built-in Helvetica font to avoid file dependencies
-            PDType1Font font = PDType1Font.HELVETICA;
+            PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
 
             // Position tracking
             float yPosition = 700;
