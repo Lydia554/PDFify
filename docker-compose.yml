@@ -10,12 +10,29 @@ services:
       - .env
     environment:
       PUPPETEER_SKIP_DOWNLOAD: "true"
+      JAVA_PDF_SERVICE_URL: "http://java-pdf-service:8080"
     cap_add:
       - SYS_ADMIN
     depends_on:
       - mongo
+      - java-pdf-service
     networks:
       - pdf-api-network
+
+  java-pdf-service:
+    build:
+      context: ./java
+      dockerfile: Dockerfile
+    container_name: java-pdf-service
+    ports:
+      - "8080:8080"
+    networks:
+      - pdf-api-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   mongo:
     image: mongo:5.0
