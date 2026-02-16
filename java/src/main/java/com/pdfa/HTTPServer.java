@@ -186,7 +186,7 @@ public class HTTPServer {
     }
 
     /**
-     * Create PDF/A-3b invoice as byte array
+     * Create PDF/A-3b invoice as byte array with improved design
      */
     private static byte[] createPdfA3B(InvoiceData data) throws IOException {
         try (PDDocument document = new PDDocument()) {
@@ -194,191 +194,248 @@ public class HTTPServer {
             addOutputIntent(document);
 
             // Add page
-            PDPage page = new PDPage();
+            PDPage page = new PDPage(PDPage.A4);
             document.addPage(page);
 
             // Load TrueType font from resources
             InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
             PDType0Font font = PDType0Font.load(document, fontStream);
 
+            // Page dimensions
+            float pageWidth = PDPage.A4.getMediaBox().getWidth();
+            float pageHeight = PDPage.A4.getMediaBox().getHeight();
+            float margin = 50;
+            float currentY = pageHeight - margin;
+
             // Create content stream
             PDPageContentStream content = new PDPageContentStream(document, page);
 
-            // Position tracking
-            float yPosition = 750;
-            float leftMargin = 50;
-            float rightMargin = 400;
-            float lineHeight = 18;
+            // ========== HEADER WITH BACKGROUND ==========
+            // Draw header background bar
+            content.setNonStrokingColor(0.95f, 0.97f, 1.0f);
+            content.addRect(margin, pageHeight - 100, pageWidth - 2 * margin, 100);
+            content.fill();
+            content.setNonStrokingColor(0, 0, 0);
 
             content.beginText();
 
-            // ========== HEADER SECTION ==========
-            // Invoice title (top left)
-            content.setFont(font, 24);
-            content.newLineAtOffset(leftMargin, yPosition);
+            // Large INVOICE text
+            content.setFont(font, 36);
+            content.newLineAtOffset(margin, pageHeight - 65);
             content.showText("INVOICE");
-            yPosition -= 35;
-
-            // Order info (top right)
+            content.newLineAtOffset(0, -25);
             content.setFont(font, 10);
-            float orderInfoX = 400;
-            float orderInfoY = 750;
-            content.newLineAtOffset(orderInfoX - leftMargin, orderInfoY - yPosition - 35);
-            content.showText("Invoice Number: " + data.orderId);
-            content.newLineAtOffset(0, -lineHeight);
+            content.showText(data.orderId);
+            content.newLineAtOffset(0, -15);
             content.showText("Date: " + data.date);
-            if (data.creator != null && !data.creator.isEmpty()) {
-                content.newLineAtOffset(0, -lineHeight);
-                content.showText("Created by: " + data.creator);
-            }
 
-            // Reset to left side
-            yPosition = 680;
-
-            // ========== FROM / COMPANY SECTION ==========
-            content.setFont(font, 11);
-            content.newLineAtOffset(leftMargin - orderInfoX, yPosition - 750);
-            content.showText("FROM:");
-            yPosition -= lineHeight;
-
-            content.setFont(font, 11);
-            String companyName = data.companyName != null ? data.companyName : "";
-            content.newLineAtOffset(leftMargin - 400, -lineHeight);
-            content.showText(truncateText(companyName, 50));
-
+            // Company info on right side
+            float rightX = pageWidth - margin - 150;
+            float currentX = rightX - (margin + 400);
+            content.newLineAtOffset(currentX, 50);
+            content.setFont(font, 12);
+            content.showText(data.companyName);
+            content.newLineAtOffset(0, -14);
+            content.setFont(font, 9);
             if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
-                yPosition -= lineHeight;
-                content.newLineAtOffset(0, 0);
-                content.showText(truncateText(data.shopAddress, 50));
+                String[] addrLines = splitText(data.shopAddress, 35);
+                for (String line : addrLines) {
+                    content.showText(line);
+                    content.newLineAtOffset(0, -12);
+                }
             }
 
-            // ========== TO / CUSTOMER SECTION ==========
-            yPosition -= 30;
-            content.setFont(font, 11);
-            content.newLineAtOffset(0, yPosition - 640);
-            content.showText("BILL TO:");
-            yPosition -= lineHeight;
+            content.endText();
 
-            content.setFont(font, 11);
-            String customerName = data.customerName != null ? data.customerName : "";
-            content.newLineAtOffset(leftMargin - 400, -lineHeight);
-            content.showText(truncateText(customerName, 50));
+            // ========== FROM / TO SECTIONS WITH BOXES ==========
+            currentY = pageHeight - 200;
 
-            if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
-                yPosition -= lineHeight;
-                content.newLineAtOffset(0, 0);
-                // Split address into multiple lines if needed
-                String[] addressLines = splitText(data.customerAddress, 50);
-                for (String line : addressLines) {
-                    content.showText(line);
-                    yPosition -= lineHeight;
-                    if (addressLines.length > 1 && !line.equals(addressLines[addressLines.length - 1])) {
-                        content.newLineAtOffset(0, -lineHeight);
+            // Draw section boxes
+            content.setLineWidth(0.5f);
+            content.setStrokingColor(0.7f, 0.7f, 0.7f);
+            float boxY = currentY - 70;
+            content.addRect(margin, boxY, pageWidth / 2 - margin - 20, 70);
+            content.stroke();
+            content.addRect(pageWidth / 2 + 20, boxY, pageWidth / 2 - margin - 20, 70);
+            content.stroke();
+            content.setStrokingColor(0, 0, 0);
+
+            content.beginText();
+            content.setFont(font, 11);
+            content.newLineAtOffset(margin + 10, boxY + 55);
+            content.showText("FROM:");
+            content.newLineAtOffset(0, -15);
+            content.setFont(font, 10);
+            content.showText(data.companyName);
+            if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
+                content.newLineAtOffset(0, -12);
+                String[] addr = splitText(data.shopAddress, 40);
+                for (int i = 0; i < Math.min(addr.length, 3); i++) {
+                    content.showText(addr[i]);
+                    if (i < addr.length - 1 && i < 2) {
+                        content.newLineAtOffset(0, -12);
                     }
                 }
             }
 
+            // To section
+            content.setTextMatrix(pageWidth / 2 + 30, boxY + 55);
+            content.setFont(font, 11);
+            content.showText("BILL TO:");
+            content.newLineAtOffset(0, -15);
+            content.setFont(font, 10);
+            content.showText(data.customerName);
+            if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
+                content.newLineAtOffset(0, -12);
+                String[] addr = splitText(data.customerAddress, 40);
+                for (int i = 0; i < Math.min(addr.length, 3); i++) {
+                    content.showText(addr[i]);
+                    if (i < addr.length - 1 && i < 2) {
+                        content.newLineAtOffset(0, -12);
+                    }
+                }
+            }
             if (data.customerEmail != null && !data.customerEmail.isEmpty()) {
-                yPosition -= lineHeight;
-                content.newLineAtOffset(0, 0);
-                content.showText("Email: " + data.customerEmail);
+                content.newLineAtOffset(0, -12);
+                content.showText(data.customerEmail);
             }
 
-            // ========== LINE ITEMS SECTION ==========
-            yPosition -= 30;
+            content.endText();
 
-            // Header line
+            // ========== ITEMS TABLE HEADER ==========
+            float tableStartY = boxY - 50;
+
+            // Table header background
+            content.setNonStrokingColor(0.93f, 0.95f, 0.98f);
+            content.addRect(margin, tableStartY - 25, pageWidth - 2 * margin, 25);
+            content.fill();
+            content.setNonStrokingColor(0, 0, 0);
+
+            // Table header line
+            content.setLineWidth(1);
+            content.moveTo(margin, tableStartY);
+            content.lineTo(pageWidth - margin, tableStartY);
+            content.stroke();
+
+            content.beginText();
             content.setFont(font, 10);
-            content.newLineAtOffset(leftMargin - 400, yPosition - 600);
-            content.showText("====================================================================================================");
-            yPosition -= lineHeight;
+            content.newLineAtOffset(margin + 10, tableStartY - 10);
+            content.showText("DESCRIPTION");
+            content.setTextMatrix(margin + 300, tableStartY - 10);
+            content.showText("QTY");
+            content.setTextMatrix(margin + 430, tableStartY - 10);
+            content.showText("UNIT PRICE");
+            content.setTextMatrix(margin + 500, tableStartY - 10);
+            content.showText("TAX");
+            content.setTextMatrix(pageWidth - margin - 80, tableStartY - 10);
+            content.showText("TOTAL");
+            content.endText();
 
-            // Column headers
-            content.setFont(font, 10);
-            content.newLineAtOffset(0, yPosition - 585);
-            content.showText(String.format("%-45s %6s %12s %12s %12s", "Description", "Qty", "Unit Price", "Tax", "Total"));
-            yPosition -= lineHeight;
+            // ========== ITEMS TABLE CONTENT ==========
+            float itemY = tableStartY - 45;
+            int itemCount = 0;
 
-            // Header line
-            content.newLineAtOffset(0, yPosition - 570);
-            content.showText("====================================================================================================");
-            yPosition -= lineHeight;
-
-            // Items
-            content.setFont(font, 9);
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
-                    content.newLineAtOffset(leftMargin - 400, yPosition - 555);
+                    // Alternating row background
+                    if (itemCount % 2 == 0) {
+                        content.setNonStrokingColor(0.98f, 0.98f, 0.98f);
+                        content.addRect(margin, itemY - 5, pageWidth - 2 * margin, 20);
+                        content.fill();
+                        content.setNonStrokingColor(0, 0, 0);
+                    }
 
-                    String name = item.name != null ? item.name : "";
+                    // Item row
+                    content.beginText();
+                    content.setFont(font, 9);
+                    content.newLineAtOffset(margin + 10, itemY);
+                    content.showText(truncateText(item.name, 40));
+                    content.setTextMatrix(margin + 300, itemY);
+                    content.showText(String.valueOf(item.quantity));
+                    content.setTextMatrix(margin + 430, itemY);
+                    content.showText(String.format("%.2f %s", item.price, data.currency));
+                    content.setTextMatrix(margin + 500, itemY);
+                    double lineTax = item.quantity * item.price * (data.vatRate / 100.0);
+                    content.showText(String.format("%.2f", lineTax));
+                    content.setTextMatrix(pageWidth - margin - 80, itemY);
                     double lineTotal = item.quantity * item.price;
-                    double lineTax = lineTotal * (data.vatRate / 100.0);
+                    content.showText(String.format("%.2f %s", lineTotal, data.currency));
+                    content.endText();
 
-                    content.showText(String.format("%-45s %6d %12.2f %12.2f %12.2f",
-                        truncateText(name, 45),
-                        item.quantity,
-                        item.price,
-                        lineTax,
-                        lineTotal));
-                    yPosition -= lineHeight * 1.3;
+                    // Bottom line for this row
+                    content.setLineWidth(0.3f);
+                    content.setStrokingColor(0.85f, 0.85f, 0.85f);
+                    content.moveTo(margin, itemY - 8);
+                    content.lineTo(pageWidth - margin, itemY - 8);
+                    content.stroke();
+                    content.setStrokingColor(0, 0, 0);
+
+                    itemY -= 25;
+                    itemCount++;
+
+                    // New page if needed
+                    if (itemY < 200) {
+                        content.close();
+                        page = new PDPage(PDPage.A4);
+                        document.addPage(page);
+                        content = new PDPageContentStream(document, page);
+                        itemY = pageHeight - 100;
+                    }
                 }
             }
 
-            // Bottom line
-            yPosition += 10;
-            content.setFont(font, 10);
-            content.newLineAtOffset(leftMargin - 400, yPosition - 520);
-            content.showText("====================================================================================================");
+            // Table bottom border
+            content.setLineWidth(1);
+            content.moveTo(margin, itemY + 5);
+            content.lineTo(pageWidth - margin, itemY + 5);
+            content.stroke();
 
             // ========== TOTALS SECTION ==========
-            yPosition -= 30;
+            float totalsY = itemY - 30;
 
-            // Subtotal
-            if (data.subtotal > 0) {
-                content.setFont(font, 10);
-                content.newLineAtOffset(rightMargin, yPosition - 500);
-                content.showText(String.format("Subtotal: %40.2f %s", data.subtotal, data.currency));
-                yPosition -= lineHeight;
-            }
+            // Totals box background
+            content.setNonStrokingColor(0.97f, 0.97f, 0.97f);
+            content.addRect(pageWidth / 2, totalsY - 80, pageWidth / 2 - margin, 80);
+            content.fill();
+            content.setStrokingColor(0.7f, 0.7f, 0.7f);
+            content.setLineWidth(0.5f);
+            content.stroke();
+            content.setStrokingColor(0, 0, 0);
+            content.setNonStrokingColor(0, 0, 0);
 
-            // Tax
-            if (data.tax > 0) {
-                content.newLineAtOffset(0, yPosition - 485);
-                content.showText(String.format("VAT (%.0f%%): %41.2f %s", data.vatRate, data.tax, data.currency));
-                yPosition -= lineHeight;
-            }
-
-            // Total
-            content.setFont(font, 14);
-            content.newLineAtOffset(0, yPosition - 468);
-            content.showText(String.format("TOTAL: %44.2f %s", data.total, data.currency));
-
-            // ========== PAYMENT INFORMATION SECTION ==========
-            yPosition -= 50;
+            content.beginText();
+            float totalLabelX = pageWidth / 2 + 20;
+            float totalValueX = pageWidth - margin - 10;
 
             content.setFont(font, 10);
-            content.newLineAtOffset(leftMargin - rightMargin, yPosition - 420);
-            content.showText("PAYMENT INFORMATION:");
+            content.setTextMatrix(totalLabelX, totalsY - 15);
+            content.showText("Subtotal:");
+            content.setTextMatrix(totalValueX, totalsY - 15);
+            content.showText(String.format("%.2f %s", data.subtotal, data.currency));
 
-            yPosition -= lineHeight * 1.5;
+            if (data.tax > 0) {
+                content.setTextMatrix(totalLabelX, totalsY - 35);
+                content.showText(String.format("VAT (%.0f%%):", data.vatRate));
+                content.setTextMatrix(totalValueX, totalsY - 35);
+                content.showText(String.format("%.2f %s", data.tax, data.currency));
+            }
+
+            // Total - highlighted
+            content.setFont(font, 14);
+            content.setTextMatrix(totalLabelX, totalsY - 60);
+            content.showText("TOTAL:");
+            content.setTextMatrix(totalValueX, totalsY - 60);
+            content.showText(String.format("%.2f %s", data.total, data.currency));
+
+            // ========== PAYMENT INFO ==========
             content.setFont(font, 9);
-
-            if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
-                content.newLineAtOffset(leftMargin - 400, yPosition - 405);
-                content.showText("Payment Terms: " + data.paymentTerms);
-                yPosition -= lineHeight;
-            }
-
-            if (data.iban != null && !data.iban.isEmpty()) {
-                content.newLineAtOffset(0, yPosition - 390);
-                content.showText("IBAN: " + data.iban);
-                yPosition -= lineHeight;
-            }
-
-            if (data.bic != null && !data.bic.isEmpty()) {
-                content.newLineAtOffset(0, yPosition - 375);
-                content.showText("BIC/SWIFT: " + data.bic);
-            }
+            float payY = totalsY - 100;
+            content.setTextMatrix(margin, payY);
+            content.showText("Payment Terms: " + data.paymentTerms);
+            content.setTextMatrix(margin, payY - 15);
+            content.showText("IBAN: " + data.iban);
+            content.setTextMatrix(margin, payY - 30);
+            content.showText("BIC: " + data.bic);
 
             content.endText();
             content.close();
@@ -390,7 +447,7 @@ public class HTTPServer {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             document.save(baos);
 
-            System.out.println("PDF/A-3b created successfully, size: " + baos.size() + " bytes");
+            System.out.println("PDF/A-3b created successfully with improved design, size: " + baos.size() + " bytes");
             return baos.toByteArray();
         }
     }
