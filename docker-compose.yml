@@ -24,8 +24,6 @@ services:
       context: ./java
       dockerfile: Dockerfile
     container_name: java-pdf-service
-    ports:
-      - "8080:8080"
     networks:
       - pdf-api-network
     healthcheck:
