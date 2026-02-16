@@ -194,7 +194,7 @@ public class HTTPServer {
             addOutputIntent(document);
 
             // Add page
-            PDPage page = new PDPage(PDPage.A4);
+            PDPage page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
             document.addPage(page);
 
             // Load TrueType font from resources
@@ -202,8 +202,8 @@ public class HTTPServer {
             PDType0Font font = PDType0Font.load(document, fontStream);
 
             // Page dimensions
-            float pageWidth = PDPage.A4.getMediaBox().getWidth();
-            float pageHeight = PDPage.A4.getMediaBox().getHeight();
+            float pageWidth = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getWidth();
+            float pageHeight = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getHeight();
             float margin = 50;
             float currentY = pageHeight - margin;
 
@@ -376,7 +376,7 @@ public class HTTPServer {
                     // New page if needed
                     if (itemY < 200) {
                         content.close();
-                        page = new PDPage(PDPage.A4);
+                        page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
                         document.addPage(page);
                         content = new PDPageContentStream(document, page);
                         itemY = pageHeight - 100;
