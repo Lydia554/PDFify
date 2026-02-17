@@ -324,7 +324,7 @@ public class HTTPServer {
 
             // ========== TABLE ITEMS ==========
             y = tableTopY - 50;
-            itemCount = 0;
+            int itemCount = 0;
 
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
