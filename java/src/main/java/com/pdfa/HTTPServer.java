@@ -205,8 +205,8 @@ public class HTTPServer {
             PDPageContentStream content = new PDPageContentStream(document, page);
 
             // ========== VIBRANT HEADER ==========
-            // Bright blue header background
-            content.setNonStrokingColor(0.15f, 0.45f, 0.95f);  // Vibrant blue
+            // Cyan header background
+            content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan
             content.addRect(margin, pageHeight - 75, pageWidth - 2 * margin, 65);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
@@ -238,7 +238,7 @@ public class HTTPServer {
             float fromY = pageHeight - 110;
             content.beginText();
             content.setFont(font, 10);
-            content.setNonStrokingColor(0.2f, 0.45f, 0.9f);  // Vibrant blue label
+            content.setNonStrokingColor(0.0f, 0.6f, 0.8f);  // Nice cyan label
             content.newLineAtOffset(margin, fromY);
             content.showText("FROM:");
             content.setNonStrokingColor(0, 0, 0);  // Black text
@@ -263,7 +263,7 @@ public class HTTPServer {
             // ========== BILL TO SECTION ==========
             content.beginText();
             content.setFont(font, 10);
-            content.setNonStrokingColor(0.2f, 0.45f, 0.9f);  // Vibrant blue label
+            content.setNonStrokingColor(0.0f, 0.6f, 0.8f);  // Nice cyan label
             float billToX = pageWidth / 2 + 30;
             content.newLineAtOffset(billToX, fromY);
             content.showText("BILL TO:");
@@ -288,15 +288,15 @@ public class HTTPServer {
             // ========== TABLE HEADER WITH COLOR ==========
             float tableTopY = fromY - 95;
 
-            // Vibrant colored table header background
-            content.setNonStrokingColor(0.9f, 0.93f, 1.0f);  // Light vibrant blue
+            // Cyan colored table header background
+            content.setNonStrokingColor(0.85f, 0.96f, 1.0f);  // Light cyan
             content.addRect(margin, tableTopY - 28, pageWidth - 2 * margin, 28);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
             // Draw thick line above header
             content.setLineWidth(2f);
-            content.setStrokingColor(0.15f, 0.45f, 0.95f);  // Vibrant blue line
+            content.setStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan line
             content.moveTo(margin, tableTopY);
             content.lineTo(pageWidth - margin, tableTopY);
             content.stroke();
@@ -305,7 +305,7 @@ public class HTTPServer {
             content.beginText();
             content.setFont(font, 11);
             float y = tableTopY - 11;
-            content.setNonStrokingColor(0.15f, 0.45f, 0.95f);  // Vibrant blue headers
+            content.setNonStrokingColor(0.0f, 0.6f, 0.8f);  // Nice cyan headers
             content.newLineAtOffset(margin + 12, y);
             content.showText("ITEM");
             content.newLineAtOffset(40, 0);
@@ -328,9 +328,9 @@ public class HTTPServer {
 
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
-                    // Alternating row background with vibrant tint
+                    // Alternating row background with cyan tint
                     if (itemCount % 2 == 0) {
-                        content.setNonStrokingColor(0.96f, 0.97f, 1.0f);  // Light blue tint
+                        content.setNonStrokingColor(0.93f, 0.98f, 1.0f);  // Light cyan tint
                         content.addRect(margin, y - 4, pageWidth - 2 * margin, 22);
                         content.fill();
                         content.setNonStrokingColor(0, 0, 0);
@@ -355,7 +355,7 @@ public class HTTPServer {
 
                     // Light line between rows
                     content.setLineWidth(0.4f);
-                    content.setStrokingColor(0.75f, 0.8f, 0.9f);  // Light blue separator
+                    content.setStrokingColor(0.7f, 0.85f, 0.95f);  // Light cyan separator
                     content.moveTo(margin, y - 7);
                     content.lineTo(pageWidth - margin, y - 7);
                     content.stroke();
@@ -368,7 +368,7 @@ public class HTTPServer {
 
             // Draw thick line below table
             content.setLineWidth(2f);
-            content.setStrokingColor(0.15f, 0.45f, 0.95f);  // Vibrant blue line
+            content.setStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan line
             content.moveTo(margin, y + 5);
             content.lineTo(pageWidth - margin, y + 5);
             content.stroke();
@@ -396,15 +396,16 @@ public class HTTPServer {
                 content.endText();
             }
 
-            // TOTAL - highlighted with vibrant color
-            content.setNonStrokingColor(0.15f, 0.45f, 0.95f);  // Vibrant blue background
-            content.addRect(pageWidth - margin - 220, totalsY - 75, 220, 30);
+            // TOTAL - highlighted with cyan color
+            float totalBoxY = totalsY - 60;
+            content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan background
+            content.addRect(pageWidth - margin - 220, totalBoxY, 220, 32);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
             content.beginText();
             content.setFont(font, 18);
-            content.newLineAtOffset(pageWidth - margin - 210, totalsY - 55);
+            content.newLineAtOffset(pageWidth - margin - 210, totalBoxY + 10);
             content.showText("TOTAL:");
             content.newLineAtOffset(170, 0);
             content.showText(String.format("%.2f %s", data.total, data.currency));
@@ -415,15 +416,15 @@ public class HTTPServer {
             // ========== PAYMENT INFORMATION ==========
             float payY = totalsY - 110;
 
-            // Payment info header with vibrant color
-            content.setNonStrokingColor(0.9f, 0.93f, 1.0f);  // Light vibrant blue
+            // Payment info header with cyan color
+            content.setNonStrokingColor(0.85f, 0.96f, 1.0f);  // Light cyan
             content.addRect(margin, payY - 60, pageWidth - 2 * margin, 60);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
             content.beginText();
             content.setFont(font, 11);
-            content.setNonStrokingColor(0.15f, 0.45f, 0.95f);  // Vibrant blue header
+            content.setNonStrokingColor(0.0f, 0.6f, 0.8f);  // Nice cyan header
             content.newLineAtOffset(margin + 12, payY - 12);
             content.showText("PAYMENT INFORMATION");
             content.setNonStrokingColor(0, 0, 0);  // Black text
@@ -439,7 +440,7 @@ public class HTTPServer {
             // ========== FOOTER ==========
             // Add a small accent line above footer
             content.setLineWidth(1f);
-            content.setStrokingColor(0.15f, 0.45f, 0.95f);  // Vibrant blue
+            content.setStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan
             content.moveTo(margin, 65);
             content.lineTo(pageWidth - margin, 65);
             content.stroke();
