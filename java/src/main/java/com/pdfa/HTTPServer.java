@@ -208,7 +208,7 @@ public class HTTPServer {
             // ========== VIBRANT HEADER ==========
             // Cyan header background
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan
-            content.addRect(margin, pageHeight - 65, pageWidth - 2 * margin, 80);
+            content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 65);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
