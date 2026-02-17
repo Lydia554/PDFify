@@ -423,14 +423,6 @@ public class HTTPServer {
             content.newLineAtOffset(0, -14);
             content.showText("BIC/SWIFT: " + data.bic);
             content.endText();
-            content.newLineAtOffset(0, -18);
-            content.setFont(font, 10);
-            content.showText("Payment Terms: " + data.paymentTerms);
-            content.newLineAtOffset(0, -14);
-            content.showText("IBAN: " + data.iban);
-            content.newLineAtOffset(0, -14);
-            content.showText("BIC/SWIFT: " + data.bic);
-            content.endText();
 
             // ========== FOOTER ==========
             // Add a small accent line above footer
