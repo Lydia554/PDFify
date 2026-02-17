@@ -237,19 +237,11 @@ public class HTTPServer {
 
             // ========== FROM SECTION ==========
             float fromY = pageHeight - 110;
-            float fromSectionHeight = 75;
-
-            // Light cyan background for FROM section
-            content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(margin, fromY - fromSectionHeight, (pageWidth / 2) - margin - 15, fromSectionHeight + 5);
-            content.fill();
-            content.setNonStrokingColor(0, 0, 0);
 
             content.beginText();
             content.setFont(font, 10);
-            content.newLineAtOffset(margin + 10, fromY);
+            content.newLineAtOffset(margin, fromY);
             content.showText("FROM:");
-            content.newLineAtOffset(0, -18);
             content.newLineAtOffset(0, -18);
             content.setFont(font, 12);
             content.showText(data.companyName);
@@ -260,7 +252,7 @@ public class HTTPServer {
                 content.newLineAtOffset(0, -13);
             }
             if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
-                String[] addr = splitText(data.shopAddress, 48);
+                String[] addr = splitText(data.shopAddress, 55);
                 for (String line : addr) {
                     content.showText(line);
                     content.newLineAtOffset(0, -13);
@@ -269,15 +261,9 @@ public class HTTPServer {
             content.endText();
 
             // ========== BILL TO SECTION ==========
-            // Light cyan background for BILL TO section
-            content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(pageWidth / 2 + 15, fromY - fromSectionHeight, (pageWidth / 2) - margin - 15, fromSectionHeight + 5);
-            content.fill();
-            content.setNonStrokingColor(0, 0, 0);
-
             content.beginText();
             content.setFont(font, 10);
-            float billToX = pageWidth / 2 + 25;
+            float billToX = pageWidth / 2 + 30;
             content.newLineAtOffset(billToX, fromY);
             content.showText("BILL TO:");
             content.newLineAtOffset(0, -18);
@@ -286,7 +272,7 @@ public class HTTPServer {
             content.newLineAtOffset(0, -15);
             content.setFont(font, 10);
             if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
-                String[] addr = splitText(data.customerAddress, 48);
+                String[] addr = splitText(data.customerAddress, 55);
                 for (String line : addr) {
                     content.showText(line);
                     content.newLineAtOffset(0, -13);
@@ -298,7 +284,7 @@ public class HTTPServer {
             content.endText();
 
             // ========== TABLE HEADER WITH COLOR ==========
-            float tableTopY = fromY - fromSectionHeight - 20;
+            float tableTopY = fromY - 95;
 
             // Cyan colored table header background
             content.setNonStrokingColor(0.85f, 0.96f, 1.0f);  // Light cyan
@@ -423,18 +409,20 @@ public class HTTPServer {
             content.setNonStrokingColor(0, 0, 0);  // Reset to black
 
             // ========== PAYMENT INFORMATION ==========
-            float payY = totalsY - 110;
-
-            // Payment info header with cyan color
-            content.setNonStrokingColor(0.85f, 0.96f, 1.0f);  // Light cyan
-            content.addRect(margin, payY - 60, pageWidth - 2 * margin, 60);
-            content.fill();
-            content.setNonStrokingColor(0, 0, 0);
+            float payY = totalsY - 100;
 
             content.beginText();
             content.setFont(font, 11);
-            content.newLineAtOffset(margin + 12, payY - 12);
+            content.newLineAtOffset(margin, payY);
             content.showText("PAYMENT INFORMATION");
+            content.newLineAtOffset(0, -18);
+            content.setFont(font, 10);
+            content.showText("Payment Terms: " + data.paymentTerms);
+            content.newLineAtOffset(0, -14);
+            content.showText("IBAN: " + data.iban);
+            content.newLineAtOffset(0, -14);
+            content.showText("BIC/SWIFT: " + data.bic);
+            content.endText();
             content.newLineAtOffset(0, -18);
             content.setFont(font, 10);
             content.showText("Payment Terms: " + data.paymentTerms);
