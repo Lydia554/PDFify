@@ -208,7 +208,7 @@ public class HTTPServer {
             // ========== VIBRANT HEADER ==========
             // Cyan header background
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan
-            content.addRect(margin, pageHeight - 65, pageWidth - 2 * margin, 65);
+            content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 65);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
@@ -296,7 +296,7 @@ public class HTTPServer {
             content.endText();
 
             // ========== TABLE HEADER WITH COLOR ==========
-            float tableTopY = fromY - 95;
+            float tableTopY = fromY - 65;
 
             // Cyan colored table header background
             content.setNonStrokingColor(0.85f, 0.96f, 1.0f);  // Light cyan
@@ -406,7 +406,7 @@ public class HTTPServer {
             // TOTAL - highlighted with cyan color
             float totalBoxY = totalsY - 60;
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan background
-            content.addRect(pageWidth - margin - 220, totalBoxY, 240, 32);
+            content.addRect(pageWidth - margin - 220, totalBoxY, 260, 32);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
