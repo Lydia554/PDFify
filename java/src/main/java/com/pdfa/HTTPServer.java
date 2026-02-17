@@ -423,8 +423,6 @@ public class HTTPServer {
             content.newLineAtOffset(pageWidth - margin - 210, totalBoxY + 10);
             content.showText("TOTAL:");
             content.newLineAtOffset(170, 0);
-            // Format with currency symbol before amount
-            String currencySymbol = getCurrencySymbol(data.currency);
             content.showText(String.format("%s %.2f", currencySymbol, data.total));
             content.endText();
 
