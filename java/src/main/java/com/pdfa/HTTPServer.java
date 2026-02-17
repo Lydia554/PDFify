@@ -240,7 +240,7 @@ public class HTTPServer {
 
             // Large cyan background for FROM section
             content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(margin, fromY - 85, (pageWidth / 2) - margin - 15, 90);
+            content.addRect(margin, fromY - 85, (pageWidth / 2) - margin - 15, 100);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
@@ -338,7 +338,7 @@ public class HTTPServer {
                     // Alternating row background with cyan tint
                     if (itemCount % 2 == 0) {
                         content.setNonStrokingColor(0.93f, 0.98f, 1.0f);  // Light cyan tint
-                        content.addRect(margin, y - 4, pageWidth - 2 * margin, 30);
+                        content.addRect(margin, y - 4, pageWidth - 2 * margin, 22);
                         content.fill();
                         content.setNonStrokingColor(0, 0, 0);
                     }
@@ -363,7 +363,7 @@ public class HTTPServer {
                     // Light line between rows
                     content.setLineWidth(0.4f);
                     content.setStrokingColor(0.7f, 0.85f, 0.95f);  // Light cyan separator
-                    content.moveTo(margin, y - 7);
+                    content.moveTo(margin, y - 10);
                     content.lineTo(pageWidth - margin, y - 7);
                     content.stroke();
                     content.setStrokingColor(0, 0, 0);
@@ -406,7 +406,7 @@ public class HTTPServer {
             // TOTAL - highlighted with cyan color
             float totalBoxY = totalsY - 60;
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan background
-            content.addRect(pageWidth - margin - 200, totalBoxY, 270, 32);
+            content.addRect(pageWidth - margin - 200, totalBoxY, 260, 32);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
@@ -423,9 +423,15 @@ public class HTTPServer {
             // ========== PAYMENT INFORMATION ==========
             float payY = totalsY - 150;
 
+            // Large cyan background for PAYMENT section
+            content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
+            content.addRect(margin, payY - 70, pageWidth - 2 * margin, 75);
+            content.fill();
+            content.setNonStrokingColor(0, 0, 0);
+
             content.beginText();
             content.setFont(font, 11);
-            content.newLineAtOffset(margin, payY);
+            content.newLineAtOffset(margin + 12, payY);
             content.showText("PAYMENT INFORMATION");
             content.newLineAtOffset(0, -18);
             content.setFont(font, 10);
