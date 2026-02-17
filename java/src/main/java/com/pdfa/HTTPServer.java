@@ -236,17 +236,17 @@ public class HTTPServer {
             content.setNonStrokingColor(0, 0, 0);  // Reset to black
 
             // ========== FROM SECTION ==========
-            float fromY = pageHeight - 105;
+            float fromY = pageHeight - 110;
 
-            // Large cyan background for FROM section - wider and taller
+            // Large cyan background for FROM section
             content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(margin - 5, fromY - 100, (pageWidth / 2) - margin + 5, 105);
+            content.addRect(margin, fromY - 85, (pageWidth / 2) - margin - 15, 90);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
             content.beginText();
             content.setFont(font, 10);
-            content.newLineAtOffset(margin + 8, fromY + 5);
+            content.newLineAtOffset(margin + 12, fromY);
             content.showText("FROM:");
             content.newLineAtOffset(0, -18);
             content.setFont(font, 12);
@@ -267,16 +267,16 @@ public class HTTPServer {
             content.endText();
 
             // ========== BILL TO SECTION ==========
-            // Large cyan background for BILL TO section - wider and taller
+            // Large cyan background for BILL TO section
             content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(pageWidth / 2 + 5, fromY - 100, (pageWidth / 2) - margin + 10, 105);
+            content.addRect(pageWidth / 2 + 15, fromY - 85, (pageWidth / 2) - margin - 15, 90);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
             content.beginText();
             content.setFont(font, 10);
-            float billToX = pageWidth / 2 + 17;
-            content.newLineAtOffset(billToX, fromY + 5);
+            float billToX = pageWidth / 2 + 27;
+            content.newLineAtOffset(billToX, fromY);
             content.showText("BILL TO:");
             content.newLineAtOffset(0, -18);
             content.setFont(font, 12);
@@ -296,26 +296,26 @@ public class HTTPServer {
             content.endText();
 
             // ========== TABLE HEADER WITH COLOR ==========
-            float tableTopY = fromY - 110;
+            float tableTopY = fromY - 95;
 
-            // Cyan colored table header background - much wider and taller
+            // Cyan colored table header background
             content.setNonStrokingColor(0.85f, 0.96f, 1.0f);  // Light cyan
-            content.addRect(margin - 5, tableTopY - 35, pageWidth - 2 * margin + 10, 35);
+            content.addRect(margin, tableTopY - 28, pageWidth - 2 * margin, 28);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
-            // Draw thick line above header - extended width
+            // Draw thick line above header
             content.setLineWidth(2f);
             content.setStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan line
-            content.moveTo(margin - 5, tableTopY);
-            content.lineTo(pageWidth - margin + 5, tableTopY);
+            content.moveTo(margin, tableTopY);
+            content.lineTo(pageWidth - margin, tableTopY);
             content.stroke();
 
             // Column headers with better spacing - all black
             content.beginText();
             content.setFont(font, 11);
-            float y = tableTopY - 14;
-            content.newLineAtOffset(margin + 8, y);
+            float y = tableTopY - 11;
+            content.newLineAtOffset(margin + 12, y);
             content.showText("ITEM");
             content.newLineAtOffset(40, 0);
             content.showText("DESCRIPTION");
@@ -373,16 +373,16 @@ public class HTTPServer {
                 }
             }
 
-            // Draw thick line below table - extended width
+            // Draw thick line below table
             content.setLineWidth(2f);
             content.setStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan line
-            content.moveTo(margin - 5, y + 5);
-            content.lineTo(pageWidth - margin + 5, y + 5);
+            content.moveTo(margin, y + 5);
+            content.lineTo(pageWidth - margin, y + 5);
             content.stroke();
             content.setStrokingColor(0, 0, 0);
 
             // ========== TOTALS SECTION ==========
-            float totalsY = y - 30;
+            float totalsY = y - 20;
 
             // Subtotal with more spacing
             content.beginText();
@@ -406,7 +406,7 @@ public class HTTPServer {
             // TOTAL - highlighted with cyan color
             float totalBoxY = totalsY - 60;
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan background
-            content.addRect(pageWidth - margin - 220, totalBoxY, 220, 32);
+            content.addRect(pageWidth - margin - 220, totalBoxY, 220, 50);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
@@ -421,17 +421,11 @@ public class HTTPServer {
             content.setNonStrokingColor(0, 0, 0);  // Reset to black
 
             // ========== PAYMENT INFORMATION ==========
-            float payY = totalsY - 105;
-
-            // Large cyan background for PAYMENT section - much wider and taller
-            content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(margin + 5, payY - 80, pageWidth - 2 * margin + 10, 85);
-            content.fill();
-            content.setNonStrokingColor(0, 0, 0);
+            float payY = totalsY - 90;
 
             content.beginText();
             content.setFont(font, 11);
-            content.newLineAtOffset(margin + 8, payY + 5);
+            content.newLineAtOffset(margin, payY);
             content.showText("PAYMENT INFORMATION");
             content.newLineAtOffset(0, -18);
             content.setFont(font, 10);
