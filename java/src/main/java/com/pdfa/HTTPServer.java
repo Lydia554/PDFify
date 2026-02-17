@@ -202,6 +202,7 @@ public class HTTPServer {
             float pageWidth = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getWidth();
             float pageHeight = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getHeight();
             float margin = 50;
+            String currencySymbol = getCurrencySymbol(data.currency);
             PDPageContentStream content = new PDPageContentStream(document, page);
 
             // ========== VIBRANT HEADER ==========
@@ -338,7 +339,6 @@ public class HTTPServer {
             // ========== TABLE ITEMS ==========
             y = tableTopY - 50;
             int itemCount = 0;
-            String currencySymbol = getCurrencySymbol(data.currency);
 
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
@@ -392,7 +392,6 @@ public class HTTPServer {
             float totalsY = y - 20;
 
             // Subtotal with more spacing
-            String currencySymbol = getCurrencySymbol(data.currency);
             content.beginText();
             content.setFont(font, 11);
             content.newLineAtOffset(pageWidth - margin - 220, totalsY);
