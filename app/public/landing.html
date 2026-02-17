@@ -175,94 +175,46 @@
   </div>
 </section>
 
- <!-- Powered by Node.js + Java PDF Engine -->
-  <section class="py-16 bg-white dark:bg-gray-900">
-    <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-      <!-- Left Column: Architecture -->
-      <div>
-        <h2 class="text-2xl font-bold mb-4">A Hybrid Node.js + Java PDF Engine</h2>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">
-          We've engineered a powerful, dual-engine architecture for creating highly-compliant merchant invoices.
-          Our <strong class="text-gray-700 dark:text-gray-300">Node.js API layer</strong> handles request processing, data validation, and business logic,
-          while delegating PDF generation to a specialized <strong class="text-gray-700 dark:text-gray-300">Java microservice</strong> powered by
-          <a href="https://pdfbox.apache.org/" target="_blank" rel="noopener noreferrer" class="text-purple-700 dark:text-purple-400 hover:underline">Apache PDFBox 3.0</a>
-          — the industry-standard library for PDF/A-3b compliance.
-        </p>
+<!-- Powered by Node.js + Java PDF Engine -->
+<section class="py-16 bg-white dark:bg-gray-900">
+  <div class="max-w-6xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+    <!-- Left Column: Architecture -->
+    <div>
+      <h2 class="text-2xl font-bold mb-4">A Hybrid Node.js + Java PDF Engine</h2>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">
+        We've engineered a powerful, dual-engine architecture for creating highly-compliant merchant invoices.
+        Our <strong class="text-gray-700 dark:text-gray-300">Node.js API layer</strong> handles request processing, data validation, and business logic,
+        while delegating PDF generation to a specialized <strong class="text-gray-700 dark:text-gray-300">Java microservice</strong> powered by
+        <a href="https://pdfbox.apache.org/" target="_blank" rel="noopener noreferrer" class="text-purple-700 dark:text-purple-400 hover:underline">Apache PDFBox 3.0</a>
+        — the industry-standard library for PDF/A-3b compliance.
+      </p>
 
-        <p class="text-gray-500 dark:text-gray-400 mb-4">
-          Unlike traditional HTML-to-PDF converters that rely on slow, resource-heavy headless browsers (like Puppeteer or Playwright),
-          our Java service <strong class="text-gray-700 dark:text-gray-300">programmatically constructs documents</strong> from the ground up.
-          This approach gives us unparalleled control over PDF structure, metadata, embedding, and conformance —
-          resulting in perfectly compliant, lightweight, and professional invoices every time.
-        </p>
+      <p class="text-gray-500 dark:text-gray-400 mb-4">
+        Unlike traditional HTML-to-PDF converters that rely on slow, resource-heavy headless browsers (like Puppeteer or Playwright),
+        our Java service <strong class="text-gray-700 dark:text-gray-300">programmatically constructs documents</strong> from the ground up.
+        This approach gives us unparalleled control over PDF structure, metadata, embedding, and conformance —
+        resulting in perfectly compliant, lightweight, and professional invoices every time.
+      </p>
 
-        <h3 class="text-lg font-semibold mt-6 mb-3">Why This Architecture?</h3>
-        <ul class="space-y-2 text-gray-500 dark:text-gray-400">
-          <li class="flex items-start">
-            <span class="text-green-500 mr-2">✓</span>
-            <span><strong>True PDF/A-3b Compliance:</strong> Apache PDFBox ensures proper XMP metadata, ICC profiles, and ZUGFeRD XML embedding</span>
-          </li>
-          <li class="flex items-start">
-            <span class="text-green-500 mr-2">✓</span>
-            <span><strong>High Performance:</strong> No browser overhead — Java service generates PDFs in milliseconds</span>
-          </li>
-          <li class="flex items-start">
-            <span class="text-green-500 mr-2">✓</span>
-            <span><strong>Scalability:</strong> Stateless Java microservice can be containerized and scaled independently</span>
-          </li>
-          <li class="flex items-start">
-            <span class="text-green-500 mr-2">✓</span>
-            <span><strong>Precision Control:</strong> Programmatic rendering means pixel-perfect layouts, not "close enough" HTML conversions</span>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Right Column: Technical Details -->
-      <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
-        <h3 class="text-lg font-semibold mb-4">Technical Stack</h3>
-
-        <div class="space-y-4">
-          <!-- Node.js Layer -->
-          <div>
-            <h4 class="font-medium text-purple-700 dark:text-purple-400 mb-2">Node.js API Layer</h4>
-            <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li>• Express.js for REST API endpoints</li>
-              <li>• Request validation & JSON-RPC handling</li>
-              <li>• Shopify integration & data fetching</li>
-              <li>• HTTP client communication to Java service</li>
-            </ul>
-          </div>
-
-          <!-- Java Service -->
-          <div>
-            <h4 class="font-medium text-blue-700 dark:text-blue-400 mb-2">Java PDF Service</h4>
-            <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li>• Apache PDFBox 3.0.3 for PDF generation</li>
-              <li>• Spark Java framework for HTTP server</li>
-              <li>• PDF/A-3b compliance with sRGB ICC profiles</li>
-              <li>• ZUGFeRD XML embedding for e-invoicing</li>
-              <li>• Custom invoice templates with multi-language support</li>
-            </ul>
-          </div>
-
-          <!-- Communication -->
-          <div>
-            <h4 class="font-medium text-green-700 dark:text-green-400 mb-2">Service Communication</h4>
-            <ul class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li>• HTTP/JSON between Node.js and Java service</li>
-              <li>• Docker containerization for isolation</li>
-              <li>• JSON-RPC protocol for structured requests</li>
-              <li>• Base64-encoded PDF response</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
-          <p class="text-sm text-blue-800 dark:text-blue-300">
-            <strong>Result:</strong> Invoices that pass strict validation tools like <em>PDF的长城验证工具</em> and <em>Mustang</em> with full PDF/A-3b conformance.
-          </p>
-        </div>
-      </div>
+      <h3 class="text-lg font-semibold mt-6 mb-3">Why This Architecture?</h3>
+      <ul class="space-y-2 text-gray-500 dark:text-gray-400">
+        <li class="flex items-start">
+          <span class="text-green-500 mr-2">✓</span>
+          <span><strong>True PDF/A-3b Compliance:</strong> Apache PDFBox ensures proper XMP metadata, ICC profiles, and ZUGFeRD XML embedding</span>
+        </li>
+        <li class="flex items-start">
+          <span class="text-green-500 mr-2">✓</span>
+          <span><strong>High Performance:</strong> No browser overhead — Java service generates PDFs in milliseconds</span>
+        </li>
+        <li class="flex items-start">
+          <span class="text-green-500 mr-2">✓</span>
+          <span><strong>Scalability:</strong> Stateless Java microservice can be containerized and scaled independently</span>
+        </li>
+        <li class="flex items-start">
+          <span class="text-green-500 mr-2">✓</span>
+          <span><strong>Precision Control:</strong> Programmatic rendering means pixel-perfect layouts, not "close enough" HTML conversions</span>
+        </li>
+      </ul>
     </div>
 
 <!-- Right Column: Invoice explanation -->
