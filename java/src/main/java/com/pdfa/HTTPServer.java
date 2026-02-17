@@ -223,7 +223,7 @@ public class HTTPServer {
             content.beginText();
             content.setFont(font, 11);
             float headerRightX = pageWidth - margin - 15;
-            content.newLineAtOffset(headerRightX - 200, pageHeight - 45);
+            content.newLineAtOffset(headerRightX - 200, pageHeight - 25);
             content.showText("Invoice No: " + data.orderId);
             content.newLineAtOffset(0, -16);
             content.showText("Date: " + data.date);
