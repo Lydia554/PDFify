@@ -236,10 +236,17 @@ public class HTTPServer {
 
             // ========== FROM SECTION ==========
             float fromY = pageHeight - 110;
+
+            // Light cyan background for FROM section
+            content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
+            content.addRect(margin, fromY - 80, (pageWidth / 2) - margin - 15, 85);
+            content.fill();
+            content.setNonStrokingColor(0, 0, 0);
+
             content.beginText();
             content.setFont(font, 10);
             content.setNonStrokingColor(0.0f, 0.6f, 0.8f);  // Nice cyan label
-            content.newLineAtOffset(margin, fromY);
+            content.newLineAtOffset(margin + 10, fromY);
             content.showText("FROM:");
             content.setNonStrokingColor(0, 0, 0);  // Black text
             content.newLineAtOffset(0, -18);
@@ -252,7 +259,7 @@ public class HTTPServer {
                 content.newLineAtOffset(0, -13);
             }
             if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
-                String[] addr = splitText(data.shopAddress, 50);
+                String[] addr = splitText(data.shopAddress, 48);
                 for (String line : addr) {
                     content.showText(line);
                     content.newLineAtOffset(0, -13);
@@ -261,10 +268,16 @@ public class HTTPServer {
             content.endText();
 
             // ========== BILL TO SECTION ==========
+            // Light cyan background for BILL TO section
+            content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
+            content.addRect(pageWidth / 2 + 15, fromY - 80, (pageWidth / 2) - margin - 15, 85);
+            content.fill();
+            content.setNonStrokingColor(0, 0, 0);
+
             content.beginText();
             content.setFont(font, 10);
             content.setNonStrokingColor(0.0f, 0.6f, 0.8f);  // Nice cyan label
-            float billToX = pageWidth / 2 + 30;
+            float billToX = pageWidth / 2 + 25;
             content.newLineAtOffset(billToX, fromY);
             content.showText("BILL TO:");
             content.setNonStrokingColor(0, 0, 0);  // Black text
@@ -274,7 +287,7 @@ public class HTTPServer {
             content.newLineAtOffset(0, -15);
             content.setFont(font, 10);
             if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
-                String[] addr = splitText(data.customerAddress, 50);
+                String[] addr = splitText(data.customerAddress, 48);
                 for (String line : addr) {
                     content.showText(line);
                     content.newLineAtOffset(0, -13);
@@ -325,6 +338,7 @@ public class HTTPServer {
             // ========== TABLE ITEMS ==========
             y = tableTopY - 50;
             int itemCount = 0;
+            String currencySymbol = getCurrencySymbol(data.currency);
 
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
@@ -347,10 +361,10 @@ public class HTTPServer {
                     content.newLineAtOffset(45, 0);
                     content.showText(item.unitCode != null ? item.unitCode : "EA");
                     content.newLineAtOffset(45, 0);
-                    content.showText(String.format("%.2f %s", item.price, data.currency));
+                    content.showText(String.format("%s %.2f", currencySymbol, item.price));
                     content.newLineAtOffset(70, 0);
                     double lineTotal = item.quantity * item.price;
-                    content.showText(String.format("%.2f", lineTotal));
+                    content.showText(String.format("%s %.2f", currencySymbol, lineTotal));
                     content.endText();
 
                     // Light line between rows
@@ -378,12 +392,13 @@ public class HTTPServer {
             float totalsY = y - 20;
 
             // Subtotal with more spacing
+            String currencySymbol = getCurrencySymbol(data.currency);
             content.beginText();
             content.setFont(font, 11);
             content.newLineAtOffset(pageWidth - margin - 220, totalsY);
             content.showText("Subtotal:");
             content.newLineAtOffset(170, 0);
-            content.showText(String.format("%.2f %s", data.subtotal, data.currency));
+            content.showText(String.format("%s %.2f", currencySymbol, data.subtotal));
             content.endText();
 
             // Tax with percentage and more spacing
@@ -392,7 +407,7 @@ public class HTTPServer {
                 content.newLineAtOffset(pageWidth - margin - 220, totalsY - 20);
                 content.showText(String.format("VAT (%.1f%%):", data.vatRate));
                 content.newLineAtOffset(170, 0);
-                content.showText(String.format("%.2f %s", data.tax, data.currency));
+                content.showText(String.format("%s %.2f", currencySymbol, data.tax));
                 content.endText();
             }
 
@@ -408,7 +423,9 @@ public class HTTPServer {
             content.newLineAtOffset(pageWidth - margin - 210, totalBoxY + 10);
             content.showText("TOTAL:");
             content.newLineAtOffset(170, 0);
-            content.showText(String.format("%.2f %s", data.total, data.currency));
+            // Format with currency symbol before amount
+            String currencySymbol = getCurrencySymbol(data.currency);
+            content.showText(String.format("%s %.2f", currencySymbol, data.total));
             content.endText();
 
             content.setNonStrokingColor(0, 0, 0);  // Reset to black
@@ -502,6 +519,40 @@ public class HTTPServer {
         }
 
         return lines.toArray(new String[0]);
+    }
+
+    /**
+     * Get currency symbol from currency code
+     */
+    private static String getCurrencySymbol(String currencyCode) {
+        if (currencyCode == null || currencyCode.isEmpty()) {
+            return "";
+        }
+        switch (currencyCode.toUpperCase()) {
+            case "USD": return "$";
+            case "EUR": return "€";
+            case "GBP": return "£";
+            case "JPY": return "¥";
+            case "CHF": return "CHF";
+            case "CAD": return "C$";
+            case "AUD": return "A$";
+            case "CNY": return "¥";
+            case "INR": return "₹";
+            case "RUB": return "₽";
+            case "BRL": return "R$";
+            case "KRW": return "₩";
+            case "SEK": return "kr";
+            case "NOK": return "kr";
+            case "DKK": return "kr";
+            case "PLN": return "zł";
+            case "TRY": return "₺";
+            case "MXN": return "$";
+            case "SGD": return "S$";
+            case "HKD": return "HK$";
+            case "NZD": return "NZ$";
+            case "ZAR": return "R";
+            default: return currencyCode;
+        }
     }
 
     /**
