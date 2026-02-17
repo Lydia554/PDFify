@@ -208,7 +208,7 @@ public class HTTPServer {
             // ========== VIBRANT HEADER ==========
             // Cyan header background
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan
-            content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 90);
+            content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 80);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
@@ -223,7 +223,7 @@ public class HTTPServer {
             content.beginText();
             content.setFont(font, 11);
             float headerRightX = pageWidth - margin - 15;
-            content.newLineAtOffset(headerRightX - 200, pageHeight - 35);
+            content.newLineAtOffset(headerRightX - 200, pageHeight - 45);
             content.showText("Invoice No: " + data.orderId);
             content.newLineAtOffset(0, -16);
             content.showText("Date: " + data.date);
