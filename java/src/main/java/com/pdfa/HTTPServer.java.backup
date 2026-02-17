@@ -204,46 +204,71 @@ public class HTTPServer {
             float margin = 50;
             PDPageContentStream content = new PDPageContentStream(document, page);
 
-            // ========== CLEAN HEADER ==========
-            // Simple blue accent line at top
-            content.setNonStrokingColor(0.25f, 0.5f, 0.85f);
-            content.addRect(margin, pageHeight - 55, pageWidth - 2 * margin, 3);
+            // ========== GRADIENT HEADER WITH 3 COLOR BLOCKS ==========
+            content.setNonStrokingColor(0.12f, 0.22f, 0.52f);  // Dark navy
+            content.addRect(margin, pageHeight - 115, pageWidth - 2 * margin, 115);
             content.fill();
-            content.setNonStrokingColor(0, 0, 0);
 
-            // INVOICE in blue - elegant and simple
+            content.setNonStrokingColor(0.22f, 0.42f, 0.82f);  // Medium blue
+            content.addRect(margin, pageHeight - 95, pageWidth - 2 * margin, 95);
+            content.fill();
+
+            content.setNonStrokingColor(0.32f, 0.57f, 0.97f);  // Light blue accent
+            content.addRect(margin, pageHeight - 115, pageWidth - 2 * margin, 20);
+            content.fill();
+
+            content.setNonStrokingColor(1.0f, 1.0f, 1.0f);
+
             content.beginText();
-            content.setFont(font, 40);
-            content.setNonStrokingColor(0.25f, 0.5f, 0.85f);
-            content.newLineAtOffset(margin, pageHeight - 95);
+            content.setFont(font, 52);
+            content.newLineAtOffset(margin, pageHeight - 68);
             content.showText("INVOICE");
             content.endText();
 
-            // Invoice details - gray text on right
             content.beginText();
-            content.setFont(font, 11);
-            content.setNonStrokingColor(0.45f, 0.45f, 0.45f);
+            content.setFont(font, 14);
             float headerRightX = pageWidth - margin - 10;
-            content.newLineAtOffset(headerRightX - 180, pageHeight - 90);
+            content.newLineAtOffset(headerRightX - 250, pageHeight - 58);
             content.showText("Invoice No: " + data.orderId);
-            content.newLineAtOffset(0, -16);
+            content.newLineAtOffset(0, -24);
             content.showText("Date: " + data.date);
             if (data.creator != null && !data.creator.isEmpty()) {
-                content.newLineAtOffset(0, -16);
+                content.newLineAtOffset(0, -24);
                 content.showText(data.creator);
             }
             content.endText();
 
-            content.setNonStrokingColor(0, 0, 0);  // Reset to black
+            content.setNonStrokingColor(0, 0, 0);
 
-            // ========== FROM SECTION ==========
-            float fromY = pageHeight - 130;
+            // ========== COLORED FROM & BILL TO BOXES ==========
+            float fromY = pageHeight - 145;
+
+            // FROM box - light green
+            content.setNonStrokingColor(0.94f, 0.98f, 0.90f);
+            content.addRect(margin, fromY - 78, (pageWidth / 2) - margin - 15, 78);
+            content.fill();
+
+            // BILL TO box - light orange
+            content.setNonStrokingColor(1.0f, 0.96f, 0.90f);
+            content.addRect(pageWidth / 2 + 15, fromY - 78, (pageWidth / 2) - margin - 15, 78);
+            content.fill();
+
+            // Borders
+            content.setLineWidth(1.2f);
+            content.setStrokingColor(0.65f, 0.70f, 0.60f);
+            content.addRect(margin, fromY - 78, (pageWidth / 2) - margin - 15, 78);
+            content.stroke();
+            content.addRect(pageWidth / 2 + 15, fromY - 78, (pageWidth / 2) - margin - 15, 78);
+            content.stroke();
+            content.setStrokingColor(0, 0, 0);
+            content.setNonStrokingColor(0, 0, 0);
+
             content.beginText();
-            content.setFont(font, 11);
-            content.newLineAtOffset(margin, fromY);
-            content.showText("FROM:");
-            content.newLineAtOffset(0, -15);
-            content.setFont(font, 12);
+            content.setFont(font, 13);
+            content.newLineAtOffset(margin + 12, fromY - 18);
+            content.showText("FROM");
+            content.newLineAtOffset(0, -20);
+            content.setFont(font, 15);
             content.showText(data.companyName);
             content.newLineAtOffset(0, -13);
             content.setFont(font, 10);
@@ -262,31 +287,30 @@ public class HTTPServer {
 
             // ========== BILL TO SECTION ==========
             content.beginText();
-            content.setFont(font, 11);
-            content.newLineAtOffset(pageWidth / 2 + 20, fromY);
-            content.showText("BILL TO:");
-            content.newLineAtOffset(0, -15);
-            content.setFont(font, 12);
+            content.setFont(font, 13);
+            content.newLineAtOffset(pageWidth / 2 + 27, fromY - 18);
+            content.showText("BILL TO");
+            content.newLineAtOffset(0, -20);
+            content.setFont(font, 15);
             content.showText(data.customerName);
-            content.newLineAtOffset(0, -13);
-            content.setFont(font, 10);
+            content.newLineAtOffset(0, -16);
+            content.setFont(font, 11);
             if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
-                String[] addr = splitText(data.customerAddress, 55);
+                String[] addr = splitText(data.customerAddress, 48);
                 for (String line : addr) {
                     content.showText(line);
-                    content.newLineAtOffset(0, -11);
+                    content.newLineAtOffset(0, -13);
                 }
             }
             if (data.customerEmail != null && !data.customerEmail.isEmpty()) {
-                content.showText("Email: " + data.customerEmail);
+                content.showText(data.customerEmail);
             }
             content.endText();
 
-            // ========== TABLE HEADER WITH COLOR ==========
-            float tableTopY = fromY - 80;
+            // ========== PURPLE TABLE HEADER ==========
+            float tableTopY = fromY - 108;
 
-            // Colored table header background
-            content.setNonStrokingColor(0.93f, 0.95f, 0.98f);  // Light blue-gray
+            content.setNonStrokingColor(0.40f, 0.30f, 0.70f);  // Rich purple
             content.addRect(margin, tableTopY - 25, pageWidth - 2 * margin, 25);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
@@ -389,41 +413,46 @@ public class HTTPServer {
                 content.endText();
             }
 
-            // TOTAL - highlighted with color
-            content.setNonStrokingColor(0.2f, 0.4f, 0.8f);  // Blue background
-            content.addRect(pageWidth - margin - 200, totalsY - 65, 200, 25);
+            // TOTAL - BIG GREEN HIGHLIGHTED BOX
+            content.setNonStrokingColor(0.15f, 0.65f, 0.25f);  // Vibrant green
+            content.addRect(pageWidth - margin - 220, totalsY - 85, 220, 48);
             content.fill();
-            content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
+            content.setNonStrokingColor(1.0f, 1.0f, 1.0f);
 
             content.beginText();
-            content.setFont(font, 16);
-            content.newLineAtOffset(pageWidth - margin - 190, totalsY - 48);
-            content.showText("TOTAL:");
-            content.newLineAtOffset(150, 0);
+            content.setFont(font, 24);
+            content.newLineAtOffset(pageWidth - margin - 205, totalsY - 58);
+            content.showText("TOTAL");
+            content.newLineAtOffset(165, 0);
             content.showText(String.format("%.2f %s", data.total, data.currency));
             content.endText();
 
             content.setNonStrokingColor(0, 0, 0);  // Reset to black
 
-            // ========== PAYMENT INFORMATION ==========
-            float payY = totalsY - 100;
+            // ========== PAYMENT INFORMATION - TURQUOISE BOX ==========
+            float payY = totalsY - 115;
 
-            // Payment info header
-            content.setNonStrokingColor(0.93f, 0.95f, 0.98f);
-            content.addRect(margin, payY - 55, pageWidth - 2 * margin, 55);
+            content.setNonStrokingColor(0.90f, 0.97f, 0.98f);  // Turquoise
+            content.addRect(margin, payY - 70, pageWidth - 2 * margin, 70);
             content.fill();
+
+            content.setLineWidth(1.5f);
+            content.setStrokingColor(0.45f, 0.75f, 0.80f);
+            content.addRect(margin, payY - 70, pageWidth - 2 * margin, 70);
+            content.stroke();
+            content.setStrokingColor(0, 0, 0);
             content.setNonStrokingColor(0, 0, 0);
 
             content.beginText();
-            content.setFont(font, 11);
-            content.newLineAtOffset(margin + 10, payY - 10);
+            content.setFont(font, 14);
+            content.newLineAtOffset(margin + 15, payY - 18);
             content.showText("PAYMENT INFORMATION");
-            content.newLineAtOffset(0, -15);
-            content.setFont(font, 9);
+            content.newLineAtOffset(0, -22);
+            content.setFont(font, 11);
             content.showText("Payment Terms: " + data.paymentTerms);
-            content.newLineAtOffset(0, -12);
+            content.newLineAtOffset(0, -15);
             content.showText("IBAN: " + data.iban);
-            content.newLineAtOffset(0, -12);
+            content.newLineAtOffset(0, -15);
             content.showText("BIC/SWIFT: " + data.bic);
             content.endText();
 
