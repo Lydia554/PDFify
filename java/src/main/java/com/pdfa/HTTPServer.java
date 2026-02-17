@@ -269,7 +269,7 @@ public class HTTPServer {
             // ========== BILL TO SECTION ==========
             // Large cyan background for BILL TO section
             content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(pageWidth / 2 + 15, fromY - 85, (pageWidth / 2) - margin - 15, 90);
+            content.addRect(pageWidth / 2 + 15, fromY - 85, (pageWidth / 2) - margin - 15, 100);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
@@ -338,7 +338,7 @@ public class HTTPServer {
                     // Alternating row background with cyan tint
                     if (itemCount % 2 == 0) {
                         content.setNonStrokingColor(0.93f, 0.98f, 1.0f);  // Light cyan tint
-                        content.addRect(margin, y - 4, pageWidth - 2 * margin, 22);
+                        content.addRect(margin, y - 4, pageWidth - 2 * margin, 30);
                         content.fill();
                         content.setNonStrokingColor(0, 0, 0);
                     }
@@ -406,7 +406,7 @@ public class HTTPServer {
             // TOTAL - highlighted with cyan color
             float totalBoxY = totalsY - 60;
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan background
-            content.addRect(pageWidth - margin - 220, totalBoxY, 250, 32);
+            content.addRect(pageWidth - margin - 200, totalBoxY, 270, 32);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
@@ -430,7 +430,7 @@ public class HTTPServer {
             content.newLineAtOffset(0, -18);
             content.setFont(font, 10);
             content.showText("Payment Terms: " + data.paymentTerms);
-            content.newLineAtOffset(0, -10);
+            content.newLineAtOffset(0, -14);
             content.showText("IBAN: " + data.iban);
             content.newLineAtOffset(0, -14);
             content.showText("BIC/SWIFT: " + data.bic);
