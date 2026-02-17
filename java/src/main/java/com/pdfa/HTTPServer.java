@@ -190,264 +190,169 @@ public class HTTPServer {
      */
     private static byte[] createPdfA3B(InvoiceData data) throws IOException {
         try (PDDocument document = new PDDocument()) {
-            // Add OutputIntent for PDF/A-3b
             addOutputIntent(document);
-
-            // Add page
             PDPage page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
             document.addPage(page);
 
-            // Load TrueType font from resources
             InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
             PDType0Font font = PDType0Font.load(document, fontStream);
 
-            // Page dimensions
             float pageWidth = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getWidth();
             float pageHeight = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getHeight();
             float margin = 50;
-            float currentY = pageHeight - margin;
-
-            // Create content stream
             PDPageContentStream content = new PDPageContentStream(document, page);
 
-            // ========== HEADER WITH BACKGROUND ==========
-            // Draw header background bar
-            content.setNonStrokingColor(0.95f, 0.97f, 1.0f);
-            content.addRect(margin, pageHeight - 100, pageWidth - 2 * margin, 100);
-            content.fill();
-            content.setNonStrokingColor(0, 0, 0);
-
+            // HEADER - INVOICE title
             content.beginText();
-
-            // Large INVOICE text
-            content.setFont(font, 36);
-            content.newLineAtOffset(margin, pageHeight - 65);
+            content.setFont(font, 32);
+            content.newLineAtOffset(margin, pageHeight - 60);
             content.showText("INVOICE");
-            content.newLineAtOffset(0, -25);
-            content.setFont(font, 10);
-            content.showText(data.orderId);
-            content.newLineAtOffset(0, -15);
-            content.showText("Date: " + data.date);
-
-            // Company info on right side
-            float rightX = pageWidth - margin - 150;
-            float currentX = rightX - (margin + 400);
-            content.newLineAtOffset(currentX, 50);
-            content.setFont(font, 12);
-            content.showText(data.companyName);
-            content.newLineAtOffset(0, -14);
-            content.setFont(font, 9);
-            if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
-                String[] addrLines = splitText(data.shopAddress, 35);
-                for (String line : addrLines) {
-                    content.showText(line);
-                    content.newLineAtOffset(0, -12);
-                }
-            }
-
             content.endText();
 
-            // ========== FROM / TO SECTIONS WITH BOXES ==========
-            currentY = pageHeight - 200;
-
-            // Draw section boxes
-            content.setLineWidth(0.5f);
-            content.setStrokingColor(0.7f, 0.7f, 0.7f);
-            float boxY = currentY - 70;
-            content.addRect(margin, boxY, pageWidth / 2 - margin - 20, 70);
-            content.stroke();
-            content.addRect(pageWidth / 2 + 20, boxY, pageWidth / 2 - margin - 20, 70);
-            content.stroke();
-            content.setStrokingColor(0, 0, 0);
-
+            // Invoice number and date on right
             content.beginText();
-            content.setFont(font, 11);
-            content.newLineAtOffset(margin + 10, boxY + 55);
+            content.setFont(font, 10);
+            content.newLineAtOffset(pageWidth - margin - 150, pageHeight - 60);
+            content.showText("Invoice #: " + data.orderId);
+            content.newLineAtOffset(0, -15);
+            content.showText("Date: " + data.date);
+            content.endText();
+
+            // FROM section (left side)
+            float fromY = pageHeight - 120;
+            content.beginText();
+            content.setFont(font, 10);
+            content.newLineAtOffset(margin, fromY);
             content.showText("FROM:");
             content.newLineAtOffset(0, -15);
-            content.setFont(font, 10);
+            content.setFont(font, 11);
             content.showText(data.companyName);
+            content.newLineAtOffset(0, -12);
+            content.setFont(font, 9);
             if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
-                content.newLineAtOffset(0, -12);
-                String[] addr = splitText(data.shopAddress, 40);
-                for (int i = 0; i < Math.min(addr.length, 3); i++) {
-                    content.showText(addr[i]);
-                    if (i < addr.length - 1 && i < 2) {
-                        content.newLineAtOffset(0, -12);
-                    }
+                String[] addr = splitText(data.shopAddress, 50);
+                for (String line : addr) {
+                    content.showText(line);
+                    content.newLineAtOffset(0, -11);
                 }
             }
+            content.endText();
 
-            // To section
-            content.newLineAtOffset(pageWidth / 2 - margin - 30, 0);
-            content.setFont(font, 11);
+            // BILL TO section (right side)
+            content.beginText();
+            content.setFont(font, 10);
+            content.newLineAtOffset(pageWidth / 2 + 20, fromY);
             content.showText("BILL TO:");
             content.newLineAtOffset(0, -15);
-            content.setFont(font, 10);
+            content.setFont(font, 11);
             content.showText(data.customerName);
+            content.newLineAtOffset(0, -12);
+            content.setFont(font, 9);
             if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
-                content.newLineAtOffset(0, -12);
-                String[] addr = splitText(data.customerAddress, 40);
-                for (int i = 0; i < Math.min(addr.length, 3); i++) {
-                    content.showText(addr[i]);
-                    if (i < addr.length - 1 && i < 2) {
-                        content.newLineAtOffset(0, -12);
-                    }
+                String[] addr = splitText(data.customerAddress, 50);
+                for (String line : addr) {
+                    content.showText(line);
+                    content.newLineAtOffset(0, -11);
                 }
             }
             if (data.customerEmail != null && !data.customerEmail.isEmpty()) {
-                content.newLineAtOffset(0, -12);
                 content.showText(data.customerEmail);
             }
-
             content.endText();
 
-            // ========== ITEMS TABLE HEADER ==========
-            float tableStartY = boxY - 50;
-
-            // Table header background
-            content.setNonStrokingColor(0.93f, 0.95f, 0.98f);
-            content.addRect(margin, tableStartY - 25, pageWidth - 2 * margin, 25);
-            content.fill();
-            content.setNonStrokingColor(0, 0, 0);
-
-            // Table header line
+            // TABLE
+            float tableTopY = fromY - 70;
+            
+            // Draw header line
             content.setLineWidth(1);
-            content.moveTo(margin, tableStartY);
-            content.lineTo(pageWidth - margin, tableStartY);
+            content.moveTo(margin, tableTopY);
+            content.lineTo(pageWidth - margin, tableTopY);
             content.stroke();
 
+            // Column headers
             content.beginText();
             content.setFont(font, 10);
-            content.newLineAtOffset(margin + 10, tableStartY - 10);
+            float y = tableTopY - 15;
+            content.newLineAtOffset(margin, y);
             content.showText("DESCRIPTION");
-            content.newLineAtOffset(margin + 300 - (margin + 10) - 90, 0);
+            content.newLineAtOffset(300, 0);
             content.showText("QTY");
-            content.newLineAtOffset(margin + 430 - (margin + 300), 0);
-            content.showText("UNIT PRICE");
-            content.newLineAtOffset(margin + 500 - (margin + 430), 0);
-            content.showText("TAX");
-            content.newLineAtOffset(pageWidth - margin - 80 - (margin + 500), 0);
+            content.newLineAtOffset(50, 0);
+            content.showText("PRICE");
+            content.newLineAtOffset(70, 0);
             content.showText("TOTAL");
             content.endText();
 
-            // ========== ITEMS TABLE CONTENT ==========
-            float itemY = tableStartY - 45;
-            int itemCount = 0;
+            // Draw line under headers
+            content.setLineWidth(0.5f);
+            content.moveTo(margin, tableTopY - 25);
+            content.lineTo(pageWidth - margin, tableTopY - 25);
+            content.stroke();
 
+            // Items
+            y = tableTopY - 45;
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
-                    // Alternating row background
-                    if (itemCount % 2 == 0) {
-                        content.setNonStrokingColor(0.98f, 0.98f, 0.98f);
-                        content.addRect(margin, itemY - 5, pageWidth - 2 * margin, 20);
-                        content.fill();
-                        content.setNonStrokingColor(0, 0, 0);
-                    }
-
-                    // Item row
                     content.beginText();
                     content.setFont(font, 9);
-                    content.newLineAtOffset(margin + 10, itemY);
-                    content.showText(truncateText(item.name, 40));
-                    content.newLineAtOffset(margin + 300 - (margin + 10) - truncateText(item.name, 40).length() * 5, 0);
+                    content.newLineAtOffset(margin, y);
+                    content.showText(truncateText(item.name, 45));
+                    content.newLineAtOffset(300, 0);
                     content.showText(String.valueOf(item.quantity));
-                    content.newLineAtOffset(80, 0);
-                    content.showText(String.format("%.2f %s", item.price, data.currency));
+                    content.newLineAtOffset(50, 0);
+                    content.showText(String.format("%.2f", item.price));
                     content.newLineAtOffset(70, 0);
-                    double lineTax = item.quantity * item.price * (data.vatRate / 100.0);
-                    content.showText(String.format("%.2f", lineTax));
-                    content.newLineAtOffset(pageWidth - margin - 80 - (margin + 500), 0);
                     double lineTotal = item.quantity * item.price;
-                    content.showText(String.format("%.2f %s", lineTotal, data.currency));
+                    content.showText(String.format("%.2f", lineTotal));
                     content.endText();
-
-                    // Bottom line for this row
-                    content.setLineWidth(0.3f);
-                    content.setStrokingColor(0.85f, 0.85f, 0.85f);
-                    content.moveTo(margin, itemY - 8);
-                    content.lineTo(pageWidth - margin, itemY - 8);
-                    content.stroke();
-                    content.setStrokingColor(0, 0, 0);
-
-                    itemY -= 25;
-                    itemCount++;
-
-                    // New page if needed
-                    if (itemY < 200) {
-                        content.close();
-                        page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
-                        document.addPage(page);
-                        content = new PDPageContentStream(document, page);
-                        itemY = pageHeight - 100;
-                    }
+                    y -= 18;
                 }
             }
 
-            // Table bottom border
-            content.setLineWidth(1);
-            content.moveTo(margin, itemY + 5);
-            content.lineTo(pageWidth - margin, itemY + 5);
-            content.stroke();
-
-            // ========== TOTALS SECTION ==========
-            float totalsY = itemY - 30;
-
-            // Totals box background
-            content.setNonStrokingColor(0.97f, 0.97f, 0.97f);
-            content.addRect(pageWidth / 2, totalsY - 80, pageWidth / 2 - margin, 80);
-            content.fill();
-            content.setStrokingColor(0.7f, 0.7f, 0.7f);
-            content.setLineWidth(0.5f);
-            content.stroke();
-            content.setStrokingColor(0, 0, 0);
-            content.setNonStrokingColor(0, 0, 0);
-
+            // TOTALS
+            float totalsY = y - 20;
+            
             content.beginText();
-            float totalLabelX = pageWidth / 2 + 20;
-            float totalValueX = pageWidth - margin - 10;
-
             content.setFont(font, 10);
-            content.newLineAtOffset(totalLabelX - margin, 0);
+            content.newLineAtOffset(pageWidth - margin - 200, totalsY);
             content.showText("Subtotal:");
-            content.newLineAtOffset(totalValueX - totalLabelX, 0);
+            content.newLineAtOffset(150, 0);
             content.showText(String.format("%.2f %s", data.subtotal, data.currency));
+            content.endText();
 
             if (data.tax > 0) {
-                content.newLineAtOffset(totalLabelX - totalValueX, 0);
+                content.beginText();
+                content.newLineAtOffset(pageWidth - margin - 200, totalsY - 15);
                 content.showText(String.format("VAT (%.0f%%):", data.vatRate));
-                content.newLineAtOffset(totalValueX - totalLabelX, 0);
+                content.newLineAtOffset(150, 0);
                 content.showText(String.format("%.2f %s", data.tax, data.currency));
+                content.endText();
             }
 
-            // Total - highlighted
+            content.beginText();
             content.setFont(font, 14);
-            content.newLineAtOffset(totalLabelX - totalValueX, 0);
+            content.newLineAtOffset(pageWidth - margin - 200, totalsY - 40);
             content.showText("TOTAL:");
-            content.newLineAtOffset(totalValueX - totalLabelX, 0);
+            content.newLineAtOffset(150, 0);
             content.showText(String.format("%.2f %s", data.total, data.currency));
-
-            // ========== PAYMENT INFO ==========
-            content.setFont(font, 9);
-            float payY = totalsY - 100;
-            content.newLineAtOffset(-(totalValueX - margin), payY - (totalsY - 60));
-            content.showText("Payment Terms: " + data.paymentTerms);
-            content.newLineAtOffset(0, -15);
-            content.showText("IBAN: " + data.iban);
-            content.newLineAtOffset(0, -15);
-            content.showText("BIC: " + data.bic);
-
             content.endText();
-            content.close();
 
-            // Add XMP metadata
+            // PAYMENT INFO
+            content.beginText();
+            content.setFont(font, 9);
+            content.newLineAtOffset(margin, totalsY - 80);
+            content.showText("Payment Terms: " + data.paymentTerms);
+            content.newLineAtOffset(0, -12);
+            content.showText("IBAN: " + data.iban);
+            content.newLineAtOffset(0, -12);
+            content.showText("BIC: " + data.bic);
+            content.endText();
+
+            content.close();
             addXMPMetadata(document, data);
 
-            // Write to byte array
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             document.save(baos);
-
-            System.out.println("PDF/A-3b created successfully with improved design, size: " + baos.size() + " bytes");
             return baos.toByteArray();
         }
     }
