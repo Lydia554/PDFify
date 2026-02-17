@@ -208,7 +208,7 @@ public class HTTPServer {
             // ========== VIBRANT HEADER ==========
             // Cyan header background
             content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan
-            content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 65);
+            content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 85);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
 
@@ -296,7 +296,7 @@ public class HTTPServer {
             content.endText();
 
             // ========== TABLE HEADER WITH COLOR ==========
-            float tableTopY = fromY - 65;
+            float tableTopY = fromY - 95;
 
             // Cyan colored table header background
             content.setNonStrokingColor(0.85f, 0.96f, 1.0f);  // Light cyan
@@ -314,7 +314,7 @@ public class HTTPServer {
             // Column headers with better spacing - all black
             content.beginText();
             content.setFont(font, 11);
-            float y = tableTopY - 11;
+            float y = tableTopY - 15;
             content.newLineAtOffset(margin + 12, y);
             content.showText("ITEM");
             content.newLineAtOffset(40, 0);
