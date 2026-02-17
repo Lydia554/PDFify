@@ -382,7 +382,7 @@ public class HTTPServer {
             content.setStrokingColor(0, 0, 0);
 
             // ========== TOTALS SECTION ==========
-            float totalsY = y - 20;
+            float totalsY = y - 30;
 
             // Subtotal with more spacing
             content.beginText();
@@ -425,7 +425,7 @@ public class HTTPServer {
 
             // Large cyan background for PAYMENT section - much wider and taller
             content.setNonStrokingColor(0.94f, 0.98f, 1.0f);  // Very light cyan
-            content.addRect(margin - 5, payY - 80, pageWidth - 2 * margin + 10, 85);
+            content.addRect(margin + 5, payY - 80, pageWidth - 2 * margin + 10, 85);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
 
