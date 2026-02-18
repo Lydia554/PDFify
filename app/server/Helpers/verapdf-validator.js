@@ -205,7 +205,8 @@ function runVeraPdf(pdfPath) {
 
         // Platform-specific spawn options
         const spawnOptions = {
-            windowsHide: true
+            windowsHide: true,
+            env: { ...process.env, LANG: 'en_US.UTF-8' }
         };
 
         // Windows needs shell mode for .bat files
@@ -219,19 +220,48 @@ function runVeraPdf(pdfPath) {
         let stderr = '';
 
         veraPdf.stdout.on('data', (data) => {
-            stdout += data.toString();
+            const chunk = data.toString();
+            stdout += chunk;
+            console.log(`[veraPDF] stdout chunk: ${chunk.substring(0, 100)}...`);
         });
 
         veraPdf.stderr.on('data', (data) => {
-            stderr += data.toString();
+            const chunk = data.toString();
+            stderr += chunk;
+            console.log(`[veraPDF] stderr: ${chunk}`);
         });
 
         veraPdf.on('close', (code) => {
             console.log(`[veraPDF] Exit code: ${code}`);
+            console.log(`[veraPDF] stdout length: ${stdout.length}`);
+            console.log(`[veraPDF] stderr length: ${stderr.length}`);
+
+            // Check if veraPDF actually ran
+            if (stdout.length === 0 && stderr.length === 0) {
+                // Try to run veraPDF directly to check if it's installed
+                const testSpawn = spawn(VERAPDF_PATH, ['--version'], { windowsHide: true });
+                let testOutput = '';
+                testSpawn.stdout.on('data', (d) => testOutput += d.toString());
+                testSpawn.on('close', () => {
+                    if (testOutput) {
+                        reject(new Error(`veraPDF is installed but returned no output. Command: ${VERAPDF_PATH} ${args.join(' ')}. This might be a file permission or encoding issue.`));
+                    } else {
+                        reject(new Error(`veraPDF not found or not executable at: ${VERAPDF_PATH}`));
+                    }
+                });
+                testSpawn.on('error', () => {
+                    reject(new Error(`veraPDF not found or not executable at: ${VERAPDF_PATH}`));
+                });
+                return;
+            }
 
             if (stdout) {
-                const result = parseVeraPdfXml(stdout);
-                resolve(result);
+                try {
+                    const result = parseVeraPdfXml(stdout);
+                    resolve(result);
+                } catch (err) {
+                    reject(new Error(`Failed to parse veraPDF output: ${err.message}. Output: ${stdout.substring(0, 200)}`));
+                }
             } else if (stderr) {
                 reject(new Error(`veraPDF error: ${stderr}`));
             } else {
@@ -244,10 +274,15 @@ function runVeraPdf(pdfPath) {
         });
 
         // Timeout after 30 seconds
-        setTimeout(() => {
+        const timeout = setTimeout(() => {
             veraPdf.kill();
-            reject(new Error('veraPDF validation timed out'));
+            reject(new Error('veraPDF validation timed out after 30 seconds'));
         }, 30000);
+
+        // Clear timeout on close
+        veraPdf.on('close', () => {
+            clearTimeout(timeout);
+        });
     });
 }
 

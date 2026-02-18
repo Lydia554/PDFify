@@ -43,15 +43,28 @@ RUN apt-get update && apt-get install -y \
 RUN wget -q "https://software.verapdf.org/releases/1.24/verapdf-pdfbox-1.24.3-installer.zip" -O /tmp/verapdf.zip && \
     mkdir -p /opt/verapdf && \
     unzip -q -o /tmp/verapdf.zip -d /opt/verapdf && \
-    mv /opt/verapdf/verapdf*/* /opt/verapdf/ 2>/dev/null || \
-    mv /opt/verapdf/*/* /opt/verapdf/ 2>/dev/null || true && \
+    (mv /opt/verapdf/verapdf*/* /opt/verapdf/ 2>/dev/null || mv /opt/verapdf/*/* /opt/verapdf/ 2>/dev/null || true) && \
     rm -f /tmp/verapdf.zip && \
     find /opt/verapdf -type f -name 'verapdf' -exec chmod +x {} \; && \
-    VERAPDF_BIN=$(find /opt/verapdf -type f -name 'verapdf' | head -1) && \
-    ln -sf "$VERAPDF_BIN" /usr/local/bin/verapdf || \
-    echo '#!/bin/sh' > /usr/local/bin/verapdf && \
-    echo 'find /opt/verapdf -name verapdf -type f -exec {} "$@" \;' >> /usr/local/bin/verapdf && \
-    chmod +x /usr/local/bin/verapdf
+    find /opt/verapdf -type f -name '*.jar' -exec chmod +x {} \; && \
+    VERAPDF_BIN=$(find /opt/verapdf -type f -name 'verapdf' ! -name '*.jar' | head -1) && \
+    VERAPDF_JAR=$(find /opt/verapdf -type f -name 'verapdf*.jar' ! -name '*installer*' | head -1) && \
+    echo "Found veraPDF binary: $VERAPDF_BIN" && \
+    echo "Found veraPDF JAR: $VERAPDF_JAR" && \
+    if [ -n "$VERAPDF_BIN" ] && [ -f "$VERAPDF_BIN" ]; then \
+        ln -sf "$VERAPDF_BIN" /usr/local/bin/verapdf; \
+        echo "Linked native binary"; \
+    elif [ -n "$VERAPDF_JAR" ] && [ -f "$VERAPDF_JAR" ]; then \
+        echo '#!/bin/sh' > /usr/local/bin/verapdf && \
+        echo "exec java -jar \"$VERAPDF_JAR\" \"\$@\"" >> /usr/local/bin/verapdf && \
+        chmod +x /usr/local/bin/verapdf && \
+        echo "Created JAR wrapper"; \
+    else \
+        echo "ERROR: veraPDF not found!" && \
+        ls -la /opt/verapdf/ && \
+        exit 1; \
+    fi && \
+    /usr/local/bin/verapdf --version
 
 WORKDIR /app
 
