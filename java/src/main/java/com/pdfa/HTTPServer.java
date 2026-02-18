@@ -319,11 +319,9 @@ public class HTTPServer {
             float dividerY = fromY - 100;
             content.setLineWidth(0.5f);
             content.setStrokingColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-            content.setLineDashPattern(new float[]{3, 3});
             content.moveTo(margin, dividerY);
             content.lineTo(pageWidth - margin, dividerY);
             content.stroke();
-            content.setLineDashPattern(new float[]{});  // Reset dash
 
             // ========== TABLE HEADER ==========
             float tableTopY = dividerY - 25;
@@ -464,11 +462,9 @@ public class HTTPServer {
             // Elegant divider
             content.setLineWidth(0.5f);
             content.setStrokingColor(0.7f, 0.7f, 0.7f);
-            content.setLineDashPattern(new float[]{2, 2});
             content.moveTo(margin, payY - 8);
             content.lineTo(margin + 150, payY - 8);
             content.stroke();
-            content.setLineDashPattern(new float[]{});
 
             content.setNonStrokingColor(0.3f, 0.3f, 0.3f);
             content.beginText();
