@@ -135,6 +135,7 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
     companyName: shopConfig.companyName || prettyShopName,
     shopName: shopConfig.shopName || prettyShopName,
     shopAddress: shopConfig.shopAddress || "123 Main St, Anytown, Country",
+    primaryColor: shopConfig.primaryColor || "#00a6cc", // Custom color from shop config
     locale: { language: order.locale || "en", format: locale },
   };
 }

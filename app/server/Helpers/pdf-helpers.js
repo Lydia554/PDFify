@@ -52,6 +52,7 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
                 paymentTerms: invoiceData.paymentTerms || 'Due within 14 days',
                 creator: invoiceData.creator || 'PDFify',
                 locale: invoiceData.locale || { language: 'en' },
+                primaryColor: invoiceData.primaryColor || '#00a6cc', // Custom color
                 filename: filename || `Invoice_${invoiceData.orderId || 'draft'}.pdf`
             }
         }, {

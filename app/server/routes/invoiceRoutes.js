@@ -97,6 +97,7 @@ function mapInvoiceDataToJavaFormat(invoiceData) {
     companyName: invoiceData.shopName || invoiceData.companyName || "Your Company",
     shopName: invoiceData.shopName || "Your Shop",
     shopAddress: invoiceData.shopAddress || "",
+    primaryColor: invoiceData.primaryColor || "#00a6cc", // Pass custom color to Java service
     locale: {
       language: invoiceData.locale?.language || "en",
       format: locale

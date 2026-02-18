@@ -132,6 +132,7 @@ public class HTTPServer {
                 invoice.bic = params.has("bic") ? params.get("bic").getAsString() : "";
                 invoice.paymentTerms = params.has("paymentTerms") ? params.get("paymentTerms").getAsString() : "";
                 invoice.creator = params.has("creator") ? params.get("creator").getAsString() : "";
+                invoice.primaryColor = params.has("primaryColor") ? params.get("primaryColor").getAsString() : "#00a6cc"; // Default cyan
 
                 // Parse locale (for future use)
                 if (params.has("locale") && params.get("locale").isJsonObject()) {
@@ -205,9 +206,19 @@ public class HTTPServer {
             String currencySymbol = getCurrencySymbol(data.currency);
             PDPageContentStream content = new PDPageContentStream(document, page);
 
+            // Generate color shades from primary color
+            float[] primaryRgb = hexToRgb(data.primaryColor);
+            float[] headerBg = primaryRgb; // Primary color for header
+            float[] fromSectionBg = lightenColor(primaryRgb, 70); // Light version for FROM section
+            float[] billToSectionBg = lightenColor(primaryRgb, 50); // Medium-light for BILL TO section
+            float[] tableHeaderBg = lightenColor(primaryRgb, 70); // Light for table header
+            float[] altRowBg = lightenColor(primaryRgb, 85); // Very light for alternating rows
+            float[] totalBoxBg = primaryRgb; // Primary color for total box
+            float[] paymentSectionBg = lightenColor(primaryRgb, 65); // Medium-light for payment section
+
             // ========== VIBRANT HEADER ==========
-            // Cyan header background
-            content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Vibrant cyan
+            // Primary color header background
+            content.setNonStrokingColor(headerRgb[0], headerRgb[1], headerRgb[2]);
             content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 65);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
@@ -238,8 +249,8 @@ public class HTTPServer {
             // ========== FROM SECTION ==========
             float fromY = pageHeight - 110;
 
-            // Large cyan-blue background for FROM section
-            content.setNonStrokingColor(0.85f, 0.95f, 1.0f);  // Light cyan-blue
+            // Large colored background for FROM section
+            content.setNonStrokingColor(fromSectionBg[0], fromSectionBg[1], fromSectionBg[2]);
             content.addRect(margin, fromY - 85, (pageWidth / 2) - margin - 15, 100);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
@@ -267,8 +278,8 @@ public class HTTPServer {
             content.endText();
 
             // ========== BILL TO SECTION ==========
-            // Large blue-teal background for BILL TO section
-            content.setNonStrokingColor(0.82f, 0.92f, 0.98f);  // Light blue-teal
+            // Large colored background for BILL TO section
+            content.setNonStrokingColor(billToSectionBg[0], billToSectionBg[1], billToSectionBg[2]);
             content.addRect(pageWidth / 2 + 15, fromY - 85, (pageWidth / 2) - margin - 15, 100);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
@@ -298,8 +309,8 @@ public class HTTPServer {
             // ========== TABLE HEADER WITH COLOR ==========
             float tableTopY = fromY - 95;
 
-            // Cyan colored table header background
-            content.setNonStrokingColor(0.75f, 0.9f, 0.98f);  // Light sky blue
+            // Colored table header background
+            content.setNonStrokingColor(tableHeaderBg[0], tableHeaderBg[1], tableHeaderBg[2]);
             content.addRect(margin, tableTopY - 28, pageWidth - 1 * margin, 28);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
@@ -335,9 +346,9 @@ public class HTTPServer {
 
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
-                    // Alternating row background with cyan tint
+                    // Alternating row background with custom color tint
                     if (itemCount % 2 == 0) {
-                        content.setNonStrokingColor(0.92f, 0.97f, 1.0f);  // Very pale cyan
+                        content.setNonStrokingColor(altRowBg[0], altRowBg[1], altRowBg[2]);
                         content.addRect(margin, y - 4, pageWidth - 1 * margin, 22);
                         content.fill();
                         content.setNonStrokingColor(0, 0, 0);
@@ -405,7 +416,7 @@ public class HTTPServer {
 
             // TOTAL - highlighted with cyan color
             float totalBoxY = totalsY - 60;
-            content.setNonStrokingColor(0.0f, 0.65f, 0.85f);  // Vibrant cyan background
+            content.setNonStrokingColor(totalBoxBg[0], totalBoxBg[1], totalBoxBg[2]);  // Primary color background
             content.addRect(pageWidth - margin - 220, totalBoxY, 280, 32);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
@@ -423,8 +434,8 @@ public class HTTPServer {
             // ========== PAYMENT INFORMATION ==========
             float payY = totalsY - 150;
 
-            // Large aqua blue background for PAYMENT section
-            content.setNonStrokingColor(0.78f, 0.93f, 0.96f);  // Light aqua blue
+            // Large colored background for PAYMENT section
+            content.setNonStrokingColor(paymentSectionBg[0], paymentSectionBg[1], paymentSectionBg[2]);
             content.addRect(margin, payY - 70, pageWidth - 2 * margin, 100);
             content.fill();
             content.setNonStrokingColor(0, 0, 0);
@@ -677,6 +688,7 @@ public class HTTPServer {
         public String paymentTerms;
         public String creator;
         public String locale;
+        public String primaryColor; // Hex color code (e.g., "#00a6cc")
     }
 
     public static class LineItem {
@@ -685,5 +697,51 @@ public class HTTPServer {
         public int quantity;
         public String unitCode;
         public double price;
+    }
+
+    /**
+     * Convert hex color to RGB array
+     * @param hexColor Hex color string (e.g., "#00a6cc" or "00a6cc")
+     * @return float array [r, g, b] with values 0.0-1.0
+     */
+    private static float[] hexToRgb(String hexColor) {
+        if (hexColor == null || hexColor.isEmpty()) {
+            // Default cyan color
+            return new float[]{0.0f, 0.65f, 0.85f};
+        }
+
+        // Remove # if present
+        hexColor = hexColor.replace("#", "");
+
+        if (hexColor.length() != 6) {
+            // Default cyan if invalid
+            return new float[]{0.0f, 0.65f, 0.85f};
+        }
+
+        try {
+            int r = Integer.parseInt(hexColor.substring(0, 2), 16);
+            int g = Integer.parseInt(hexColor.substring(2, 4), 16);
+            int b = Integer.parseInt(hexColor.substring(4, 6), 16);
+
+            return new float[]{r / 255.0f, g / 255.0f, b / 255.0f};
+        } catch (NumberFormatException e) {
+            // Default cyan if parsing fails
+            return new float[]{0.0f, 0.65f, 0.85f};
+        }
+    }
+
+    /**
+     * Lighten an RGB color by a percentage
+     * @param rgb Original RGB color [r, g, b]
+     * @param percent Amount to lighten (0-100)
+     * @return Lightened RGB color [r, g, b]
+     */
+    private static float[] lightenColor(float[] rgb, int percent) {
+        float factor = 1.0f + (percent / 100.0f);
+        return new float[]{
+            Math.min(1.0f, rgb[0] * factor),
+            Math.min(1.0f, rgb[1] * factor),
+            Math.min(1.0f, rgb[2] * factor)
+        };
     }
 }
