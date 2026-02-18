@@ -39,13 +39,13 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Install veraPDF - download the packaged version (not installer)
-RUN wget -q "https://github.com/veraPDF/veraPDF-packaging/releases/download/v1.24.3/verapdf-1.24.3.zip" -O /tmp/verapdf.zip && \
+# Install veraPDF - download from official repository
+RUN wget -q "https://software.verapdf.org/rel/verapdf-pdfbox-1.24.3.tar.gz" -O /tmp/verapdf.tar.gz && \
     mkdir -p /opt/verapdf && \
-    unzip -q -o /tmp/verapdf.zip -d /opt/verapdf && \
-    mv /opt/verapdf/verapdf-1.24.3/* /opt/verapdf/ && \
-    rm -f /tmp/verapdf.zip && \
-    rmdir /opt/verapdf/verapdf-1.24.3 && \
+    tar -xzf /tmp/verapdf.tar.gz -C /opt/verapdf && \
+    mv /opt/verapdf/verapdf-pdfbox-1.24.3/* /opt/verapdf/ && \
+    rm -f /tmp/verapdf.tar.gz && \
+    rmdir /opt/verapdf/verapdf-pdfbox-1.24.3 && \
     chmod +x /opt/verapdf/verapdf && \
     ls -la /opt/verapdf/ && \
     ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf && \
