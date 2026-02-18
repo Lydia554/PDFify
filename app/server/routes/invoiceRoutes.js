@@ -42,6 +42,8 @@ function formatPrice(amount, currency = "EUR", locale = "en-US") {
  * Map invoice data to Java service format
  */
 function mapInvoiceDataToJavaFormat(invoiceData) {
+  log(`[DEBUG] mapInvoiceDataToJavaFormat received primaryColor: ${invoiceData.primaryColor}`);
+
   const currency = invoiceData.currency || "EUR";
   const locale = invoiceData.locale?.format || "en-US";
 
@@ -113,12 +115,13 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
   invoiceData.isFreeUser = user.planType === "free";
 
-  // Use Java service for PDF/A-3b compliant PDFs
-  if (user.planType === "pro" && invoiceData.compliant) {
-    log("Generating PDF/A-3b compliant PDF via Java service");
+  // Use Java service for ALL pro users (includes PDF/A-3b compliance + ZUGFeRD XML)
+  if (user.planType === "pro") {
+    log("Generating PDF via Java service (PDF/A-3b + ZUGFeRD for pro users)");
 
     try {
       const javaData = mapInvoiceDataToJavaFormat(invoiceData);
+      log(`[DEBUG] primaryColor passed to Java: ${javaData.primaryColor}`);
       const filename = `Invoice_${javaData.orderId}_${Date.now()}.pdf`;
       const pdfBuffer = await createPdfA3WithJava(javaData, filename);
 
@@ -134,7 +137,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     }
   }
 
-  // Puppeteer fallback for colorful PDFs or if Java service fails
+  // Puppeteer fallback for free/premium users or if Java service fails
   const page = await browser.newPage();
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");

@@ -134,6 +134,8 @@ public class HTTPServer {
                 invoice.creator = params.has("creator") ? params.get("creator").getAsString() : "";
                 invoice.primaryColor = params.has("primaryColor") ? params.get("primaryColor").getAsString() : "#00a6cc"; // Default cyan
 
+                System.out.println("[DEBUG] Java service received primaryColor: " + invoice.primaryColor);
+
                 // Parse locale (for future use)
                 if (params.has("locale") && params.get("locale").isJsonObject()) {
                     JsonObject localeObj = params.getAsJsonObject("locale");
@@ -208,6 +210,7 @@ public class HTTPServer {
 
             // Generate color shades from primary color
             float[] primaryRgb = hexToRgb(data.primaryColor);
+            System.out.println("[DEBUG] Creating PDF with primaryColor: " + data.primaryColor + " -> RGB: " + primaryRgb[0] + "," + primaryRgb[1] + "," + primaryRgb[2]);
             float[] headerBg = primaryRgb; // Primary color for header
             float[] fromSectionBg = lightenColor(primaryRgb, 70); // Light version for FROM section
             float[] billToSectionBg = lightenColor(primaryRgb, 50); // Medium-light for BILL TO section
