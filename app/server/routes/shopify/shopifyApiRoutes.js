@@ -3,6 +3,7 @@ const axios = require("axios");
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
+const sharp = require("sharp");
 
 const ShopConfig = require("../../models/ShopConfig");
 const User = require("../../models/User");
@@ -11,33 +12,132 @@ const dualAuth = require("../../middleware/dualAuth");
 const { resolveShopifyToken, getShopLogoUrl } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
-const { generateCustomerInvoiceHTML, formatPrice } = require("./customerInvoice");
-const { mapOrderToPdfData, createMerchantPdf, getBase64Image } = require("./shopifyMerchantTemplate");
-const { validatePdfWithVeraPdf } = require("../../Helpers/verapdf-validator");
-const multer = require('multer');
-
-
-
+const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = require("./customerInvoice");
+const { createPdfA3WithJava } = require("../../Helpers/pdf-helpers");
 
 const os = require("os");
 const JSZip = require("jszip");
 
 const router = express.Router();
 
-// Multer configuration for file uploads (memory storage)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/pdf') {
-      cb(null, true);
-    } else {
-      cb(new Error('Only PDF files are allowed'));
-    }
-  }
-});
-
 require('dotenv').config();
+
+// ----------------------------
+// Helper Functions
+// ----------------------------
+
+/**
+ * Formats a number as a currency string.
+ * @param {number} amount - The amount to format.
+ * @param {string} currency - The currency code (e.g., "USD", "EUR").
+ * @param {string} locale - The locale string (e.g., "en-US", "de-DE").
+ * @returns {string} The formatted currency string.
+ */
+function formatPrice(amount, currency = "EUR", locale = "en-US") {
+  if (typeof amount !== 'number') {
+    amount = parseFloat(amount);
+  }
+  if (isNaN(amount)) {
+    return "";
+  }
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
+
+/**
+ * Convert image URL (PNG, JPG, or SVG) to Buffer for embedding in PDF
+ * @param {string} url
+ * @returns {Promise<Buffer>}
+ */
+async function getBase64Image(url) {
+  if (!url) return null;
+  try {
+    console.log("🔍 Fetching logo for merchant invoice:", url);
+    const response = await axios.get(url, { responseType: "arraybuffer" });
+
+    // Use sharp to ensure it's a PNG/JPG, converting SVG if necessary
+    const imageBuffer = await sharp(response.data).png().toBuffer();
+
+    console.log("✅ Logo processed successfully");
+    return imageBuffer;
+  } catch (err) {
+    console.error("❌ Error fetching or processing logo:", url, err.message);
+    return null;
+  }
+}
+
+/**
+ * Map Shopify order → PDF data for Java service
+ * @param {object} order - Shopify order object
+ * @param {object} shopConfig - Shop configuration
+ * @param {object} user - User object
+ * @returns {object} Invoice data for Java service
+ */
+function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
+  const shopDomain = user?.connectedShopDomain;
+  const prettyShopName = shopDomain ? shopDomain.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Your Shop";
+
+  const items = (order.line_items || []).map((item, index) => {
+    const price = parseFloat(item.price || 0);
+    const quantity = parseFloat(item.quantity || 1);
+    const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+    const net = price * quantity;
+    const total = net + tax;
+    const currency = order.currency || "EUR";
+    const locale = shopConfig.locale || "en-US";
+
+    return {
+      position: index + 1,
+      name: item.title || item.name || "Item",
+      quantity,
+      unitCode: "EA",
+      price,
+      formattedPrice: formatPrice(price, currency, locale),
+      net,
+      formattedNet: formatPrice(net, currency, locale),
+      tax,
+      formattedTax: formatPrice(tax, currency, locale),
+      total,
+      formattedTotal: formatPrice(total, currency, locale),
+      taxRate: 21,
+      currency,
+    };
+  });
+
+  const subtotal = items.reduce((sum, i) => sum + i.net, 0);
+  const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
+  const total = subtotal + taxTotal;
+  const currency = order.currency || "EUR";
+  const locale = shopConfig.locale || "en-US";
+
+  return {
+    orderId: order.name || order.id,
+    date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+    customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
+    customerEmail: order.customer?.email,
+    customerAddress: order.shipping_address ?
+                      `${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.zip || ''}, ${order.shipping_address.country}` :
+                      (order.billing_address ?
+                        `${order.billing_address.address1}, ${order.billing_address.city}, ${order.billing_address.zip || ''}, ${order.billing_address.country}` :
+                        "Customer Address Not Available"),
+    items,
+    subtotal,
+    formattedSubtotal: formatPrice(subtotal, currency, locale),
+    tax: taxTotal,
+    formattedTaxTotal: formatPrice(taxTotal, currency, locale),
+    total,
+    formattedTotal: formatPrice(total, currency, locale),
+    vatRate: 21,
+    currency,
+    iban: shopConfig.iban || "DE89370400440532013000",
+    bic: shopConfig.bic || "COBADEFFXXX",
+    paymentTerms: order.payment?.terms || "Due within 14 days",
+    creator: "PDFify",
+    companyName: shopConfig.companyName || prettyShopName,
+    shopName: shopConfig.shopName || prettyShopName,
+    shopAddress: shopConfig.shopAddress || "123 Main St, Anytown, Country",
+    locale: { language: order.locale || "en", format: locale },
+  };
+}
 
 // ----------------------------
 // Generate invoice PDF
@@ -117,9 +217,9 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 if (isMerchant) {
 try {
   console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
-  
+
   const invoiceData = mapOrderToPdfData(order, shopConfig, user);
-  
+
   // Fetch logo from Shopify directly
   if (!token) token = await resolveShopifyToken(req, shopDomain);
   const logoUrl = await getShopLogoUrl(shopDomain, token);
@@ -130,7 +230,8 @@ try {
       console.log(`[Shopify Merchant Invoice] Could not fetch logo URL from Shopify.`);
   }
 
-  const pdfBuffer = await createMerchantPdf(invoiceData);
+  const filename = `Invoice_${invoiceData.orderId}_${Date.now()}.pdf`;
+  pdfBuffer = await createPdfA3WithJava(invoiceData, filename);
   console.log(`📄 Merchant PDF generated, size: ${pdfBuffer.length} bytes`);
 
   const safeOrderId = (invoiceData.orderId || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -383,120 +484,6 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
   } catch (err) {
     console.error("Failed to generate ZIP:", err);
     res.status(500).json({ error: "Failed to generate ZIP" });
-  }
-});
-
-// ----------------------------
-// Validate PDF/A-3b compliance
-// ----------------------------
-router.post("/validate-pdfa3b", upload.single('pdf'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No PDF file uploaded" });
-    }
-
-    const { autoFix = "false" } = req.body;
-    const shouldAutoFix = autoFix === "true" || autoFix === true;
-
-    console.log(`[Validate] PDF/A-3b validation request, size: ${req.file.size} bytes, autoFix: ${shouldAutoFix}`);
-
-    // Validate PDF with veraPDF
-    const result = await validatePdfWithVeraPdf(req.file.buffer, {
-      autoFix: shouldAutoFix
-    });
-
-    // Build response
-    const response = {
-      success: true,
-      validation: {
-        compliant: result.compliant,
-        profileName: result.profileName || 'PDF/A-3b',
-        passCount: result.passCount,
-        failCount: result.failCount,
-        totalRules: result.totalRules,
-        summary: result.summary,
-        rules: result.rules.slice(0, 50), // Limit to first 50 rules for response size
-        hasMoreRules: result.rules.length > 50
-      }
-    };
-
-    // If auto-fix was attempted and successful, include fixed PDF
-    if (result.fixedPdf) {
-      response.validation.fixed = true;
-      response.validation.afterFix = {
-        compliant: result.compliant,
-        passCount: result.passCount,
-        failCount: result.failCount,
-        totalRules: result.totalRules,
-        summary: result.summary
-      };
-    }
-
-    // Return JSON response for API
-    if (req.query.download === "true" && result.fixedPdf) {
-      // Download fixed PDF
-      res.set({
-        "Content-Type": "application/pdf",
-        "Content-Disposition": "attachment; filename=validated-pdfa3b.pdf",
-      });
-      return res.send(result.fixedPdf);
-    }
-
-    res.json(response);
-
-  } catch (err) {
-    console.error("[Validate] PDF/A-3b validation error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message || "Validation failed"
-    });
-  }
-});
-
-// ----------------------------
-// Batch validate multiple PDFs
-// ----------------------------
-router.post("/validate-batch", upload.array('pdfs', 10), async (req, res) => {
-  try {
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: "No PDF files uploaded" });
-    }
-
-    console.log(`[Validate] Batch validation request: ${req.files.length} files`);
-
-    const results = [];
-
-    for (const file of req.files) {
-      const result = await validatePdfWithVeraPdf(file.buffer, {
-        autoFix: false
-      });
-
-      results.push({
-        filename: file.originalname,
-        size: file.size,
-        validation: {
-          compliant: result.compliant,
-          passCount: result.passCount,
-          failCount: result.failCount,
-          totalRules: result.totalRules,
-          summary: result.summary
-        }
-      });
-    }
-
-    res.json({
-      success: true,
-      totalFiles: req.files.length,
-      compliantCount: results.filter(r => r.validation.compliant).length,
-      results
-    });
-
-  } catch (err) {
-    console.error("[Validate] Batch validation error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message || "Batch validation failed"
-    });
   }
 });
 

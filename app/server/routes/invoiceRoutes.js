@@ -8,10 +8,7 @@ const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const { incrementUsage } = require("../utils/usageUtils");
 const { generateInvoiceHTML } = require("../../templates/english.js");
-const { generateInvoiceHTMLPro } = require("../../templates/english-pro-compliant.js");
-const { finalizePdf } = require("../Helpers/pdf-helpers");
-const { generateZugferdPdfWithFallback, checkZugferdServiceHealth } = require("../Helpers/zugferd-client");
-const generateZugferdXml = require("../../xml/generateZugferdXml");
+const { createPdfA3WithJava } = require("../Helpers/pdf-helpers");
 
 const locales = {
   sl: require("../../locales/sl.json"),
@@ -24,27 +21,127 @@ const DEBUG_MODE = process.env.DEBUG_MODE === "true";
 
 const log = (message, meta = {}) => console.log("[InvoiceRoute]", message, meta);
 
+// ----------------------------
+// Helper Functions
+// ----------------------------
+
+/**
+ * Format number as currency string
+ */
+function formatPrice(amount, currency = "EUR", locale = "en-US") {
+  if (typeof amount !== 'number') {
+    amount = parseFloat(amount);
+  }
+  if (isNaN(amount)) {
+    return "";
+  }
+  return new Intl.NumberFormat(locale, { style: "currency", currency }).format(amount);
+}
+
+/**
+ * Map invoice data to Java service format
+ */
+function mapInvoiceDataToJavaFormat(invoiceData) {
+  const currency = invoiceData.currency || "EUR";
+  const locale = invoiceData.locale?.format || "en-US";
+
+  // Map items
+  const items = (invoiceData.items || []).map((item, index) => {
+    const price = parseFloat(item.price || 0);
+    const quantity = parseFloat(item.quantity || 1);
+    const net = parseFloat(item.net || price * quantity);
+    const tax = parseFloat(item.tax || 0);
+    const total = parseFloat(item.total || net + tax);
+
+    return {
+      position: index + 1,
+      name: item.name || "Item",
+      quantity,
+      unitCode: "EA",
+      price,
+      formattedPrice: formatPrice(price, currency, locale),
+      net,
+      formattedNet: formatPrice(net, currency, locale),
+      tax,
+      formattedTax: formatPrice(tax, currency, locale),
+      total,
+      formattedTotal: formatPrice(total, currency, locale),
+      taxRate: parseFloat(invoiceData.taxRate?.replace('%', '') || 21),
+      currency,
+    };
+  });
+
+  const subtotal = parseFloat(invoiceData.subtotal || items.reduce((sum, i) => sum + i.net, 0));
+  const taxTotal = parseFloat(invoiceData.tax || items.reduce((sum, i) => sum + i.tax, 0));
+  const total = parseFloat(invoiceData.total || subtotal + taxTotal);
+
+  return {
+    orderId: invoiceData.orderId || `INV-${Date.now()}`,
+    date: invoiceData.date || new Date().toISOString().split('T')[0],
+    customerName: invoiceData.customerName || "Customer",
+    customerEmail: invoiceData.customerEmail || "",
+    customerAddress: invoiceData.customerAddress || "",
+    items,
+    subtotal,
+    formattedSubtotal: formatPrice(subtotal, currency, locale),
+    tax: taxTotal,
+    formattedTaxTotal: formatPrice(taxTotal, currency, locale),
+    total,
+    formattedTotal: formatPrice(total, currency, locale),
+    vatRate: parseFloat(invoiceData.taxRate?.replace('%', '') || 21),
+    currency,
+    iban: invoiceData.iban || "",
+    bic: invoiceData.bic || "",
+    paymentTerms: invoiceData.paymentTerms || "Due within 14 days",
+    creator: "PDFify",
+    companyName: invoiceData.shopName || invoiceData.companyName || "Your Company",
+    shopName: invoiceData.shopName || "Your Shop",
+    shopAddress: invoiceData.shopAddress || "",
+    locale: {
+      language: invoiceData.locale?.language || "en",
+      format: locale
+    },
+  };
+}
+
 // -----------------------------
 // PDF generation helper
 // -----------------------------
 async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
-  const page = await browser.newPage();
-
-  await page.setViewport({ width: 1200, height: 1600 });
-  await page.emulateMediaType("print");
-
   // Source + plan flags
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
   invoiceData.isFreeUser = user.planType === "free";
 
-  // Choose correct HTML template
+  // Use Java service for PDF/A-3b compliant PDFs
+  if (user.planType === "pro" && invoiceData.compliant) {
+    log("Generating PDF/A-3b compliant PDF via Java service");
+
+    try {
+      const javaData = mapInvoiceDataToJavaFormat(invoiceData);
+      const filename = `Invoice_${javaData.orderId}_${Date.now()}.pdf`;
+      const pdfBuffer = await createPdfA3WithJava(javaData, filename);
+
+      // Get page count
+      const { PDFDocument } = require("pdf-lib");
+      const pdfDoc = await PDFDocument.load(pdfBuffer);
+      const pageCount = pdfDoc.getPageCount();
+
+      return { pdfBuffer, pageCount };
+    } catch (err) {
+      log("Java service failed, falling back to Puppeteer", { error: err.message });
+      // Fall through to Puppeteer fallback
+    }
+  }
+
+  // Puppeteer fallback for colorful PDFs or if Java service fails
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1200, height: 1600 });
+  await page.emulateMediaType("print");
+
+  // Generate HTML template
   let html;
   try {
-    if (user.planType === "pro" && invoiceData.compliant) {
-      html = await generateInvoiceHTMLPro(invoiceData); // black & white compliant
-    } else {
-      html = await generateInvoiceHTML(invoiceData); // colorful standard
-    }
+    html = await generateInvoiceHTML(invoiceData);
   } catch (err) {
     throw new Error(`Error generating HTML: ${err.message}`);
   }
@@ -66,15 +163,10 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
 
   await page.close();
 
-  // If pro user and compliant, finalize the PDF for PDF/A-3b and ZUGFeRD
-  if (user.planType === "pro" && invoiceData.compliant) {
-    pdfBuffer = await finalizePdf(pdfBuffer, invoiceData);
-  }
-
-  // Need to reload to get accurate page count after potential finalizePdf operations
-  // This is a workaround as pdf-lib's save() doesn't currently return page count easily
-  const { PDFDocument } = require("pdf-lib"); // Moved here
-  const pdfDocFinal = await PDFDocument.load(pdfBuffer);  const pageCount = pdfDocFinal.getPageCount();
+  // Get page count
+  const { PDFDocument } = require("pdf-lib");
+  const pdfDoc = await PDFDocument.load(pdfBuffer);
+  const pageCount = pdfDoc.getPageCount();
 
   return { pdfBuffer, pageCount };
 }
