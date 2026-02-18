@@ -30,6 +30,10 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
     const logoData = invoiceData.logoData || '';
     console.log(`[Java Service] logoData length: ${logoData.length}, logoData present: ${!!logoData && logoData.length > 0}`);
 
+    // Log ZUGFeRD XML data for debugging
+    const zugferdXml = invoiceData.zugferdXml || '';
+    console.log(`[Java Service] zugferdXml length: ${zugferdXml.length}, zugferdXml present: ${!!zugferdXml && zugferdXml.length > 0}`);
+
     try {
         // Call Java service
         const response = await axios.post(`${JAVA_SERVICE_CONFIG.baseURL}/create`, {
@@ -59,6 +63,7 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
                 locale: invoiceData.locale || { language: 'en' },
                 primaryColor: invoiceData.primaryColor || '#00a6cc', // Custom color
                 logoData: logoData, // Base64 encoded logo
+                zugferdXml: zugferdXml, // ZUGFeRD XML content
                 filename: filename || `Invoice_${invoiceData.orderId || 'draft'}.pdf`
             }
         }, {

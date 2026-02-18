@@ -140,6 +140,20 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
   log(`[DEBUG] About to fetch logo with URL: "${logoUrl}" (length: ${logoUrl.length})`);
   const logoData = await fetchAndEncodeLogo(logoUrl);
 
+  // Generate ZUGFeRD XML for pro users
+  let zugferdXml = '';
+  if (invoiceData.invoiceSource === "pro" || invoiceData.invoiceSource === "shopify") {
+    try {
+      log('[ZUGFeRD] Generating ZUGFeRD XML...');
+      const zugferdData = mapToZugferdFormat(invoiceData);
+      zugferdXml = generateZugferdXml(zugferdData);
+      log(`[ZUGFeRD] Generated XML (${zugferdXml.length} bytes)`);
+    } catch (zugferdErr) {
+      log('[ZUGFeRD] Failed to generate XML', { error: zugferdErr.message });
+      // Continue without XML
+    }
+  }
+
   const mappedData = {
     orderId: invoiceData.orderId || `INV-${Date.now()}`,
     date: invoiceData.date || new Date().toISOString().split('T')[0],
@@ -173,6 +187,11 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
   // Only include logoData if it's valid (non-empty and properly formatted)
   if (logoData && logoData.length > 0) {
     mappedData.logoData = logoData;
+  }
+
+  // Include ZUGFeRD XML if generated
+  if (zugferdXml && zugferdXml.length > 0) {
+    mappedData.zugferdXml = zugferdXml;
   }
 
   return mappedData;

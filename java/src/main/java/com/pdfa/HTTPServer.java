@@ -136,12 +136,18 @@ public class HTTPServer {
                 invoice.primaryColor = params.has("primaryColor") ? params.get("primaryColor").getAsString() : "#00a6cc"; // Default cyan
                 invoice.bankName = params.has("bankName") ? params.get("bankName").getAsString() : ""; // Bank name
                 invoice.logoData = params.has("logoData") ? params.get("logoData").getAsString() : ""; // Base64 logo
+                invoice.zugferdXml = params.has("zugferdXml") ? params.get("zugferdXml").getAsString() : ""; // ZUGFeRD XML
 
                 System.out.println("[DEBUG] Java service received primaryColor: " + invoice.primaryColor);
                 if (invoice.logoData != null && !invoice.logoData.isEmpty()) {
                     System.out.println("[Logo] Java service received logo data: " + invoice.logoData.length() + " characters");
                 } else {
                     System.out.println("[Logo] No logo data received");
+                }
+                if (invoice.zugferdXml != null && !invoice.zugferdXml.isEmpty()) {
+                    System.out.println("[ZUGFeRD] Java service received ZUGFeRD XML: " + invoice.zugferdXml.length() + " characters");
+                } else {
+                    System.out.println("[ZUGFeRD] No ZUGFeRD XML received");
                 }
 
                 // Parse locale (for future use)
@@ -169,8 +175,21 @@ public class HTTPServer {
 
                 log(requestId, "Invoice data parsed successfully, items: " + invoice.items.size());
 
-                // Generate PDF to byte array
-                byte[] pdfBytes = createPdfA3B(invoice);
+                // Generate PDF to PDDocument
+                PDDocument document = createPdfA3BDocument(invoice);
+
+                // Embed ZUGFeRD XML if provided
+                if (invoice.zugferdXml != null && !invoice.zugferdXml.isEmpty()) {
+                    System.out.println("[ZUGFeRD] Embedding ZUGFeRD XML into PDF...");
+                    embedZugferdXml(document, invoice.zugferdXml);
+                    System.out.println("[ZUGFeRD] ZUGFeRD XML embedded successfully");
+                }
+
+                // Convert to byte array
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                document.save(baos);
+                document.close();
+                byte[] pdfBytes = baos.toByteArray();
 
                 long duration = System.currentTimeMillis() - startTime;
                 log(requestId, "PDF created successfully in " + duration + "ms, size: " + pdfBytes.length + " bytes");
@@ -199,13 +218,13 @@ public class HTTPServer {
     }
 
     /**
-     * Create PDF/A-3b invoice as byte array with clean professional design
+     * Create PDF/A-3b invoice as PDDocument (for further processing like ZUGFeRD embedding)
      */
-    private static byte[] createPdfA3B(InvoiceData data) throws IOException {
-        try (PDDocument document = new PDDocument()) {
-            addOutputIntent(document);
-            PDPage page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
-            document.addPage(page);
+    private static PDDocument createPdfA3BDocument(InvoiceData data) throws IOException {
+        PDDocument document = new PDDocument();
+        addOutputIntent(document);
+        PDPage page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
+        document.addPage(page);
 
             InputStream fontStream = getResourceAsStream("LiberationSans-Regular.ttf");
             PDType0Font font = PDType0Font.load(document, fontStream);
@@ -641,13 +660,11 @@ public class HTTPServer {
 
             content.close();
 
-            // Add metadata and save
+            // Add metadata
             addXMPMetadata(document, data);
 
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            document.save(baos);
-            return baos.toByteArray();
-        }
+            // Return document for further processing (ZUGFeRD embedding, etc.)
+            return document;
     }
 
     /**
@@ -859,6 +876,7 @@ public class HTTPServer {
         public String locale;
         public String primaryColor; // Hex color code (e.g., "#00a6cc")
         public String logoData; // Base64 encoded PNG logo
+        public String zugferdXml; // ZUGFeRD XML content to embed
     }
 
     public static class LineItem {

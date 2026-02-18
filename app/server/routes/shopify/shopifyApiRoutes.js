@@ -14,6 +14,7 @@ const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = require("./customerInvoice");
 const { createPdfA3WithJava } = require("../../Helpers/pdf-helpers");
+const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 const os = require("os");
 const JSZip = require("jszip");
@@ -256,6 +257,41 @@ try {
   console.log("🧾 [Shopify] Mapped invoiceData - customerName:", invoiceData.customerName);
   console.log("🧾 [Shopify] Mapped invoiceData - items:", invoiceData.items?.length);
   console.log("🧾 [Shopify] Mapped invoiceData - total:", invoiceData.total);
+
+  // Generate ZUGFeRD XML for merchant PDF
+  try {
+    console.log("🧾 [Shopify] Generating ZUGFeRD XML for merchant PDF...");
+    const zugferdData = {
+      orderId: invoiceData.orderId,
+      date: invoiceData.date,
+      currency: invoiceData.currency,
+      customerName: invoiceData.customerName,
+      companyName: invoiceData.companyName,
+      iban: invoiceData.iban,
+      items: invoiceData.items,
+      subtotal: invoiceData.subtotal,
+      tax: invoiceData.tax,
+      total: invoiceData.total,
+      sellerAddress: {
+        postCode: "12345", // Should come from shopConfig
+        street: invoiceData.shopAddress || "Main Street 1",
+        city: "Anytown",
+        country: "DE"
+      },
+      buyerAddress: {
+        postCode: "12345",
+        street: invoiceData.customerAddress?.split(',')[0] || "Customer Street 1",
+        city: invoiceData.customerAddress?.split(',')[1] || "Customerton",
+        country: invoiceData.customerAddress?.split(',')[3] || "DE"
+      },
+      sellerVatId: "DE123456789" // Should come from shopConfig
+    };
+    invoiceData.zugferdXml = generateZugferdXml(zugferdData);
+    console.log("🧾 [Shopify] ZUGFeRD XML generated:", invoiceData.zugferdXml.length, "bytes");
+  } catch (zugferdErr) {
+    console.error("🧾 [Shopify] Failed to generate ZUGFeRD XML:", zugferdErr.message);
+    // Continue without XML
+  }
 
   // Fetch logo from Shopify directly
   if (!token) token = await resolveShopifyToken(req, shopDomain);
