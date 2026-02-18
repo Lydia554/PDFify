@@ -1,3 +1,6 @@
+# Stage 0: Extract veraPDF from official image
+FROM verapdf/verapdf:latest AS verapdf-extractor
+
 # Stage 1: Java service builder
 FROM maven:3.9-eclipse-temurin-17 AS java-builder
 
@@ -10,6 +13,13 @@ RUN cd /tmp/java && mvn clean package -DskipTests && cp target/pdfa-3b-service-1
 
 # Stage 2: Node.js application
 FROM node:20-slim AS node-builder
+
+# Copy veraPDF from official image
+COPY --from=verapdf-extractor /opt/verapdf /opt/verapdf
+RUN chmod +x /opt/verapdf/verapdf && \
+    ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf && \
+    /usr/local/bin/verapdf --version && \
+    echo "✅ veraPDF installed from official Docker image"
 
 # Install system dependencies in one layer
 RUN apt-get update && apt-get install -y \
@@ -39,9 +49,16 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Note: veraPDF validation skipped in Docker build
-# The validator will fall back to basic validation without veraPDF
-# To enable full PDF/A-3b validation, install veraPDF manually in the container
+# Install veraPDF by extracting from the official Docker image
+RUN docker pull verapdf/verapdf:latest && \
+    docker create --name verapdf-container verapdf/verapdf:latest && \
+    docker cp verapdf-container:/opt/verapdf /opt/verapdf && \
+    docker rm verapdf-container && \
+    docker rmi verapdf/verapdf:latest && \
+    chmod +x /opt/verapdf/verapdf && \
+    ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf && \
+    /usr/local/bin/verapdf --version && \
+    echo "✅ veraPDF installed successfully"
 
 WORKDIR /app
 
