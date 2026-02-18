@@ -14,7 +14,7 @@ const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = require("./customerInvoice");
 const { createPdfA3WithJava } = require("../../Helpers/pdf-helpers");
-const generateZugferdXml = require("../../xml/generateZugferdXml");
+const generateZugferdXml = require("../../../xml/generateZugferdXml");
 
 const os = require("os");
 const JSZip = require("jszip");
