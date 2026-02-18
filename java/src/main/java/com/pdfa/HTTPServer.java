@@ -233,33 +233,64 @@ public class HTTPServer {
 
             // Logo (top left)
             if (data.logoData != null && !data.logoData.isEmpty()) {
+                // Only process if it looks like valid base64 image data
                 if (!data.logoData.startsWith("http://") && !data.logoData.startsWith("https://") &&
                     !data.logoData.endsWith(".png") && !data.logoData.endsWith(".jpg") &&
                     !data.logoData.endsWith(".jpeg") && data.logoData.length() > 100) {
 
                     try {
-                        byte[] logoBytes = java.util.Base64.getDecoder().decode(data.logoData);
-                        PDImageXObject logoImage = PDImageXObject.createFromByteArray(document, logoBytes, "logo");
+                        // Validate base64 string
+                        String cleanBase64 = data.logoData.trim();
+                        // Remove data URI prefix if present
+                        if (cleanBase64.startsWith("data:image/")) {
+                            int commaIndex = cleanBase64.indexOf(',');
+                            if (commaIndex > 0) {
+                                cleanBase64 = cleanBase64.substring(commaIndex + 1);
+                            }
+                        }
 
-                        float originalWidth = logoImage.getWidth();
-                        float originalHeight = logoImage.getHeight();
-                        float maxLogoWidth = 160;
-                        float maxLogoHeight = 60;
+                        // Decode base64
+                        byte[] logoBytes = java.util.Base64.getDecoder().decode(cleanBase64);
 
-                        float scaleX = maxLogoWidth / originalWidth;
-                        float scaleY = maxLogoHeight / originalHeight;
-                        float scale = Math.min(scaleX, scaleY);
-                        scale = Math.min(scale, 1.0f);
+                        // Validate we have actual image data (check for common image signatures)
+                        if (logoBytes.length < 100) {
+                            System.err.println("[Logo] Image data too small, skipping");
+                        } else {
+                            // Check PNG signature
+                            boolean isPng = logoBytes[0] == (byte)0x89 && logoBytes[1] == (byte)0x50 &&
+                                          logoBytes[2] == (byte)0x4E && logoBytes[3] == (byte)0x47;
+                            // Check JPEG signature
+                            boolean isJpeg = logoBytes[0] == (byte)0xFF && logoBytes[1] == (byte)0xD8;
 
-                        float logoWidth = originalWidth * scale;
-                        float logoHeight = originalHeight * scale;
+                            if (!isPng && !isJpeg) {
+                                System.err.println("[Logo] Invalid image signature, skipping");
+                            } else {
+                                PDImageXObject logoImage = PDImageXObject.createFromByteArray(document, logoBytes, "logo");
 
-                        content.drawImage(logoImage, margin, headerY - logoHeight + 10, logoWidth, logoHeight);
-                        logoRightX = margin + logoWidth + 20;
+                                float originalWidth = logoImage.getWidth();
+                                float originalHeight = logoImage.getHeight();
+                                float maxLogoWidth = 160;
+                                float maxLogoHeight = 60;
 
-                        System.out.println("[Logo] Drew logo: " + (int)logoWidth + "x" + (int)logoHeight);
+                                float scaleX = maxLogoWidth / originalWidth;
+                                float scaleY = maxLogoHeight / originalHeight;
+                                float scale = Math.min(scaleX, scaleY);
+                                scale = Math.min(scale, 1.0f);
+
+                                float logoWidth = originalWidth * scale;
+                                float logoHeight = originalHeight * scale;
+
+                                content.drawImage(logoImage, margin, headerY - logoHeight + 10, logoWidth, logoHeight);
+                                logoRightX = margin + logoWidth + 20;
+
+                                System.out.println("[Logo] Drew logo: " + (int)logoWidth + "x" + (int)logoHeight);
+                            }
+                        }
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("[Logo] Invalid base64 data, skipping: " + e.getMessage());
                     } catch (Exception e) {
                         System.err.println("[Logo] Failed to draw logo: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 }
             }
@@ -274,35 +305,44 @@ public class HTTPServer {
 
             // Invoice details (right aligned)
             float rightX = pageWidth - margin;
+            float detailY = headerY + 5;
+            float detailLineHeight = 18;
+
+            // Invoice Number line
             content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
             content.beginText();
             content.setFont(font, 9);
 
             String invLabel = "Invoice Number:";
             float invLabelWidth = font.getStringWidth(invLabel) / 1000 * 9;
-            content.newLineAtOffset(rightX - invLabelWidth, headerY + 5);
+            content.newLineAtOffset(rightX - invLabelWidth, detailY);
             content.showText(invLabel);
+
+            // Invoice number value (right aligned, after the label)
+            String invValue = data.orderId;
+            float invValueWidth = font.getStringWidth(invValue) / 1000 * 10;
+            content.setNonStrokingColor(0.15f, 0.15f, 0.15f);
+            content.setFont(font, 10);
+            content.newLineAtOffset(rightX - invLabelWidth - 8 - invValueWidth, detailY);
+            content.showText(invValue);
+            content.endText();
+
+            // Date line
+            content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
+            content.beginText();
+            content.setFont(font, 9);
 
             String dateLabel = "Date:";
             float dateLabelWidth = font.getStringWidth(dateLabel) / 1000 * 9;
-            content.newLineAtOffset(-invLabelWidth + dateLabelWidth, -20);
+            content.newLineAtOffset(rightX - dateLabelWidth, detailY - detailLineHeight);
             content.showText(dateLabel);
 
-            content.endText();
-
-            // Values (right aligned, bold)
-            content.setNonStrokingColor(0.15f, 0.15f, 0.15f);
-            content.beginText();
-            content.setFont(font, 10);
-
-            String invValue = data.orderId;
-            float invValueWidth = font.getStringWidth(invValue) / 1000 * 10;
-            content.newLineAtOffset(rightX - invValueWidth, headerY + 5);
-            content.showText(invValue);
-
+            // Date value (right aligned, after the label)
             String dateValue = data.date;
             float dateValueWidth = font.getStringWidth(dateValue) / 1000 * 10;
-            content.newLineAtOffset(-invValueWidth + dateValueWidth, -20);
+            content.setNonStrokingColor(0.15f, 0.15f, 0.15f);
+            content.setFont(font, 10);
+            content.newLineAtOffset(rightX - dateLabelWidth - 8 - dateValueWidth, detailY - detailLineHeight);
             content.showText(dateValue);
 
             content.endText();
