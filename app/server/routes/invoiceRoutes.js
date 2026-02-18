@@ -2,6 +2,8 @@ const express = require("express");
 const puppeteer = require("puppeteer");
 const archiver = require("archiver");
 const { PDFDocument } = require("pdf-lib");
+const axios = require("axios");
+const sharp = require("sharp");
 
 const router = express.Router();
 const User = require("../models/User");
@@ -41,9 +43,9 @@ function formatPrice(amount, currency = "EUR", locale = "en-US") {
 }
 
 /**
- * Fetch logo from URL and convert to base64
- * @param {string} logoUrl - URL of the logo image
- * @returns {Promise<string>} Base64 encoded logo or empty string
+ * Fetch logo from URL and convert to base64 PNG
+ * @param {string} logoUrl - URL of the logo image (supports PNG, JPG, SVG)
+ * @returns {Promise<string>} Base64 encoded PNG logo or empty string
  */
 async function fetchAndEncodeLogo(logoUrl) {
   if (!logoUrl || logoUrl.trim() === '') {
@@ -55,7 +57,6 @@ async function fetchAndEncodeLogo(logoUrl) {
     const response = await axios.get(logoUrl, {
       responseType: 'arraybuffer',
       timeout: 10000,
-      // Validate content type
       validateStatus: (status) => status === 200
     });
 
@@ -66,9 +67,14 @@ async function fetchAndEncodeLogo(logoUrl) {
       return '';
     }
 
+    // Use sharp to convert to PNG (handles SVG conversion)
+    const pngBuffer = await sharp(response.data)
+      .png()
+      .toBuffer();
+
     // Convert to base64
-    const base64 = Buffer.from(response.data).toString('base64');
-    log(`[Logo] Successfully fetched and encoded logo (${response.data.length} bytes)`);
+    const base64 = pngBuffer.toString('base64');
+    log(`[Logo] Successfully fetched and encoded logo (${pngBuffer.length} bytes)`);
     return base64;
   } catch (err) {
     log(`[Logo] Failed to fetch logo: ${err.message}`);
@@ -151,6 +157,24 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
 }
 
 /**
+ * Format date for PDF (D:YYYYMMDDHHmmSS+HH'mm')
+ * @param {Date} date - JavaScript Date object
+ * @returns {string} PDF-formatted date string
+ */
+function formatPdfDate(date) {
+  const d = date || new Date();
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  const hours = String(d.getUTCHours()).padStart(2, '0');
+  const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+  const seconds = String(d.getUTCSeconds()).padStart(2, '0');
+
+  // For simplicity, use UTC (Z) timezone indicator
+  return `D:${year}${month}${day}${hours}${minutes}${seconds}Z`;
+}
+
+/**
  * Attach ZUGFeRD XML to PDF as file attachment
  * @param {Buffer} pdfBuffer - Original PDF buffer
  * @param {object} invoiceData - Invoice data
@@ -185,8 +209,8 @@ async function attachZugferdXml(pdfBuffer, invoiceData) {
           Filter: 'FlateDecode',
           Params: pdfDoc.context.obj({
             Size: xmlBytes.length,
-            CreationDate: pdfDoc.context.date(new Date()),
-            ModDate: pdfDoc.context.date(new Date()),
+            CreationDate: formatPdfDate(new Date()),
+            ModDate: formatPdfDate(new Date()),
           }),
         }),
       }),
