@@ -10,17 +10,14 @@ async function generateInvoiceHTML(data) {
   const locale = data.locale || {};
   const items = Array.isArray(data.items) ? data.items : [];
 
-  // Determine free/pro user safely
-  const planType = (data?.planType || "").toLowerCase();
-  const isFree = planType === "free" || planType === "starter";
-
+  // All users get the same high-quality PDF - only monthly quota differs
   data.invoiceSource ||= "colorful";
 
-  // Colors
-  const primaryColor = isFree ? "#888888" : "#2a3d66";
-  const secondaryColor = isFree ? "#cccccc" : "#dbe7ff";
-  const borderColor = isFree ? "#aaaaaa" : "#c5d0f9";
-  const evenRowColor = isFree ? "#eee" : "#f6f9fe";
+  // Colors - same for all users
+  const primaryColor = data.primaryColor || "#2a3d66";
+  const secondaryColor = "#dbe7ff";
+  const borderColor = "#c5d0f9";
+  const evenRowColor = "#f6f9fe";
 
   // Logo
   let logoHTML = "";
@@ -60,8 +57,8 @@ async function generateInvoiceHTML(data) {
     return ""; // no empty placeholder if no logo
   };
 
-  // Chart for pro users only
-  const chartHTML = !isFree && data.showChart
+  // Chart for all users (if requested)
+  const chartHTML = data.showChart
     ? `<div class="chart-container">
          <h2>${locale.breakdown || "Breakdown"}</h2>
          <img src="https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify({
@@ -76,9 +73,8 @@ async function generateInvoiceHTML(data) {
          }))}" alt="Invoice Breakdown" style="max-width:500px;display:block;margin:auto;" />
        </div>` : "";
 
-  // Watermark for free/preview users
-  const watermarkHTML = isFree && data.isPreview
-    ? `<div class="watermark">${locale.watermarkBasic || 'FOR PRODUCTION ONLY — NOT AVAILABLE IN BASIC VERSION'}</div>` : "";
+  // No watermark - all users get production-quality PDFs
+  const watermarkHTML = "";
 
   // Full HTML
   return `

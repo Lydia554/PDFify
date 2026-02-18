@@ -258,40 +258,46 @@ try {
   console.log("🧾 [Shopify] Mapped invoiceData - items:", invoiceData.items?.length);
   console.log("🧾 [Shopify] Mapped invoiceData - total:", invoiceData.total);
 
-  // Generate ZUGFeRD XML for merchant PDF
-  try {
-    console.log("🧾 [Shopify] Generating ZUGFeRD XML for merchant PDF...");
-    const zugferdData = {
-      orderId: invoiceData.orderId,
-      date: invoiceData.date,
-      currency: invoiceData.currency,
-      customerName: invoiceData.customerName,
-      companyName: invoiceData.companyName,
-      iban: invoiceData.iban,
-      items: invoiceData.items,
-      subtotal: invoiceData.subtotal,
-      tax: invoiceData.tax,
-      total: invoiceData.total,
-      sellerAddress: {
-        postCode: "12345", // Should come from shopConfig
-        street: invoiceData.shopAddress || "Main Street 1",
-        city: "Anytown",
-        country: "DE"
-      },
-      buyerAddress: {
-        postCode: "12345",
-        street: invoiceData.customerAddress?.split(',')[0] || "Customer Street 1",
-        city: invoiceData.customerAddress?.split(',')[1] || "Customerton",
-        country: invoiceData.customerAddress?.split(',')[3] || "DE"
-      },
-      sellerVatId: "DE123456789", // Should come from shopConfig
-      vatRate: invoiceData.vatRate || 21
-    };
-    invoiceData.zugferdXml = generateZugferdXml(zugferdData);
-    console.log("🧾 [Shopify] ZUGFeRD XML generated:", invoiceData.zugferdXml.length, "bytes");
-  } catch (zugferdErr) {
-    console.error("🧾 [Shopify] Failed to generate ZUGFeRD XML:", zugferdErr.message);
-    // Continue without XML
+  // Generate ZUGFeRD XML only for pro users
+  const isProUser = user && user.planType === "pro";
+
+  if (isProUser) {
+    try {
+      console.log("🧾 [Shopify] Generating ZUGFeRD XML for pro user...");
+      const zugferdData = {
+        orderId: invoiceData.orderId,
+        date: invoiceData.date,
+        currency: invoiceData.currency,
+        customerName: invoiceData.customerName,
+        companyName: invoiceData.companyName,
+        iban: invoiceData.iban,
+        items: invoiceData.items,
+        subtotal: invoiceData.subtotal,
+        tax: invoiceData.tax,
+        total: invoiceData.total,
+        sellerAddress: {
+          postCode: "12345", // Should come from shopConfig
+          street: invoiceData.shopAddress || "Main Street 1",
+          city: "Anytown",
+          country: "DE"
+        },
+        buyerAddress: {
+          postCode: "12345",
+          street: invoiceData.customerAddress?.split(',')[0] || "Customer Street 1",
+          city: invoiceData.customerAddress?.split(',')[1] || "Customerton",
+          country: invoiceData.customerAddress?.split(',')[3] || "DE"
+        },
+        sellerVatId: "DE123456789", // Should come from shopConfig
+        vatRate: invoiceData.vatRate || 21
+      };
+      invoiceData.zugferdXml = generateZugferdXml(zugferdData);
+      console.log("🧾 [Shopify] ZUGFeRD XML generated:", invoiceData.zugferdXml.length, "bytes");
+    } catch (zugferdErr) {
+      console.error("🧾 [Shopify] Failed to generate ZUGFeRD XML:", zugferdErr.message);
+      // Continue without XML
+    }
+  } else {
+    console.log("🧾 [Shopify] Skipping ZUGFeRD XML for free/premium user");
   }
 
   // Fetch logo from Shopify directly

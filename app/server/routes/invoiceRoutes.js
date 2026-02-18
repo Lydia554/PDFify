@@ -98,7 +98,7 @@ async function fetchAndEncodeLogo(logoUrl) {
 /**
  * Map invoice data to Java service format
  */
-async function mapInvoiceDataToJavaFormat(invoiceData) {
+async function mapInvoiceDataToJavaFormat(invoiceData, user) {
   log(`[DEBUG] mapInvoiceDataToJavaFormat received primaryColor: ${invoiceData.primaryColor}`);
   log(`[DEBUG] mapInvoiceDataToJavaFormat received customLogoUrl: "${invoiceData.customLogoUrl}"`);
 
@@ -140,11 +140,13 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
   log(`[DEBUG] About to fetch logo with URL: "${logoUrl}" (length: ${logoUrl.length})`);
   const logoData = await fetchAndEncodeLogo(logoUrl);
 
-  // Generate ZUGFeRD XML for pro users
+  // Generate ZUGFeRD XML only for pro users
   let zugferdXml = '';
-  if (invoiceData.invoiceSource === "pro" || invoiceData.invoiceSource === "shopify") {
+  const isProUser = user && user.planType === "pro";
+
+  if (isProUser) {
     try {
-      log('[ZUGFeRD] Generating ZUGFeRD XML...');
+      log('[ZUGFeRD] Generating ZUGFeRD XML for pro user...');
       const zugferdData = mapToZugferdFormat(invoiceData);
       zugferdXml = generateZugferdXml(zugferdData);
       log(`[ZUGFeRD] Generated XML (${zugferdXml.length} bytes)`);
@@ -152,6 +154,8 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
       log('[ZUGFeRD] Failed to generate XML', { error: zugferdErr.message });
       // Continue without XML
     }
+  } else {
+    log('[ZUGFeRD] Skipping ZUGFeRD XML for free/premium user');
   }
 
   const mappedData = {
@@ -379,32 +383,27 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
   invoiceData.invoiceSource ||= reqInvoiceSource || "standard";
   invoiceData.isFreeUser = user.planType === "free";
 
-  // Use Java service for ALL pro users (includes PDF/A-3b compliance + ZUGFeRD XML)
-  if (user.planType === "pro") {
-    log("Generating PDF via Java service (PDF/A-3b + ZUGFeRD for pro users)");
+  // Use Java service for ALL users (PDF/A-3b compliance + ZUGFeRD XML)
+  // The only difference between free and pro should be monthly quota, not PDF quality
+  log("Generating PDF via Java service (PDF/A-3b + ZUGFeRD)");
 
-    try {
-      const javaData = await mapInvoiceDataToJavaFormat(invoiceData);
-      log(`[DEBUG] primaryColor passed to Java: ${javaData.primaryColor}`);
-      const filename = `Invoice_${javaData.orderId}_${Date.now()}.pdf`;
-      let pdfBuffer = await createPdfA3WithJava(javaData, filename);
+  try {
+    const javaData = await mapInvoiceDataToJavaFormat(invoiceData, user);
+    log(`[DEBUG] primaryColor passed to Java: ${javaData.primaryColor}`);
+    const filename = `Invoice_${javaData.orderId}_${Date.now()}.pdf`;
+    let pdfBuffer = await createPdfA3WithJava(javaData, filename);
 
-      // ZUGFeRD XML attachment disabled - it was corrupting PDFs
-      // The Java service already generates PDF/A-3b compliant PDFs
-      // TODO: Fix ZUGFeRD attachment to use proper pdf-lib API
+    // Get page count
+    const pdfDoc = await PDFDocument.load(pdfBuffer);
+    const pageCount = pdfDoc.getPageCount();
 
-      // Get page count
-      const pdfDoc = await PDFDocument.load(pdfBuffer);
-      const pageCount = pdfDoc.getPageCount();
-
-      return { pdfBuffer, pageCount };
-    } catch (err) {
-      log("Java service failed, falling back to Puppeteer", { error: err.message });
-      // Fall through to Puppeteer fallback
-    }
+    return { pdfBuffer, pageCount };
+  } catch (err) {
+    log("Java service failed, falling back to Puppeteer", { error: err.message });
+    // Fall through to Puppeteer fallback
   }
 
-  // Puppeteer fallback for free/premium users or if Java service fails
+  // Puppeteer fallback if Java service fails
   const page = await browser.newPage();
   await page.setViewport({ width: 1200, height: 1600 });
   await page.emulateMediaType("print");
