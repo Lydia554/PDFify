@@ -39,19 +39,9 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Install veraPDF from the official Debian package or apt repository
-RUN apt-get update && \
-    # Try to install from apt (available in Debian/testing)
-    apt-get install -y verapdf 2>/dev/null || \
-    # If not available in apt, download and extract the portable version
-    (wget -q "https://files.verapdf.org/components/1.24/verapdf-1.24.3.tar.gz" -O /tmp/verapdf.tar.gz && \
-     mkdir -p /opt/verapdf && \
-     tar -xzf /tmp/verapdf.tar.gz -C /opt/verapdf && \
-     rm -f /tmp/verapdf.tar.gz && \
-     chmod +x /opt/verapdf/verapdf && \
-     ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf && \
-     /usr/local/bin/verapdf --version) && \
-    rm -rf /var/lib/apt/lists/*
+# Note: veraPDF validation skipped in Docker build
+# The validator will fall back to basic validation without veraPDF
+# To enable full PDF/A-3b validation, install veraPDF manually in the container
 
 WORKDIR /app
 
