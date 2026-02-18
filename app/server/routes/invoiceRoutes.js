@@ -140,13 +140,13 @@ async function mapInvoiceDataToJavaFormat(invoiceData, user) {
   log(`[DEBUG] About to fetch logo with URL: "${logoUrl}" (length: ${logoUrl.length})`);
   const logoData = await fetchAndEncodeLogo(logoUrl);
 
-  // Generate ZUGFeRD XML only for pro users
+  // Generate ZUGFeRD XML for paying customers (premium + pro)
   let zugferdXml = '';
-  const isProUser = user && user.planType === "pro";
+  const isPayingCustomer = user && (user.planType === "pro" || user.planType === "premium");
 
-  if (isProUser) {
+  if (isPayingCustomer) {
     try {
-      log('[ZUGFeRD] Generating ZUGFeRD XML for pro user...');
+      log(`[ZUGFeRD] Generating ZUGFeRD XML for ${user.planType} user...`);
       const zugferdData = mapToZugferdFormat(invoiceData);
       zugferdXml = generateZugferdXml(zugferdData);
       log(`[ZUGFeRD] Generated XML (${zugferdXml.length} bytes)`);
@@ -155,7 +155,7 @@ async function mapInvoiceDataToJavaFormat(invoiceData, user) {
       // Continue without XML
     }
   } else {
-    log('[ZUGFeRD] Skipping ZUGFeRD XML for free/premium user');
+    log('[ZUGFeRD] Skipping ZUGFeRD XML for free user');
   }
 
   const mappedData = {

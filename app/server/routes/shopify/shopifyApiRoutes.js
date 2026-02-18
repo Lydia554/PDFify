@@ -258,12 +258,12 @@ try {
   console.log("🧾 [Shopify] Mapped invoiceData - items:", invoiceData.items?.length);
   console.log("🧾 [Shopify] Mapped invoiceData - total:", invoiceData.total);
 
-  // Generate ZUGFeRD XML only for pro users
-  const isProUser = user && user.planType === "pro";
+  // Generate ZUGFeRD XML for paying customers (premium + pro)
+  const isPayingCustomer = user && (user.planType === "pro" || user.planType === "premium");
 
-  if (isProUser) {
+  if (isPayingCustomer) {
     try {
-      console.log("🧾 [Shopify] Generating ZUGFeRD XML for pro user...");
+      console.log(`🧾 [Shopify] Generating ZUGFeRD XML for ${user.planType} user...`);
       const zugferdData = {
         orderId: invoiceData.orderId,
         date: invoiceData.date,
@@ -297,7 +297,7 @@ try {
       // Continue without XML
     }
   } else {
-    console.log("🧾 [Shopify] Skipping ZUGFeRD XML for free/premium user");
+    console.log("🧾 [Shopify] Skipping ZUGFeRD XML for free user");
   }
 
   // Fetch logo from Shopify directly

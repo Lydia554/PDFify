@@ -248,8 +248,9 @@ public class HTTPServer {
 
             // ========== HEADER: LOGO + INVOICE TITLE ==========
             float headerY = pageHeight - margin - 30;
+            float logoHeight = 0; // Track logo height for text positioning
 
-            // Draw logo BEFORE opening content stream for text
+            // Draw logo in the SAME content stream (don't close/reopen)
             if (data.logoData != null && !data.logoData.isEmpty()) {
                 try {
                     System.out.println("[Logo] Processing logo data...");
@@ -274,32 +275,20 @@ public class HTTPServer {
                     scale = Math.min(scale, 1.0f);
 
                     float logoWidth = originalWidth * scale;
-                    float logoHeight = originalHeight * scale;
-
-                    // Close existing content stream temporarily
-                    content.close();
-
-                    // Create new content stream just for the logo
-                    PDPageContentStream logoContent = new PDPageContentStream(document, page,
-                        PDPageContentStream.AppendMode.APPEND, true);
+                    logoHeight = originalHeight * scale;
 
                     float logoX = margin;
                     float logoY = pageHeight - margin - logoHeight;
-                    logoContent.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
-                    logoContent.close();
+
+                    // Draw logo in the CURRENT content stream (no closing/reopening!)
+                    content.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
 
                     System.out.println("[Logo] Successfully drew logo: " + (int)originalWidth + "x" + (int)originalHeight +
                                        " -> " + (int)logoWidth + "x" + (int)logoHeight + " at (" + (int)logoX + "," + (int)logoY + ")");
-
-                    // Reopen content stream for remaining elements
-                    content = new PDPageContentStream(document, page,
-                        PDPageContentStream.AppendMode.APPEND, true);
                 } catch (Exception e) {
                     System.err.println("[Logo] Failed to draw logo: " + e.getMessage());
                     e.printStackTrace();
-                    // Content stream is closed, need to create new one
-                    content = new PDPageContentStream(document, page,
-                        PDPageContentStream.AppendMode.APPEND, true);
+                    // Continue without logo - content stream is still open
                 }
             }
 
