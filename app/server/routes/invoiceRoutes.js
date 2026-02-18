@@ -369,15 +369,9 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       const filename = `Invoice_${javaData.orderId}_${Date.now()}.pdf`;
       let pdfBuffer = await createPdfA3WithJava(javaData, filename);
 
-      // Attach ZUGFeRD XML for pro users
-      try {
-        log("Attaching ZUGFeRD XML to PDF...");
-        pdfBuffer = await attachZugferdXml(pdfBuffer, invoiceData);
-        log("ZUGFeRD XML attachment process completed");
-      } catch (zugferdErr) {
-        log("Warning: Failed to attach ZUGFeRD XML", { error: zugferdErr.message });
-        // Continue without ZUGFeRD XML - PDF is still compliant
-      }
+      // ZUGFeRD XML attachment disabled - it was corrupting PDFs
+      // The Java service already generates PDF/A-3b compliant PDFs
+      // TODO: Fix ZUGFeRD attachment to use proper pdf-lib API
 
       // Get page count
       const pdfDoc = await PDFDocument.load(pdfBuffer);
