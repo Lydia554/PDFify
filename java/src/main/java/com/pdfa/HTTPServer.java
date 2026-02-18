@@ -639,26 +639,18 @@ public class HTTPServer {
             content.endText();
 
             // ========== FOOTER ==========
-            // Add a small accent line above footer
-            content.setLineWidth(1f);
-            content.setStrokingColor(0.0f, 0.65f, 0.85f);  // Nice cyan
-            content.moveTo(margin, 65);
-            content.lineTo(pageWidth - margin, 65);
-            content.stroke();
-            content.setStrokingColor(0, 0, 0);
-
+            content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
-            content.setFont(font, 9);
-            content.setNonStrokingColor(0.4f, 0.4f, 0.4f);  // Gray text
-            content.newLineAtOffset(margin, 48);
+            content.setFont(font, 8);
+            content.newLineAtOffset(margin, 65);
             content.showText("Thank you for your business!");
-            content.newLineAtOffset(0, -14);
+            content.newLineAtOffset(0, -12);
             content.showText("Page 1 of 1");
             content.endText();
 
-            content.setNonStrokingColor(0, 0, 0);  // Reset to black
-
             content.close();
+
+            // Add metadata and save
             addXMPMetadata(document, data);
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
