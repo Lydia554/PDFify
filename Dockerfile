@@ -43,25 +43,27 @@ RUN apt-get update && apt-get install -y \
 RUN wget -q "https://software.verapdf.org/releases/1.24/verapdf-pdfbox-1.24.3-installer.zip" -O /tmp/verapdf.zip && \
     mkdir -p /opt/verapdf && \
     unzip -q -o /tmp/verapdf.zip -d /opt/verapdf && \
-    (mv /opt/verapdf/verapdf*/* /opt/verapdf/ 2>/dev/null || mv /opt/verapdf/*/* /opt/verapdf/ 2>/dev/null || true) && \
+    (mv /opt/verapdf/verapdf-pdfbox-*/* /opt/verapdf/ 2>/dev/null || true) && \
     rm -f /tmp/verapdf.zip && \
-    find /opt/verapdf -type f -name 'verapdf' -exec chmod +x {} \; && \
-    find /opt/verapdf -type f -name '*.jar' -exec chmod +x {} \; && \
-    VERAPDF_BIN=$(find /opt/verapdf -type f -name 'verapdf' ! -name '*.jar' | head -1) && \
-    VERAPDF_JAR=$(find /opt/verapdf -type f -name 'verapdf*.jar' ! -name '*installer*' | head -1) && \
+    ls -la /opt/verapdf/ && \
+    find /opt/verapdf -type f -name 'verapdf' ! -name '*.jar' ! -name '*install*' -exec chmod +x {} \; && \
+    find /opt/verapdf -type f -name '*.jar' ! -name '*installer*' -exec chmod +x {} \; && \
+    VERAPDF_BIN=$(find /opt/verapdf -maxdepth 2 -type f -name 'verapdf' ! -name '*.jar' ! -name '*install*' | head -1) && \
+    VERAPDF_JAR=$(find /opt/verapdf -maxdepth 2 -type f -name 'verapdf*.jar' ! -name '*installer*' | head -1) && \
     echo "Found veraPDF binary: $VERAPDF_BIN" && \
     echo "Found veraPDF JAR: $VERAPDF_JAR" && \
     if [ -n "$VERAPDF_BIN" ] && [ -f "$VERAPDF_BIN" ]; then \
+        echo "Using native binary" && \
         ln -sf "$VERAPDF_BIN" /usr/local/bin/verapdf; \
-        echo "Linked native binary"; \
     elif [ -n "$VERAPDF_JAR" ] && [ -f "$VERAPDF_JAR" ]; then \
+        echo "Using JAR file" && \
         echo '#!/bin/sh' > /usr/local/bin/verapdf && \
         echo "exec java -jar \"$VERAPDF_JAR\" \"\$@\"" >> /usr/local/bin/verapdf && \
-        chmod +x /usr/local/bin/verapdf && \
-        echo "Created JAR wrapper"; \
+        chmod +x /usr/local/bin/verapdf; \
     else \
         echo "ERROR: veraPDF not found!" && \
-        ls -la /opt/verapdf/ && \
+        find /opt/verapdf -type f -name 'verapdf*' && \
+        ls -laR /opt/verapdf/ && \
         exit 1; \
     fi && \
     /usr/local/bin/verapdf --version
