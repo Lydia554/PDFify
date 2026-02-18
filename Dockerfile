@@ -1,6 +1,3 @@
-# Stage 0: Extract veraPDF from official image
-FROM verapdf/verapdf:latest AS verapdf-extractor
-
 # Stage 1: Java service builder
 FROM maven:3.9-eclipse-temurin-17 AS java-builder
 
@@ -13,6 +10,20 @@ RUN cd /tmp/java && mvn clean package -DskipTests && cp target/pdfa-3b-service-1
 
 # Stage 2: Node.js application
 FROM node:20-slim AS node-builder
+
+# Install veraPDF from GitHub releases
+RUN echo "Installing veraPDF from GitHub..." && \
+    apt-get update && \
+    apt-get install -y wget && \
+    wget -q "https://github.com/veraPDF/veraPDF-packages/releases/download/v1.24/verapdf-1.24.3.zip" -O /tmp/verapdf.zip && \
+    unzip -q -o /tmp/verapdf.zip -d /opt/ && \
+    rm -f /tmp/verapdf.zip && \
+    mv /opt/verapdf-1.24.3 /opt/verapdf && \
+    chmod +x /opt/verapdf/verapdf && \
+    ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf && \
+    /usr/local/bin/verapdf --version && \
+    echo "✅ veraPDF installed successfully" && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy veraPDF from official image
 COPY --from=verapdf-extractor /opt/verapdf /opt/verapdf
