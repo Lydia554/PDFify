@@ -49,6 +49,7 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
                 vatRate: invoiceData.vatRate || 21,
                 iban: invoiceData.iban || '',
                 bic: invoiceData.bic || '',
+                bankName: invoiceData.bankName || '',
                 paymentTerms: invoiceData.paymentTerms || 'Due within 14 days',
                 creator: invoiceData.creator || 'PDFify',
                 locale: invoiceData.locale || { language: 'en' },

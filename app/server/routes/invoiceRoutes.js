@@ -96,6 +96,7 @@ function mapInvoiceDataToJavaFormat(invoiceData) {
     currency,
     iban: invoiceData.iban || "",
     bic: invoiceData.bic || "",
+    bankName: invoiceData.bankName || "",
     paymentTerms: invoiceData.paymentTerms || "Due within 14 days",
     creator: "PDFify",
     companyName: invoiceData.shopName || invoiceData.companyName || "Your Company",

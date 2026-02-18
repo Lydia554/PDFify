@@ -130,6 +130,7 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
     currency,
     iban: shopConfig.iban || "DE89370400440532013000",
     bic: shopConfig.bic || "COBADEFFXXX",
+    bankName: shopConfig.bankName || "",
     paymentTerms: order.payment?.terms || "Due within 14 days",
     creator: "PDFify",
     companyName: shopConfig.companyName || prettyShopName,
