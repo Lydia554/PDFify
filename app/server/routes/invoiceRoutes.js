@@ -72,6 +72,19 @@ async function fetchAndEncodeLogo(logoUrl) {
       .png()
       .toBuffer();
 
+    // Validate the PNG conversion worked
+    if (!pngBuffer || pngBuffer.length < 8) {
+      log(`[Logo] PNG conversion failed or produced invalid data`);
+      return '';
+    }
+
+    // Verify PNG signature
+    if (pngBuffer[0] !== 0x89 || pngBuffer[1] !== 0x50 ||
+        pngBuffer[2] !== 0x4E || pngBuffer[3] !== 0x47) {
+      log(`[Logo] Data does not have valid PNG signature`);
+      return '';
+    }
+
     // Convert to base64
     const base64 = pngBuffer.toString('base64');
     log(`[Logo] Successfully fetched and encoded logo (${pngBuffer.length} bytes)`);
@@ -124,7 +137,7 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
   // Fetch and encode logo if provided
   const logoData = await fetchAndEncodeLogo(invoiceData.customLogoUrl || '');
 
-  return {
+  const mappedData = {
     orderId: invoiceData.orderId || `INV-${Date.now()}`,
     date: invoiceData.date || new Date().toISOString().split('T')[0],
     customerName: invoiceData.customerName || "Customer",
@@ -148,12 +161,18 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
     shopName: invoiceData.shopName || "Your Shop",
     shopAddress: invoiceData.shopAddress || "",
     primaryColor: invoiceData.primaryColor || "#00a6cc", // Pass custom color to Java service
-    logoData, // Pass base64 encoded logo to Java service
     locale: {
       language: invoiceData.locale?.language || "en",
       format: locale
     },
   };
+
+  // Only include logoData if it's valid (non-empty and properly formatted)
+  if (logoData && logoData.length > 0) {
+    mappedData.logoData = logoData;
+  }
+
+  return mappedData;
 }
 
 /**

@@ -52,10 +52,34 @@ async function getBase64Image(url) {
   if (!url) return '';
   try {
     console.log("🔍 Fetching logo for merchant invoice:", url);
-    const response = await axios.get(url, { responseType: "arraybuffer" });
+    const response = await axios.get(url, {
+      responseType: "arraybuffer",
+      timeout: 10000,
+      validateStatus: (status) => status === 200
+    });
+
+    // Validate we received image data
+    const buffer = Buffer.from(response.data);
+    if (buffer.length === 0) {
+      console.error("❌ Logo fetch returned empty buffer");
+      return '';
+    }
 
     // Use sharp to ensure it's a PNG, converting SVG if necessary
-    const imageBuffer = await sharp(response.data).png().toBuffer();
+    const imageBuffer = await sharp(buffer).png().toBuffer();
+
+    // Validate the PNG conversion worked
+    if (!imageBuffer || imageBuffer.length < 8) {
+      console.error("❌ Logo PNG conversion failed or produced invalid data");
+      return '';
+    }
+
+    // Verify PNG signature
+    if (imageBuffer[0] !== 0x89 || imageBuffer[1] !== 0x50 ||
+        imageBuffer[2] !== 0x4E || imageBuffer[3] !== 0x47) {
+      console.error("❌ Logo data does not have valid PNG signature");
+      return '';
+    }
 
     // Convert to base64 string
     const base64 = imageBuffer.toString('base64');
@@ -238,7 +262,15 @@ try {
   const logoUrl = await getShopLogoUrl(shopDomain, token);
   if (logoUrl) {
       console.log(`[Shopify Merchant Invoice] Fetched logo URL from Shopify: ${logoUrl}`);
-      invoiceData.logoData = await getBase64Image(logoUrl);
+      const logoBase64 = await getBase64Image(logoUrl);
+      // Only add logoData if it was successfully fetched and is valid
+      if (logoBase64 && logoBase64.length > 0) {
+          invoiceData.logoData = logoBase64;
+          console.log(`[Shopify Merchant Invoice] Logo added to invoice (${logoBase64.length} bytes base64)`);
+      } else {
+          console.log(`[Shopify Merchant Invoice] Logo fetch returned empty data, skipping logo`);
+          delete invoiceData.logoData;
+      }
   } else {
       console.log(`[Shopify Merchant Invoice] Could not fetch logo URL from Shopify.`);
   }
