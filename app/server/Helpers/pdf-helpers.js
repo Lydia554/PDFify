@@ -26,6 +26,10 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
 
     const requestId = `pdfa3b-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Log logo data for debugging
+    const logoData = invoiceData.logoData || '';
+    console.log(`[Java Service] logoData length: ${logoData.length}, logoData present: ${!!logoData && logoData.length > 0}`);
+
     try {
         // Call Java service
         const response = await axios.post(`${JAVA_SERVICE_CONFIG.baseURL}/create`, {
@@ -54,7 +58,7 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
                 creator: invoiceData.creator || 'PDFify',
                 locale: invoiceData.locale || { language: 'en' },
                 primaryColor: invoiceData.primaryColor || '#00a6cc', // Custom color
-                logoData: invoiceData.logoData || '', // Base64 encoded logo
+                logoData: logoData, // Base64 encoded logo
                 filename: filename || `Invoice_${invoiceData.orderId || 'draft'}.pdf`
             }
         }, {

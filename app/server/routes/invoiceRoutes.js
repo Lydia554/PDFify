@@ -100,6 +100,7 @@ async function fetchAndEncodeLogo(logoUrl) {
  */
 async function mapInvoiceDataToJavaFormat(invoiceData) {
   log(`[DEBUG] mapInvoiceDataToJavaFormat received primaryColor: ${invoiceData.primaryColor}`);
+  log(`[DEBUG] mapInvoiceDataToJavaFormat received customLogoUrl: "${invoiceData.customLogoUrl}"`);
 
   const currency = invoiceData.currency || "EUR";
   const locale = invoiceData.locale?.format || "en-US";
@@ -135,7 +136,9 @@ async function mapInvoiceDataToJavaFormat(invoiceData) {
   const total = parseFloat(invoiceData.total || subtotal + taxTotal);
 
   // Fetch and encode logo if provided
-  const logoData = await fetchAndEncodeLogo(invoiceData.customLogoUrl || '');
+  const logoUrl = invoiceData.customLogoUrl || '';
+  log(`[DEBUG] About to fetch logo with URL: "${logoUrl}" (length: ${logoUrl.length})`);
+  const logoData = await fetchAndEncodeLogo(logoUrl);
 
   const mappedData = {
     orderId: invoiceData.orderId || `INV-${Date.now()}`,
