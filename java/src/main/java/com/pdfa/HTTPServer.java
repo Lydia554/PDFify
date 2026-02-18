@@ -409,9 +409,9 @@ public class HTTPServer {
             content.setNonStrokingColor(0.35f, 0.35f, 0.35f);
             content.beginText();
             content.setFont(font, 9);
-            float headerY = tableTopY - 19;
+            float tableHeaderY = tableTopY - 19;
 
-            content.newLineAtOffset(colPos, headerY);
+            content.newLineAtOffset(colPos, tableHeaderY);
             content.showText("#");
 
             content.newLineAtOffset(colItem - colPos, 0);
