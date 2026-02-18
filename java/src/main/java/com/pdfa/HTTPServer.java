@@ -218,7 +218,7 @@ public class HTTPServer {
 
             // ========== VIBRANT HEADER ==========
             // Primary color header background
-            content.setNonStrokingColor(headerRgb[0], headerRgb[1], headerRgb[2]);
+            content.setNonStrokingColor(headerBg[0], headerBg[1], headerBg[2]);
             content.addRect(margin, pageHeight - 70, pageWidth - 2 * margin, 65);
             content.fill();
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);  // White text
