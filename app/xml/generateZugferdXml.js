@@ -114,7 +114,7 @@ function generateZugferdXml(invoiceData) {
         lineItem.ele('ram:AssociatedDocumentLineDocument').ele('ram:LineID').txt(index + 1).up().up();
         lineItem.ele('ram:SpecifiedTradeProduct').ele('ram:Name').txt(item.name).up().up();
         lineItem.ele('ram:SpecifiedLineTradeAgreement')
-            .ele('ram:NetPriceProductTradePrice').ele('ram:ChargeAmount').txt(item.price.toFixed(2)).up().up().up();
+            .ele('ram:NetPriceProductTradePrice').ele('ram:ChargeAmount').txt((item.net || item.price / (1 + finalTaxRate/100)).toFixed(2)).up().up().up();
         lineItem.ele('ram:SpecifiedLineTradeDelivery')
             .ele('ram:BilledQuantity', { unitCode: 'C62' }).txt(item.quantity.toFixed(4)).up().up();
         lineItem.ele('ram:SpecifiedLineTradeSettlement')
@@ -123,7 +123,7 @@ function generateZugferdXml(invoiceData) {
                 .ele('ram:CategoryCode').txt('S').up()
                 .ele('ram:RateApplicablePercent').txt(finalTaxRate.toFixed(2)).up().up()
             .ele('ram:SpecifiedTradeSettlementLineMonetarySummation')
-                .ele('ram:LineTotalAmount').txt((item.price * item.quantity).toFixed(2)).up().up().up();
+                .ele('ram:LineTotalAmount').txt((item.net || (item.price * item.quantity / (1 + finalTaxRate/100))).toFixed(2)).up().up().up();
     });
 
 
