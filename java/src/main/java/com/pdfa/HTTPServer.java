@@ -291,27 +291,35 @@ public class HTTPServer {
                     byte[] logoBytes = java.util.Base64.getDecoder().decode(data.logoData);
                     PDImageXObject logoImage = PDImageXObject.createFromByteArray(document, logoBytes, "logo");
 
-                    float maxLogoWidth = 160;
-                    float maxLogoHeight = 70;
-                    float logoWidth = logoImage.getWidth();
-                    float logoHeight = logoImage.getHeight();
+                    // Get original dimensions
+                    float originalWidth = logoImage.getWidth();
+                    float originalHeight = logoImage.getHeight();
 
-                    if (logoWidth > maxLogoWidth || logoHeight > maxLogoHeight) {
-                        float widthRatio = maxLogoWidth / logoWidth;
-                        float heightRatio = maxLogoHeight / logoHeight;
-                        float scale = Math.min(widthRatio, heightRatio);
-                        logoWidth *= scale;
-                        logoHeight *= scale;
-                    }
+                    // Maximum allowed dimensions
+                    float maxLogoWidth = 180;
+                    float maxLogoHeight = 80;
+
+                    // Calculate scale to fit within max dimensions while maintaining aspect ratio
+                    float scaleX = maxLogoWidth / originalWidth;
+                    float scaleY = maxLogoHeight / originalHeight;
+                    float scale = Math.min(scaleX, scaleY);
+
+                    // Don't upscale small logos - only downscale if needed
+                    scale = Math.min(scale, 1.0f);
+
+                    float logoWidth = originalWidth * scale;
+                    float logoHeight = originalHeight * scale;
 
                     float logoX = margin;
                     float logoY = pageHeight - margin - logoHeight;
                     content.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
                     logoBottomY = logoY;
 
-                    System.out.println("[Logo] Successfully drew logo: " + (int)logoWidth + "x" + (int)logoHeight + " at (" + (int)logoX + "," + (int)logoY + ")");
+                    System.out.println("[Logo] Drew logo: original=" + (int)originalWidth + "x" + (int)originalHeight +
+                                       " displayed=" + (int)logoWidth + "x" + (int)logoHeight + " scale=" + scale);
                 } catch (Exception e) {
                     System.err.println("[Logo] Failed to draw logo: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
 
