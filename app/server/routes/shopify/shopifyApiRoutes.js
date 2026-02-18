@@ -44,24 +44,27 @@ function formatPrice(amount, currency = "EUR", locale = "en-US") {
 }
 
 /**
- * Convert image URL (PNG, JPG, or SVG) to Buffer for embedding in PDF
+ * Convert image URL (PNG, JPG, or SVG) to base64 string for embedding in PDF
  * @param {string} url
- * @returns {Promise<Buffer>}
+ * @returns {Promise<string>} Base64 encoded PNG image or empty string
  */
 async function getBase64Image(url) {
-  if (!url) return null;
+  if (!url) return '';
   try {
     console.log("🔍 Fetching logo for merchant invoice:", url);
     const response = await axios.get(url, { responseType: "arraybuffer" });
 
-    // Use sharp to ensure it's a PNG/JPG, converting SVG if necessary
+    // Use sharp to ensure it's a PNG, converting SVG if necessary
     const imageBuffer = await sharp(response.data).png().toBuffer();
 
-    console.log("✅ Logo processed successfully");
-    return imageBuffer;
+    // Convert to base64 string
+    const base64 = imageBuffer.toString('base64');
+
+    console.log("✅ Logo processed successfully, size:", imageBuffer.length, "bytes");
+    return base64;
   } catch (err) {
     console.error("❌ Error fetching or processing logo:", url, err.message);
-    return null;
+    return '';
   }
 }
 

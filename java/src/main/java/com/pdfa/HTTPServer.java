@@ -199,7 +199,7 @@ public class HTTPServer {
     }
 
     /**
-     * Create PDF/A-3b invoice as byte array with sidebar design
+     * Create PDF/A-3b invoice as byte array with clean professional design
      */
     private static byte[] createPdfA3B(InvoiceData data) throws IOException {
         try (PDDocument document = new PDDocument()) {
@@ -213,251 +213,238 @@ public class HTTPServer {
             float pageWidth = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getWidth();
             float pageHeight = org.apache.pdfbox.pdmodel.common.PDRectangle.A4.getHeight();
             float margin = 50;
-            float sidebarWidth = 170;
-            float contentMaxX = pageWidth - margin - sidebarWidth - 20;
+            float contentWidth = pageWidth - 2 * margin;
             String currencySymbol = getCurrencySymbol(data.currency);
             PDPageContentStream content = new PDPageContentStream(document, page);
 
             // Generate color shades from primary color
             float[] primaryRgb = hexToRgb(data.primaryColor);
+            float[] lighterBg = lightenColor(primaryRgb, 90);
             System.out.println("[DEBUG] Creating PDF with primaryColor: " + data.primaryColor + " -> RGB: " + primaryRgb[0] + "," + primaryRgb[1] + "," + primaryRgb[2]);
 
-            // ========== COLORED SIDEBAR (Right side) ==========
-            float sidebarX = pageWidth - margin - sidebarWidth;
+            // ========== TOP ACCENT LINE ==========
             content.setNonStrokingColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-            content.addRect(sidebarX, margin, sidebarWidth, pageHeight - 2 * margin);
+            content.addRect(margin, pageHeight - margin, contentWidth, 3);
             content.fill();
 
-            // ========== SIDEBAR CONTENT ==========
-            content.setNonStrokingColor(1.0f, 1.0f, 1.0f); // White text
+            // ========== HEADER: LOGO + INVOICE TITLE ==========
+            float headerY = pageHeight - margin - 30;
+            float logoRightX = margin + 200;
 
-            // "INVOICE" title in sidebar - large
+            // Logo (top left)
+            if (data.logoData != null && !data.logoData.isEmpty()) {
+                if (!data.logoData.startsWith("http://") && !data.logoData.startsWith("https://") &&
+                    !data.logoData.endsWith(".png") && !data.logoData.endsWith(".jpg") &&
+                    !data.logoData.endsWith(".jpeg") && data.logoData.length() > 100) {
+
+                    try {
+                        byte[] logoBytes = java.util.Base64.getDecoder().decode(data.logoData);
+                        PDImageXObject logoImage = PDImageXObject.createFromByteArray(document, logoBytes, "logo");
+
+                        float originalWidth = logoImage.getWidth();
+                        float originalHeight = logoImage.getHeight();
+                        float maxLogoWidth = 160;
+                        float maxLogoHeight = 60;
+
+                        float scaleX = maxLogoWidth / originalWidth;
+                        float scaleY = maxLogoHeight / originalHeight;
+                        float scale = Math.min(scaleX, scaleY);
+                        scale = Math.min(scale, 1.0f);
+
+                        float logoWidth = originalWidth * scale;
+                        float logoHeight = originalHeight * scale;
+
+                        content.drawImage(logoImage, margin, headerY - logoHeight + 10, logoWidth, logoHeight);
+                        logoRightX = margin + logoWidth + 20;
+
+                        System.out.println("[Logo] Drew logo: " + (int)logoWidth + "x" + (int)logoHeight);
+                    } catch (Exception e) {
+                        System.err.println("[Logo] Failed to draw logo: " + e.getMessage());
+                    }
+                }
+            }
+
+            // "INVOICE" title (large, dark)
+            content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
             content.beginText();
-            content.setFont(font, 36);
-            float invoiceTitleWidth = font.getStringWidth("INVOICE") / 1000 * 36;
-            content.newLineAtOffset(sidebarX + (sidebarWidth - invoiceTitleWidth) / 2, pageHeight - margin - 60);
+            content.setFont(font, 32);
+            content.newLineAtOffset(margin + 220, headerY);
             content.showText("INVOICE");
             content.endText();
 
-            // Divider line in sidebar
-            content.setLineWidth(1.0f);
-            content.setStrokingColor(1.0f, 1.0f, 1.0f, 0.5f);
-            content.moveTo(sidebarX + 20, pageHeight - margin - 85);
-            content.lineTo(pageWidth - margin - 20, pageHeight - margin - 85);
-            content.stroke();
-
-            // Invoice details in sidebar
-            content.setNonStrokingColor(1.0f, 1.0f, 1.0f);
+            // Invoice details (right aligned)
+            float rightX = pageWidth - margin;
+            content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
             content.beginText();
-            content.setFont(font, 10);
-            float sidebarTextY = pageHeight - margin - 115;
-
-            // Invoice number label
             content.setFont(font, 9);
-            content.newLineAtOffset(sidebarX + 20, sidebarTextY);
-            content.showText("Invoice No:");
 
-            // Invoice number value
-            content.setFont(font, 11);
-            content.newLineAtOffset(0, -17);
-            content.showText(data.orderId);
+            String invLabel = "Invoice Number:";
+            float invLabelWidth = font.getStringWidth(invLabel) / 1000 * 9;
+            content.newLineAtOffset(rightX - invLabelWidth, headerY + 5);
+            content.showText(invLabel);
 
-            // Date label
-            content.setFont(font, 9);
-            content.newLineAtOffset(0, -32);
-            content.showText("Date:");
+            String dateLabel = "Date:";
+            float dateLabelWidth = font.getStringWidth(dateLabel) / 1000 * 9;
+            content.newLineAtOffset(-invLabelWidth + dateLabelWidth, -20);
+            content.showText(dateLabel);
 
-            // Date value
-            content.setFont(font, 11);
-            content.newLineAtOffset(0, -17);
-            content.showText(data.date);
-
-            // Creator if exists
-            if (data.creator != null && !data.creator.isEmpty()) {
-                content.setFont(font, 9);
-                content.newLineAtOffset(0, -32);
-                String[] creatorLines = splitText(data.creator, 18);
-                for (String line : creatorLines) {
-                    content.newLineAtOffset(0, -14);
-                    content.showText(line);
-                }
-            }
             content.endText();
 
-            // ========== LOGO (Top Left) ==========
-            float logoBottomY = pageHeight - margin;
-            if (data.logoData != null && !data.logoData.isEmpty()) {
-                try {
-                    byte[] logoBytes = java.util.Base64.getDecoder().decode(data.logoData);
-                    PDImageXObject logoImage = PDImageXObject.createFromByteArray(document, logoBytes, "logo");
-
-                    // Get original dimensions
-                    float originalWidth = logoImage.getWidth();
-                    float originalHeight = logoImage.getHeight();
-
-                    // Maximum allowed dimensions
-                    float maxLogoWidth = 180;
-                    float maxLogoHeight = 80;
-
-                    // Calculate scale to fit within max dimensions while maintaining aspect ratio
-                    float scaleX = maxLogoWidth / originalWidth;
-                    float scaleY = maxLogoHeight / originalHeight;
-                    float scale = Math.min(scaleX, scaleY);
-
-                    // Don't upscale small logos - only downscale if needed
-                    scale = Math.min(scale, 1.0f);
-
-                    float logoWidth = originalWidth * scale;
-                    float logoHeight = originalHeight * scale;
-
-                    float logoX = margin;
-                    float logoY = pageHeight - margin - logoHeight;
-                    content.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
-                    logoBottomY = logoY;
-
-                    System.out.println("[Logo] Drew logo: original=" + (int)originalWidth + "x" + (int)originalHeight +
-                                       " displayed=" + (int)logoWidth + "x" + (int)logoHeight + " scale=" + scale);
-                } catch (Exception e) {
-                    System.err.println("[Logo] Failed to draw logo: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            }
-
-            // ========== COMPANY INFO (Left side) ==========
-            float companyY = logoBottomY - 20;
-
+            // Values (right aligned, bold)
             content.setNonStrokingColor(0.15f, 0.15f, 0.15f);
             content.beginText();
-            content.setFont(font, 14);
-            content.newLineAtOffset(margin, companyY);
+            content.setFont(font, 10);
+
+            String invValue = data.orderId;
+            float invValueWidth = font.getStringWidth(invValue) / 1000 * 10;
+            content.newLineAtOffset(rightX - invValueWidth, headerY + 5);
+            content.showText(invValue);
+
+            String dateValue = data.date;
+            float dateValueWidth = font.getStringWidth(dateValue) / 1000 * 10;
+            content.newLineAtOffset(-invValueWidth + dateValueWidth, -20);
+            content.showText(dateValue);
+
+            content.endText();
+
+            // ========== FROM & TO (Two columns) ==========
+            float fromY = headerY - 60;
+            float columnWidth = (contentWidth - 40) / 2;
+
+            // FROM section
+            content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
+            content.beginText();
+            content.setFont(font, 8);
+            content.newLineAtOffset(margin, fromY);
+            content.showText("FROM");
+            content.endText();
+
+            content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
+            content.beginText();
+            content.setFont(font, 11);
+            content.newLineAtOffset(margin, fromY - 16);
             content.showText(data.companyName);
             content.endText();
 
             content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
             content.beginText();
             content.setFont(font, 9);
-            float addrY = companyY - 18;
+            float fromAddrY = fromY - 32;
 
             if (data.shopName != null && !data.shopName.isEmpty()) {
-                content.newLineAtOffset(margin, addrY);
+                content.newLineAtOffset(margin, fromAddrY);
                 content.showText(data.shopName);
-                addrY -= 14;
+                fromAddrY -= 13;
             }
-
             if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
-                String[] addrLines = splitText(data.shopAddress, 55);
-                for (String line : addrLines) {
-                    content.newLineAtOffset(margin, addrY);
+                String[] addr = splitText(data.shopAddress, 45);
+                for (String line : addr) {
+                    content.newLineAtOffset(margin, fromAddrY);
                     content.showText(line);
-                    addrY -= 14;
+                    fromAddrY -= 13;
                 }
             }
             content.endText();
 
-            // ========== BILL TO SECTION ==========
-            float billToY = addrY - 25;
+            // BILL TO section
+            float billToX = margin + columnWidth + 40;
 
-            content.setNonStrokingColor(0.3f, 0.3f, 0.3f);
+            content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
-            content.setFont(font, 9);
-            content.newLineAtOffset(margin, billToY);
+            content.setFont(font, 8);
+            content.newLineAtOffset(billToX, fromY);
             content.showText("BILL TO");
             content.endText();
 
-            // Divider
-            content.setLineWidth(0.5f);
-            content.setStrokingColor(0.75f, 0.75f, 0.75f);
-            content.moveTo(margin, billToY - 8);
-            content.lineTo(contentMaxX, billToY - 8);
-            content.stroke();
-
-            content.setNonStrokingColor(0.15f, 0.15f, 0.15f);
+            content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
             content.beginText();
             content.setFont(font, 11);
-            content.newLineAtOffset(margin, billToY - 25);
+            content.newLineAtOffset(billToX, fromY - 16);
             content.showText(data.customerName);
+            content.endText();
 
-            content.setFont(font, 9);
             content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
-            float customerY = billToY - 43;
+            content.beginText();
+            content.setFont(font, 9);
+            float billToAddrY = fromY - 32;
 
             if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
-                String[] addrLines = splitText(data.customerAddress, 55);
-                for (String line : addrLines) {
-                    content.newLineAtOffset(margin, customerY);
+                String[] addr = splitText(data.customerAddress, 45);
+                for (String line : addr) {
+                    content.newLineAtOffset(billToX, billToAddrY);
                     content.showText(line);
-                    customerY -= 14;
+                    billToAddrY -= 13;
                 }
             }
-
             if (data.customerEmail != null && !data.customerEmail.isEmpty()) {
-                content.newLineAtOffset(margin, customerY);
+                content.newLineAtOffset(billToX, billToAddrY);
                 content.showText(data.customerEmail);
-                customerY -= 14;
             }
             content.endText();
 
-            // ========== TABLE SECTION ==========
-            float tableTopY = customerY - 20;
+            // ========== TABLE ==========
+            float tableTopY = Math.min(fromAddrY, billToAddrY) - 25;
+            float tableHeight = 28;
 
             // Table header background
-            float[] lightBg = lightenColor(primaryRgb, 85);
-            content.setNonStrokingColor(lightBg[0], lightBg[1], lightBg[2]);
-            content.addRect(margin, tableTopY - 24, contentMaxX - margin, 24);
+            content.setNonStrokingColor(lighterBg[0], lighterBg[1], lighterBg[2]);
+            content.addRect(margin, tableTopY - tableHeight, contentWidth, tableHeight);
             content.fill();
 
-            // Define column positions for consistent alignment
+            // Table header border
+            content.setLineWidth(0.5f);
+            content.setStrokingColor(primaryRgb[0] * 0.6f, primaryRgb[1] * 0.6f, primaryRgb[2] * 0.6f);
+            content.moveTo(margin, tableTopY - tableHeight);
+            content.lineTo(pageWidth - margin, tableTopY - tableHeight);
+            content.stroke();
+
+            // Column positions
             float colPos = margin + 12;
-            float colItem = colPos + 30;
-            float colQty = colItem + 235;
+            float colItem = colPos + 28;
+            float colQty = colItem + 245;
             float colPrice = colQty + 50;
             float colTotal = colPrice + 70;
 
-            // Table header text
-            content.setNonStrokingColor(0.3f, 0.3f, 0.3f);
+            // Header text
+            content.setNonStrokingColor(0.35f, 0.35f, 0.35f);
             content.beginText();
             content.setFont(font, 9);
-            float headerY = tableTopY - 16;
+            float headerY = tableTopY - 19;
 
-            // # header
             content.newLineAtOffset(colPos, headerY);
             content.showText("#");
 
-            // ITEM header
             content.newLineAtOffset(colItem - colPos, 0);
-            content.showText("ITEM");
+            content.showText("DESCRIPTION");
 
-            // QTY header (right-aligned)
             String qtyHeader = "QTY";
-            float qtyHeaderWidth = font.getStringWidth(qtyHeader) / 1000 * 9;
-            content.newLineAtOffset(colQty - colPos - qtyHeaderWidth, 0);
+            float qtyHW = font.getStringWidth(qtyHeader) / 1000 * 9;
+            content.newLineAtOffset(colQty - colItem - qtyHW, 0);
             content.showText(qtyHeader);
 
-            // PRICE header (right-aligned)
             String priceHeader = "PRICE";
-            float priceHeaderWidth = font.getStringWidth(priceHeader) / 1000 * 9;
-            content.newLineAtOffset(colPrice - colPos + qtyHeaderWidth - priceHeaderWidth, 0);
+            float priceHW = font.getStringWidth(priceHeader) / 1000 * 9;
+            content.newLineAtOffset(colPrice - colQty + qtyHW - priceHW, 0);
             content.showText(priceHeader);
 
-            // TOTAL header (right-aligned)
             String totalHeader = "TOTAL";
-            float totalHeaderWidth = font.getStringWidth(totalHeader) / 1000 * 9;
-            content.newLineAtOffset(colTotal - colPos + priceHeaderWidth - totalHeaderWidth, 0);
+            float totalHW = font.getStringWidth(totalHeader) / 1000 * 9;
+            content.newLineAtOffset(colTotal - colPrice + priceHW - totalHW, 0);
             content.showText(totalHeader);
 
             content.endText();
 
             // Table items
-            float y = tableTopY - 32;
+            float y = tableTopY - tableHeight - 8;
             int itemCount = 0;
 
             if (data.items != null && !data.items.isEmpty()) {
                 for (LineItem item : data.items) {
-                    // Alternating row background
+                    // Subtle row background
                     if (itemCount % 2 == 0) {
-                        float[] veryLightBg = lightenColor(primaryRgb, 93);
-                        content.setNonStrokingColor(veryLightBg[0], veryLightBg[1], veryLightBg[2]);
-                        content.addRect(margin, y - 5, contentMaxX - margin, 20);
+                        float[] veryLight = lightenColor(primaryRgb, 96);
+                        content.setNonStrokingColor(veryLight[0], veryLight[1], veryLight[2]);
+                        content.addRect(margin, y - 3, contentWidth, 20);
                         content.fill();
                     }
 
@@ -465,33 +452,29 @@ public class HTTPServer {
                     content.beginText();
                     content.setFont(font, 9);
 
-                    // Position
                     String pos = String.valueOf(item.position > 0 ? item.position : (itemCount + 1));
                     content.newLineAtOffset(colPos, y);
                     content.showText(pos);
 
-                    // Name
                     content.newLineAtOffset(colItem - colPos, 0);
-                    content.showText(truncateText(item.name, 40));
+                    content.showText(truncateText(item.name, 45));
 
-                    // Quantity (right-aligned)
                     String qtyStr = String.valueOf(item.quantity);
-                    float qtyWidth = font.getStringWidth(qtyStr) / 1000 * 9;
-                    content.newLineAtOffset(colQty - colPos - qtyWidth, 0);
+                    float qtyW = font.getStringWidth(qtyStr) / 1000 * 9;
+                    content.newLineAtOffset(colQty - colItem - qtyW, 0);
                     content.showText(qtyStr);
 
-                    // Price (right-aligned)
                     String priceStr = currencySymbol + String.format("%.2f", item.price);
-                    float priceWidth = font.getStringWidth(priceStr) / 1000 * 9;
-                    content.newLineAtOffset(colPrice - colQty + qtyWidth - priceWidth, 0);
+                    float priceW = font.getStringWidth(priceStr) / 1000 * 9;
+                    content.newLineAtOffset(colPrice - colQty + qtyW - priceW, 0);
                     content.showText(priceStr);
 
-                    // Total (right-aligned)
                     double lineTotal = item.price * item.quantity;
                     String totalStr = currencySymbol + String.format("%.2f", lineTotal);
-                    float totalWidth = font.getStringWidth(totalStr) / 1000 * 9;
-                    content.newLineAtOffset(colTotal - colPrice + priceWidth - totalWidth, 0);
+                    float totalW = font.getStringWidth(totalStr) / 1000 * 9;
+                    content.newLineAtOffset(colTotal - colPrice + priceW - totalW, 0);
                     content.showText(totalStr);
+
                     content.endText();
 
                     y -= 20;
@@ -499,99 +482,99 @@ public class HTTPServer {
                 }
             }
 
-            // ========== TOTALS SECTION (Right aligned, before sidebar) ==========
-            float totalsY = y - 25;
+            // ========== TOTALS (Right side) ==========
+            float totalsY = y - 20;
+            float totalsX = pageWidth - margin - 180;
 
             // Subtotal
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 9);
-            content.newLineAtOffset(contentMaxX - 140, totalsY);
+            content.newLineAtOffset(totalsX, totalsY);
             content.showText("Subtotal:");
             content.endText();
 
-            content.setNonStrokingColor(0.15f, 0.15f, 0.15f);
+            content.setNonStrokingColor(0.2f, 0.2f, 0.2f);
             content.beginText();
             content.setFont(font, 10);
-            String subtotalStr = currencySymbol + String.format("%.2f", data.subtotal);
-            float subtotalWidth = font.getStringWidth(subtotalStr) / 1000 * 10;
-            content.newLineAtOffset(contentMaxX - 10 - subtotalWidth, totalsY);
-            content.showText(subtotalStr);
+            String subStr = currencySymbol + String.format("%.2f", data.subtotal);
+            float subW = font.getStringWidth(subStr) / 1000 * 10;
+            content.newLineAtOffset(pageWidth - margin - subW, totalsY);
+            content.showText(subStr);
             content.endText();
 
             // Tax
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 9);
-            content.newLineAtOffset(contentMaxX - 140, totalsY - 20);
+            content.newLineAtOffset(totalsX, totalsY - 20);
             content.showText("Tax (" + (int)data.vatRate + "%):");
             content.endText();
 
-            content.setNonStrokingColor(0.15f, 0.15f, 0.15f);
+            content.setNonStrokingColor(0.2f, 0.2f, 0.2f);
             content.beginText();
             content.setFont(font, 10);
             String taxStr = currencySymbol + String.format("%.2f", data.tax);
-            float taxWidth = font.getStringWidth(taxStr) / 1000 * 10;
-            content.newLineAtOffset(contentMaxX - 10 - taxWidth, totalsY - 20);
+            float taxW = font.getStringWidth(taxStr) / 1000 * 10;
+            content.newLineAtOffset(pageWidth - margin - taxW, totalsY - 20);
             content.showText(taxStr);
             content.endText();
 
-            // TOTAL box with primary color background
+            // TOTAL (colored box)
             float totalBoxY = totalsY - 55;
             content.setNonStrokingColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
-            content.addRect(contentMaxX - 155, totalBoxY, 155, 32);
+            content.addRect(totalsX - 10, totalBoxY - 4, 200, 32);
             content.fill();
 
             content.setNonStrokingColor(1.0f, 1.0f, 1.0f);
             content.beginText();
-            content.setFont(font, 13);
-            String totalText = "TOTAL " + currencySymbol + String.format("%.2f", data.total);
-            content.newLineAtOffset(contentMaxX - 145, totalBoxY + 20);
-            content.showText(totalText);
+            content.setFont(font, 12);
+            content.newLineAtOffset(totalsX, totalBoxY + 15);
+            content.showText("TOTAL " + currencySymbol + String.format("%.2f", data.total));
             content.endText();
 
-            // ========== PAYMENT INFORMATION ==========
+            // ========== PAYMENT DETAILS ==========
             float payY = totalBoxY - 45;
 
-            content.setNonStrokingColor(0.3f, 0.3f, 0.3f);
+            content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
-            content.setFont(font, 9);
+            content.setFont(font, 8);
             content.newLineAtOffset(margin, payY);
             content.showText("PAYMENT DETAILS");
             content.endText();
 
-            // Divider
+            // Small divider
             content.setLineWidth(0.5f);
             content.setStrokingColor(0.75f, 0.75f, 0.75f);
-            content.moveTo(margin, payY - 8);
-            content.lineTo(margin + 160, payY - 8);
+            content.moveTo(margin, payY - 6);
+            content.lineTo(margin + 120, payY - 6);
             content.stroke();
 
             content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
             content.beginText();
             content.setFont(font, 8);
-            float payLabelX = margin;
-            float payValueX = margin + 70;
+            float payLabelY = payY - 20;
+            float payValueX = margin + 75;
 
-            content.newLineAtOffset(payLabelX, payY - 22);
+            content.newLineAtOffset(margin, payLabelY);
             content.showText("Bank:");
-            content.newLineAtOffset(payValueX - payLabelX, 0);
+            content.newLineAtOffset(payValueX - margin, 0);
             content.showText(data.bankName != null && !data.bankName.isEmpty() ? data.bankName : "Your Bank");
 
-            content.newLineAtOffset(payLabelX - payValueX, -15);
+            content.newLineAtOffset(margin - payValueX, -14);
             content.showText("IBAN:");
-            content.newLineAtOffset(70, 0);
+            content.newLineAtOffset(75, 0);
             content.showText(data.iban != null && !data.iban.isEmpty() ? data.iban : "N/A");
 
-            content.newLineAtOffset(-70, -15);
+            content.newLineAtOffset(-75, -14);
             content.showText("BIC:");
-            content.newLineAtOffset(70, 0);
+            content.newLineAtOffset(75, 0);
             content.showText(data.bic != null && !data.bic.isEmpty() ? data.bic : "N/A");
 
             if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
-                content.newLineAtOffset(-70, -15);
+                content.newLineAtOffset(-75, -14);
                 content.showText("Terms:");
-                content.newLineAtOffset(70, 0);
+                content.newLineAtOffset(75, 0);
                 content.showText(data.paymentTerms);
             }
             content.endText();
@@ -599,30 +582,27 @@ public class HTTPServer {
             // ========== FOOTER ==========
             float footerY = 70;
 
-            // Divider line
             content.setLineWidth(0.3f);
-            content.setStrokingColor(0.7f, 0.7f, 0.7f);
-            content.moveTo(margin, footerY + 15);
-            content.lineTo(contentMaxX, footerY + 15);
+            content.setStrokingColor(0.8f, 0.8f, 0.8f);
+            content.moveTo(margin, footerY + 12);
+            content.lineTo(pageWidth - margin, footerY + 12);
             content.stroke();
 
-            // Thank you message (centered in content area)
-            content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
+            content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 8);
             String thankYou = "Thank you for your business!";
-            float thankYouWidth = font.getStringWidth(thankYou) / 1000 * 8;
-            content.newLineAtOffset((contentMaxX + margin - thankYouWidth) / 2, footerY + 8);
+            float thankYouW = font.getStringWidth(thankYou) / 1000 * 8;
+            content.newLineAtOffset((pageWidth - thankYouW) / 2, footerY + 4);
             content.showText(thankYou);
             content.endText();
 
-            // Branding
-            content.setNonStrokingColor(0.35f, 0.35f, 0.35f);
+            content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
             content.beginText();
             content.setFont(font, 7);
             String branding = "Powered by PDFify • pdfify.pro";
-            float brandingWidth = font.getStringWidth(branding) / 1000 * 7;
-            content.newLineAtOffset(contentMaxX - brandingWidth, footerY - 6);
+            float brandingW = font.getStringWidth(branding) / 1000 * 7;
+            content.newLineAtOffset(pageWidth - margin - brandingW, footerY - 8);
             content.showText(branding);
             content.endText();
 
