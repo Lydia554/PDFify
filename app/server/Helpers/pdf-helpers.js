@@ -54,6 +54,7 @@ async function createPdfA3WithJava(invoiceData, filename = null) {
                 creator: invoiceData.creator || 'PDFify',
                 locale: invoiceData.locale || { language: 'en' },
                 primaryColor: invoiceData.primaryColor || '#00a6cc', // Custom color
+                logoData: invoiceData.logoData || '', // Base64 encoded logo
                 filename: filename || `Invoice_${invoiceData.orderId || 'draft'}.pdf`
             }
         }, {
