@@ -314,8 +314,7 @@ try {
       shopName: shopConfig.shopName || shopDomain,
       currency: order.currency || "EUR",
       locale: lang || "en",
-      customLogoUrl: shopConfig.customLogoUrl,
-      fallbackLogoUrl: "/assets/default-logo.png",
+      customLogoUrl: shopConfig.customLogoUrl || "",
     };
 
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });

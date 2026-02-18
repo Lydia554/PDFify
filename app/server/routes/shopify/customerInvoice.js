@@ -239,7 +239,7 @@ const premiumTemplate = `
       </head>
 <body>
   <div class="container">
-    <img src="${customLogoUrl || fallbackLogoUrl}" class="logo" />
+    ${customLogoUrl && customLogoUrl.trim() !== "" ? `<img src="${customLogoUrl}" class="logo" />` : ""}
 
     <h1>${t.invoiceTitle}</h1>
 

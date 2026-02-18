@@ -14,9 +14,9 @@ async function generateInvoiceHTMLPro(data) {
   // Fonts folder (embedded for PDF/A)
   const fontPath = path.join(__dirname, "fonts");
 
-  // Only show chart/logo if not in compliance mode
-  const showLogo = !data.complianceMode && data.customLogoUrl;
-  const logoUrl = data.customLogoUrl || "https://pdfify.pro/images/Logo.png";
+  // Only show logo if customLogoUrl is provided
+  const showLogo = data.customLogoUrl && data.customLogoUrl.trim() !== "";
+  const logoUrl = data.customLogoUrl || "";
 
   const showChart = !data.complianceMode && data.showChart;
 

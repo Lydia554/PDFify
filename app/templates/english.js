@@ -25,9 +25,7 @@ async function generateInvoiceHTML(data) {
   // Logo
   let logoHTML = "";
 
-  if (isFree) {
-    logoHTML = `<img src="https://pdfify.pro/images/Logo.png" style="height:60px;display:block;" alt="PDFify Logo" />`;
-  } else if (data.customLogoUrl && data.customLogoUrl.trim() !== "") {
+  if (data.customLogoUrl && data.customLogoUrl.trim() !== "") {
     try {
       const customLogo = data.customLogoUrl;
       let buffer;
@@ -52,7 +50,7 @@ async function generateInvoiceHTML(data) {
       logoHTML = `<img src="data:image/png;base64,${base64}" style="height:60px;display:block;" />`;
     } catch (err) {
       console.warn("[generateInvoiceHTML] ⚠️ Could not fetch or convert logo:", err.message);
-      logoHTML = ""; 
+      logoHTML = "";
     }
   }
 
