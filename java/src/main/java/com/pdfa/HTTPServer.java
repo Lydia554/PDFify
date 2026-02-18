@@ -668,6 +668,75 @@ public class HTTPServer {
     }
 
     /**
+     * Embed ZUGFeRD XML as attachment to the PDF
+     * Full PDF/A-3b compliant embedding with all required keys
+     */
+    private static void embedZugferdXml(PDDocument document, String xmlContent) throws IOException {
+        // Create file specification for ZUGFeRD XML
+        PDComplexFileSpecification fs = new PDComplexFileSpecification();
+
+        // Create embedded file with XML content
+        byte[] xmlBytes = xmlContent.getBytes(StandardCharsets.UTF_8);
+
+        // Create COSStream for embedded file data
+        COSStream cosStream = document.getDocument().createCOSStream();
+
+        // Write XML content
+        java.io.OutputStream os = cosStream.createOutputStream();
+        os.write(xmlBytes);
+        os.close();
+
+        // Create PDEmbeddedFile from COSStream
+        PDEmbeddedFile embeddedFile = new PDEmbeddedFile(cosStream);
+        embeddedFile.setSubtype("application/xml");
+        fs.setEmbeddedFile(embeddedFile);
+
+        // IMPORTANT: Manually set F and UF keys on the COSDictionary
+        // These are required by PDF/A-3b for embedded files
+        COSDictionary fsDict = fs.getCOSObject();
+
+        // F key: filename (required)
+        fsDict.setString("F", "factur-x.xml");
+
+        // UF key: Unicode filename (required)
+        fsDict.setString("UF", "factur-x.xml");
+
+        // AFRelationship: Alternative (required for ZUGFeRD)
+        fsDict.setName("AFRelationship", "Alternative");
+
+        System.out.println("DEBUG: F and UF keys set, AFRelationship set to Alternative");
+
+        // Get or create the EmbeddedFiles name tree
+        PDDocumentNameDictionary names = new PDDocumentNameDictionary(document.getDocumentCatalog());
+        PDEmbeddedFilesNameTreeNode embeddedFiles = names.getEmbeddedFiles();
+
+        if (embeddedFiles == null) {
+            embeddedFiles = new PDEmbeddedFilesNameTreeNode();
+        }
+
+        // Add the file specification
+        Map<String, PDComplexFileSpecification> files = new HashMap<>();
+        files.put("factur-x.xml", fs);
+        embeddedFiles.setNames(files);
+
+        names.setEmbeddedFiles(embeddedFiles);
+        document.getDocumentCatalog().setNames(names);
+
+        // Add AF entry to catalog (required for PDF/A-3b)
+        // This tells PDF readers that factur-x.xml is an associated file
+        COSArray afArray = new COSArray();
+        afArray.add(fs.getCOSObject());
+        document.getDocumentCatalog().getCOSObject().setItem("AF", afArray);
+
+        System.out.println("ZUGFeRD XML embedded: factur-x.xml (" + xmlBytes.length + " bytes)");
+        System.out.println("  - F (filename): factur-x.xml");
+        System.out.println("  - UF (Unicode filename): factur-x.xml");
+        System.out.println("  - AFRelationship: Alternative");
+        System.out.println("  - MIME type: application/xml");
+        System.out.println("  - AF entry added to catalog");
+    }
+
+    /**
      * Truncate text to fit within maximum width
      */
     private static String truncateText(String text, int maxLength) {
