@@ -25,13 +25,6 @@ RUN echo "Installing veraPDF from GitHub..." && \
     echo "✅ veraPDF installed successfully" && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy veraPDF from official image
-COPY --from=verapdf-extractor /opt/verapdf /opt/verapdf
-RUN chmod +x /opt/verapdf/verapdf && \
-    ln -sf /opt/verapdf/verapdf /usr/local/bin/verapdf && \
-    /usr/local/bin/verapdf --version && \
-    echo "✅ veraPDF installed from official Docker image"
-
 # Install system dependencies in one layer
 RUN apt-get update && apt-get install -y \
     wget \
