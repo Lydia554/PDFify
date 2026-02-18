@@ -398,21 +398,45 @@ public class HTTPServer {
             content.addRect(margin, tableTopY - 24, contentMaxX - margin, 24);
             content.fill();
 
+            // Define column positions for consistent alignment
+            float colPos = margin + 12;
+            float colItem = colPos + 30;
+            float colQty = colItem + 235;
+            float colPrice = colQty + 50;
+            float colTotal = colPrice + 70;
+
             // Table header text
             content.setNonStrokingColor(0.3f, 0.3f, 0.3f);
             content.beginText();
             content.setFont(font, 9);
             float headerY = tableTopY - 16;
-            content.newLineAtOffset(margin + 12, headerY);
+
+            // # header
+            content.newLineAtOffset(colPos, headerY);
             content.showText("#");
-            content.newLineAtOffset(28, 0);
+
+            // ITEM header
+            content.newLineAtOffset(colItem - colPos, 0);
             content.showText("ITEM");
-            content.newLineAtOffset(220, 0);
-            content.showText("QTY");
-            content.newLineAtOffset(45, 0);
-            content.showText("PRICE");
-            content.newLineAtOffset(65, 0);
-            content.showText("TOTAL");
+
+            // QTY header (right-aligned)
+            String qtyHeader = "QTY";
+            float qtyHeaderWidth = font.getStringWidth(qtyHeader) / 1000 * 9;
+            content.newLineAtOffset(colQty - colPos - qtyHeaderWidth, 0);
+            content.showText(qtyHeader);
+
+            // PRICE header (right-aligned)
+            String priceHeader = "PRICE";
+            float priceHeaderWidth = font.getStringWidth(priceHeader) / 1000 * 9;
+            content.newLineAtOffset(colPrice - colPos + qtyHeaderWidth - priceHeaderWidth, 0);
+            content.showText(priceHeader);
+
+            // TOTAL header (right-aligned)
+            String totalHeader = "TOTAL";
+            float totalHeaderWidth = font.getStringWidth(totalHeader) / 1000 * 9;
+            content.newLineAtOffset(colTotal - colPos + priceHeaderWidth - totalHeaderWidth, 0);
+            content.showText(totalHeader);
+
             content.endText();
 
             // Table items
@@ -435,26 +459,30 @@ public class HTTPServer {
 
                     // Position
                     String pos = String.valueOf(item.position > 0 ? item.position : (itemCount + 1));
-                    content.newLineAtOffset(margin + 12, y);
+                    content.newLineAtOffset(colPos, y);
                     content.showText(pos);
 
                     // Name
-                    content.newLineAtOffset(28, 0);
+                    content.newLineAtOffset(colItem - colPos, 0);
                     content.showText(truncateText(item.name, 40));
 
-                    // Quantity
-                    content.newLineAtOffset(220, 0);
-                    content.showText(String.valueOf(item.quantity));
+                    // Quantity (right-aligned)
+                    String qtyStr = String.valueOf(item.quantity);
+                    float qtyWidth = font.getStringWidth(qtyStr) / 1000 * 9;
+                    content.newLineAtOffset(colQty - colPos - qtyWidth, 0);
+                    content.showText(qtyStr);
 
-                    // Price
+                    // Price (right-aligned)
                     String priceStr = currencySymbol + String.format("%.2f", item.price);
-                    content.newLineAtOffset(45, 0);
+                    float priceWidth = font.getStringWidth(priceStr) / 1000 * 9;
+                    content.newLineAtOffset(colPrice - colQty + qtyWidth - priceWidth, 0);
                     content.showText(priceStr);
 
-                    // Total
+                    // Total (right-aligned)
                     double lineTotal = item.price * item.quantity;
                     String totalStr = currencySymbol + String.format("%.2f", lineTotal);
-                    content.newLineAtOffset(65, 0);
+                    float totalWidth = font.getStringWidth(totalStr) / 1000 * 9;
+                    content.newLineAtOffset(colTotal - colPrice + priceWidth - totalWidth, 0);
                     content.showText(totalStr);
                     content.endText();
 
