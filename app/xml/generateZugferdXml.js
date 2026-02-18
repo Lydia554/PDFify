@@ -146,8 +146,12 @@ function generateZugferdXml(invoiceData) {
         .ele('ram:TypeCode').txt('30').up()
         .ele('ram:PayeePartyCreditorFinancialAccount').ele('ram:IBANID').txt(iban).up().up().up();
 
+    // Calculate tax from subtotal and rate to ensure accuracy
+    const calculatedTax = subtotal * (taxRate / 100);
+    const calculatedTotal = subtotal + calculatedTax;
+
     settlement.ele('ram:ApplicableTradeTax')
-        .ele('ram:CalculatedAmount').txt(tax.toFixed(2)).up()
+        .ele('ram:CalculatedAmount').txt(calculatedTax.toFixed(2)).up()
         .ele('ram:TypeCode').txt('VAT').up()
         .ele('ram:BasisAmount').txt(subtotal.toFixed(2)).up()
         .ele('ram:CategoryCode').txt('S').up()
@@ -159,9 +163,9 @@ function generateZugferdXml(invoiceData) {
     settlement.ele('ram:SpecifiedTradeSettlementHeaderMonetarySummation')
         .ele('ram:LineTotalAmount').txt(subtotal.toFixed(2)).up()
         .ele('ram:TaxBasisTotalAmount').txt(subtotal.toFixed(2)).up()
-        .ele('ram:TaxTotalAmount', { currencyID: currency }).txt(tax.toFixed(2)).up()
-        .ele('ram:GrandTotalAmount').txt(total.toFixed(2)).up()
-        .ele('ram:DuePayableAmount').txt(total.toFixed(2)).up().up();
+        .ele('ram:TaxTotalAmount', { currencyID: currency }).txt(calculatedTax.toFixed(2)).up()
+        .ele('ram:GrandTotalAmount').txt(calculatedTotal.toFixed(2)).up()
+        .ele('ram:DuePayableAmount').txt(calculatedTotal.toFixed(2)).up().up();
 
     return doc.end({ prettyPrint: false });
 }
