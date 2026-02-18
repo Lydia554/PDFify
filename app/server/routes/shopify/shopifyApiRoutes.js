@@ -222,8 +222,16 @@ router.post("/invoice", authenticate, dualAuth, async (req, res) => {
 if (isMerchant) {
 try {
   console.log("🧾 [Shopify] Generating merchant PDF for:", order?.id || order?.name);
+  console.log("🧾 [Shopify] Order name:", order?.name, "Order ID:", order?.id);
+  console.log("🧾 [Shopify] Customer:", order?.customer?.first_name, order?.customer?.last_name);
+  console.log("🧾 [Shopify] Line items:", order?.line_items?.length);
 
   const invoiceData = mapOrderToPdfData(order, shopConfig, user);
+
+  console.log("🧾 [Shopify] Mapped invoiceData - orderId:", invoiceData.orderId);
+  console.log("🧾 [Shopify] Mapped invoiceData - customerName:", invoiceData.customerName);
+  console.log("🧾 [Shopify] Mapped invoiceData - items:", invoiceData.items?.length);
+  console.log("🧾 [Shopify] Mapped invoiceData - total:", invoiceData.total);
 
   // Fetch logo from Shopify directly
   if (!token) token = await resolveShopifyToken(req, shopDomain);

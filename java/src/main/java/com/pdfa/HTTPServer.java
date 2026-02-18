@@ -229,15 +229,60 @@ public class HTTPServer {
 
             // ========== HEADER: LOGO + INVOICE TITLE ==========
             float headerY = pageHeight - margin - 30;
-            float logoRightX = margin + 200;
 
-            // Logo (top left) - DISABLED TEMPORARILY DUE TO PDF CORRUPTION ISSUES
-            // TODO: Re-enable after fixing image embedding
-            /*
+            // Draw logo BEFORE opening content stream for text
             if (data.logoData != null && !data.logoData.isEmpty()) {
-                System.out.println("[Logo] Logo data present, skipping due to PDF corruption issues");
+                try {
+                    System.out.println("[Logo] Processing logo data...");
+
+                    byte[] logoBytes = java.util.Base64.getDecoder().decode(data.logoData);
+                    PDImageXObject logoImage = PDImageXObject.createFromByteArray(document, logoBytes, "logo");
+
+                    // Get original dimensions
+                    float originalWidth = logoImage.getWidth();
+                    float originalHeight = logoImage.getHeight();
+
+                    // Maximum allowed dimensions
+                    float maxLogoWidth = 180;
+                    float maxLogoHeight = 80;
+
+                    // Calculate scale to fit within max dimensions while maintaining aspect ratio
+                    float scaleX = maxLogoWidth / originalWidth;
+                    float scaleY = maxLogoHeight / originalHeight;
+                    float scale = Math.min(scaleX, scaleY);
+
+                    // Don't upscale small logos - only downscale if needed
+                    scale = Math.min(scale, 1.0f);
+
+                    float logoWidth = originalWidth * scale;
+                    float logoHeight = originalHeight * scale;
+
+                    // Close existing content stream temporarily
+                    content.close();
+
+                    // Create new content stream just for the logo
+                    PDPageContentStream logoContent = new PDPageContentStream(document, page,
+                        PDPageContentStream.AppendMode.APPEND, true);
+
+                    float logoX = margin;
+                    float logoY = pageHeight - margin - logoHeight;
+                    logoContent.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
+                    logoContent.close();
+
+                    System.out.println("[Logo] Successfully drew logo: " + (int)originalWidth + "x" + (int)originalHeight +
+                                       " -> " + (int)logoWidth + "x" + (int)logoHeight + " at (" + (int)logoX + "," + (int)logoY + ")");
+
+                    // Reopen content stream for remaining elements
+                    content = new PDPageContentStream(document, page,
+                        PDPageContentStream.AppendMode.APPEND, true);
+                } catch (Exception e) {
+                    System.err.println("[Logo] Failed to draw logo: " + e.getMessage());
+                    e.printStackTrace();
+                    // Content stream is closed, need to create new one
+                    content = new PDPageContentStream(document, page,
+                        PDPageContentStream.AppendMode.APPEND, true);
+                }
             }
-            */
 
             // "INVOICE" title (large, dark)
             content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
