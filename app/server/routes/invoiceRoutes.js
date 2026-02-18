@@ -195,51 +195,62 @@ async function attachZugferdXml(pdfBuffer, invoiceData) {
     const xmlFileName = `ZUGFeRD-Invoice-${invoiceData.orderId || 'invoice'}.xml`;
     const xmlBytes = Buffer.from(zugferdXml, 'utf-8');
 
-    // Try to attach using pdf-lib
-    // Note: pdf-lib has limited file attachment support
-    // We'll use the catalog's embedded files name tree
-    const pdfRef = pdfDoc.context.nextRef();
-    const pdfDict = pdfDoc.context.obj({
+    // Try to attach using pdf-lib's low-level context API
+    const context = pdfDoc.context;
+    const pdfRef = context.nextRef();
+    const pdfDict = context.obj({
       Type: 'Filespec',
-      F: pdfDoc.context.obj(xmlFileName),
-      EF: pdfDoc.context.obj({
-        F: pdfDoc.context.stream(xmlBytes, {
+      F: context.obj(xmlFileName),
+      EF: context.obj({
+        F: context.stream(xmlBytes, {
           Type: 'EmbeddedFile',
           Subtype: 'text/xml',
           Filter: 'FlateDecode',
-          Params: pdfDoc.context.obj({
+          Params: context.obj({
             Size: xmlBytes.length,
             CreationDate: formatPdfDate(new Date()),
             ModDate: formatPdfDate(new Date()),
           }),
         }),
       }),
-      Desc: pdfDoc.context.obj('ZUGFeRD Invoice XML'),
+      Desc: context.obj('ZUGFeRD Invoice XML'),
     });
 
-    pdfDoc.context.assign(pdfRef, pdfDict);
+    context.assign(pdfRef, pdfDict);
 
-    // Add to the catalog's Names dictionary
-    let catalog = pdfDoc.catalog.object();
-    if (!catalog.get(pdfDoc.context.obj('Names'))) {
-      catalog.set(pdfDoc.context.obj('Names'), pdfDoc.context.obj({}));
+    // Try to add to catalog - use simpler approach
+    try {
+      const catalog = pdfDoc.catalog;
+
+      // Check if Names exists, if not create it
+      const NamesObj = context.obj('Names');
+      let namesDict;
+      try {
+        namesDict = catalog.get(NamesObj);
+      } catch {
+        // Names doesn't exist, create it
+        namesDict = context.obj({});
+        catalog.set(NamesObj, namesDict);
+      }
+
+      // Create EmbeddedFiles structure
+      const EmbeddedFilesObj = context.obj('EmbeddedFiles');
+      const filesRef = context.nextRef();
+      const filesDict = context.obj({
+        Names: context.array([context.obj(xmlFileName), pdfRef]),
+        Limits: context.array([context.obj(xmlFileName), context.obj(xmlFileName)]),
+      });
+
+      context.assign(filesRef, filesDict);
+
+      // Set EmbeddedFiles in Names dictionary
+      namesDict.set(EmbeddedFilesObj, filesRef);
+
+      log(`[ZUGFeRD] XML attached as "${xmlFileName}"`);
+    } catch (catalogErr) {
+      log(`[ZUGFeRD] Warning: Could not attach to catalog structure: ${catalogErr.message}`);
+      // Continue anyway - PDF is still valid
     }
-    const names = catalog.get(pdfDoc.context.obj('Names'));
-    if (!names.get(pdfDoc.context.obj('EmbeddedFiles'))) {
-      names.set(pdfDoc.context.obj('EmbeddedFiles'), pdfDoc.context.obj({}));
-    }
-    const embeddedFiles = names.get(pdfDoc.context.obj('EmbeddedFiles'));
-
-    // Add the file to the EmbeddedFiles tree
-    const filesRef = pdfDoc.context.nextRef();
-    const filesDict = pdfDoc.context.obj({
-      Names: pdfDoc.context.array([pdfDoc.context.obj(xmlFileName), pdfRef]),
-      Limits: pdfDoc.context.array([pdfDoc.context.obj(xmlFileName), pdfDoc.context.obj(xmlFileName)]),
-    });
-    pdfDoc.context.assign(filesRef, filesDict);
-    embeddedFiles.set(pdfDoc.context.obj('EmbeddedFiles'), filesRef);
-
-    log(`[ZUGFeRD] XML attached as "${xmlFileName}"`);
 
     // Save and return
     const modifiedPdf = await pdfDoc.save();
@@ -340,7 +351,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
       try {
         log("Attaching ZUGFeRD XML to PDF...");
         pdfBuffer = await attachZugferdXml(pdfBuffer, invoiceData);
-        log("ZUGFeRD XML attached successfully");
+        log("ZUGFeRD XML attachment process completed");
       } catch (zugferdErr) {
         log("Warning: Failed to attach ZUGFeRD XML", { error: zugferdErr.message });
         // Continue without ZUGFeRD XML - PDF is still compliant
