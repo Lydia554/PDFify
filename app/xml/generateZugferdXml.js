@@ -56,16 +56,31 @@ function generateZugferdXml(invoiceData) {
     const {
         orderId, date, dueDate, currency = 'EUR',
         customerName, companyName, iban, items = [],
-        subtotal, tax, total, sellerAddress, buyerAddress, sellerVatId
+        subtotal, tax, total, sellerAddress, buyerAddress, sellerVatId,
+        vatRate // Use vatRate from invoiceData
     } = invoiceData;
 
     const formattedDate = date.replace(/-/g, '');
     const formattedDueDate = dueDate ? dueDate.replace(/-/g, '') : formattedDate;
 
-    // Get tax rate from first item or calculate
-    const taxRate = items.length > 0 && items[0].taxRate ?
-        items[0].taxRate :
-        (subtotal > 0 ? (tax / subtotal * 100) : 19);
+    // Calculate tax rate from actual item data, not from placeholder
+    // This gives us the REAL tax rate being applied
+    let actualTaxRate = 19; // default fallback
+
+    if (items.length > 0 && items[0] && items[0].tax && items[0].net && items[0].net > 0) {
+        // Calculate from first item: (tax / net) * 100
+        const itemTax = parseFloat(items[0].tax) || 0;
+        const itemNet = parseFloat(items[0].net) || 0;
+        if (itemNet > 0) {
+            actualTaxRate = (itemTax / itemNet) * 100;
+        }
+    } else if (subtotal > 0 && tax > 0) {
+        // Fallback: calculate from totals
+        actualTaxRate = (tax / subtotal) * 100;
+    }
+
+    // Round to 2 decimal places for consistency
+    const finalTaxRate = Math.round(actualTaxRate * 100) / 100;
 
     const doc = create({ version: '1.0', encoding: 'UTF-8' })
         .ele('rsm:CrossIndustryInvoice', {
@@ -106,7 +121,7 @@ function generateZugferdXml(invoiceData) {
             .ele('ram:ApplicableTradeTax')
                 .ele('ram:TypeCode').txt('VAT').up()
                 .ele('ram:CategoryCode').txt('S').up()
-                .ele('ram:RateApplicablePercent').txt((item.taxRate || taxRate).toFixed(2)).up().up()
+                .ele('ram:RateApplicablePercent').txt(finalTaxRate.toFixed(2)).up().up()
             .ele('ram:SpecifiedTradeSettlementLineMonetarySummation')
                 .ele('ram:LineTotalAmount').txt((item.price * item.quantity).toFixed(2)).up().up().up();
     });
@@ -147,7 +162,7 @@ function generateZugferdXml(invoiceData) {
         .ele('ram:PayeePartyCreditorFinancialAccount').ele('ram:IBANID').txt(iban).up().up().up();
 
     // Calculate tax from subtotal and rate to ensure accuracy
-    const calculatedTax = subtotal * (taxRate / 100);
+    const calculatedTax = subtotal * (finalTaxRate / 100);
     const calculatedTotal = subtotal + calculatedTax;
 
     settlement.ele('ram:ApplicableTradeTax')
@@ -155,7 +170,7 @@ function generateZugferdXml(invoiceData) {
         .ele('ram:TypeCode').txt('VAT').up()
         .ele('ram:BasisAmount').txt(subtotal.toFixed(2)).up()
         .ele('ram:CategoryCode').txt('S').up()
-        .ele('ram:RateApplicablePercent').txt(taxRate.toFixed(2)).up().up();
+        .ele('ram:RateApplicablePercent').txt(finalTaxRate.toFixed(2)).up().up();
 
     settlement.ele('ram:SpecifiedTradePaymentTerms')
         .ele('ram:DueDateDateTime').ele('udt:DateTimeString', { format: '102' }).txt(formattedDueDate).up().up().up();

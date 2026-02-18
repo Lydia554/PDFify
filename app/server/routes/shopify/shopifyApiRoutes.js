@@ -284,7 +284,8 @@ try {
         city: invoiceData.customerAddress?.split(',')[1] || "Customerton",
         country: invoiceData.customerAddress?.split(',')[3] || "DE"
       },
-      sellerVatId: "DE123456789" // Should come from shopConfig
+      sellerVatId: "DE123456789", // Should come from shopConfig
+      vatRate: invoiceData.vatRate || 21
     };
     invoiceData.zugferdXml = generateZugferdXml(zugferdData);
     console.log("🧾 [Shopify] ZUGFeRD XML generated:", invoiceData.zugferdXml.length, "bytes");

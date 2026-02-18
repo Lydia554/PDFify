@@ -366,6 +366,27 @@ function mapToZugferdFormat(invoiceData) {
     total,
     sellerAddress,
     buyerAddress,
+    sellerVatId: invoiceData.sellerVatId || 'DE123456789',
+    vatRate: taxRate
+  };
+}
+    dueDate: invoiceData.dueDate || invoiceData.paymentTerms?.match(/(\d+)\s*days/)?.[1] ?
+      (() => {
+        const days = parseInt(invoiceData.paymentTerms.match(/(\d+)\s*days/)?.[1] || '14');
+        const due = new Date(invoiceData.date);
+        due.setDate(due.getDate() + days);
+        return due.toISOString().split('T')[0];
+      })() : null,
+    currency,
+    customerName: invoiceData.customerName || 'Customer',
+    companyName: invoiceData.companyName || invoiceData.shopName || 'Your Company',
+    iban: invoiceData.iban || 'DE89370400440532013000',
+    items,
+    subtotal,
+    tax: taxTotal,
+    total,
+    sellerAddress,
+    buyerAddress,
     sellerVatId: invoiceData.sellerVatId || 'DE123456789'
   };
 }
