@@ -8,6 +8,7 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.graphics.color.PDOutputIntent;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.pdmodel.common.PDMetadata;
 import org.apache.pdfbox.pdmodel.PDDocumentNameDictionary;
 import org.apache.pdfbox.pdmodel.PDEmbeddedFilesNameTreeNode;
@@ -218,6 +219,40 @@ public class HTTPServer {
             content.setNonStrokingColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
             content.addRect(margin, pageHeight - 35, pageWidth - 2 * margin, 3);
             content.fill();
+
+            // ========== LOGO (Top Left) ==========
+            if (data.logoData != null && !data.logoData.isEmpty()) {
+                try {
+                    // Decode base64 logo
+                    byte[] logoBytes = java.util.Base64.getDecoder().decode(data.logoData);
+                    PDImageXObject logoImage = PDImageXObject.createFromByteArray(document, logoBytes, "logo");
+
+                    // Calculate logo size (max width 150px, maintain aspect ratio)
+                    float maxLogoWidth = 150;
+                    float maxLogoHeight = 60;
+                    float logoWidth = logoImage.getWidth();
+                    float logoHeight = logoImage.getHeight();
+
+                    // Scale down if needed
+                    if (logoWidth > maxLogoWidth || logoHeight > maxLogoHeight) {
+                        float widthRatio = maxLogoWidth / logoWidth;
+                        float heightRatio = maxLogoHeight / logoHeight;
+                        float scale = Math.min(widthRatio, heightRatio);
+                        logoWidth *= scale;
+                        logoHeight *= scale;
+                    }
+
+                    // Draw logo in top-left corner (below accent bar)
+                    float logoX = margin;
+                    float logoY = pageHeight - 35 - logoHeight - 5; // 5px below accent bar
+                    content.drawImage(logoImage, logoX, logoY, logoWidth, logoHeight);
+
+                    System.out.println("[Logo] Successfully drew logo: " + (int)logoWidth + "x" + (int)logoHeight + " at (" + (int)logoX + "," + (int)logoY + ")");
+                } catch (Exception e) {
+                    System.err.println("[Logo] Failed to draw logo: " + e.getMessage());
+                    // Continue without logo if it fails
+                }
+            }
 
             // Invoice number and date - modern layout
             content.setNonStrokingColor(0.2f, 0.2f, 0.2f);  // Dark gray
@@ -750,6 +785,7 @@ public class HTTPServer {
         public String creator;
         public String locale;
         public String primaryColor; // Hex color code (e.g., "#00a6cc")
+        public String logoData; // Base64 encoded PNG logo
     }
 
     public static class LineItem {

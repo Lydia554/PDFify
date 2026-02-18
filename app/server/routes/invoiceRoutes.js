@@ -41,9 +41,45 @@ function formatPrice(amount, currency = "EUR", locale = "en-US") {
 }
 
 /**
+ * Fetch logo from URL and convert to base64
+ * @param {string} logoUrl - URL of the logo image
+ * @returns {Promise<string>} Base64 encoded logo or empty string
+ */
+async function fetchAndEncodeLogo(logoUrl) {
+  if (!logoUrl || logoUrl.trim() === '') {
+    return '';
+  }
+
+  try {
+    log(`[Logo] Fetching logo from: ${logoUrl}`);
+    const response = await axios.get(logoUrl, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+      // Validate content type
+      validateStatus: (status) => status === 200
+    });
+
+    // Check if the response is an image
+    const contentType = response.headers['content-type'];
+    if (!contentType || !contentType.startsWith('image/')) {
+      log(`[Logo] Invalid content type: ${contentType}`);
+      return '';
+    }
+
+    // Convert to base64
+    const base64 = Buffer.from(response.data).toString('base64');
+    log(`[Logo] Successfully fetched and encoded logo (${response.data.length} bytes)`);
+    return base64;
+  } catch (err) {
+    log(`[Logo] Failed to fetch logo: ${err.message}`);
+    return '';
+  }
+}
+
+/**
  * Map invoice data to Java service format
  */
-function mapInvoiceDataToJavaFormat(invoiceData) {
+async function mapInvoiceDataToJavaFormat(invoiceData) {
   log(`[DEBUG] mapInvoiceDataToJavaFormat received primaryColor: ${invoiceData.primaryColor}`);
 
   const currency = invoiceData.currency || "EUR";
@@ -79,6 +115,9 @@ function mapInvoiceDataToJavaFormat(invoiceData) {
   const taxTotal = parseFloat(invoiceData.tax || items.reduce((sum, i) => sum + i.tax, 0));
   const total = parseFloat(invoiceData.total || subtotal + taxTotal);
 
+  // Fetch and encode logo if provided
+  const logoData = await fetchAndEncodeLogo(invoiceData.customLogoUrl || '');
+
   return {
     orderId: invoiceData.orderId || `INV-${Date.now()}`,
     date: invoiceData.date || new Date().toISOString().split('T')[0],
@@ -103,6 +142,7 @@ function mapInvoiceDataToJavaFormat(invoiceData) {
     shopName: invoiceData.shopName || "Your Shop",
     shopAddress: invoiceData.shopAddress || "",
     primaryColor: invoiceData.primaryColor || "#00a6cc", // Pass custom color to Java service
+    logoData, // Pass base64 encoded logo to Java service
     locale: {
       language: invoiceData.locale?.language || "en",
       format: locale
@@ -267,7 +307,7 @@ async function generatePdf(invoiceData, user, browser, reqInvoiceSource) {
     log("Generating PDF via Java service (PDF/A-3b + ZUGFeRD for pro users)");
 
     try {
-      const javaData = mapInvoiceDataToJavaFormat(invoiceData);
+      const javaData = await mapInvoiceDataToJavaFormat(invoiceData);
       log(`[DEBUG] primaryColor passed to Java: ${javaData.primaryColor}`);
       const filename = `Invoice_${javaData.orderId}_${Date.now()}.pdf`;
       let pdfBuffer = await createPdfA3WithJava(javaData, filename);
