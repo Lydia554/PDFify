@@ -8,6 +8,7 @@ const User = require("../models/User");
 const dualAuth = require('../middleware/dualAuth');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
+const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
 
 if (typeof ReadableStream === "undefined") {
@@ -42,18 +43,21 @@ function generateShopOrderHTML(data) {
   `;
 }
 
-function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
+function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark, primaryColor = '#5e60ce') {
   const logoUrl = "https://pdfify.pro/images/Logo.png";
+  const palette = generateColorPalette(primaryColor);
 
   return `
     <html>
       <head>
         <style>
+          ${generateColorVariables(primaryColor)}
+
           body {
             font-family: 'Arial', sans-serif;
             padding: 40px;
             color: #333;
-            background-color: #f9f9f9;
+            background-color: ${palette.lightest};
             margin: 0;
             box-sizing: border-box;
             position: relative;
@@ -66,7 +70,7 @@ function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
           }
           h1 {
             text-align: center;
-            color: #5e60ce;
+            color: ${palette.primary};
             margin-bottom: 20px;
           }
           h2 {
@@ -89,14 +93,14 @@ function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
           }
           .order-details {
             margin-top: 10px;
-            border-top: 2px solid #5e60ce;
+            border-top: 2px solid ${palette.primary};
             padding-top: 20px;
           }
           .products-list {
             margin-top: 15px;
             padding: 10px;
             border-radius: 8px;
-            background-color: #f4f7fb;
+            background-color: ${palette.lightest};
           }
           .products-list li {
             margin-bottom: 8px;
@@ -104,7 +108,7 @@ function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark) {
           .total {
             font-size: 1.2em;
             font-weight: bold;
-            color: #5e60ce;
+            color: ${palette.primary};
           }
    .footer {
         position: static;
@@ -177,6 +181,8 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
     return res.status(400).json({ error: "Missing shop order data" });
   }
 
+  const primaryColor = data.primaryColor || '#5e60ce';
+
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
@@ -203,7 +209,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
     const page = await browser.newPage();
     const rawHtml = generateShopOrderHTML(data);
-    const wrappedHtml = wrapHtmlShopOrder(rawHtml, user.isPremium, addWatermark);
+    const wrappedHtml = wrapHtmlShopOrder(rawHtml, user.isPremium, addWatermark, primaryColor);
 
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
@@ -211,7 +217,7 @@ router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => 
 
     const pdfBuffer = fs.readFileSync(pdfPath);
 
- 
+
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pageCount = pdfDoc.getPageCount();
 

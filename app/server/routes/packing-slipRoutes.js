@@ -8,6 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
+const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
 
 const logoUrl = "https://pdfify.pro/images/Logo.png";
@@ -41,14 +42,19 @@ async function resetMonthlyUsageIfNeeded(user) {
 }
 
 function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = false) {
+  const primaryColor = data.primaryColor || '#2a3d66';
+  const palette = generateColorPalette(primaryColor);
+
   return `
     <html>
       <head>
         <style>
+          ${generateColorVariables(primaryColor)}
+
           body {
             font-family: 'Open Sans', sans-serif;
             padding: 40px;
-            background-color: #f7f9fc;
+            background-color: ${palette.lightest};
             color: #333;
             position: relative;
           }
@@ -66,7 +72,7 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #ccc;
+            border-bottom: 2px solid ${palette.lighter};
             padding-bottom: 15px;
             margin-bottom: 25px;
           }
@@ -78,7 +84,7 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
           h1 {
             font-size: 24px;
             margin: 0;
-            color: #2a3d66;
+            color: ${palette.primary};
           }
 
           .info {
@@ -101,8 +107,9 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
           }
 
           table th {
-            background-color: #f0f4fa;
+            background-color: ${palette.lightest};
             font-weight: 600;
+            color: ${palette.primary};
           }
 
           table tr:nth-child(even) td {
@@ -264,6 +271,12 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
 
     const addWatermark = isPreview && !user.isPremium && user.previewCount >= 3;
 
+    // Accept primaryColor from request
+    const invoiceData = {
+      ...data,
+      primaryColor: data.primaryColor || '#2a3d66'
+    };
+
     const safeOrderId = data.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
@@ -276,18 +289,18 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
     });
 
     const page = await browser.newPage();
-    const html = generatePackingSlipHTML(data, addWatermark, user.isPremium);
+    const html = generatePackingSlipHTML(invoiceData, addWatermark, user.isPremium);
     await page.setContent(html, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();
 
     const pdfBuffer = fs.readFileSync(pdfPath);
 
-    
+
     const pdfDoc = await PDFDocument.load(pdfBuffer);
     const pageCount = pdfDoc.getPageCount();
 
-    
+
  const usageAllowed = await incrementUsage(user, pageCount, isPreview);
 if (!usageAllowed) {
   return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });

@@ -8,6 +8,7 @@ const User = require("../models/User");
 const dualAuth = require('../middleware/dualAuth');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
+const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
 
 if (typeof ReadableStream === "undefined") {
@@ -24,6 +25,9 @@ const log = (message, data = null) => {
 function generateRecipeHTML(data) {
   log("🧪 Inside HTML Generator - showChart:", data.showChart);
   log("🧪 customLogoUrl:", data.customLogoUrl);
+
+  const primaryColor = data.primaryColor || '#5e60ce';
+  const palette = generateColorPalette(primaryColor);
 
   const logoHtml = data.customLogoUrl
     ? `<img src="${data.customLogoUrl}" alt="Logo" class="logo" />`
@@ -65,7 +69,7 @@ function generateRecipeHTML(data) {
 
   const footerNote = data.showWatermark
     ? `<div class="footer watermark">
-        
+
       </div>`
     : '';
 
@@ -73,13 +77,15 @@ function generateRecipeHTML(data) {
     <html>
       <head>
         <style>
+          ${generateColorVariables(primaryColor)}
+
           @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap');
           @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap');
 
           body {
             font-family: 'Open Sans', sans-serif;
             color: #333;
-            background-color: #f4f7fb;
+            background-color: ${palette.lightest};
             margin: 0; padding: 0;
             position: relative;
           }
@@ -97,17 +103,17 @@ function generateRecipeHTML(data) {
             z-index: 1;
           }
 
-          h1 { text-align: center; color: #5e60ce; font-size: 2.5em; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
+          h1 { text-align: center; color: ${palette.primary}; font-size: 2.5em; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px; }
           h2 {
             font-size: 1.8em;
-            color: #2a3d66;
+            color: ${palette.dark};
             margin-bottom: 15px;
-            border-bottom: 2px solid #ddd;
+            border-bottom: 2px solid ${palette.lighter};
             padding-bottom: 10px;
           }
           p { line-height: 1.8; font-size: 1.1em; margin-bottom: 15px; }
           .section { margin-bottom: 30px; }
-          .label { font-weight: bold; color: #5e60ce; font-size: 1.1em; }
+          .label { font-weight: bold; color: ${palette.primary}; font-size: 1.1em; }
           .ingredients, .instructions { padding-left: 20px; }
           .ingredients li, .instructions li { margin-bottom: 8px; font-size: 1.05em; }
           .chart-container { text-align: center; margin: 40px 0 20px; }
@@ -230,6 +236,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
       customLogoUrl: isPremium ? null : defaultLogoUrl,
       showChart: isPremium,
       showWatermark: !isPremium,
+      primaryColor: data.primaryColor || '#5e60ce'
     };
 
     log("User isPremium:", isPremium);

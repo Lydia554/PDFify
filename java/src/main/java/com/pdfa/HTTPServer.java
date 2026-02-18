@@ -495,14 +495,40 @@ public class HTTPServer {
             }
             content.endText();
 
-            // ========== FOOTER ==========
-            content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
+            // ========== FOOTER WITH BRANDING ==========
+            float footerY = 65;
+
+            // Top divider line
+            content.setLineWidth(0.3f);
+            content.setStrokingColor(0.7f, 0.7f, 0.7f);
+            content.moveTo(margin, footerY + 15);
+            content.lineTo(pageWidth - margin, footerY + 15);
+            content.stroke();
+
+            // "Thank you" message (centered)
+            content.setNonStrokingColor(0.4f, 0.4f, 0.4f);
             content.beginText();
             content.setFont(font, 8);
-            content.newLineAtOffset(margin, 65);
-            content.showText("Thank you for your business!");
-            content.newLineAtOffset(0, -12);
-            content.showText("Page 1 of 1");
+            String thankYou = "Thank you for your business!";
+            float thankYouWidth = font.getStringWidth(thankYou) / 1000 * 8;
+            content.newLineAtOffset((pageWidth - thankYouWidth) / 2, footerY + 8);
+            content.showText(thankYou);
+
+            // "Page X of Y" (centered)
+            String pageInfo = "Page 1 of 1";
+            float pageInfoWidth = font.getStringWidth(pageInfo) / 1000 * 8;
+            content.newLineAtOffset((pageWidth - pageInfoWidth) / 2, footerY - 4);
+            content.showText(pageInfo);
+            content.endText();
+
+            // "Powered by PDFify" branding (subtle, right-aligned)
+            content.setNonStrokingColor(0.3f, 0.3f, 0.3f);
+            content.beginText();
+            content.setFont(font, 7);
+            String branding = "Powered by PDFify • pdfify.pro";
+            float brandingWidth = font.getStringWidth(branding) / 1000 * 7;
+            content.newLineAtOffset(pageWidth - margin - brandingWidth, footerY - 14);
+            content.showText(branding);
             content.endText();
 
             content.close();

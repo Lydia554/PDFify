@@ -5,9 +5,10 @@ const router = express.Router();
 const fs = require("fs");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
-const User = require("../models/User"); 
+const User = require("../models/User");
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
+const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
 
 if (typeof ReadableStream === "undefined") {
@@ -17,7 +18,8 @@ if (typeof ReadableStream === "undefined") {
 const logoUrl = "https://pdfify.pro/images/Logo.png";
 
 
-function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
+function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark, primaryColor = '#5e60ce') {
+  const palette = generateColorPalette(primaryColor);
 
   const watermarkHtml = `
     <div class="watermark-confidential">Confidential</div>
@@ -28,12 +30,14 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
   <html>
     <head>
       <style>
+        ${generateColorVariables(primaryColor)}
+
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display&display=swap');
 
         body {
           font-family: Arial, sans-serif;
           margin: 40px;
-          background: #f9f9f9;
+          background: ${palette.lightest};
           color: #333;
         }
         .logo {
@@ -47,7 +51,7 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
           left: 50%;
           font-size: 6rem;
           font-weight: 700;
-          color: #5e60ce;
+          color: ${palette.primary};
           opacity: 0.05;
           transform: translate(-50%, -50%) rotate(-30deg);
           pointer-events: none;
@@ -82,7 +86,9 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark) {
   `;
 }
 
-function generateTherapyReportHTML(data, isPremiumUser) {
+function generateTherapyReportHTML(data, isPremiumUser, primaryColor = '#5e60ce') {
+  const palette = generateColorPalette(primaryColor);
+
   const innerHtml = `
     ${!isPremiumUser ? `<div class="watermark">Confidential</div>` : ''}
     <h1>Therapy Report</h1>
@@ -125,6 +131,8 @@ function generateTherapyReportHTML(data, isPremiumUser) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+      const primaryColor = '${primaryColor}';
+
       const ctx = document.getElementById('progressChart').getContext('2d');
       new Chart(ctx, {
         type: 'bar',
@@ -133,8 +141,8 @@ function generateTherapyReportHTML(data, isPremiumUser) {
           datasets: [{
             label: 'Milestone Progress',
             data: [${data.milestonesData.join(',')}],
-            backgroundColor: 'rgba(94, 96, 206, 0.5)',
-            borderColor: 'rgba(94, 96, 206, 1)',
+            backgroundColor: primaryColor + '80',
+            borderColor: primaryColor,
             borderWidth: 1
           }]
         },
@@ -156,6 +164,8 @@ function generateTherapyReportHTML(data, isPremiumUser) {
     </script>
 
     <style>
+      ${generateColorVariables(primaryColor)}
+
       .section {
         margin-bottom: 25px;
       }
@@ -171,7 +181,7 @@ function generateTherapyReportHTML(data, isPremiumUser) {
         margin-top: 20px;
         font-size: 18px;
         font-weight: bold;
-        color: #5e60ce;
+        color: ${palette.primary};
       }
       .multi-column {
         display: grid;
@@ -189,7 +199,7 @@ function generateTherapyReportHTML(data, isPremiumUser) {
         text-align: left;
       }
       .table th {
-        background-color: #5e60ce;
+        background-color: ${palette.primary};
         color: white;
       }
       .chart-container {
@@ -238,7 +248,7 @@ function generateTherapyReportHTML(data, isPremiumUser) {
       </p>
     </div>
 
-   
+
 
   `;
 
@@ -249,6 +259,8 @@ function generateTherapyReportHTML(data, isPremiumUser) {
 
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
   const { data, isPreview = false } = req.body;
+
+  const primaryColor = data?.primaryColor || '#5e60ce';
 
   const cleanedData = {
     childName: data?.childName ?? "John Doe",
@@ -272,7 +284,7 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const user = await User.findById(req.user.userId);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-   
+
     const now = new Date();
     if (!user.usageLastReset || user.usageLastReset.getMonth() !== now.getMonth()) {
       user.usageCount = 0;
@@ -299,9 +311,10 @@ router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res)
     const page = await browser.newPage();
     await page.setContent(
       wrapHtmlWithBranding(
-        generateTherapyReportHTML(cleanedData, isPremiumUser),
+        generateTherapyReportHTML(cleanedData, isPremiumUser, primaryColor),
         isPremiumUser,
-        isPreview && !isPremiumUser
+        isPreview && !isPremiumUser,
+        primaryColor
       ),
       { waitUntil: "networkidle0" }
     );
