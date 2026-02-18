@@ -1,5 +1,57 @@
 const { create } = require('xmlbuilder2');
 
+/**
+ * Convert country name to ISO 3166-1 alpha-2 code
+ * Supports common country names and returns ISO code
+ */
+function countryToIsoCode(countryName) {
+    if (!countryName) return 'DE';
+
+    const countryMap = {
+        'Germany': 'DE',
+        'Deutschland': 'DE',
+        'United States': 'US',
+        'USA': 'US',
+        'United Kingdom': 'GB',
+        'UK': 'GB',
+        'France': 'FR',
+        'Italy': 'IT',
+        'Spain': 'ES',
+        'Netherlands': 'NL',
+        'Belgium': 'BE',
+        'Austria': 'AT',
+        'Switzerland': 'CH',
+        'Poland': 'PL',
+        'Czech Republic': 'CZ',
+        'Slovenia': 'SI',
+        'Slovakia': 'SK',
+        'Hungary': 'HU',
+        'Romania': 'RO',
+        'Bulgaria': 'BG',
+        'Croatia': 'HR',
+        'Greece': 'GR',
+        'Portugal': 'PT',
+        'Ireland': 'IE',
+        'Sweden': 'SE',
+        'Norway': 'NO',
+        'Denmark': 'DK',
+        'Finland': 'FI',
+        'Luxembourg': 'LU',
+        'Estonia': 'EE',
+        'Latvia': 'LV',
+        'Lithuania': 'LT',
+        'Malta': 'MT',
+        'Cyprus': 'CY'
+    };
+
+    // If already 2-letter ISO code, return as-is
+    if (countryName.length === 2 && /^[A-Z]{2}$/i.test(countryName)) {
+        return countryName.toUpperCase();
+    }
+
+    return countryMap[countryName] || 'DE';
+}
+
 function generateZugferdXml(invoiceData) {
     const {
         orderId, date, dueDate, currency = 'EUR',
@@ -9,6 +61,11 @@ function generateZugferdXml(invoiceData) {
 
     const formattedDate = date.replace(/-/g, '');
     const formattedDueDate = dueDate ? dueDate.replace(/-/g, '') : formattedDate;
+
+    // Get tax rate from first item or calculate
+    const taxRate = items.length > 0 && items[0].taxRate ?
+        items[0].taxRate :
+        (subtotal > 0 ? (tax / subtotal * 100) : 19);
 
     const doc = create({ version: '1.0', encoding: 'UTF-8' })
         .ele('rsm:CrossIndustryInvoice', {
@@ -49,22 +106,22 @@ function generateZugferdXml(invoiceData) {
             .ele('ram:ApplicableTradeTax')
                 .ele('ram:TypeCode').txt('VAT').up()
                 .ele('ram:CategoryCode').txt('S').up()
-                .ele('ram:RateApplicablePercent').txt(item.taxRate.toFixed(2)).up().up()
+                .ele('ram:RateApplicablePercent').txt((item.taxRate || taxRate).toFixed(2)).up().up()
             .ele('ram:SpecifiedTradeSettlementLineMonetarySummation')
                 .ele('ram:LineTotalAmount').txt((item.price * item.quantity).toFixed(2)).up().up().up();
     });
-    
+
 
     // 4. Agreement (Seller/Buyer + Addresses + VAT ID)
     const agreement = transaction.ele('ram:ApplicableHeaderTradeAgreement');
-    
+
     const seller = agreement.ele('ram:SellerTradeParty');
     seller.ele('ram:Name').txt(companyName).up();
     seller.ele('ram:PostalTradeAddress')
         .ele('ram:PostcodeCode').txt(sellerAddress.postCode).up()
         .ele('ram:LineOne').txt(sellerAddress.street).up()
         .ele('ram:CityName').txt(sellerAddress.city).up()
-        .ele('ram:CountryID').txt(sellerAddress.country).up().up();
+        .ele('ram:CountryID').txt(countryToIsoCode(sellerAddress.country)).up().up();
     seller.ele('ram:SpecifiedTaxRegistration')
         .ele('ram:ID', { schemeID: 'VA' }).txt(sellerVatId).up().up();
 
@@ -74,7 +131,7 @@ function generateZugferdXml(invoiceData) {
         .ele('ram:PostcodeCode').txt(buyerAddress.postCode).up()
         .ele('ram:LineOne').txt(buyerAddress.street).up()
         .ele('ram:CityName').txt(buyerAddress.city).up()
-        .ele('ram:CountryID').txt(buyerAddress.country).up().up();
+        .ele('ram:CountryID').txt(countryToIsoCode(buyerAddress.country)).up().up();
 
     // 5. Delivery
     transaction.ele('ram:ApplicableHeaderTradeDelivery')
@@ -94,7 +151,7 @@ function generateZugferdXml(invoiceData) {
         .ele('ram:TypeCode').txt('VAT').up()
         .ele('ram:BasisAmount').txt(subtotal.toFixed(2)).up()
         .ele('ram:CategoryCode').txt('S').up()
-        .ele('ram:RateApplicablePercent').txt((tax / subtotal * 100).toFixed(2)).up().up();
+        .ele('ram:RateApplicablePercent').txt(taxRate.toFixed(2)).up().up();
 
     settlement.ele('ram:SpecifiedTradePaymentTerms')
         .ele('ram:DueDateDateTime').ele('udt:DateTimeString', { format: '102' }).txt(formattedDueDate).up().up().up();
