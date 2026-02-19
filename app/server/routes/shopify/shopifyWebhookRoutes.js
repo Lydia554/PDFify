@@ -79,10 +79,8 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
 
     console.log("📧 [Direct] Calling customer invoice generation directly (bypassing HTTP)...");
 
-    // Import directly to avoid HTTP round-trip through Cloudflare
-    const { generateCustomerInvoiceHTML } = require("./customerInvoice");
-    const puppeteer = require("puppeteer");
-    const { formatPrice: customerFormatPrice } = require("./customerInvoice");
+    // Import customer invoice generator
+    const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = require("./customerInvoice");
     const localeMap = {
       sl: require("../../locales/sl.json"),
       en: require("../../locales/en.json"),
