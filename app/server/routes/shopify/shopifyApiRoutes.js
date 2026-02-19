@@ -17,9 +17,9 @@ const { createPdfA3WithJava } = require("../../Helpers/pdf-helpers");
 const generateZugferdXml = require("../../../xml/generateZugferdXml");
 
 const locales = {
-  sl: require("../../locales/sl.json"),
-  en: require("../../locales/en.json"),
-  de: require("../../locales/de.json"),
+  sl: require("../../../locales/sl.json"),
+  en: require("../../../locales/en.json"),
+  de: require("../../../locales/de.json"),
 };
 
 const os = require("os");
