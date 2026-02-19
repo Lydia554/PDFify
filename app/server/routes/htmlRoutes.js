@@ -8,7 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require('../models/User');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateColorVariables, generateColorPalette } = require("../../public/js/color-helpers");
+const { generateColorVariables, generateColorPalette } = require("../helpers/color-helpers");
 
 function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark, primaryColor = '#5e60ce') {
   const palette = generateColorPalette(primaryColor);
