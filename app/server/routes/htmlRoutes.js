@@ -9,9 +9,6 @@ const User = require('../models/User');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
 
-
-const logoUrl = "https://pdfify.pro/images/Logo.png";
-
 function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
   return `
     <html>
@@ -108,8 +105,6 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
         </style>
       </head>
       <body>
-
-        ${isPremium ? '' : `<img src="${logoUrl}" alt="Logo" class="logo" />`}
         ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
         <div class="content">
           ${htmlContent}

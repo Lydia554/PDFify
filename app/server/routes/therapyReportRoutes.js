@@ -10,13 +10,9 @@ const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
 const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
-
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
-
-const logoUrl = "https://pdfify.pro/images/Logo.png";
-
 
 function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark, primaryColor = '#5e60ce') {
   const palette = generateColorPalette(primaryColor);
@@ -76,7 +72,6 @@ function wrapHtmlWithBranding(htmlContent, isPremiumUser, addPreviewWatermark, p
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
-      ${!isPremiumUser ? `<img src="${logoUrl}" alt="Logo" class="logo" />` : ''}
       ${watermarkHtml}
       <div id="content">
         ${htmlContent}

@@ -173,7 +173,7 @@ body::before {
     </style>
   </head>
   <body>
-    <img src="https://pdfify.pro/images/Logo.png" alt="Food Trek Logo" class="logo" />
+    <img src="https://food-trek.com/wp-content/uploads/2025/02/logo-1.jpg" alt="Food Trek Logo" class="logo" />
     <h1>${data.recipeName} <span class="emoji">🍽️</span></h1>
 
     ${

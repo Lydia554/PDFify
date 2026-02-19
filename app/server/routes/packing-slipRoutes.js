@@ -10,9 +10,6 @@ const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
 const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
-
-const logoUrl = "https://pdfify.pro/images/Logo.png";
-
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);
@@ -209,7 +206,6 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
         ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
         <div class="container">
      <div class="header">
-            ${!isPremiumUser ? `<img src="${logoUrl}" alt="Company Logo" class="logo" />` : ''}
             <h1>Packing Slip</h1>
           </div>
 

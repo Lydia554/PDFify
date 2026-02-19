@@ -15,8 +15,6 @@ if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
 
-const defaultLogoUrl = "https://pdfify.pro/images/Logo.png";
-
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {
     console.log(message, data);

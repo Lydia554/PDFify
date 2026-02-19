@@ -2,7 +2,7 @@ function generateInvoiceHtml(data) {
   const logoUrl =
     typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
       ? data.customLogoUrl.trim()
-      : "https://pdfify.pro/images/Logo.png";
+      : "";
 
 
   const computedSubtotal = (data.items || []).reduce((sum, item) => {

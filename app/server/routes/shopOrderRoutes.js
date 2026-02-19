@@ -10,7 +10,6 @@ const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
 const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
-
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
 }
@@ -44,7 +43,6 @@ function generateShopOrderHTML(data) {
 }
 
 function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark, primaryColor = '#5e60ce') {
-  const logoUrl = "https://pdfify.pro/images/Logo.png";
   const palette = generateColorPalette(primaryColor);
 
   return `
@@ -156,7 +154,6 @@ function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark, primaryColor = 
         </style>
       </head>
       <body>
-        ${isPremium ? '' : `<img src="${logoUrl}" alt="Logo" class="logo" />`}
         ${addWatermark ? `<div class="watermark">FOR PRODUCTION ONLY - NOT AVAILABLE IN BASIC</div>` : ''}
         <div class="content">
           ${htmlContent}
