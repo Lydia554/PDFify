@@ -8,7 +8,7 @@ const User = require("../models/User");
 const dualAuth = require('../middleware/dualAuth');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateColorVariables, generateColorPalette } = require("../helpers/color-helpers");
+const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
 
 if (typeof ReadableStream === "undefined") {
   global.ReadableStream = require("web-streams-polyfill").ReadableStream;
