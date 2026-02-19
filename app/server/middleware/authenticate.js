@@ -13,8 +13,18 @@ const authenticate = async (req, res, next) => {
     apiKey = req.query.apiKey;
   }
 
+  // Helper function to handle auth failure
+  const authFailed = (message, statusCode = 403) => {
+    const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
+
+    if (acceptsHtml) {
+      return res.redirect('/login.html');
+    }
+    return res.status(statusCode).json({ error: message });
+  };
+
   if (!apiKey) {
-    return res.status(403).json({ error: "API key not provided" });
+    return authFailed("API key not provided", 403);
   }
 
   try {
@@ -32,14 +42,8 @@ const authenticate = async (req, res, next) => {
 });
 
 if (!user || user.deleted) {
-  return res.status(401).json({ error: "User not found or inactive" });
+  return authFailed("User not found or inactive", 401);
 }
-
-
-
-    if (!user) {
-      return res.status(401).json({ error: "User not found or API key is invalid" });
-    }
 
     const decryptedKey = user.getDecryptedApiKey();
 

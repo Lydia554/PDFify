@@ -12,10 +12,22 @@ const dualAuth = async (req, res, next) => {
     apiKey = req.query.apiKey;
   }
 
+  // Helper function to handle auth failure - redirect for browser requests, JSON for API
+  const authFailed = (message, statusCode = 401) => {
+    const acceptsHtml = req.headers.accept && req.headers.accept.includes('text/html');
+
+    if (acceptsHtml) {
+      // Browser navigation - redirect to login
+      return res.redirect('/login.html');
+    }
+    // API request - return JSON error
+    return res.status(statusCode).json({ error: message });
+  };
+
   try {
     let user = null;
 
-    
+
     if (apiKey) {
       const users = await User.find();
       user = users.find(u => {
@@ -28,7 +40,7 @@ const dualAuth = async (req, res, next) => {
       });
 
       if (!user || user.deleted) {
-        return res.status(403).json({ error: "User not found or inactive" });
+        return authFailed("User not found or inactive", 403);
       }
     }
 
@@ -36,7 +48,7 @@ const dualAuth = async (req, res, next) => {
     if (!user && req.session && typeof req.session.userId === "string") {
   user = await User.findById(req.session.userId);
   if (!user || user.deleted) {
-    return res.status(403).json({ error: "User not found or inactive" });
+    return authFailed("User not found or inactive", 403);
   }
 }
 
@@ -45,12 +57,12 @@ const dualAuth = async (req, res, next) => {
     if (!user && req.session?.userId) {
       user = await User.findById(req.session.userId);
       if (!user || user.deleted) {
-        return res.status(401).json({ error: "User not found or inactive" });
+        return authFailed("User not found or inactive", 401);
       }
     }
 
     if (!user) {
-      return res.status(401).json({ error: "Authentication failed" });
+      return authFailed("Authentication failed", 401);
     }
 
     req.user = {
