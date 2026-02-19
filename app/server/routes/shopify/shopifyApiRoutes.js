@@ -352,6 +352,32 @@ try {
     }
 
     console.log("🧾 [Customer Invoice] Building htmlData...");
+
+    // Fetch and optimize logo if present
+    let optimizedLogoUrl = shopConfig.customLogoUrl || "";
+    if (optimizedLogoUrl && optimizedLogoUrl.trim() !== "") {
+      try {
+        console.log("🧾 [Customer Invoice] Fetching logo:", optimizedLogoUrl.substring(0, 60) + "...");
+        const logoResponse = await axios.get(optimizedLogoUrl, {
+          responseType: "arraybuffer",
+          timeout: 5000,
+          validateStatus: (status) => status === 200
+        });
+
+        // Resize and optimize logo
+        const logoBuffer = await sharp(logoResponse.data)
+          .resize({ width: 180, height: 80, fit: "inside", withoutEnlargement: true })
+          .png()
+          .toBuffer();
+
+        optimizedLogoUrl = `data:image/png;base64,${logoBuffer.toString("base64")}`;
+        console.log("🧾 [Customer Invoice] Logo optimized, size:", logoBuffer.length, "bytes");
+      } catch (logoErr) {
+        console.warn("🧾 [Customer Invoice] Logo fetch/optimization failed:", logoErr.message);
+        optimizedLogoUrl = "";
+      }
+    }
+
     const htmlData = {
       ...invoiceData,
       items: items.map(i => ({
@@ -367,7 +393,7 @@ try {
       shopName: shopConfig.shopName || shopDomain,
       currency: order.currency || "EUR",
       locale: lang || "en",
-      customLogoUrl: shopConfig.customLogoUrl || "",
+      customLogoUrl: optimizedLogoUrl,
     };
 
     console.log("🧾 [Customer Invoice] htmlData built:", {
@@ -375,7 +401,7 @@ try {
       customerName: htmlData.customerName,
       itemCount: htmlData.items?.length,
       hasLogo: !!htmlData.customLogoUrl,
-      logoUrl: htmlData.customLogoUrl?.substring(0, 50) + "..."
+      logoIsDataUrl: htmlData.customLogoUrl?.startsWith("data:")
     });
 
     console.log("🧾 [Customer Invoice] Launching Puppeteer...");
@@ -396,13 +422,14 @@ try {
     await page.evaluateHandle("document.fonts.ready");
     console.log("🧾 [Customer Invoice] Fonts ready, generating PDF...");
 
-    // Generate PDF directly from Puppeteer
+    // Generate PDF directly from Puppeteer with PDF/A-1b compatibility
     pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
       margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
       preferCSSPageSize: true,
       displayHeaderFooter: false,
+      pdfVersion: "1.4",  // More compatible PDF version
     });
 
     console.log("🧾 [Customer Invoice] PDF generated successfully, size:", pdfBuffer.length, "bytes");
