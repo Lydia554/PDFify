@@ -222,7 +222,7 @@ const premiumTemplate = `
     </head>
     <body>
       <div class="container">
-        ${customLogoUrl && customLogoUrl.trim() !== "" ? `<img src="${customLogoUrl}" class="logo" />` : ""}
+        ${customLogoUrl && customLogoUrl.trim() !== "" && !customLogoUrl.includes('undefined') && !customLogoUrl.includes('null') ? `<img src="${customLogoUrl}" class="logo" onerror="this.style.display='none'" />` : ""}
 
         <div class="accent-line"></div>
 

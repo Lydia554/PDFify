@@ -368,8 +368,19 @@ try {
 
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
+
+    // Log for debugging
+    console.log("[Customer Invoice] Generating PDF with data:", {
+      shopName: htmlData.shopName,
+      customerName: htmlData.customerName,
+      itemCount: htmlData.items?.length,
+      hasLogo: !!htmlData.customLogoUrl
+    });
+
     const locale = locales[lang] || locales["en"];
     const html = generateCustomerInvoiceHTML(htmlData, true, lang, locale);
+
+    console.log("[Customer Invoice] HTML generated, length:", html.length);
 
     await page.setContent(html, { waitUntil: "load", timeout: 15000 });
     await page.evaluateHandle("document.fonts.ready");
@@ -378,9 +389,12 @@ try {
     pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: 40, bottom: 40, left: 40, right: 40 },
-      tagged: true,
+      margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+      preferCSSPageSize: true,
+      displayHeaderFooter: false,
     });
+
+    console.log("[Customer Invoice] PDF generated, size:", pdfBuffer.length, "bytes");
 
     await browser.close();
     await incrementUsage(user, 1, isPreview);
