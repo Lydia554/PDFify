@@ -11,7 +11,20 @@ const nodemailer = require("nodemailer");
  */
 const sendEmail = async ({ to, subject, text, html, attachments }) => {
   try {
-    
+    console.log("📧 [sendEmail] Starting email send...");
+    console.log("📧 [sendEmail] To:", to);
+    console.log("📧 [sendEmail] Subject:", subject);
+    console.log("📧 [sendEmail] Has attachments:", !!attachments);
+    if (attachments && attachments.length > 0) {
+      attachments.forEach((att, i) => {
+        console.log(`📧 [sendEmail] Attachment ${i + 1}:`, {
+          filename: att.filename,
+          contentType: att.contentType,
+          size: att.content?.length || "unknown"
+        });
+      });
+    }
+
     const transporter = nodemailer.createTransport({
       host: "smtp.zeptomail.eu",
       port: 587,

@@ -84,6 +84,11 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
 
     const pdfBuffer = Buffer.from(invoiceResponse.data);
 
+    console.log("📧 [Email] PDF buffer created from API response");
+    console.log("📧 [Email] PDF buffer size:", pdfBuffer.length, "bytes");
+    console.log("📧 [Email] PDF buffer first 20 bytes:", pdfBuffer.subarray(0, 20).toString("hex"));
+    console.log("📧 [Email] PDF starts with %PDF:", pdfBuffer.toString("utf8", 0, 4) === "%PDF");
+
     // Safely parse page count
     let pageCount = 1;
     const headerPageCount = invoiceResponse.headers["x-pdf-page-count"];
@@ -98,11 +103,23 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
     } else if (!allowCustomerPDF) {
       console.log(`⚠️ Merchant has NOT approved customer PDFs for shop ${shopDomain}. Skipping PDF email and usage increment.`);
     } else {
+      const attachment = {
+        filename: `Invoice-${order.name || order.id}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf"
+      };
+
+      console.log("📧 [Email] Preparing to send email with PDF attachment:");
+      console.log("📧 [Email] - To:", order.email);
+      console.log("📧 [Email] - Filename:", attachment.filename);
+      console.log("📧 [Email] - Attachment size:", attachment.content.length, "bytes");
+      console.log("📧 [Email] - Content type:", attachment.contentType);
+
       await sendEmail({
         to: order.email,
         subject: `Invoice for Shopify Order ${order.name || order.id}`,
         text: `Hello,\n\nYour invoice for order ${order.name || order.id} is attached.\n\nThanks for your purchase!`,
-        attachments: [{ filename: `Invoice-${order.name || order.id}.pdf`, content: pdfBuffer, contentType: "application/pdf" }],
+        attachments: [attachment],
       });
       console.log(`✉️ Customer PDF SENT for order ${order.id} to ${order.email}`);
 
