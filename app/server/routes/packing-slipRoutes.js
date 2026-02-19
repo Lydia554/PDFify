@@ -279,7 +279,7 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
       primaryColor: requestData.primaryColor || '#2a3d66'
     };
 
-    const safeOrderId = data.orderId || `preview-${Date.now()}`;
+    const safeOrderId = requestData.orderId || `preview-${Date.now()}`;
     const pdfDir = path.join(__dirname, "../pdfs");
     if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
 
