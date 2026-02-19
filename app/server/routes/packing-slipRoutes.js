@@ -8,7 +8,7 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
+const { generateColorVariables, generateColorPalette } = require("../../public/js/color-helpers");
 
 const log = (message, data = null) => {
   if (process.env.NODE_ENV !== "production") {

@@ -1,4 +1,39 @@
 function generateInvoiceHtml(data) {
+  const primaryColor = data.primaryColor || '#00a6cc';
+
+  // Generate color palette (simulating the color-helpers functionality)
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
+    const hex = Math.round(x).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+
+  const lightenColor = (color, percent) => {
+    const rgb = hexToRgb(color);
+    if (!rgb) return color;
+    const amount = Math.round(2.55 * percent);
+    return rgbToHex(
+      Math.min(255, rgb.r + amount),
+      Math.min(255, rgb.g + amount),
+      Math.min(255, rgb.b + amount)
+    );
+  };
+
+  const palette = {
+    primary: primaryColor,
+    light: lightenColor(primaryColor, 20),
+    lighter: lightenColor(primaryColor, 40),
+    lightest: lightenColor(primaryColor, 85),
+  };
+
   const logoUrl =
     typeof data.customLogoUrl === "string" && data.customLogoUrl.trim().length > 0
       ? data.customLogoUrl.trim()
@@ -22,7 +57,7 @@ function generateInvoiceHtml(data) {
         font-family: 'Arial', sans-serif;
         padding: 30px;
         color: #444;
-        background: #fff;
+        background: ${palette.lightest};
       }
 
       .header {
@@ -38,8 +73,8 @@ function generateInvoiceHtml(data) {
       }
 
       h1 {
-        color: #1565c0;
-        border-bottom: 3px solid #42a5f5;
+        color: ${palette.primary};
+        border-bottom: 3px solid ${palette.light};
         padding-bottom: 10px;
         margin-top: 0;
       }
@@ -63,29 +98,29 @@ function generateInvoiceHtml(data) {
       }
 
       th {
-        background-color: #e3f2fd;
+        background-color: ${palette.lighter};
       }
 
       tfoot td {
         font-weight: bold;
-        border-top: 2px solid #1565c0;
+        border-top: 2px solid ${palette.primary};
       }
 
       .section-title {
         font-size: 22px;
-        color: #1565c0;
+        color: ${palette.primary};
         margin-top: 30px;
         margin-bottom: 10px;
         font-weight: bold;
-        border-bottom: 2px solid #42a5f5;
+        border-bottom: 2px solid ${palette.light};
         padding-bottom: 4px;
       }
 
       .footer {
         font-size: 11px !important;
-        background-color: #f9f9f9;
+        background-color: ${palette.lighter};
         color: #444;
-        border-top: 1px solid #ccc;
+        border-top: 2px solid ${palette.primary};
         text-align: center;
         line-height: 1.6;
         padding: 20px 10px;
@@ -95,7 +130,7 @@ function generateInvoiceHtml(data) {
       }
 
       .footer a {
-        color: #0073e6;
+        color: ${palette.primary};
         text-decoration: none;
       }
 

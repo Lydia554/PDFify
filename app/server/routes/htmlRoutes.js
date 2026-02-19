@@ -8,16 +8,22 @@ const dualAuth = require("../middleware/dualAuth");
 const User = require('../models/User');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
+const { generateColorVariables, generateColorPalette } = require("../../public/js/color-helpers");
 
-function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
+function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark, primaryColor = '#5e60ce') {
+  const palette = generateColorPalette(primaryColor);
+
+  return `
   return `
     <html>
       <head>
         <style>
+          ${generateColorVariables(primaryColor)}
+
           body {
             font-family: Arial, sans-serif;
             padding: 30px;
-            background-color: #fff;
+            background-color: ${palette.lightest};
             color: #333;
             position: relative;
             min-height: 90vh;
@@ -35,9 +41,9 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
         max-width: 800px;
         margin: 40px auto 10px auto;
         padding: 10px 20px;
-        background-color: #f0f2f7;
+        background-color: ${palette.lightest};
         color: #555;
-        border-top: 2px solid #cbd2e1;
+        border-top: 2px solid ${palette.primary};
         text-align: center;
         line-height: 1.6;
         font-size: 11px;
@@ -50,7 +56,7 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
       }
 
       .footer a {
-        color: #4a69bd;
+        color: ${palette.primary};
         text-decoration: none;
         word-break: break-word;
       }
@@ -128,7 +134,7 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark) {
 
 
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
-  const { html, isPreview } = req.body;
+  const { html, isPreview, primaryColor } = req.body;
 
   if (!html) {
     return res.status(400).json({ error: "No HTML content provided" });
@@ -176,7 +182,7 @@ router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) 
     });
 
     const page = await browser.newPage();
-    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark);
+    const wrappedHtml = wrapHtmlWithBranding(html, user.isPremium, addWatermark, primaryColor || '#5e60ce');
     await page.setContent(wrappedHtml, { waitUntil: "networkidle0" });
     await page.pdf({ path: pdfPath, format: "A4", printBackground: true });
     await browser.close();

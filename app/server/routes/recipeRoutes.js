@@ -8,7 +8,7 @@ const User = require("../models/User");
 const dualAuth = require('../middleware/dualAuth');
 const { PDFDocument } = require("pdf-lib");
 const { incrementUsage } = require("../utils/usageUtils");
-const { generateColorVariables, generateColorPalette } = require("../Helpers/color-helpers");
+const { generateColorVariables, generateColorPalette } = require("../../public/js/color-helpers");
 
 
 if (typeof ReadableStream === "undefined") {
@@ -212,13 +212,18 @@ function generateRecipeHTML(data) {
 
 
 router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
-  const { data, isPreview = false } = req.body;
-  log("Received data for recipe generation:", data);
+  // Handle both direct data structure and wrapped requests structure
+  const requestData = req.body.requests?.[0]?.data || req.body.data;
+  const isPreview = req.body.requests?.[0]?.isPreview || req.body.isPreview || false;
 
-  if (!data || !data.recipeName) {
-    log("Invalid recipe data:", data);
+  log("Received data for recipe generation:", requestData);
+
+  if (!requestData || !requestData.recipeName) {
+    log("Invalid recipe data:", requestData);
     return res.status(400).json({ error: "Missing recipe data" });
   }
+
+  const data = requestData;
 
   try {
     const user = await User.findById(req.user.userId);
@@ -231,7 +236,7 @@ router.post("/generate-recipe", authenticate, dualAuth, async (req, res) => {
 
     const payload = {
       ...cleanedData,
-      customLogoUrl: isPremium ? null : defaultLogoUrl,
+      customLogoUrl: data.customLogoUrl || null,
       showChart: isPremium,
       showWatermark: !isPremium,
       primaryColor: data.primaryColor || '#5e60ce'
