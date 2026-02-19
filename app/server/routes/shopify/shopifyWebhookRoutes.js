@@ -76,57 +76,88 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
   try {
     order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
-    // Use query params to control merchant vs customer PDF + cache busting
-    const invoiceUrl = `https://pdfify.pro/api/shopify/invoice?merchant=false&_=${Date.now()}`;
+    console.log("📧 [Direct] Calling customer invoice generation directly (bypassing HTTP)...");
 
-    const invoiceResponse = await axios.post(
-      invoiceUrl,
-      {
-        orderId: order.id,
-        order,
-        shopDomain,
-        shopifyAccessToken: accessToken,
-        lang
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${user.getDecryptedApiKey()}`,
-          "Cache-Control": "no-cache",
-          "Pragma": "no-cache"
-        },
-        responseType: "arraybuffer"
-      }
-    );
+    // Import directly to avoid HTTP round-trip through Cloudflare
+    const { generateCustomerInvoiceHTML } = require("./customerInvoice");
+    const puppeteer = require("puppeteer");
+    const { formatPrice: customerFormatPrice } = require("./customerInvoice");
+    const localeMap = {
+      sl: require("../../locales/sl.json"),
+      en: require("../../locales/en.json"),
+      de: require("../../locales/de.json")
+    };
 
-    console.log("📧 [Email] API Response status:", invoiceResponse.status);
-    console.log("📧 [Email] API Response headers:", Object.keys(invoiceResponse.headers));
+    // Map order items (same logic as invoice route)
+    const items = (order.line_items || []).map((item) => {
+      const quantity = parseFloat(item.quantity || 1);
+      const price = parseFloat(item.price || 0);
+      const net = price * quantity;
+      const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+      const total = net + tax;
+      return { name: item.title || item.name || "Item", quantity, price, net, tax, total };
+    });
 
-    // Check if response is actually a PDF or an error
-    const contentType = invoiceResponse.headers["content-type"];
-    console.log("📧 [Email] Response Content-Type:", contentType);
+    const subtotal = items.reduce((sum, i) => sum + i.net, 0);
+    const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
+    const total = subtotal + taxTotal;
 
-    if (contentType && contentType.includes("application/json")) {
-      // It's an error response, not a PDF
-      const errorText = Buffer.from(invoiceResponse.data).toString("utf8");
-      console.error("❌ [Email] API returned JSON error instead of PDF:");
-      console.error("❌ [Email] Error (first 500 chars):", errorText.substring(0, 500));
-      throw new Error(`Invoice API returned error: ${errorText.substring(0, 200)}`);
-    }
+    const invoiceData = {
+      orderId: order.name || order.id,
+      date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+      items,
+      subtotal,
+      tax: taxTotal,
+      total,
+      vatRate: 21,
+      customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
+      customerEmail: order.email || "",
+      iban: "DE89370400440532013000",
+      currency: order.currency || "EUR"
+    };
 
-    const pdfBuffer = Buffer.from(invoiceResponse.data);
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+    const locale = localeMap[lang] || localeMap["en"];
 
-    console.log("📧 [Email] PDF buffer created from API response");
-    console.log("📧 [Email] PDF buffer size:", pdfBuffer.length, "bytes");
-    console.log("📧 [Email] PDF buffer first 20 bytes:", pdfBuffer.subarray(0, 20).toString("hex"));
-    console.log("📧 [Email] PDF starts with %PDF:", pdfBuffer.toString("utf8", 0, 4) === "%PDF");
+    const htmlData = {
+      ...invoiceData,
+      items: items.map(i => ({
+        ...i,
+        formattedPrice: customerFormatPrice(i.price, order.currency || "EUR", lang || "en"),
+        formattedNet: customerFormatPrice(i.net, order.currency || "EUR", lang || "en"),
+        formattedTax: customerFormatPrice(i.tax, order.currency || "EUR", lang || "en"),
+        formattedTotal: customerFormatPrice(i.total, order.currency || "EUR", lang || "en"),
+      })),
+      formattedSubtotal: customerFormatPrice(subtotal, order.currency || "EUR", lang || "en"),
+      formattedTaxTotal: customerFormatPrice(taxTotal, order.currency || "EUR", lang || "en"),
+      formattedTotal: customerFormatPrice(total, order.currency || "EUR", lang || "en"),
+      shopName: shopDomain,
+      currency: order.currency || "EUR",
+      locale: lang || "en",
+      customLogoUrl: "",
+    };
 
-    // Safely parse page count
+    const html = generateCustomerInvoiceHTML(htmlData, true, lang, locale);
+    await page.setContent(html, { waitUntil: "load", timeout: 15000 });
+    await page.evaluateHandle("document.fonts.ready");
+
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      printBackground: true,
+      margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+      preferCSSPageSize: true,
+      displayHeaderFooter: false,
+      pdfVersion: "1.4",
+    });
+
+    await browser.close();
+
+    console.log("📧 [Direct] PDF generated successfully, size:", pdfBuffer.length, "bytes");
+    console.log("📧 [Direct] PDF starts with %PDF:", pdfBuffer.toString("utf8", 0, 4) === "%PDF");
+
+    // Page count (always 1 for customer invoices)
     let pageCount = 1;
-    const headerPageCount = invoiceResponse.headers["x-pdf-page-count"];
-    if (headerPageCount) {
-      const parsed = parseInt(headerPageCount, 10);
-      if (!isNaN(parsed)) pageCount = parsed;
-    }
 
     // Send PDF email and increment usage only if allowed
     if (!order.email) {
