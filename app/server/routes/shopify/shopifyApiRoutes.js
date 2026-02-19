@@ -338,9 +338,7 @@ try {
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
     // ----------------------------
-    if (!shopConfig.allowCustomerPDF) {
-      return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
-    }
+    // Customer PDFs are always allowed - they're essential for buyer receipts
 
     const htmlData = {
       ...invoiceData,
