@@ -52,10 +52,8 @@ const premiumTemplate = `
       <meta charset="UTF-8" />
       <title>Invoice</title>
       <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
         body {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
           color: #1f2937;
           background: #ffffff;
           margin: 0;

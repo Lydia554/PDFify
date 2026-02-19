@@ -363,7 +363,9 @@ try {
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
     const html = generateCustomerInvoiceHTML(htmlData, true, lang, {});
-    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    await page.setContent(html, { waitUntil: "load", timeout: 15000 });
+    await page.evaluateHandle("document.fonts.ready");
 
     // Generate PDF directly from Puppeteer
     pdfBuffer = await page.pdf({
