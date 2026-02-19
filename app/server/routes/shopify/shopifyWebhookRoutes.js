@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const User = require("../../models/User");
 const ShopConfig = require("../../models/ShopConfig");
 const axios = require("axios");
+const puppeteer = require("puppeteer");
 const sendEmail = require("../../sendEmail");
 const { enrichLineItemsWithImages } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
