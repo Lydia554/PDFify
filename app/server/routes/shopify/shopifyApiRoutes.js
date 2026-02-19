@@ -344,10 +344,14 @@ try {
     // ----------------------------
     // Customer PDF (Puppeteer HTML → PDF)
     // ----------------------------
+    console.log("🧾 [Customer Invoice] Starting PDF generation...");
+    console.log("🧾 [Customer Invoice] allowCustomerPDF:", shopConfig.allowCustomerPDF);
+
     if (!shopConfig.allowCustomerPDF) {
       return res.status(403).json({ error: "Customer PDFs are not allowed by this merchant" });
     }
 
+    console.log("🧾 [Customer Invoice] Building htmlData...");
     const htmlData = {
       ...invoiceData,
       items: items.map(i => ({
@@ -366,24 +370,31 @@ try {
       customLogoUrl: shopConfig.customLogoUrl || "",
     };
 
-    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
-    const page = await browser.newPage();
-
-    // Log for debugging
-    console.log("[Customer Invoice] Generating PDF with data:", {
+    console.log("🧾 [Customer Invoice] htmlData built:", {
       shopName: htmlData.shopName,
       customerName: htmlData.customerName,
       itemCount: htmlData.items?.length,
-      hasLogo: !!htmlData.customLogoUrl
+      hasLogo: !!htmlData.customLogoUrl,
+      logoUrl: htmlData.customLogoUrl?.substring(0, 50) + "..."
     });
 
+    console.log("🧾 [Customer Invoice] Launching Puppeteer...");
+    const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+    const page = await browser.newPage();
+
+    console.log("🧾 [Customer Invoice] Loading locale:", lang);
     const locale = locales[lang] || locales["en"];
+    console.log("🧾 [Customer Invoice] Locale loaded, keys:", Object.keys(locale).length);
+
+    console.log("🧾 [Customer Invoice] Generating HTML...");
     const html = generateCustomerInvoiceHTML(htmlData, true, lang, locale);
+    console.log("🧾 [Customer Invoice] HTML generated, length:", html.length, "chars");
 
-    console.log("[Customer Invoice] HTML generated, length:", html.length);
-
+    console.log("🧾 [Customer Invoice] Setting page content...");
     await page.setContent(html, { waitUntil: "load", timeout: 15000 });
+    console.log("🧾 [Customer Invoice] Page content set, waiting for fonts...");
     await page.evaluateHandle("document.fonts.ready");
+    console.log("🧾 [Customer Invoice] Fonts ready, generating PDF...");
 
     // Generate PDF directly from Puppeteer
     pdfBuffer = await page.pdf({
@@ -394,20 +405,29 @@ try {
       displayHeaderFooter: false,
     });
 
-    console.log("[Customer Invoice] PDF generated, size:", pdfBuffer.length, "bytes");
-
+    console.log("🧾 [Customer Invoice] PDF generated successfully, size:", pdfBuffer.length, "bytes");
+    console.log("🧾 [Customer Invoice] Closing browser...");
     await browser.close();
     await incrementUsage(user, 1, isPreview);
 
+    console.log("🧾 [Customer Invoice] Sending response, size:", pdfBuffer.length, "bytes");
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
     });
+    console.log("🧾 [Customer Invoice] Response headers set, sending buffer...");
     res.send(pdfBuffer);
+    console.log("🧾 [Customer Invoice] Response sent successfully!");
 
   } catch (err) {
-    console.error("❌ Invoice route error:", err);
-    res.status(500).json({ error: "PDF generation failed" });
+    console.error("❌ [Customer Invoice] ERROR:", err.message);
+    console.error("❌ [Customer Invoice] Stack trace:", err.stack);
+    console.error("❌ [Customer Invoice] Error details:", {
+      name: err.name,
+      message: err.message,
+      stack: err.stack
+    });
+    res.status(500).json({ error: "PDF generation failed", details: err.message });
   }
 });
 
