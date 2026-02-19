@@ -73,6 +73,16 @@ function renderForm(template) {
       </fieldset>
 
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" checked /> Include Title</label>
+
+      <!-- Color Picker Section -->
+      <div class="mt-4 p-3 border border-indigo-500 rounded bg-gray-700">
+        <h4 class="text-white font-semibold mb-2">🎨 PDF Color Theme</h4>
+        <label class="block text-gray-300 text-sm mb-1">Primary Color:</label>
+        <div class="flex items-center gap-2">
+          <input type="color" id="primaryColor" value="#00a6cc" class="w-12 h-8 rounded cursor-pointer border border-gray-500">
+          <input type="text" id="primaryColorText" value="#00a6cc" class="flex-1 p-1 rounded border border-gray-400 text-black text-sm font-mono">
+        </div>
+      </div>
     `;
   } else if (template === 'recipe') {
     html = `
@@ -105,6 +115,18 @@ function renderForm(template) {
   formContainer.innerHTML = html;
   allSelectedFiles = [];
   updateImagePreview();
+
+  // Setup color picker sync
+  const primaryColorInput = document.getElementById('primaryColor');
+  const primaryColorText = document.getElementById('primaryColorText');
+  if (primaryColorInput && primaryColorText) {
+    primaryColorInput.addEventListener('input', (e) => {
+      primaryColorText.value = e.target.value;
+    });
+    primaryColorText.addEventListener('input', (e) => {
+      primaryColorInput.value = e.target.value;
+    });
+  }
 
 
   const advancedFields = formContainer.querySelectorAll('.advanced-only input, .advanced-only textarea, .advanced-only select, .advanced-only button');
@@ -190,6 +212,7 @@ generatePdfBtn.addEventListener('click', async () => {
         companyEmail: isAdvanced ? document.getElementById('companyEmail')?.value : undefined,
         recipientAddress: isAdvanced ? document.getElementById('recipientAddress')?.value : undefined,
         notes: isAdvanced ? document.getElementById('notes')?.value : undefined,
+        primaryColor: document.getElementById('primaryColor')?.value || '#00a6cc',
       };
     } else if (template === 'recipe') {
       const videoUrl = isAdvanced ? document.getElementById('videoUrl')?.value.trim() : '';

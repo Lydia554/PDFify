@@ -9,7 +9,6 @@ const { incrementUsage } = require("../utils/usageUtils");
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
-const { generateZugferdXML, embedIccProfile, embedXmp, embedXmlIntoPdf } = require("../Helpers/pdf-helpers");
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
@@ -72,19 +71,6 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
     await page.setContent(html, { waitUntil: 'networkidle0' });
     let pdfBuffer = await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
     await browser.close();
-
-    // --- PRO invoices: PDF/A-3b + ZUGFeRD ---
-    if (template === 'invoice' && plan === 'pro') {
-      const zugferdXml = generateZugferdXML(formData);
-      const pdfDoc = await PDFDocument.load(pdfBuffer);
-
-      await embedIccProfile(pdfDoc);
-      await embedXmp(pdfDoc);
-      embedXmlIntoPdf(pdfDoc, zugferdXml);
-
-      pdfBuffer = await pdfDoc.save();
-      fs.writeFileSync(pdfPath, pdfBuffer);
-    }
 
     // Page count & usage
     const pdfDocFinal = await PDFDocument.load(pdfBuffer);
