@@ -82,9 +82,9 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
     // Import customer invoice generator
     const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = require("./customerInvoice");
     const localeMap = {
-      sl: require("../../locales/sl.json"),
-      en: require("../../locales/en.json"),
-      de: require("../../locales/de.json")
+      sl: require("../../../locales/sl.json"),
+      en: require("../../../locales/en.json"),
+      de: require("../../../locales/de.json")
     };
 
     // Map order items (same logic as invoice route)
