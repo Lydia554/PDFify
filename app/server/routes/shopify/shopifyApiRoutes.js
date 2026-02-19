@@ -16,6 +16,12 @@ const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = requir
 const { createPdfA3WithJava } = require("../../Helpers/pdf-helpers");
 const generateZugferdXml = require("../../../xml/generateZugferdXml");
 
+const locales = {
+  sl: require("../../locales/sl.json"),
+  en: require("../../locales/en.json"),
+  de: require("../../locales/de.json"),
+};
+
 const os = require("os");
 const JSZip = require("jszip");
 
@@ -362,7 +368,8 @@ try {
 
     const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
     const page = await browser.newPage();
-    const html = generateCustomerInvoiceHTML(htmlData, true, lang, {});
+    const locale = locales[lang] || locales["en"];
+    const html = generateCustomerInvoiceHTML(htmlData, true, lang, locale);
 
     await page.setContent(html, { waitUntil: "load", timeout: 15000 });
     await page.evaluateHandle("document.fonts.ready");
