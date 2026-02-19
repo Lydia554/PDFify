@@ -76,11 +76,35 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
   try {
     order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
+    // Use query params to control merchant vs customer PDF
+    const invoiceUrl = `https://pdfify.pro/api/shopify/invoice?merchant=false`;
+
     const invoiceResponse = await axios.post(
-      "https://pdfify.pro/api/shopify/invoice",
-      { orderId: order.id, order, shopDomain, shopifyAccessToken: accessToken, lang, sendEmail: false },
+      invoiceUrl,
+      {
+        orderId: order.id,
+        order,
+        shopDomain,
+        shopifyAccessToken: accessToken,
+        lang
+      },
       { headers: { Authorization: `Bearer ${user.getDecryptedApiKey()}` }, responseType: "arraybuffer" }
     );
+
+    console.log("📧 [Email] API Response status:", invoiceResponse.status);
+    console.log("📧 [Email] API Response headers:", Object.keys(invoiceResponse.headers));
+
+    // Check if response is actually a PDF or an error
+    const contentType = invoiceResponse.headers["content-type"];
+    console.log("📧 [Email] Response Content-Type:", contentType);
+
+    if (contentType && contentType.includes("application/json")) {
+      // It's an error response, not a PDF
+      const errorText = Buffer.from(invoiceResponse.data).toString("utf8");
+      console.error("❌ [Email] API returned JSON error instead of PDF:");
+      console.error("❌ [Email] Error (first 500 chars):", errorText.substring(0, 500));
+      throw new Error(`Invoice API returned error: ${errorText.substring(0, 200)}`);
+    }
 
     const pdfBuffer = Buffer.from(invoiceResponse.data);
 
