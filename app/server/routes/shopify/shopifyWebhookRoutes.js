@@ -76,8 +76,8 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
   try {
     order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
 
-    // Use query params to control merchant vs customer PDF
-    const invoiceUrl = `https://pdfify.pro/api/shopify/invoice?merchant=false`;
+    // Use query params to control merchant vs customer PDF + cache busting
+    const invoiceUrl = `https://pdfify.pro/api/shopify/invoice?merchant=false&_=${Date.now()}`;
 
     const invoiceResponse = await axios.post(
       invoiceUrl,
@@ -88,7 +88,14 @@ async function processOrderAsync({ order, user, accessToken, shopDomain, lang, a
         shopifyAccessToken: accessToken,
         lang
       },
-      { headers: { Authorization: `Bearer ${user.getDecryptedApiKey()}` }, responseType: "arraybuffer" }
+      {
+        headers: {
+          Authorization: `Bearer ${user.getDecryptedApiKey()}`,
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache"
+        },
+        responseType: "arraybuffer"
+      }
     );
 
     console.log("📧 [Email] API Response status:", invoiceResponse.status);

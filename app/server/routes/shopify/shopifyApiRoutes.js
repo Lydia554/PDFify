@@ -441,6 +441,9 @@ try {
     res.set({
       "Content-Type": "application/pdf",
       "Content-Disposition": isPreview ? "inline" : `attachment; filename=${invoiceData.orderId}.pdf`,
+      "Cache-Control": "no-store, no-cache, must-revalidate, private",
+      "X-Content-Type-Options": "nosniff",
+      "Pragma": "no-cache"
     });
     console.log("🧾 [Customer Invoice] Response headers set, sending buffer...");
     res.send(pdfBuffer);
