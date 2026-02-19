@@ -6,6 +6,43 @@ const locales = { en, de, sl };
 
 function generateInvoicePremiumHtml(data) {
   console.log('generateInvoiceFriendlyHtml data:', data);
+
+  // Extract primary color with fallback
+  const primaryColor = data.primaryColor || '#00a6cc';
+
+  // Generate color palette (inline to avoid dependency)
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
+    const hex = Math.round(Math.max(0, Math.min(255, x))).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+
+  const lightenColor = (color, percent) => {
+    const rgb = hexToRgb(color);
+    if (!rgb) return color;
+    const factor = 1 + (percent / 100);
+    return rgbToHex(
+      Math.min(255, rgb.r * factor),
+      Math.min(255, rgb.g * factor),
+      Math.min(255, rgb.b * factor)
+    );
+  };
+
+  const palette = {
+    primary: primaryColor,
+    light: lightenColor(primaryColor, 20),
+    lighter: lightenColor(primaryColor, 40),
+    lightest: lightenColor(primaryColor, 85),
+  };
+
   const {
     customerName = 'Valued Customer',
     recipientAddress = '',
@@ -93,23 +130,23 @@ const t = locales[lang] || locales['en'];
           font-family: 'Roboto', sans-serif;
           padding: 40px;
           color: #333;
-          background: #f4f7fa;
+          background: ${palette.lightest};
         }
-  
+
         .header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          border-bottom: 4px solid #1565c0;
+          border-bottom: 4px solid ${palette.primary};
           padding-bottom: 10px;
           margin-bottom: 30px;
         }
-  
-      
-  
+
+
+
         .invoice-title {
           font-size: 28px;
-          color: #1565c0;
+          color: ${palette.primary};
           font-weight: bold;
         }
   
@@ -142,14 +179,14 @@ const t = locales[lang] || locales['en'];
         }
   
         th {
-          background-color: #e3f2fd;
+          background-color: ${palette.lighter};
           text-align: left;
         }
-  
+
         tfoot td {
           font-weight: bold;
-          background: #f1faff;
-          border-top: 2px solid #1565c0;
+          background: ${palette.lightest};
+          border-top: 2px solid ${palette.primary};
         }
   
         .notes {

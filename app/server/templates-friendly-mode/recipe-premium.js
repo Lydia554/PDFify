@@ -24,9 +24,43 @@ function generatePremiumRecipeHtml(data) {
     instructions = [],
     nutrition,
     videoUrl,
+    primaryColor = '#e65100', // Food Trek orange default
   } = data;
 
   const videoId = videoUrl ? extractYouTubeId(videoUrl) : null;
+
+  // Generate color palette
+  const hexToRgb = (hex) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
+    const hex = Math.round(Math.max(0, Math.min(255, x))).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+
+  const lightenColor = (color, percent) => {
+    const rgb = hexToRgb(color);
+    if (!rgb) return color;
+    const factor = 1 + (percent / 100);
+    return rgbToHex(
+      Math.min(255, rgb.r * factor),
+      Math.min(255, rgb.g * factor),
+      Math.min(255, rgb.b * factor)
+    );
+  };
+
+  const palette = {
+    primary: primaryColor,
+    light: lightenColor(primaryColor, 20),
+    lighter: lightenColor(primaryColor, 40),
+    lightest: lightenColor(primaryColor, 85),
+  };
 
   const nutritionRows = nutrition && typeof nutrition === 'object'
     ? Object.entries(nutrition)
@@ -57,11 +91,11 @@ function generatePremiumRecipeHtml(data) {
           box-shadow: 0 10px 30px rgba(0,0,0,0.9);
         }
         h1, h2, .tag {
-          color: #a5d6a7;
+          color: ${palette.light};
         }
         .tag {
-          background: #2e7d32;
-          border-color: #4caf50;
+          background: ${palette.primary};
+          border-color: ${palette.light};
         }
         ul, ol {
           color: #ccc;
@@ -128,7 +162,7 @@ function generatePremiumRecipeHtml(data) {
         font-family: 'Playfair Display', serif;
         font-size: 2.8rem;
         margin: 10px 0;
-        color: #2e7d32;
+        color: ${palette.primary};
         position: relative;
       }
 
@@ -137,7 +171,7 @@ function generatePremiumRecipeHtml(data) {
         display: block;
         width: 60px;
         height: 4px;
-        background: #66bb6a;
+        background: ${palette.light};
         margin: 12px auto 0 auto;
         border-radius: 2px;
       }
@@ -151,13 +185,13 @@ function generatePremiumRecipeHtml(data) {
       }
 
       .tag {
-        background: #e8f5e9;
-        color: #2e7d32;
+        background: ${palette.lightest};
+        color: ${palette.primary};
         padding: 6px 14px;
         border-radius: 20px;
         font-size: 0.9rem;
         font-weight: 500;
-        border: 1px solid #c8e6c9;
+        border: 1px solid ${palette.lighter};
         user-select: none;
       }
 
@@ -228,8 +262,8 @@ function generatePremiumRecipeHtml(data) {
       }
 
       table th {
-        background-color: #e8f5e9;
-        color: #2e7d32;
+        background-color: ${palette.lightest};
+        color: ${palette.primary};
       }
 
       /* Video + QR container */
@@ -252,7 +286,7 @@ function generatePremiumRecipeHtml(data) {
         display: block;
         margin-bottom: 10px;
         font-size: 1.1rem;
-        color: #2e7d32;
+        color: ${palette.primary};
       }
 
       .video-section img.thumb {

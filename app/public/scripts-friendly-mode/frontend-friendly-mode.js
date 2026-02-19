@@ -109,6 +109,16 @@ function renderForm(template) {
       </fieldset>
 
       <label class="block text-white mt-3"><input type="checkbox" id="includeTitle" checked /> Include Title</label>
+
+      <!-- Color Picker Section -->
+      <div class="mt-4 p-3 border border-indigo-500 rounded bg-gray-700">
+        <h4 class="text-white font-semibold mb-2">🎨 PDF Color Theme</h4>
+        <label class="block text-gray-300 text-sm mb-1">Primary Color:</label>
+        <div class="flex items-center gap-2">
+          <input type="color" id="primaryColor" value="#e65100" class="w-12 h-8 rounded cursor-pointer border border-gray-500">
+          <input type="text" id="primaryColorText" value="#e65100" class="flex-1 p-1 rounded border border-gray-400 text-black text-sm font-mono">
+        </div>
+      </div>
     `;
   }
 
@@ -238,6 +248,7 @@ generatePdfBtn.addEventListener('click', async () => {
         imageUrls: base64Images,
         includeTitle: document.getElementById('includeTitle')?.checked ?? false,
         videoUrl: videoUrl || undefined,
+        primaryColor: document.getElementById('primaryColor')?.value || '#e65100',
         nutrition: isAdvanced ? {
           Calories: document.getElementById('calories')?.value || undefined,
           Protein: document.getElementById('protein')?.value || undefined,
