@@ -257,7 +257,13 @@ function generatePackingSlipHTML(data, addWatermark = false, isPremiumUser = fal
 
 
 router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) => {
-  const { data, isPreview } = req.body;
+  // Handle both direct data structure and wrapped requests structure
+  const requestData = req.body.requests?.[0]?.data || req.body.data;
+  const isPreview = req.body.requests?.[0]?.isPreview ?? req.body.isPreview ?? false;
+
+  if (!requestData) {
+    return res.status(400).json({ error: "Missing data" });
+  }
 
   try {
     const user = await User.findById(req.user.userId);
@@ -269,8 +275,8 @@ router.post("/generate-packing-slip", authenticate, dualAuth, async (req, res) =
 
     // Accept primaryColor from request
     const invoiceData = {
-      ...data,
-      primaryColor: data.primaryColor || '#2a3d66'
+      ...requestData,
+      primaryColor: requestData.primaryColor || '#2a3d66'
     };
 
     const safeOrderId = data.orderId || `preview-${Date.now()}`;

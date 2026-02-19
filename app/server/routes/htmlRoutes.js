@@ -133,7 +133,11 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark, primaryColor
 
 
 router.post("/generate-pdf-from-html", authenticate, dualAuth, async (req, res) => {
-  const { html, isPreview, primaryColor } = req.body;
+  // Handle both direct data structure and wrapped requests structure
+  const requestData = req.body.requests?.[0]?.data || req.body;
+  const html = requestData.html;
+  const isPreview = req.body.requests?.[0]?.isPreview ?? req.body.isPreview ?? false;
+  const primaryColor = requestData.primaryColor || req.body.primaryColor;
 
   if (!html) {
     return res.status(400).json({ error: "No HTML content provided" });

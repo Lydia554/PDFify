@@ -253,25 +253,31 @@ function generateTherapyReportHTML(data, isPremiumUser, primaryColor = '#5e60ce'
 
 
 router.post("/generate-therapy-report", authenticate, dualAuth, async (req, res) => {
-  const { data, isPreview = false } = req.body;
+  // Handle both direct data structure and wrapped requests structure
+  const requestData = req.body.requests?.[0]?.data || req.body.data;
+  const isPreview = req.body.requests?.[0]?.isPreview ?? req.body.isPreview ?? false;
 
-  const primaryColor = data?.primaryColor || '#5e60ce';
+  if (!requestData) {
+    return res.status(400).json({ error: "Missing data" });
+  }
+
+  const primaryColor = requestData.primaryColor || '#5e60ce';
 
   const cleanedData = {
-    childName: data?.childName ?? "John Doe",
-    birthDate: data?.birthDate ?? "2017-08-16",
-    sessionDate: data?.sessionDate ?? new Date().toLocaleDateString(),
-    therapyType: data?.therapyType ?? "Occupational Therapy",
-    observations: data?.observations ?? "Patient showed engagement in all tasks.",
-    recommendations: data?.recommendations ?? "Continue weekly therapy sessions.",
-    milestones: Array.isArray(data?.milestones) && data.milestones.length > 0
-      ? data.milestones
+    childName: requestData.childName ?? "John Doe",
+    birthDate: requestData.birthDate ?? "2017-08-16",
+    sessionDate: requestData.sessionDate ?? new Date().toLocaleDateString(),
+    therapyType: requestData.therapyType ?? "Occupational Therapy",
+    observations: requestData.observations ?? "Patient showed engagement in all tasks.",
+    recommendations: requestData.recommendations ?? "Continue weekly therapy sessions.",
+    milestones: Array.isArray(requestData.milestones) && requestData.milestones.length > 0
+      ? requestData.milestones
       : [
           { name: "Fine Motor", progress: "Good" },
           { name: "Verbal Communication", progress: "Needs Improvement" }
         ],
-    milestonesData: Array.isArray(data?.milestonesData) && data.milestonesData.length > 0
-      ? data.milestonesData
+    milestonesData: Array.isArray(requestData.milestonesData) && requestData.milestonesData.length > 0
+      ? requestData.milestonesData
       : [2, 3, 4, 4]
   };
 

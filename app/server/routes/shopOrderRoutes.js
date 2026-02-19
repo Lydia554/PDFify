@@ -173,12 +173,16 @@ function wrapHtmlShopOrder(htmlContent, isPremium, addWatermark, primaryColor = 
 }
 
 router.post("/generate-shop-order", authenticate, dualAuth, async (req, res) => {
-  const { data, isPreview = false } = req.body;
-  if (!data || !data.shopName) {
+  // Handle both direct data structure and wrapped requests structure
+  const requestData = req.body.requests?.[0]?.data || req.body.data;
+  const isPreview = req.body.requests?.[0]?.isPreview ?? req.body.isPreview ?? false;
+
+  if (!requestData || !requestData.shopName) {
     return res.status(400).json({ error: "Missing shop order data" });
   }
 
-  const primaryColor = data.primaryColor || '#5e60ce';
+  const primaryColor = requestData.primaryColor || '#5e60ce';
+  const data = requestData;
 
   const pdfDir = path.join(__dirname, "../pdfs");
   if (!fs.existsSync(pdfDir)) fs.mkdirSync(pdfDir, { recursive: true });
