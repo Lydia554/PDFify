@@ -14,7 +14,6 @@ function wrapHtmlWithBranding(htmlContent, isPremium, addWatermark, primaryColor
   const palette = generateColorPalette(primaryColor);
 
   return `
-  return `
     <html>
       <head>
         <style>
