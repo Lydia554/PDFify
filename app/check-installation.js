@@ -1,7 +1,7 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
-const ShopConfig = require('./app/server/models/ShopConfig');
-const User = require('./app/server/models/User');
+const ShopConfig = require('./server/models/ShopConfig');
+const User = require('./server/models/User');
 
 async function checkInstallation() {
   try {
