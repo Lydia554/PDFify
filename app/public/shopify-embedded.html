@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDFify - Invoice Generator</title>
+  <script src="https://cdn.jsdelivr.net/npm/@shopify/app-bridge@3"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    .Polaris-Card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; }
+    .Polaris-Button { background: #008060; color: white; padding: 10px 20px; border-radius: 6px; border: none; cursor: pointer; }
+    .Polaris-Button:hover { background: #006e52; }
+    .Polaris-Button--secondary { background: white; color: #008060; border: 1px solid #008060; }
+    .Polaris-Checkbox { width: 18px; height: 18px; accent-color: #008060; }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="loading" class="flex items-center justify-center min-h-screen">
+    <div class="text-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+      <p class="mt-4 text-gray-600">Loading PDFify...</p>
+    </div>
+  </div>
+
+  <div id="app" class="hidden max-w-4xl mx-auto p-6">
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">PDFify Settings</h1>
+      <p class="text-gray-600 mt-1">Configure your invoice settings</p>
+    </div>
+
+    <!-- Shop Info -->
+    <div class="Polaris-Card mb-4">
+      <h2 class="text-lg font-semibold mb-3">Connected Store</h2>
+      <p class="text-gray-700"><strong>Shop:</strong> <span id="shopDomain">Loading...</span></p>
+      <p class="text-gray-700 mt-1"><strong>Status:</strong> <span class="text-green-600">✓ Connected</span></p>
+    </div>
+
+    <!-- Customer PDF Settings -->
+    <div class="Polaris-Card mb-4">
+      <h2 class="text-lg font-semibold mb-4">Customer Invoices</h2>
+      <p class="text-gray-600 mb-4">Automatically send colorful PDF invoices to customers when they place an order.</p>
+
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input type="checkbox" id="allowCustomerPDF" class="Polaris-Checkbox" />
+        <span class="text-gray-800">Enable automatic customer invoices</span>
+      </label>
+    </div>
+
+    <!-- Branding Settings -->
+    <div class="Polaris-Card mb-4">
+      <h2 class="text-lg font-semibold mb-4">Branding</h2>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Accent Color</label>
+        <div class="flex gap-3">
+          <input type="color" id="primaryColor" value="#00a6cc" class="w-16 h-10 rounded cursor-pointer" />
+          <input type="text" id="primaryColorText" value="#00a6cc" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg" />
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Company Name</label>
+        <input type="text" id="companyName" placeholder="Your Company Ltd" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+      </div>
+    </div>
+
+    <!-- Payment Details -->
+    <div class="Polaris-Card mb-4">
+      <h2 class="text-lg font-semibold mb-4">Payment Details</h2>
+      <p class="text-gray-600 mb-4">These will appear on your merchant invoices.</p>
+
+      <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700 mb-1">IBAN</label>
+        <input type="text" id="iban" placeholder="DE89370400440532013000" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+      </div>
+
+      <div class="mb-3">
+        <label class="block text-sm font-medium text-gray-700 mb-1">BIC</label>
+        <input type="text" id="bic" placeholder="COBADEFFXXX" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+        <input type="text" id="bankName" placeholder="Your Bank Name" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3">
+      <button onclick="saveSettings()" class="Polaris-Button">Save Settings</button>
+      <button onclick="testConnection()" class="Polaris-Button Polaris-Button--secondary">Test Connection</button>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="statusMessage" class="hidden mt-4 p-4 rounded-lg"></div>
+
+    <!-- Usage Stats -->
+    <div class="Polaris-Card mt-4">
+      <h2 class="text-lg font-semibold mb-3">Usage This Month</h2>
+      <p class="text-gray-700"><strong>PDFs Generated:</strong> <span id="usageCount">Loading...</span></p>
+      <p class="text-sm text-gray-500 mt-2">
+        Need more? <a href="https://pdfify.pro" target="_blank" class="text-blue-600 hover:underline">Upgrade your plan</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script>
+    // Parse shop from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const shop = urlParams.get('shop');
+    const host = urlParams.get('host');
+
+    // Initialize App Bridge
+    const AppBridge = window['app-bridge'];
+    const createApp = AppBridge.default;
+    const Redirect = AppBridge.actions.Redirect;
+    const Toast = AppBridge.actions.Toast;
+
+    let app;
+    let toast;
+
+    if (shop && host) {
+      app = createApp({
+        apiKey: SHOPIFY_API_KEY,
+        shopOrigin: `https://${shop}`,
+        host: host,
+        forceRedirect: false
+      });
+
+      toast = Toast.create(app, { duration: 3000 });
+    }
+
+    // API client
+    const api = axios.create({
+      baseURL: 'https://pdfify.pro/api',
+      timeout: 10000
+    });
+
+    // Show status message
+    function showMessage(message, isError = false) {
+      const el = document.getElementById('statusMessage');
+      el.className = `mt-4 p-4 rounded-lg ${isError ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`;
+      el.textContent = message;
+      el.classList.remove('hidden');
+
+      if (toast) {
+        toast.dispatch(Toast.show(message, { duration: 3000, isError }));
+      }
+
+      setTimeout(() => el.classList.add('hidden'), 5000);
+    }
+
+    // Load shop config
+    async function loadConfig() {
+      try {
+        const res = await api.get(`/shopify/config?shopDomain=${shop}`);
+        const config = res.data;
+
+        document.getElementById('shopDomain').textContent = shop;
+        document.getElementById('allowCustomerPDF').checked = config.allowCustomerPDF || false;
+        document.getElementById('primaryColor').value = config.primaryColor || '#00a6cc';
+        document.getElementById('primaryColorText').value = config.primaryColor || '#00a6cc';
+        document.getElementById('companyName').value = config.companyName || '';
+        document.getElementById('iban').value = config.iban || '';
+        document.getElementById('bic').value = config.bic || '';
+        document.getElementById('bankName').value = config.bankName || '';
+        document.getElementById('usageCount').textContent = config.usageCount || '0';
+
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+      } catch (err) {
+        console.error('Failed to load config:', err);
+        showMessage('Failed to load settings. Please try reinstalling the app.', true);
+      }
+    }
+
+    // Save settings
+    async function saveSettings() {
+      const button = event.target;
+      button.disabled = true;
+      button.textContent = 'Saving...';
+
+      try {
+        await api.post('/shopify/settings', {
+          shopDomain: shop,
+          allowCustomerPDF: document.getElementById('allowCustomerPDF').checked,
+          primaryColor: document.getElementById('primaryColor').value,
+          companyName: document.getElementById('companyName').value,
+          iban: document.getElementById('iban').value,
+          bic: document.getElementById('bic').value,
+          bankName: document.getElementById('bankName').value
+        });
+
+        showMessage('Settings saved successfully!');
+      } catch (err) {
+        console.error('Failed to save settings:', err);
+        showMessage('Failed to save settings. Please try again.', true);
+      } finally {
+        button.disabled = false;
+        button.textContent = 'Save Settings';
+      }
+    }
+
+    // Test connection
+    async function testConnection() {
+      try {
+        const res = await api.get(`/shopify/connection`, {
+          headers: { 'X-Shopify-Shop-Domain': shop }
+        });
+        showMessage('Connection successful! Your store is properly connected.');
+      } catch (err) {
+        showMessage('Connection test failed. Please check your API access.', true);
+      }
+    }
+
+    // Color picker sync
+    document.getElementById('primaryColor').addEventListener('input', (e) => {
+      document.getElementById('primaryColorText').value = e.target.value;
+    });
+    document.getElementById('primaryColorText').addEventListener('input', (e) => {
+      if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+        document.getElementById('primaryColor').value = e.target.value;
+      }
+    });
+
+    // Initialize
+    if (shop) {
+      loadConfig();
+    } else {
+      document.getElementById('loading').innerHTML = '<p class="text-red-600">Error: Shop parameter not found. Please reinstall the app.</p>';
+    }
+  </script>
+
+  <!-- Replace with your actual API key from Shopify Partners -->
+  <script>
+    // IMPORTANT: Get your API key from https://partners.shopify.com
+    // Go to Apps -> Your App -> App setup -> Client credentials -> Client ID
+    // Paste your Client ID below (it looks like: shpat_xxxxxxxxxxxxx or similar)
+    const SHOPIFY_API_KEY = '0376de62157405b2a081e40f8b6b9a6c';
+  </script>
+</body>
+</html>

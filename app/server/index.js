@@ -130,6 +130,10 @@ app.get("/user-dashboard", authProtect, (req, res) =>
 app.get("/shopify", authProtect, (req, res) =>
   res.sendFile(path.join(__dirname, "../public/shopify.html"))
 );
+// Embedded Shopify app (loaded inside Shopify Admin iframe)
+app.get("/shopify/app", (req, res) =>
+  res.sendFile(path.join(__dirname, "../public/shopify-embedded.html"))
+);
 app.get("/woocommerce", authProtect, (req, res) =>
   res.sendFile(path.join(__dirname, "../public/woocommerce.html"))
 );

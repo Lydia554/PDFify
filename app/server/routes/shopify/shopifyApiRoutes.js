@@ -4,6 +4,7 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
+const crypto = require("crypto");
 
 const ShopConfig = require("../../models/ShopConfig");
 const User = require("../../models/User");
@@ -644,6 +645,201 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
   } catch (err) {
     console.error("Failed to generate ZIP:", err);
     res.status(500).json({ error: "Failed to generate ZIP" });
+  }
+});
+
+// ================================
+// OAuth Routes for App Store Installation
+// ================================
+
+/**
+ * OAuth Install - Entry point from Shopify App Store
+ * GET /api/shopify/install?shop=store.myshopify.com
+ */
+router.get("/install", (req, res) => {
+  const { shop } = req.query;
+
+  // Validate shop parameter
+  if (!shop) {
+    return res.status(400).send("Missing shop parameter. Please use the link from Shopify App Store.");
+  }
+
+  // Normalize shop domain
+  const normalizedShop = shop.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  if (!normalizedShop.endsWith('.myshopify.com') && !normalizedShop.endsWith('.myshopify.io')) {
+    return res.status(400).send("Invalid shop domain. Must be a *.myshopify.com or *.myshopify.io domain.");
+  }
+
+  // Generate state parameter for security
+  const state = crypto.randomBytes(16).toString("hex");
+
+  // Build OAuth authorization URL
+  const scopes = "read_orders,write_orders,read_products,read_themes,read_locations";
+  const redirectUri = process.env.SHOPIFY_REDIRECT_URL || "https://pdfify.pro/shopify/callback";
+  const clientId = process.env.SHOPIFY_API_KEY;
+
+  if (!clientId) {
+    console.error("❌ SHOPIFY_API_KEY not set in environment variables");
+    return res.status(500).send("App configuration error. Please contact support.");
+  }
+
+  const installUrl = `https://${normalizedShop}/admin/oauth/authorize?` +
+    `client_id=${clientId}&` +
+    `scope=${encodeURIComponent(scopes)}&` +
+    `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+    `state=${state}&` +
+    `response_type=code`;
+
+  console.log(`🔗 Redirecting to Shopify OAuth for shop: ${normalizedShop}`);
+  res.redirect(installUrl);
+});
+
+/**
+ * OAuth Callback - Handles the callback after merchant approves the app
+ * GET /api/shopify/callback?shop=...&code=...&hmac=...&state=...
+ */
+router.get("/callback", async (req, res) => {
+  const { shop, code, hmac, state } = req.query;
+
+  // Validate required parameters
+  if (!shop || !code || !hmac) {
+    return res.status(400).send("Missing required OAuth parameters");
+  }
+
+  const normalizedShop = shop.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  try {
+    // Step 1: Verify HMAC signature for security
+    const message = Object.keys(req.query)
+      .filter(key => key !== 'hmac')
+      .sort()
+      .map(key => `${key}=${req.query[key]}`)
+      .join('&');
+
+    const expectedHmac = crypto
+      .createHmac('sha256', process.env.SHOPIFY_API_SECRET)
+      .update(message)
+      .digest('hex');
+
+    if (hmac !== expectedHmac) {
+      console.error("❌ HMAC verification failed for shop:", normalizedShop);
+      return res.status(400).send("Security verification failed. Please try again.");
+    }
+
+    console.log(`✅ HMAC verified for shop: ${normalizedShop}`);
+
+    // Step 2: Exchange authorization code for access token
+    const clientId = process.env.SHOPIFY_API_KEY;
+    const clientSecret = process.env.SHOPIFY_API_SECRET;
+
+    const tokenResponse = await axios.post(
+      `https://${normalizedShop}/admin/oauth/access_token`,
+      {
+        client_id: clientId,
+        client_secret: clientSecret,
+        code: code
+      },
+      {
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+
+    const { access_token } = tokenResponse.data;
+
+    if (!access_token) {
+      console.error("❌ No access token received from Shopify");
+      return res.status(500).send("Failed to obtain access token");
+    }
+
+    console.log(`✅ Access token received for shop: ${normalizedShop}`);
+
+    // Step 3: Save shop configuration to database
+    await ShopConfig.findOneAndUpdate(
+      { shopDomain: normalizedShop },
+      {
+        shopDomain: normalizedShop,
+        connectedAt: new Date(),
+        isActive: true
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(`✅ Shop config saved for: ${normalizedShop}`);
+
+    // Step 4: Check if there's an existing user with this shop, or create association
+    // The access token should be stored securely - you may want to encrypt it
+    const existingUser = await User.findOne({ connectedShopDomain: normalizedShop });
+
+    if (existingUser) {
+      // Update existing user's access token
+      existingUser.shopifyAccessToken = access_token;
+      await existingUser.save();
+      console.log(`✅ Updated existing user for shop: ${normalizedShop}`);
+    } else {
+      // For new installations, you might want to create a pending user
+      // or handle this differently based on your business logic
+      console.log(`ℹ️ New shop installation: ${normalizedShop} (no existing user found)`);
+      // You could optionally create a new user here or store the token differently
+    }
+
+    // Step 5: Redirect to the embedded app
+    // The app will be loaded at: https://{shop}/admin/apps/pdfify
+    console.log(`🎉 Installation successful for: ${normalizedShop}, redirecting to embedded app`);
+
+    res.redirect(`https://${normalizedShop}/admin/apps/pdfify`);
+
+  } catch (error) {
+    console.error("❌ OAuth callback error:", error.response?.data || error.message);
+
+    // Provide user-friendly error message
+    const errorMessage = error.response?.data?.error || error.message;
+    res.status(500).send(`
+      <html>
+        <head><title>Installation Error</title></head>
+        <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+          <h1>Installation Failed</h1>
+          <p>There was an error connecting your store to PDFify.</p>
+          <p>Error: ${errorMessage}</p>
+          <p>Please <a href="https://pdfify.pro/contact">contact support</a> if this persists.</p>
+        </body>
+      </html>
+    `);
+  }
+});
+
+/**
+ * OAuth Uninstall - Called by Shopify when app is uninstalled
+ * POST /api/shopify/uninstall (webhook)
+ */
+router.post("/uninstall", async (req, res) => {
+  try {
+    const shopDomain = req.headers["x-shopify-shop-domain"];
+
+    if (!shopDomain) {
+      return res.status(400).send("Missing shop domain");
+    }
+
+    console.log(`🗑️ App uninstall requested for: ${shopDomain}`);
+
+    // Mark shop as inactive but keep config data
+    await ShopConfig.findOneAndUpdate(
+      { shopDomain },
+      { isActive: false, uninstalledAt: new Date() }
+    );
+
+    // Clear access token from user
+    await User.findOneAndUpdate(
+      { connectedShopDomain: shopDomain },
+      { shopifyAccessToken: null, connectedShopDomain: null }
+    );
+
+    console.log(`✅ Cleanup completed for: ${shopDomain}`);
+    res.status(200).send("OK");
+
+  } catch (error) {
+    console.error("❌ Uninstall webhook error:", error);
+    res.status(500).send("Error processing uninstall");
   }
 });
 
