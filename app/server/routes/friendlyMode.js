@@ -29,10 +29,6 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const templateConfig = templates[template];
   if (!templateConfig) return res.status(400).json({ error: 'Invalid template' });
 
-  console.log('📝 [Friendly Mode] Template:', template);
-  console.log('📝 [Friendly Mode] FormData keys:', Object.keys(formData));
-  console.log('📝 [Friendly Mode] FormData:', JSON.stringify(formData, null, 2));
-
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
 
@@ -84,6 +80,31 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
       try {
         // Prepare data for Java service
+        // Map items to Java service format
+        const mappedItems = (formData.items || []).map(item => {
+          const qty = Number(item.quantity) || 1;
+          const price = Number(item.unitPrice) || 0;
+          const net = qty * price;
+          const taxRate = Number(formData.taxRate) || 0;
+          const tax = net * (taxRate / 100);
+
+          return {
+            name: item.description || 'Item',
+            price,
+            quantity: qty,
+            unitCode: 'EA',
+            net,
+            tax,
+            total: net + tax
+          };
+        });
+
+        // Calculate totals for ZUGFeRD
+        const subtotal = mappedItems.reduce((sum, item) => sum + item.net, 0);
+        const tax = mappedItems.reduce((sum, item) => sum + item.tax, 0);
+        const total = subtotal + tax;
+        const taxRate = Number(formData.taxRate) || 0;
+
         const javaData = {
           orderId: formData.invoiceNumber || `INV-${Date.now()}`,
           date: formData.date || new Date().toISOString().split('T')[0],
@@ -95,14 +116,28 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
           shopAddress: formData.senderAddress || '',
           customLogoUrl: formData.logo || null,
           primaryColor: formData.primaryColor || '#00a6cc',
-          items: formData.items || [],
+          items: mappedItems,
           currency: 'EUR',
           language: formData.invoiceLanguage || formData.language || 'en',
           notes: formData.notes || '',
+          subtotal,
+          tax,
+          total,
+          taxRate,
+          iban: 'DE89370400440532013000',
+          sellerAddress: formData.senderAddress || '',
+          buyerAddress: formData.recipientAddress || '',
+          sellerVatId: 'DE123456789'
         };
 
         // Generate ZUGFeRD XML
-        const zugferdXml = generateZugferdXml(javaData);
+        let zugferdXml;
+        try {
+          zugferdXml = generateZugferdXml(javaData);
+        } catch (xmlError) {
+          console.error('❌ [Friendly Mode] ZUGFeRD XML generation failed:', xmlError);
+          throw new Error(`ZUGFeRD XML generation failed: ${xmlError.message}`);
+        }
         javaData.zugferdXml = zugferdXml;
 
         console.log('📄 [Friendly Mode] Calling Java service...');
