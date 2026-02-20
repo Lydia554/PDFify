@@ -677,10 +677,10 @@ router.get("/install", (req, res) => {
   // Build OAuth authorization URL
   const scopes = "read_orders,write_orders,read_products,read_themes,read_locations";
   const redirectUri = process.env.SHOPIFY_REDIRECT_URL || "https://pdfify.pro/shopify/callback";
-  const clientId = process.env.SHOPIFY_API_KEY;
+  const clientId = process.env.SHOPIFY_CLIENT_ID;
 
   if (!clientId) {
-    console.error("❌ SHOPIFY_API_KEY not set in environment variables");
+    console.error("❌ SHOPIFY_CLIENT_ID not set in environment variables");
     return res.status(500).send("App configuration error. Please contact support.");
   }
 
@@ -718,7 +718,7 @@ router.get("/callback", async (req, res) => {
       .join('&');
 
     const expectedHmac = crypto
-      .createHmac('sha256', process.env.SHOPIFY_API_SECRET)
+      .createHmac('sha256', process.env.SHOPIFY_CLIENT_SECRET)
       .update(message)
       .digest('hex');
 
@@ -730,8 +730,8 @@ router.get("/callback", async (req, res) => {
     console.log(`✅ HMAC verified for shop: ${normalizedShop}`);
 
     // Step 2: Exchange authorization code for access token
-    const clientId = process.env.SHOPIFY_API_KEY;
-    const clientSecret = process.env.SHOPIFY_API_SECRET;
+    const clientId = process.env.SHOPIFY_CLIENT_ID;
+    const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
 
     const tokenResponse = await axios.post(
       `https://${normalizedShop}/admin/oauth/access_token`,
