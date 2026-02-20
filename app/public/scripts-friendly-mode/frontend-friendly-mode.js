@@ -281,8 +281,20 @@ generatePdfBtn.addEventListener('click', async () => {
     }
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to generate PDF');
+      let errorMsg = 'Failed to generate PDF';
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMsg = errorData.error || errorMsg;
+        } else {
+          const errorText = await response.text();
+          errorMsg = errorText || errorMsg;
+        }
+      } catch (e) {
+        console.error('Error parsing error response:', e);
+      }
+      throw new Error(errorMsg);
     }
 
     const blob = await response.blob();

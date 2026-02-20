@@ -9,6 +9,8 @@ const { incrementUsage } = require("../utils/usageUtils");
 const User = require('../models/User');
 const authenticate = require('../middleware/authenticate');
 const dualAuth = require("../middleware/dualAuth");
+const { createPdfA3WithJava } = require("../Helpers/pdf-helpers");
+const generateZugferdXml = require("../../xml/generateZugferdXml");
 
 const invoiceTemplate = require('../templates-friendly-mode/invoice');
 const invoiceTemplatePremium = require('../templates-friendly-mode/invoice-premium');
@@ -26,6 +28,10 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
   const { template, isPreview, ...formData } = req.body;
   const templateConfig = templates[template];
   if (!templateConfig) return res.status(400).json({ error: 'Invalid template' });
+
+  console.log('📝 [Friendly Mode] Template:', template);
+  console.log('📝 [Friendly Mode] FormData keys:', Object.keys(formData));
+  console.log('📝 [Friendly Mode] FormData:', JSON.stringify(formData, null, 2));
 
   const tmpDir = path.join(os.tmpdir(), `pdfify-${Date.now()}`);
   fs.mkdirSync(tmpDir, { recursive: true });
@@ -62,15 +68,69 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     // Generate HTML
     const generateHtml = templateConfig.fn(isPremiumRender);
-    const html = generateHtml(formData);
+    let html;
+    try {
+      html = generateHtml(formData);
+    } catch (templateError) {
+      console.error('❌ Template generation error:', templateError);
+      throw new Error(`Template error: ${templateError.message}`);
+    }
 
-    // Puppeteer PDF generation
-    const pdfPath = path.join(tmpDir, `pdf_${Date.now()}.pdf`);
-    browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    let pdfBuffer = await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
-    await browser.close();
+    let pdfBuffer;
+
+    // --- PAID invoices: Use Java service for PDF/A-3b + ZUGFeRD ---
+    if (template === 'invoice' && (plan === 'pro' || plan === 'premium')) {
+      console.log('🚀 [Friendly Mode] Using Java service for PAID invoice (', plan, ')');
+
+      try {
+        // Prepare data for Java service
+        const javaData = {
+          orderId: formData.invoiceNumber || `INV-${Date.now()}`,
+          date: formData.date || new Date().toISOString().split('T')[0],
+          customerName: formData.customerName || 'Customer',
+          customerEmail: formData.companyEmail || '',
+          customerAddress: formData.recipientAddress || '',
+          companyName: formData.companyName || 'Your Company',
+          shopName: formData.companyName || '',
+          shopAddress: formData.senderAddress || '',
+          customLogoUrl: formData.logo || null,
+          primaryColor: formData.primaryColor || '#00a6cc',
+          items: formData.items || [],
+          currency: 'EUR',
+          language: formData.invoiceLanguage || formData.language || 'en',
+          notes: formData.notes || '',
+        };
+
+        // Generate ZUGFeRD XML
+        const zugferdXml = generateZugferdXml(javaData);
+        javaData.zugferdXml = zugferdXml;
+
+        console.log('📄 [Friendly Mode] Calling Java service...');
+        const filename = `FriendlyInvoice_${javaData.orderId}_${Date.now()}.pdf`;
+        pdfBuffer = await createPdfA3WithJava(javaData, filename);
+        console.log('✅ [Friendly Mode] Java service PDF generated');
+
+      } catch (javaError) {
+        console.error('❌ [Friendly Mode] Java service failed:', javaError.message);
+        console.log('⚠️  [Friendly Mode] Falling back to Puppeteer...');
+
+        // Fallback to Puppeteer
+        const pdfPath = path.join(tmpDir, `pdf_${Date.now()}.pdf`);
+        browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'networkidle0' });
+        pdfBuffer = await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+        await browser.close();
+      }
+    } else {
+      // Standard Puppeteer generation for non-Pro or non-invoice templates
+      const pdfPath = path.join(tmpDir, `pdf_${Date.now()}.pdf`);
+      browser = await puppeteer.launch({ args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      pdfBuffer = await page.pdf({ path: pdfPath, format: 'A4', printBackground: true });
+      await browser.close();
+    }
 
     // Page count & usage
     const pdfDocFinal = await PDFDocument.load(pdfBuffer);
@@ -78,9 +138,12 @@ router.post('/generate', authenticate, dualAuth, async (req, res) => {
 
     const usageAllowed = await incrementUsage(user, pageCount, isPreview, plan);
     if (!usageAllowed) {
-      fs.unlinkSync(pdfPath);
       return res.status(403).json({ error: 'Monthly usage limit reached. Upgrade to premium for more pages.' });
     }
+
+    // Save PDF to temp file for download
+    const pdfPath = path.join(tmpDir, `friendly_${template}_${Date.now()}.pdf`);
+    fs.writeFileSync(pdfPath, pdfBuffer);
 
     // Send PDF
     res.download(pdfPath, err => {
