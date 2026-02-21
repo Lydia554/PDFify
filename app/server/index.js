@@ -116,7 +116,14 @@ app.use("/api", (req, res, next) => { req.invoiceSource = "dev"; next(); }, invo
 app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
 app.use(express.static(path.join(__dirname, "../public")));
 
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "../public/landing.html")));
+app.get("/", (req, res) => {
+  // If this is Shopify loading the embedded app
+  if (req.query.shop && req.query.host) {
+    return res.sendFile(path.join(__dirname, "../public/shopify-embedded.html"));
+  }
+  // Otherwise show landing page
+  return res.sendFile(path.join(__dirname, "../public/landing.html"));
+});
 app.get("/api-guide", (req, res) => res.sendFile(path.join(__dirname, "../public/api-guide.html")));
 app.get("/beta-registration", (req, res) => res.sendFile(path.join(__dirname, "../public/beta-registration.html")));
 app.get("/success.html", (req, res) => res.sendFile(path.join(__dirname, "public", "success.html")));
