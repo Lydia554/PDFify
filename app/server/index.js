@@ -76,9 +76,13 @@ app.use(cors({
 
 // -------------------- Security Headers for Shopify Embedded App --------------------
 app.use((req, res, next) => {
-  // Allow Shopify to embed this app in an iframe
-  res.setHeader('X-Frame-Options', 'ALLOWALL');
-  res.removeHeader('X-Frame-Options');
+  // Allow Shopify to embed this app in an iframe (Content Security Policy)
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *.myshopify.com admin.shopify.com;");
+
+  // Legacy fallback for older browsers
+  res.setHeader('X-Frame-Options', 'ALLOWFROM');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+
   next();
 });
 
