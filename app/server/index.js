@@ -65,12 +65,22 @@ app.use("/webhook", shopifyWebhookRoutes);
 app.use(cors({
   origin: [
     "https://food-trek.com",
-    "https://woocommerce.portfolio.lidija-jokic.com"
+    "https://woocommerce.portfolio.lidija-jokic.com",
+    /.+\.myshopify\.com$/,  // Allow all Shopify stores
+    /admin\.shopify\.com/,    // Allow Shopify Admin
   ],
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
 }));
+
+// -------------------- Security Headers for Shopify Embedded App --------------------
+app.use((req, res, next) => {
+  // Allow Shopify to embed this app in an iframe
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.removeHeader('X-Frame-Options');
+  next();
+});
 
 // -------------------- Body parser --------------------
 app.use(express.json({ limit: '20mb' }));
