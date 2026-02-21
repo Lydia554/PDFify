@@ -108,6 +108,9 @@
 
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script>
+    // Shopify API credentials
+    const SHOPIFY_API_KEY = 'e07548c088f572af4bbf103e4dee46bb';
+
     // Parse shop from URL
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
@@ -232,14 +235,6 @@
     } else {
       document.getElementById('loading').innerHTML = '<p class="text-red-600">Error: Shop parameter not found. Please reinstall the app.</p>';
     }
-  </script>
-
-  <!-- Replace with your actual API key from Shopify Partners -->
-  <script>
-    // IMPORTANT: Get your API key from https://partners.shopify.com
-    // Go to Apps -> Your App -> App setup -> Client credentials -> Client ID
-    // Paste your Client ID below (it looks like: shpat_xxxxxxxxxxxxx or similar)
-    const SHOPIFY_API_KEY = 'e07548c088f572af4bbf103e4dee46bb';
   </script>
 </body>
 </html>
