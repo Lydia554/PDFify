@@ -784,10 +784,10 @@ router.get("/callback", async (req, res) => {
     }
 
     // Step 5: Redirect to the embedded app
-    // The app will be loaded at: https://{shop}/admin/apps/pdfify
+    // The app will be loaded at: https://{shop}/admin/apps/pdfify-invoice-generator
     console.log(`🎉 Installation successful for: ${normalizedShop}, redirecting to embedded app`);
 
-    res.redirect(`https://${normalizedShop}/admin/apps/pdfify`);
+    res.redirect(`https://${normalizedShop}/admin/apps/pdfify-invoice-generator`);
 
   } catch (error) {
     console.error("❌ OAuth callback error:", error.response?.data || error.message);
