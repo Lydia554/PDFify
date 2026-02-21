@@ -117,8 +117,8 @@ app.use('/debug', express.static(path.join(__dirname, 'server/routes')));
 app.use(express.static(path.join(__dirname, "../public")));
 
 app.get("/", (req, res) => {
-  // If this is Shopify loading the embedded app
-  if (req.query.shop && req.query.host) {
+  // If this is Shopify loading the embedded app (check for shop parameter)
+  if (req.query.shop) {
     return res.sendFile(path.join(__dirname, "../public/shopify-embedded.html"));
   }
   // Otherwise show landing page
