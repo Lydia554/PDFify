@@ -6,7 +6,6 @@
   <title>PDFify - Invoice Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
@@ -440,24 +439,9 @@
   </div>
 
   <script>
-    // Shopify App Bridge
-    let app;
-    const SHOPIFY_API_KEY = 'e07548c088f572af4bbf103e4dee46bb';
-
     // Parse shop from URL
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
-    const host = urlParams.get('host');
-
-    // Initialize App Bridge
-    if (shop && host) {
-      app = createApp({
-        apiKey: SHOPIFY_API_KEY,
-        shopOrigin: `https://${shop}`,
-        host: host,
-        forceRedirect: false
-      });
-    }
 
     // API client
     const api = axios.create({
