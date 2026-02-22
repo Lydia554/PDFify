@@ -109,7 +109,7 @@ async function getBase64Image(url) {
  * @param {string} shopDomain - Shop domain
  * @returns {object} Invoice data for Java service
  */
-async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null, shopDomain = null) {
+async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null, shopDomain = null, forcedLanguage = null) {
   const prettyShopName = shopDomain ? shopDomain.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Your Shop";
 
   const items = (order.line_items || []).map((item, index) => {
@@ -185,8 +185,8 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
   console.log('[DEBUG] Customer name:', customerName);
   console.log('[DEBUG] Raw customer object:', JSON.stringify(order.customer, null, 2));
 
-  // Get language for translations
-  const lang = shopConfig.invoiceLanguage || order.locale || "en";
+  // Get language for translations - prioritize shop config, then forced language, then order
+  const lang = forcedLanguage || shopConfig.invoiceLanguage || order.locale || "en";
 
   // Translate payment terms - always use translated version based on language
   const paymentTermsTranslations = {
@@ -240,7 +240,7 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
     shopName: shopConfig.shopName || prettyShopName,
     shopAddress: shopAddress || "123 Main St, Anytown, Country",
     primaryColor: shopConfig.primaryColor || "#00a6cc",
-    locale: { language: shopConfig.invoiceLanguage || order.locale || "en", format: locale },
+    locale: { language: lang, format: locale },
   };
 }
 
@@ -1522,12 +1522,10 @@ router.post("/invoice-public", async (req, res) => {
     console.log(`🧾 [Shopify Public] shopConfig.primaryColor: "${shopConfig.primaryColor}"`);
 
     // Use the proper merchant invoice generation logic (Java service for ALL users)
-    const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop);
+    const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
     console.log(`🧾 [Shopify Public] invoiceData.primaryColor: "${invoiceData.primaryColor}"`);
     console.log(`🧾 [Shopify Public] invoiceData.customerName: "${invoiceData.customerName}"`);
     console.log(`🧾 [Shopify Public] invoiceData.paymentTerms: "${invoiceData.paymentTerms}"`);
-    // Override locale with selected language
-    invoiceData.locale = { language: lang };
 
     // Add ZUGFeRD XML ONLY for paying customers (premium/pro)
     if (isPayingCustomer) {
@@ -1689,9 +1687,7 @@ router.post("/invoices/zip-public", async (req, res) => {
     // Process orders
     for (const order of orders) {
       // Build invoice data using mapOrderToPdfData
-      const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop);
-      // Override locale with selected language
-      invoiceData.locale = { language: lang };
+      const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
 
       // Add ZUGFeRD XML ONLY for paying customers
       if (isPayingCustomer) {
