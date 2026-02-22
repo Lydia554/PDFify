@@ -833,8 +833,11 @@ router.get("/install", (req, res) => {
 router.get("/callback", async (req, res) => {
   const { shop, code, hmac, state } = req.query;
 
+  console.log("🔐 OAuth callback received:", { shop, hasCode: !!code, hasHmac: !!hmac });
+
   // Validate required parameters
   if (!shop || !code || !hmac) {
+    console.error("❌ Missing OAuth parameters");
     return res.status(400).send("Missing required OAuth parameters");
   }
 
@@ -864,6 +867,8 @@ router.get("/callback", async (req, res) => {
     const clientId = process.env.SHOPIFY_CLIENT_ID;
     const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
 
+    console.log(`🔑 Exchanging code for access token...`);
+
     const tokenResponse = await axios.post(
       `https://${normalizedShop}/admin/oauth/access_token`,
       {
@@ -879,14 +884,16 @@ router.get("/callback", async (req, res) => {
     const { access_token } = tokenResponse.data;
 
     if (!access_token) {
-      console.error("❌ No access token received from Shopify");
+      console.error("❌ No access token received from Shopify. Response:", tokenResponse.data);
       return res.status(500).send("Failed to obtain access token");
     }
 
-    console.log(`✅ Access token received for shop: ${normalizedShop}`);
+    console.log(`✅ Access token received for shop: ${normalizedShop}, length: ${access_token.length}`);
 
     // Step 3: Save shop configuration with access token to database
-    await ShopConfig.findOneAndUpdate(
+    console.log(`💾 Saving shop config to database...`);
+
+    const shopConfig = await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
       {
         shopDomain: normalizedShop,
@@ -898,6 +905,8 @@ router.get("/callback", async (req, res) => {
     );
 
     console.log(`✅ Shop config saved for: ${normalizedShop}`);
+    console.log(`   - Has access token: ${!!shopConfig.shopifyAccessToken}`);
+    console.log(`   - Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
 
     // Step 4: Also update existing user if one exists with this shop
     const existingUser = await User.findOne({ connectedShopDomain: normalizedShop });
@@ -919,6 +928,7 @@ router.get("/callback", async (req, res) => {
 
   } catch (error) {
     console.error("❌ OAuth callback error:", error.response?.data || error.message);
+    console.error("❌ Full error:", error);
 
     // Provide user-friendly error message
     const errorMessage = error.response?.data?.error || error.message;
@@ -1023,6 +1033,87 @@ router.post("/save-token", async (req, res) => {
   } catch (error) {
     console.error("❌ Save token error:", error);
     res.status(500).json({ error: "Failed to save access token: " + error.message });
+  }
+});
+
+/**
+ * Clear shop data (for testing/debugging)
+ * POST /api/shopify/clear
+ */
+router.post("/clear", async (req, res) => {
+  try {
+    const { shopDomain } = req.body;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    console.log(`🗑️ Clearing data for shop: ${normalizedShop}`);
+
+    // Delete from ShopConfig
+    const shopConfigResult = await ShopConfig.deleteOne({ shopDomain: normalizedShop });
+    console.log(`   - ShopConfig deleted: ${shopConfigResult.deletedCount > 0}`);
+
+    // Clear from User
+    const userResult = await User.updateMany(
+      { connectedShopDomain: normalizedShop },
+      { $unset: { shopifyAccessToken: "", connectedShopDomain: "" } }
+    );
+    console.log(`   - Users updated: ${userResult.modifiedCount}`);
+
+    res.json({
+      success: true,
+      message: "Shop data cleared successfully",
+      shop: normalizedShop
+    });
+  } catch (error) {
+    console.error("❌ Clear error:", error);
+    res.status(500).json({ error: "Failed to clear shop data" });
+  }
+});
+
+/**
+ * Debug endpoint to check what's stored for a shop
+ * GET /api/shopify/debug?shop=store.myshopify.com
+ */
+router.get("/debug", async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) {
+      return res.status(400).json({ error: "Missing shop parameter" });
+    }
+
+    const normalizedShop = shop.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Check ShopConfig
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    // Check User
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+
+    const debugInfo = {
+      shop: normalizedShop,
+      shopConfig: {
+        exists: !!shopConfig,
+        isActive: shopConfig?.isActive,
+        connectedAt: shopConfig?.connectedAt,
+        hasAccessToken: !!shopConfig?.shopifyAccessToken,
+        tokenLength: shopConfig?.shopifyAccessToken?.length || 0,
+        tokenPrefix: shopConfig?.shopifyAccessToken?.substring(0, 10) + '...'
+      },
+      user: {
+        exists: !!user,
+        hasAccessToken: !!user?.shopifyAccessToken,
+        tokenLength: user?.shopifyAccessToken?.length || 0,
+        plan: user?.plan
+      }
+    };
+
+    res.json(debugInfo);
+  } catch (error) {
+    console.error("❌ Debug error:", error);
+    res.status(500).json({ error: "Debug error" });
   }
 });
 
@@ -1226,9 +1317,20 @@ router.get("/orders-public", async (req, res) => {
 
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+    console.log(`📦 Fetching orders for: ${normalizedShop}`);
+
     // Find shop config with access token (from OAuth installation)
     const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    console.log(`📦 Shop config found: ${!!shopConfig}`);
+    if (shopConfig) {
+      console.log(`📦 Has access token: ${!!shopConfig.shopifyAccessToken}`);
+      console.log(`📦 Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
+      console.log(`📦 Token prefix: ${shopConfig.shopifyAccessToken?.substring(0, 15)}...`);
+    }
+
     if (!shopConfig || !shopConfig.shopifyAccessToken) {
+      console.error(`❌ Shop not connected: ${normalizedShop}`);
       return res.status(404).json({ error: "Shop not connected. Please install the app first." });
     }
 
@@ -1240,9 +1342,13 @@ router.get("/orders-public", async (req, res) => {
     if (to) params.push(`created_at_max=${encodeURIComponent(to + "T23:59:59Z")}`);
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
+    console.log(`📦 Calling Shopify API: ${shopifyOrdersUrl.replace(shopConfig.shopifyAccessToken, '***TOKEN***')}`);
+
     const response = await axios.get(shopifyOrdersUrl, {
       headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
     });
+
+    console.log(`✅ Orders fetched successfully: ${response.data.orders?.length || 0} orders`);
 
     const orders = response.data.orders.map(o => ({
       id: o.id,
@@ -1254,8 +1360,17 @@ router.get("/orders-public", async (req, res) => {
 
     res.json({ orders });
   } catch (err) {
-    console.error("❌ Failed to fetch orders:", err.response?.data || err.message);
-    res.status(500).json({ error: "Failed to fetch orders" });
+    console.error("❌ Failed to fetch orders:", err.response?.status, err.response?.data || err.message);
+    console.error("❌ Full error:", err);
+
+    if (err.response?.status === 401 || err.response?.status === 403) {
+      res.status(401).json({
+        error: "Invalid or expired access token",
+        details: "Please reinstall the app to get a fresh token"
+      });
+    } else {
+      res.status(500).json({ error: "Failed to fetch orders" });
+    }
   }
 });
 
