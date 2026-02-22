@@ -535,27 +535,31 @@
         return;
       }
 
-      statusEl.textContent = 'Connecting...';
+      statusEl.textContent = 'Connecting and validating token...';
       statusEl.style.color = '#a5b4fc';
 
       try {
-        await api.post('/shopify/connect', {
+        // Save to ShopConfig for embedded app (public endpoint)
+        const saveRes = await api.post('/shopify/save-token', {
           shopDomain: shop,
           accessToken: accessToken
         });
 
-        // Also save to ShopConfig for embedded app
-        await api.post('/shopify/save-token', {
-          shopDomain: shop,
-          accessToken: accessToken
-        });
-
-        statusEl.textContent = 'Connected! Reloading...';
-        setTimeout(() => window.location.reload(), 1000);
+        if (saveRes.data.success) {
+          statusEl.textContent = '✅ Connected! Reloading...';
+          statusEl.style.color = '#86efac';
+          setTimeout(() => window.location.reload(), 1500);
+        }
       } catch (err) {
         console.error('Manual connection failed:', err);
-        statusEl.textContent = 'Failed: ' + (err.response?.data?.error || err.message);
+        const errorMsg = err.response?.data?.error || err.message;
+        statusEl.textContent = '❌ Failed: ' + errorMsg;
         statusEl.style.color = '#fca5a5';
+
+        // Show helpful error message
+        if (errorMsg.includes('API') || errorMsg.includes('token')) {
+          statusEl.textContent += '\n\nMake sure your token has these permissions: read_orders, read_products, read_themes';
+        }
       }
     }
 

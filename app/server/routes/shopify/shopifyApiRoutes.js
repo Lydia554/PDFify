@@ -984,6 +984,24 @@ router.post("/save-token", async (req, res) => {
 
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+    // Validate the token by making a test API call to Shopify
+    try {
+      const testUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=1`;
+      await axios.get(testUrl, {
+        headers: { "X-Shopify-Access-Token": accessToken },
+        timeout: 10000
+      });
+      console.log(`✅ Token validated for shop: ${normalizedShop}`);
+    } catch (validationErr) {
+      console.error("❌ Token validation failed:", validationErr.response?.data || validationErr.message);
+      if (validationErr.response?.status === 401 || validationErr.response?.status === 403) {
+        return res.status(400).json({
+          error: "Invalid or expired access token. Please check your token and ensure it has the required permissions: read_orders, read_products, read_themes"
+        });
+      }
+      throw validationErr;
+    }
+
     // Save to ShopConfig
     await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
@@ -1004,7 +1022,7 @@ router.post("/save-token", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Save token error:", error);
-    res.status(500).json({ error: "Failed to save access token" });
+    res.status(500).json({ error: "Failed to save access token: " + error.message });
   }
 });
 
