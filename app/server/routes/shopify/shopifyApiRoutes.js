@@ -1471,7 +1471,7 @@ router.get("/orders-public", async (req, res) => {
  */
 router.post("/invoice-public", async (req, res) => {
   try {
-    const { shopDomain, orderId, merchant } = req.body;
+    const { shopDomain, orderId, merchant, lang: forcedLang } = req.body;
     if (!shopDomain || !orderId) {
       return res.status(400).json({ error: "Missing shopDomain or orderId" });
     }
@@ -1507,11 +1507,12 @@ router.post("/invoice-public", async (req, res) => {
       fullCustomer: order.customer
     }, null, 2));
 
-    // Use saved language preference from shop config, or fallback to auto-detect
-    const savedLang = shopConfig.invoiceLanguage;
+    // Use forced language from request, then saved preference from shop config, or fallback to auto-detect
     const { lang: detectedLang } = await resolveLanguage({ req, order, shopDomain, shopConfig });
-    const lang = savedLang || detectedLang;
+    const lang = forcedLang || shopConfig.invoiceLanguage || detectedLang;
     const locale = locales[lang] || locales["en"];
+
+    console.log(`🧾 [Shopify Public] Language resolution - forced: "${forcedLang}", saved: "${shopConfig.invoiceLanguage}", detected: "${detectedLang}", final: "${lang}"`);
 
     // Check if there's an associated user with a plan
     const user = await User.findOne({ connectedShopDomain: normalizedShop });
