@@ -8,7 +8,8 @@ const MongoStore = require("connect-mongo");
 const dotenv = require("dotenv");
 const fs = require("fs");
 
-dotenv.config();
+// Load .env from root directory
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 if (!fs.existsSync(process.env.PDFA_ICC_PROFILE)) {
   console.warn("[WARN] ICC profile not found at path:", process.env.PDFA_ICC_PROFILE);
