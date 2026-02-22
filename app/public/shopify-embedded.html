@@ -318,6 +318,14 @@
     <!-- Message Display -->
     <div id="message" class="message"></div>
 
+    <!-- Plan Info Banner -->
+    <div id="planInfoBanner" class="card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%); border: 1px solid rgba(251, 191, 36, 0.3);">
+      <h3 style="color: #fde047; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">📋 Your Current Plan: <span id="currentPlanName">Free</span></h3>
+      <p id="planFeatures" style="color: #a5b4fc; font-size: 13px; margin: 0; line-height: 1.6;">
+        Basic PDF invoices (30 pages/month). <strong style="color: #fca5a5;">No ZUGFeRD XML attachment.</strong> Upgrade for electronic invoice compliance.
+      </p>
+    </div>
+
     <!-- Installation Required -->
     <div id="installRequired" class="card hidden">
       <h2 class="card-title">⚠️ Installation Required</h2>
@@ -368,6 +376,10 @@
       <div class="stat-card">
         <div class="stat-value" id="usageRemaining">30</div>
         <div class="stat-label">Remaining</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="userPlan" style="font-size: 20px;">Free</div>
+        <div class="stat-label">Current Plan</div>
       </div>
     </div>
 
@@ -465,13 +477,90 @@
       <p id="zipStatus" style="margin-top: 12px; font-size: 14px; color: #a5b4fc;"></p>
     </div>
 
-    <!-- Upgrade CTA -->
-    <div class="upgrade-cta">
-      <h3>⭐ Upgrade to Pro</h3>
-      <p>Get unlimited invoices, PDF/A-3b compliance, and ZUGFeRD XML support</p>
-      <a href="https://pdfify.pro" target="_blank" class="btn btn-green" style="display: inline-flex;">
-        🚀 Upgrade Now
-      </a>
+    <!-- Pricing Plans -->
+    <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%);">
+      <h2 class="card-title">💎 Upgrade Your Plan</h2>
+      <p style="color: #a5b4fc; margin-bottom: 16px; font-size: 14px;">
+        Free users get basic PDFs. Upgrade for <strong>ZUGFeRD XML 2.4</strong> + <strong>PDF/A-3b compliance</strong>.
+      </p>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <!-- Premium Plan -->
+        <div style="background: rgba(30, 27, 75, 0.8); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 12px; padding: 16px;">
+          <h3 style="color: #86efac; font-size: 18px; font-weight: 700; margin: 0 0 8px 0;">Premium</h3>
+          <div style="font-size: 24px; font-weight: 700; color: #c4b5fd; margin-bottom: 8px;">
+            <span style="font-size: 14px; text-decoration: line-through; color: #fca5a5; margin-right: 8px;">€9.99</span>
+            €4.99<span style="font-size: 14px; font-weight: 400; color: #a5b4fc;">/mo</span>
+          </div>
+          <ul style="list-style: none; padding: 0; margin: 0 0 12px 0; font-size: 13px; color: #a5b4fc;">
+            <li style="margin-bottom: 4px;">✓ <strong>1,000</strong> PDF pages/month</li>
+            <li style="margin-bottom: 4px;">✓ <strong>ZUGFeRD XML 2.4</strong> embedded</li>
+            <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliance</li>
+            <li style="margin-bottom: 4px;">✓ SAP, DATEV compatible</li>
+          </ul>
+          <a href="https://pdfify.pro" target="_blank" class="btn btn-green" style="width: 100%; font-size: 13px; padding: 8px 16px;">
+            Upgrade to Premium
+          </a>
+        </div>
+
+        <!-- Pro Plan -->
+        <div style="background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%); border: 2px solid rgba(234, 179, 8, 0.4); border-radius: 12px; padding: 16px; position: relative;">
+          <span style="position: absolute; top: -10px; right: 12px; background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: white; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;">BEST VALUE</span>
+          <h3 style="color: #fde047; font-size: 18px; font-weight: 700; margin: 0 0 8px 0;">Pro</h3>
+          <div style="font-size: 24px; font-weight: 700; color: #c4b5fd; margin-bottom: 8px;">
+            <span style="font-size: 14px; text-decoration: line-through; color: #fca5a5; margin-right: 8px;">€69.99</span>
+            €49.99<span style="font-size: 14px; font-weight: 400; color: #a5b4fc;">/mo</span>
+          </div>
+          <ul style="list-style: none; padding: 0; margin: 0 0 12px 0; font-size: 13px; color: #a5b4fc;">
+            <li style="margin-bottom: 4px;">✓ <strong>10,000</strong> PDF pages/month</li>
+            <li style="margin-bottom: 4px;">✓ <strong>ZUGFeRD XML 2.4</strong> embedded</li>
+            <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliance</li>
+            <li style="margin-bottom: 4px;">✓ Priority support</li>
+            <li style="margin-bottom: 4px;">✓ Bulk CSV processing</li>
+          </ul>
+          <a href="https://pdfify.pro" target="_blank" class="btn btn-primary" style="width: 100%; font-size: 13px; padding: 8px 16px;">
+            Upgrade to Pro
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buy Token Packs -->
+    <div class="card">
+      <h2 class="card-title">🪙 Buy Extra PDF Pages</h2>
+      <p style="color: #a5b4fc; margin-bottom: 16px; font-size: 14px;">
+        Need more pages? Buy token packs to go beyond your monthly limit.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+        <!-- 1,000 Pages Pack -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+          <h4 style="color: #34d399; font-weight: 700; font-size: 16px; margin: 0 0 8px 0;">1,000 Pages</h4>
+          <p style="font-size: 20px; font-weight: 700; color: #c4b5fd; margin: 0 0 12px 0;">€5</p>
+          <button data-pack="1000" class="token-pack-btn btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px 12px;">
+            Buy Now
+          </button>
+        </div>
+
+        <!-- 5,000 Pages Pack -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+          <h4 style="color: #60a5fa; font-weight: 700; font-size: 16px; margin: 0 0 8px 0;">5,000 Pages</h4>
+          <p style="font-size: 20px; font-weight: 700; color: #c4b5fd; margin: 0 0 12px 0;">€25</p>
+          <button data-pack="5000" class="token-pack-btn btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px 12px;">
+            Buy Now
+          </button>
+        </div>
+
+        <!-- 10,000 Pages Pack -->
+        <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 12px; padding: 16px; text-align: center;">
+          <h4 style="color: #a78bfa; font-weight: 700; font-size: 16px; margin: 0 0 8px 0;">10,000 Pages</h4>
+          <p style="font-size: 20px; font-weight: 700; color: #c4b5fd; margin: 0 0 12px 0;">€50</p>
+          <button data-pack="10000" class="token-pack-btn btn btn-secondary" style="width: 100%; font-size: 12px; padding: 8px 12px;">
+            Buy Now
+          </button>
+        </div>
+      </div>
+      <p id="token-purchase-result" style="margin-top: 12px; font-size: 14px; color: #a5b4fc; min-height: 20px;"></p>
     </div>
     </div>
 
@@ -629,6 +718,45 @@
           document.getElementById('usageLimit').textContent = usageRes.data.limit === Infinity ? '∞' : (usageRes.data.limit || 30);
           const remaining = usageRes.data.limit === Infinity ? '∞' : Math.max(0, (usageRes.data.limit || 30) - (usageRes.data.used || 0));
           document.getElementById('usageRemaining').textContent = remaining;
+
+          // Set plan name and style
+          const planEl = document.getElementById('userPlan');
+          const plan = usageRes.data.plan || 'Free';
+          planEl.textContent = plan;
+
+          // Style plan badge
+          if (plan === 'Free') {
+            planEl.style.color = '#a5b4fc';
+          } else if (plan === 'Premium') {
+            planEl.style.color = '#86efac';
+          } else if (plan === 'Pro') {
+            planEl.style.color = '#fde047';
+          }
+
+          // Update plan info banner
+          const planNameEl = document.getElementById('currentPlanName');
+          const planFeaturesEl = document.getElementById('planFeatures');
+          const planInfoBanner = document.getElementById('planInfoBanner');
+
+          if (planNameEl && planFeaturesEl) {
+            planNameEl.textContent = plan;
+
+            if (plan === 'Free') {
+              planFeaturesEl.innerHTML = 'Basic PDF invoices (30 pages/month). <strong style="color: #fca5a5;">No ZUGFeRD XML attachment.</strong> Upgrade for electronic invoice compliance.';
+              planInfoBanner.style.background = 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)';
+              planInfoBanner.style.border = '1px solid rgba(251, 191, 36, 0.3)';
+            } else if (plan === 'Premium') {
+              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> + <strong>PDF/A-3b</strong> compliant invoices (1,000 pages/month). Compatible with SAP, DATEV.';
+              planInfoBanner.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)';
+              planInfoBanner.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+              document.querySelector('#planInfoBanner h3').style.color = '#86efac';
+            } else if (plan === 'Pro') {
+              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> + <strong>PDF/A-3b</strong> compliant invoices (10,000 pages/month). Priority support + bulk processing.';
+              planInfoBanner.style.background = 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%)';
+              planInfoBanner.style.border = '1px solid rgba(234, 179, 8, 0.4)';
+              document.querySelector('#planInfoBanner h3').style.color = '#fde047';
+            }
+          }
         }
 
         // Load orders
@@ -845,6 +973,52 @@
         zipStatus.textContent = 'Failed to download: ' + (err.response?.data?.error || err.message);
       }
     }
+
+    // ------------------------------
+    // Buy Token Packs
+    // ------------------------------
+    document.querySelectorAll('.token-pack-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const pack = btn.dataset.pack;
+        const resultEl = document.getElementById('token-purchase-result');
+        resultEl.textContent = 'Redirecting to payment...';
+
+        try {
+          const response = await fetch('https://pdfify.pro/api/stripe/buy-tokens', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              shopDomain: shop,
+              pack
+            }),
+            credentials: 'include',
+          });
+
+          if (!response.ok) {
+            const error = await response.json();
+            console.error("Error creating token checkout session:", error);
+            resultEl.textContent = `❌ Error: ${error.error || "Failed to create checkout session"}`;
+            resultEl.style.color = '#fca5a5';
+            return;
+          }
+
+          const { url } = await response.json();
+          if (!url) {
+            resultEl.textContent = '❌ Error: No checkout URL returned.';
+            resultEl.style.color = '#fca5a5';
+            return;
+          }
+
+          window.location.href = url;
+        } catch (err) {
+          console.error("Unexpected error:", err);
+          resultEl.textContent = '❌ An unexpected error occurred. Please try again.';
+          resultEl.style.color = '#fca5a5';
+        }
+      });
+    });
   </script>
 </body>
 </html>
