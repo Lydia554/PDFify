@@ -843,5 +843,42 @@ router.post("/uninstall", async (req, res) => {
   }
 });
 
+/**
+ * Public connection test for embedded app (no authentication required)
+ * GET /api/shopify/test-connection?shop=store.myshopify.com
+ */
+router.get("/test-connection", async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) {
+      return res.status(400).json({ error: "Missing shop parameter" });
+    }
+
+    const normalizedShop = shop.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Check if shop exists in database (was installed via OAuth)
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    if (!shopConfig) {
+      return res.status(404).json({ error: "Shop not found. Please install the app first." });
+    }
+
+    // Check if there's a user with access token
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+
+    return res.json({
+      success: true,
+      shop: normalizedShop,
+      isActive: shopConfig.isActive || false,
+      hasAccessToken: !!user?.shopifyAccessToken,
+      connectedAt: shopConfig.connectedAt,
+      message: "Shop is properly connected!"
+    });
+  } catch (error) {
+    console.error("❌ Connection test error:", error);
+    res.status(500).json({ error: "Connection test failed" });
+  }
+});
+
 
 module.exports = router;

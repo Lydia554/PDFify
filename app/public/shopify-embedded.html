@@ -210,11 +210,14 @@
     // Test connection
     async function testConnection() {
       try {
-        const res = await api.get(`/shopify/connection`, {
-          headers: { 'X-Shopify-Shop-Domain': shop }
-        });
-        showMessage('Connection successful! Your store is properly connected.');
+        const res = await api.get(`/shopify/test-connection?shop=${encodeURIComponent(shop)}`);
+        if (res.data.success) {
+          showMessage('Connection successful! Your store is properly connected.');
+        } else {
+          showMessage('Connection test failed: ' + (res.data.error || 'Unknown error'), true);
+        }
       } catch (err) {
+        console.error('Connection test failed:', err);
         showMessage('Connection test failed. Please check your API access.', true);
       }
     }
