@@ -144,16 +144,28 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
   const currency = order.currency || "EUR";
   const locale = shopConfig.locale || "en-US";
 
+  // Build address from Shopify order with proper handling of missing fields
+  const buildAddress = (addr) => {
+    if (!addr) return null;
+    const parts = [
+      addr.address1 || addr.name || '',
+      addr.city || '',
+      addr.zip || addr.postal_code || '',
+      addr.country_code || addr.country || ''
+    ].filter(p => p && p.trim() !== '');
+    return parts.length > 0 ? parts.join(', ') : null;
+  };
+
+  const customerAddress = buildAddress(order.shipping_address) ||
+                          buildAddress(order.billing_address) ||
+                          "Customer Address Not Available";
+
   return {
     orderId: order.name || order.id,
     date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
     customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
     customerEmail: order.customer?.email,
-    customerAddress: order.shipping_address ?
-                      `${order.shipping_address.address1}, ${order.shipping_address.city}, ${order.shipping_address.zip || ''}, ${order.shipping_address.country}` :
-                      (order.billing_address ?
-                        `${order.billing_address.address1}, ${order.billing_address.city}, ${order.billing_address.zip || ''}, ${order.billing_address.country}` :
-                        "Customer Address Not Available"),
+    customerAddress,
     items,
     subtotal,
     formattedSubtotal: formatPrice(subtotal, currency, locale),
@@ -171,8 +183,8 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
     companyName: shopConfig.companyName || prettyShopName,
     shopName: shopConfig.shopName || prettyShopName,
     shopAddress: shopConfig.shopAddress || "123 Main St, Anytown, Country",
-    primaryColor: shopConfig.primaryColor || "#00a6cc", // Custom color from shop config
-    locale: { language: order.locale || "en", format: locale },
+    primaryColor: shopConfig.primaryColor || "#00a6cc",
+    locale: { language: shopConfig.invoiceLanguage || order.locale || "en", format: locale },
   };
 }
 

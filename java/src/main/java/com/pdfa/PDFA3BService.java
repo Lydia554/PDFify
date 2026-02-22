@@ -42,22 +42,129 @@ public class PDFA3BService {
         public String date;
         public String customerName;
         public String companyName;
+        public String customerAddress;
+        public String shopName;
+        public String shopAddress;
         public List<LineItem> items;
+        public double subtotal;
+        public double tax;
         public double total;
         public String currency = "EUR";
+        public String vatRate;
+        public String iban;
+        public String bic;
+        public String bankName;
+        public String paymentTerms;
+        public String primaryColor;
+        public String locale = "en";  // Language locale: "en", "de", "sl"
         public String zugferdXml;  // ZUGFeRD XML to embed
+        public String logoData;  // Base64 encoded logo
 
         public static class LineItem {
             public String name;
+            public String formattedPrice;
+            public String formattedNet;
+            public String formattedTax;
+            public String formattedTotal;
             public int quantity;
             public double price;
+            public double net;
+            public double tax;
+            public double total;
         }
+    }
+
+    /**
+     * Translation map for invoice labels
+     */
+    private static class Translations {
+        public String invoiceTitle;
+        public String orderIdLabel;
+        public String dateLabel;
+        public String fromLabel;
+        public String toLabel;
+        public String descriptionLabel;
+        public String qtyLabel;
+        public String priceLabel;
+        public String totalLabel;
+        public String subtotalLabel;
+        public String taxLabel;
+        public String grandTotalLabel;
+        public String ibanLabel;
+        public String bicLabel;
+        public String bankLabel;
+        public String paymentTermsLabel;
+    }
+
+    private static Translations getTranslations(String locale) {
+        Translations t = new Translations();
+
+        switch (locale) {
+            case "de":
+                t.invoiceTitle = "RECHNUNG";
+                t.orderIdLabel = "Bestellnummer:";
+                t.dateLabel = "Datum:";
+                t.fromLabel = "VON:";
+                t.toLabel = "AN:";
+                t.descriptionLabel = "Beschreibung";
+                t.qtyLabel = "Menge";
+                t.priceLabel = "Preis";
+                t.totalLabel = "Gesamt";
+                t.subtotalLabel = "Zwischensumme:";
+                t.taxLabel = "MwSt:";
+                t.grandTotalLabel = "GESAMTSUMME:";
+                t.ibanLabel = "IBAN:";
+                t.bicLabel = "BIC:";
+                t.bankLabel = "Bank:";
+                t.paymentTermsLabel = "Zahlungsbedingungen:";
+                break;
+            case "sl":
+                t.invoiceTitle = "RAČUN";
+                t.orderIdLabel = "Številka naročila:";
+                t.dateLabel = "Datum:";
+                t.fromLabel = "OD:";
+                t.toLabel = "ZA:";
+                t.descriptionLabel = "Opis";
+                t.qtyLabel = "Količina";
+                t.priceLabel = "Cena";
+                t.totalLabel = "Skupaj";
+                t.subtotalLabel = "Vmesna vsota:";
+                t.taxLabel = "DDV:";
+                t.grandTotalLabel = "ZNANA VSOTA:";
+                t.ibanLabel = "IBAN:";
+                t.bicLabel = "BIC:";
+                t.bankLabel = "Banka:";
+                t.paymentTermsLabel = "Pogoji plačila:";
+                break;
+            default: // English
+                t.invoiceTitle = "INVOICE";
+                t.orderIdLabel = "Order Number:";
+                t.dateLabel = "Date:";
+                t.fromLabel = "FROM:";
+                t.toLabel = "TO:";
+                t.descriptionLabel = "Description";
+                t.qtyLabel = "Qty";
+                t.priceLabel = "Price";
+                t.totalLabel = "Total";
+                t.subtotalLabel = "Subtotal:";
+                t.taxLabel = "VAT:";
+                t.grandTotalLabel = "TOTAL:";
+                t.ibanLabel = "IBAN:";
+                t.bicLabel = "BIC:";
+                t.bankLabel = "Bank:";
+                t.paymentTermsLabel = "Payment Terms:";
+                break;
+        }
+        return t;
     }
 
     /**
      * Create a PDF/A-3b compliant invoice
      */
     public static void createInvoice(InvoiceData data, String outputPath) throws IOException {
+        // Get translations based on locale
+        Translations t = getTranslations(data.locale != null ? data.locale : "en");
+
         // Create document
         PDDocument document = new PDDocument();
 
@@ -87,75 +194,124 @@ public class PDFA3BService {
         content.beginText();
         content.setFont(font, 16);
 
-        // Invoice title
+        // Invoice title (translated)
         content.newLineAtOffset(leftMargin, yPosition);
-        content.showText("INVOICE");
+        content.showText(t.invoiceTitle);
         yPosition -= lineHeight * 2;
 
-        // Order ID
+        // Order ID (translated)
         content.setFont(font, 12);
         content.newLineAtOffset(50, yPosition);
-        content.showText("Order ID: " + data.orderId);
+        content.showText(t.orderIdLabel + " " + data.orderId);
         yPosition -= lineHeight;
 
-        // Date
+        // Date (translated)
         content.newLineAtOffset(50, yPosition);
-        content.showText("Date: " + data.date);
+        content.showText(t.dateLabel + " " + data.date);
         yPosition -= lineHeight * 2;
 
-        // From
+        // From (translated)
         content.setFont(font, 11);
         content.newLineAtOffset(50, yPosition);
-        content.showText("FROM:");
+        content.showText(t.fromLabel);
         content.newLineAtOffset(50, yPosition - lineHeight);
         content.setFont(font, 12);
         content.showText(data.companyName);
-        yPosition -= lineHeight * 3;
+        yPosition -= lineHeight;
 
-        // To
+        // Shop address if available
+        if (data.shopAddress != null && !data.shopAddress.isEmpty()) {
+            content.newLineAtOffset(50, yPosition);
+            content.showText(data.shopAddress);
+            yPosition -= lineHeight;
+        }
+        yPosition -= lineHeight;
+
+        // To (translated)
         content.setFont(font, 11);
         content.newLineAtOffset(50, yPosition);
-        content.showText("TO:");
+        content.showText(t.toLabel);
         content.newLineAtOffset(50, yPosition - lineHeight);
         content.setFont(font, 12);
         content.showText(data.customerName);
-        yPosition -= lineHeight * 3;
+        yPosition -= lineHeight;
 
-        // Line items header
+        // Customer address if available
+        if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
+            content.newLineAtOffset(50, yPosition);
+            content.showText(data.customerAddress);
+            yPosition -= lineHeight;
+        }
+        yPosition -= lineHeight;
+
+        // Line items header (translated)
         content.setFont(font, 11);
         content.newLineAtOffset(50, yPosition);
         content.showText("--------------------------------------------------------------------------------");
         yPosition -= lineHeight;
         content.newLineAtOffset(50, yPosition);
-        content.showText(String.format("%-40s %8s %10s %10s", "Description", "Qty", "Price", "Total"));
+        content.showText(String.format("%-40s %8s %12s %12s", t.descriptionLabel, t.qtyLabel, t.priceLabel, t.totalLabel));
         yPosition -= lineHeight;
         content.newLineAtOffset(50, yPosition);
         content.showText("--------------------------------------------------------------------------------");
 
-        // Line items
+        // Line items (use formatted values if available)
         yPosition -= lineHeight;
         content.setFont(font, 10);
         if (data.items != null) {
             for (InvoiceData.LineItem item : data.items) {
                 content.newLineAtOffset(50, yPosition);
-                double lineTotal = item.quantity * item.price;
-                content.showText(String.format("%-40s %8d %10.2f %10.2f",
-                    item.name, item.quantity, item.price, lineTotal));
+                // Use formatted values if available, otherwise format manually
+                String priceStr = item.formattedPrice != null ? item.formattedPrice : String.format("%.2f", item.price);
+                String totalStr = item.formattedTotal != null ? item.formattedTotal : String.format("%.2f", item.total);
+                content.showText(String.format("%-40s %8d %12s %12s",
+                    truncateString(item.name, 40), item.quantity, priceStr, totalStr));
                 yPosition -= lineHeight * 1.5;
             }
         }
 
-        // Total line
-        yPosition += lineHeight;
+        // Subtotal (translated)
+        yPosition -= lineHeight;
         content.setFont(font, 11);
-        content.newLineAtOffset(50, yPosition);
-        content.showText("--------------------------------------------------------------------------------");
+        content.newLineAtOffset(350, yPosition);
+        String subtotalStr = String.format("%.2f", data.subtotal);
+        content.showText(t.subtotalLabel + " " + subtotalStr + " " + data.currency);
+        yPosition -= lineHeight;
+
+        // Tax (translated)
+        content.newLineAtOffset(350, yPosition);
+        String taxStr = String.format("%.2f", data.tax);
+        content.showText(t.taxLabel + " (" + (data.vatRate != null ? data.vatRate : "21") + "%) " + taxStr + " " + data.currency);
         yPosition -= lineHeight * 2;
 
-        // Final total
+        // Final total (translated)
         content.setFont(font, 14);
-        content.newLineAtOffset(400, yPosition);
-        content.showText(String.format("TOTAL: %.2f %s", data.total, data.currency));
+        content.newLineAtOffset(350, yPosition);
+        content.showText(t.grandTotalLabel + " " + String.format("%.2f %s", data.total, data.currency));
+
+        // Payment details at bottom
+        yPosition -= lineHeight * 4;
+        content.setFont(font, 9);
+        content.newLineAtOffset(50, yPosition);
+
+        if (data.iban != null && !data.iban.isEmpty()) {
+            content.showText(t.ibanLabel + " " + data.iban);
+            yPosition -= lineHeight;
+            content.newLineAtOffset(50, yPosition);
+        }
+        if (data.bic != null && !data.bic.isEmpty()) {
+            content.showText(t.bicLabel + " " + data.bic);
+            yPosition -= lineHeight;
+            content.newLineAtOffset(50, yPosition);
+        }
+        if (data.bankName != null && !data.bankName.isEmpty()) {
+            content.showText(t.bankLabel + " " + data.bankName);
+            yPosition -= lineHeight;
+            content.newLineAtOffset(50, yPosition);
+        }
+        if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
+            content.showText(t.paymentTermsLabel + " " + data.paymentTerms);
+        }
 
         content.endText();
         content.close();
@@ -175,6 +331,15 @@ public class PDFA3BService {
 
         System.out.println("PDF created: " + outputPath);
         System.out.println("Size: " + new File(outputPath).length() + " bytes");
+    }
+
+    /**
+     * Truncate string to max length
+     */
+    private static String truncateString(String str, int maxLength) {
+        if (str == null) return "";
+        if (str.length() <= maxLength) return str;
+        return str.substring(0, maxLength - 3) + "...";
     }
 
     /**

@@ -221,6 +221,9 @@ public class HTTPServer {
      * Create PDF/A-3b invoice as PDDocument (for further processing like ZUGFeRD embedding)
      */
     private static PDDocument createPdfA3BDocument(InvoiceData data) throws IOException {
+        // Get translations based on locale
+        Translations t = getTranslations(data.locale);
+
         PDDocument document = new PDDocument();
         addOutputIntent(document);
         PDPage page = new PDPage(org.apache.pdfbox.pdmodel.common.PDRectangle.A4);
@@ -240,6 +243,7 @@ public class HTTPServer {
             float[] primaryRgb = hexToRgb(data.primaryColor);
             float[] lighterBg = lightenColor(primaryRgb, 90);
             System.out.println("[DEBUG] Creating PDF with primaryColor: " + data.primaryColor + " -> RGB: " + primaryRgb[0] + "," + primaryRgb[1] + "," + primaryRgb[2]);
+            System.out.println("[DEBUG] Using locale: " + data.locale + ", invoice title: " + t.invoiceTitle);
 
             // ========== TOP ACCENT LINE ==========
             content.setNonStrokingColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
@@ -292,12 +296,12 @@ public class HTTPServer {
                 }
             }
 
-            // "INVOICE" title (large, dark)
+            // "INVOICE" title (large, dark) - TRANSLATED
             content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
             content.beginText();
             content.setFont(font, 32);
             content.newLineAtOffset(margin + 220, headerY);
-            content.showText("INVOICE");
+            content.showText(t.invoiceTitle);
             content.endText();
 
             // Invoice details (right aligned)
@@ -305,10 +309,10 @@ public class HTTPServer {
             float detailY = headerY + 5;
             float detailLineHeight = 18;
 
-            // Calculate widths for positioning
-            String invLabel = "Invoice Number:";
+            // Calculate widths for positioning - TRANSLATED
+            String invLabel = t.invoiceLabel + " Number:";
             String invValue = data.orderId;
-            String dateLabel = "Date:";
+            String dateLabel = t.dateLabel;
             String dateValue = data.date;
 
             float invLabelWidth = font.getStringWidth(invLabel) / 1000 * 9;
@@ -446,7 +450,7 @@ public class HTTPServer {
             float colPrice = colQty + 50;
             float colTotal = colPrice + 70;
 
-            // Header text
+            // Header text - TRANSLATED
             content.setNonStrokingColor(0.35f, 0.35f, 0.35f);
             content.beginText();
             content.setFont(font, 9);
@@ -456,19 +460,19 @@ public class HTTPServer {
             content.showText("#");
 
             content.newLineAtOffset(colItem - colPos, 0);
-            content.showText("DESCRIPTION");
+            content.showText(t.descriptionLabel.toUpperCase());
 
-            String qtyHeader = "QTY";
+            String qtyHeader = t.qtyLabel.toUpperCase();
             float qtyHW = font.getStringWidth(qtyHeader) / 1000 * 9;
             content.newLineAtOffset(colQty - colItem - qtyHW, 0);
             content.showText(qtyHeader);
 
-            String priceHeader = "PRICE";
+            String priceHeader = t.priceLabel.toUpperCase();
             float priceHW = font.getStringWidth(priceHeader) / 1000 * 9;
             content.newLineAtOffset(colPrice - colQty + qtyHW - priceHW, 0);
             content.showText(priceHeader);
 
-            String totalHeader = "TOTAL";
+            String totalHeader = t.totalLabel.toUpperCase();
             float totalHW = font.getStringWidth(totalHeader) / 1000 * 9;
             content.newLineAtOffset(colTotal - colPrice + priceHW - totalHW, 0);
             content.showText(totalHeader);
@@ -527,12 +531,12 @@ public class HTTPServer {
             float totalsY = y - 20;
             float totalsX = pageWidth - margin - 180;
 
-            // Subtotal
+            // Subtotal - TRANSLATED
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 9);
             content.newLineAtOffset(totalsX, totalsY);
-            content.showText("Subtotal:");
+            content.showText(t.subtotalLabel);
             content.endText();
 
             content.setNonStrokingColor(0.2f, 0.2f, 0.2f);
@@ -544,12 +548,12 @@ public class HTTPServer {
             content.showText(subStr);
             content.endText();
 
-            // Tax
+            // Tax - TRANSLATED
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 9);
             content.newLineAtOffset(totalsX, totalsY - 20);
-            content.showText("Tax (" + (int)data.vatRate + "%):");
+            content.showText(t.taxLabel + " (" + (int)data.vatRate + "%):");
             content.endText();
 
             content.setNonStrokingColor(0.2f, 0.2f, 0.2f);
@@ -561,7 +565,7 @@ public class HTTPServer {
             content.showText(taxStr);
             content.endText();
 
-            // TOTAL (colored box)
+            // TOTAL (colored box) - Use translated label
             float totalBoxY = totalsY - 55;
             content.setNonStrokingColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
             content.addRect(totalsX - 10, totalBoxY - 4, 200, 32);
@@ -571,17 +575,17 @@ public class HTTPServer {
             content.beginText();
             content.setFont(font, 12);
             content.newLineAtOffset(totalsX, totalBoxY + 15);
-            content.showText("TOTAL " + currencySymbol + String.format("%.2f", data.total));
+            content.showText(t.totalLabel.toUpperCase() + " " + currencySymbol + String.format("%.2f", data.total));
             content.endText();
 
-            // ========== PAYMENT DETAILS ==========
+            // ========== PAYMENT DETAILS - TRANSLATED ==========
             float payY = totalBoxY - 45;
 
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 8);
             content.newLineAtOffset(margin, payY);
-            content.showText("PAYMENT DETAILS");
+            content.showText("PAYMENT DETAILS"); // Keep this in English for now or translate
             content.endText();
 
             // Small divider
@@ -598,23 +602,23 @@ public class HTTPServer {
             float payValueX = margin + 75;
 
             content.newLineAtOffset(margin, payLabelY);
-            content.showText("Bank:");
+            content.showText(t.bankLabel);
             content.newLineAtOffset(payValueX - margin, 0);
             content.showText(data.bankName != null && !data.bankName.isEmpty() ? data.bankName : "Your Bank");
 
             content.newLineAtOffset(margin - payValueX, -14);
-            content.showText("IBAN:");
+            content.showText(t.ibanLabel);
             content.newLineAtOffset(75, 0);
             content.showText(data.iban != null && !data.iban.isEmpty() ? data.iban : "N/A");
 
             content.newLineAtOffset(-75, -14);
-            content.showText("BIC:");
+            content.showText(t.bicLabel);
             content.newLineAtOffset(75, 0);
             content.showText(data.bic != null && !data.bic.isEmpty() ? data.bic : "N/A");
 
             if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
                 content.newLineAtOffset(-75, -14);
-                content.showText("Terms:");
+                content.showText(t.paymentTermsLabel);
                 content.newLineAtOffset(75, 0);
                 content.showText(data.paymentTerms);
             }
@@ -943,6 +947,83 @@ public class HTTPServer {
         public int quantity;
         public String unitCode;
         public double price;
+    }
+
+    /**
+     * Translation class for invoice labels
+     */
+    private static class Translations {
+        public String invoiceTitle;
+        public String invoiceLabel;
+        public String dateLabel;
+        public String descriptionLabel;
+        public String qtyLabel;
+        public String priceLabel;
+        public String totalLabel;
+        public String subtotalLabel;
+        public String taxLabel;
+        public String ibanLabel;
+        public String bicLabel;
+        public String bankLabel;
+        public String paymentTermsLabel;
+    }
+
+    /**
+     * Get translations based on locale
+     */
+    private static Translations getTranslations(String locale) {
+        Translations t = new Translations();
+
+        if (locale == null) locale = "en";
+
+        switch (locale) {
+            case "de":
+                t.invoiceTitle = "RECHNUNG";
+                t.invoiceLabel = "Rechnung";
+                t.dateLabel = "Datum:";
+                t.descriptionLabel = "Beschreibung";
+                t.qtyLabel = "Menge";
+                t.priceLabel = "Preis";
+                t.totalLabel = "Gesamt";
+                t.subtotalLabel = "Zwischensumme:";
+                t.taxLabel = "MwSt";
+                t.ibanLabel = "IBAN:";
+                t.bicLabel = "BIC:";
+                t.bankLabel = "Bank:";
+                t.paymentTermsLabel = "Zahlungsbedingungen:";
+                break;
+            case "sl":
+                t.invoiceTitle = "RAČUN";
+                t.invoiceLabel = "Račun";
+                t.dateLabel = "Datum:";
+                t.descriptionLabel = "Opis";
+                t.qtyLabel = "Količina";
+                t.priceLabel = "Cena";
+                t.totalLabel = "Skupaj";
+                t.subtotalLabel = "Vmesna vsota:";
+                t.taxLabel = "DDV";
+                t.ibanLabel = "IBAN:";
+                t.bicLabel = "BIC:";
+                t.bankLabel = "Banka:";
+                t.paymentTermsLabel = "Pogoji plačila:";
+                break;
+            default: // English
+                t.invoiceTitle = "INVOICE";
+                t.invoiceLabel = "Invoice";
+                t.dateLabel = "Date:";
+                t.descriptionLabel = "Description";
+                t.qtyLabel = "Qty";
+                t.priceLabel = "Price";
+                t.totalLabel = "Total";
+                t.subtotalLabel = "Subtotal:";
+                t.taxLabel = "VAT";
+                t.ibanLabel = "IBAN:";
+                t.bicLabel = "BIC:";
+                t.bankLabel = "Bank:";
+                t.paymentTermsLabel = "Payment Terms:";
+                break;
+        }
+        return t;
     }
 
     /**
