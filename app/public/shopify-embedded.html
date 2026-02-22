@@ -589,6 +589,9 @@
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
 
+    // Global shop config
+    let shopConfig = null;
+
     // API client
     const api = axios.create({
       baseURL: 'https://pdfify.pro/api',
@@ -694,35 +697,35 @@
 
         // Load shop config
         const configRes = await api.get(`/shopify/config?shopDomain=${encodeURIComponent(shop)}`);
-        const config = configRes.data;
+        shopConfig = configRes.data;
 
         // Update UI
         document.getElementById('connectedShopName').textContent = shop;
 
         // Load customer PDF settings
-        if (config.allowCustomerPDF) {
+        if (shopConfig.allowCustomerPDF) {
           document.getElementById('allowCustomerPDF').checked = true;
         }
 
         // Load branding
-        if (config.primaryColor) {
-          document.getElementById('primaryColor').value = config.primaryColor;
-          document.getElementById('primaryColorText').value = config.primaryColor;
+        if (shopConfig.primaryColor) {
+          document.getElementById('primaryColor').value = shopConfig.primaryColor;
+          document.getElementById('primaryColorText').value = shopConfig.primaryColor;
         }
-        if (config.invoiceLanguage) {
-          document.getElementById('invoiceLanguage').value = config.invoiceLanguage;
+        if (shopConfig.invoiceLanguage) {
+          document.getElementById('invoiceLanguage').value = shopConfig.invoiceLanguage;
         }
-        if (config.companyName) {
-          document.getElementById('companyName').value = config.companyName;
+        if (shopConfig.companyName) {
+          document.getElementById('companyName').value = shopConfig.companyName;
         }
-        if (config.iban) {
-          document.getElementById('iban').value = config.iban;
+        if (shopConfig.iban) {
+          document.getElementById('iban').value = shopConfig.iban;
         }
-        if (config.bic) {
-          document.getElementById('bic').value = config.bic;
+        if (shopConfig.bic) {
+          document.getElementById('bic').value = shopConfig.bic;
         }
-        if (config.bankName) {
-          document.getElementById('bankName').value = config.bankName;
+        if (shopConfig.bankName) {
+          document.getElementById('bankName').value = shopConfig.bankName;
         }
 
         // Load usage stats
@@ -914,7 +917,8 @@
         const res = await api.post('/shopify/invoice-public', {
           shopDomain: shop,
           orderId,
-          merchant: true
+          merchant: true,
+          lang: shopConfig?.invoiceLanguage || 'en'
         }, {
           responseType: 'blob'
         });
