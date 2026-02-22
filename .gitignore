@@ -42,3 +42,4 @@ java/*.jar
 
 # Old Java service folder (replaced by java/)
 java-pdfa-service/
+nul

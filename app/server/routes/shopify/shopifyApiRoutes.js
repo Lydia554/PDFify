@@ -172,18 +172,20 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
                           "Customer Address Not Available";
 
   // Build customer name
+  // Build customer name
   const firstName = order.customer?.first_name || "";
   const lastName = order.customer?.last_name || "";
   const customerName = `${firstName} ${lastName}`.trim() || "Valued Customer";
 
-  console.log('[DEBUG] Final customer address:', customerAddress);
-  console.log('[DEBUG] Customer name:', customerName);
-  console.log('[DEBUG] Raw customer object:', JSON.stringify(order.customer, null, 2));
-
+  // Build customer address
   const customerAddress = buildAddress(order.shipping_address) ||
                           buildAddress(order.billing_address) ||
                           buildAddress(order.customer?.default_address) ||
                           "Customer Address Not Available";
+
+  console.log('[DEBUG] Final customer address:', customerAddress);
+  console.log('[DEBUG] Customer name:', customerName);
+  console.log('[DEBUG] Raw customer object:', JSON.stringify(order.customer, null, 2));
 
   // Fetch shop details from Shopify to get shop address
   let shopAddress = shopConfig.shopAddress || null;
