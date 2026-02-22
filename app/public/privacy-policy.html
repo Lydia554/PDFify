@@ -12,7 +12,7 @@
 
   <div class="max-w-3xl mx-auto px-6 py-12">
     <h1 class="text-4xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
-    <p class="text-sm text-gray-500 mb-10">Last updated: June 2025</p>
+    <p class="text-sm text-gray-500 mb-10">Last updated: February 22, 2026</p>
 
     <section class="mb-8">
       <h2 class="text-2xl font-semibold text-gray-800 mb-2">1. Who We Are</h2>
@@ -66,24 +66,89 @@
     </section>
 
     <section class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-2">7. Data Retention</h2>
-      <p>User data is stored for the duration of your account. Deleted accounts are anonymized or purged after 30 days. Consent logs are stored securely with your user account metadata.</p>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">7. Processing of Merchants' Customer Data</h2>
+      <p class="mb-4">
+        <strong>Important for Shopify Merchants:</strong> When you use PDFify to generate invoices,
+        we process your customers' personal data on your behalf.
+      </p>
+
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">7.1 What Customer Data We Process</h3>
+      <p class="mb-2">To generate PDF invoices, we temporarily access:</p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Order Information:</strong> Order ID, date, line items, pricing, taxes</li>
+        <li><strong>Customer Information:</strong> Name, email address, shipping address, billing address</li>
+        <li><strong>Store Information:</strong> Store name, logo, branding preferences</li>
+      </ul>
+
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">7.2 How We Process Customer Data</h3>
+      <p class="mb-2">
+        <strong>We do NOT store your customers' data.</strong> Our process is:
+      </p>
+      <ol class="list-decimal pl-5 space-y-1">
+        <li>Merchant requests an invoice → We fetch order data from Shopify API</li>
+        <li>Data is processed in computer memory to generate a PDF invoice</li>
+        <li>PDF is delivered to the merchant for download</li>
+        <li>All data is immediately deleted from memory after PDF generation</li>
+      </ol>
+      <p class="mt-2 text-sm bg-yellow-50 border-l-4 border-yellow-400 p-3">
+        <strong>Note:</strong> Merchants are responsible for storing and retaining downloaded invoices
+        according to their local legal requirements (e.g., 10 years in Germany under GoBD regulations).
+      </p>
+
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">7.3 Our Role as Data Processor</h3>
+      <p class="mb-2">
+        For customer data processed through our Shopify app:
+      </p>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Merchant</strong> is the Data Controller (you control your customers' data)</li>
+        <li><strong>PDFify</strong> is the Data Processor (we process data only on your instructions)</li>
+        <li>We process customer data <strong>solely</strong> to generate PDF invoices</li>
+        <li>We <strong>do not</strong> use customer data for marketing, analytics, or any other purpose</li>
+        <li>We <strong>do not</strong> sell or share customer data with third parties</li>
+      </ul>
+
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">7.4 Data Security</h3>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Encryption in Transit:</strong> All data is transmitted using HTTPS/TLS encryption</li>
+        <li><strong>No Data at Rest:</strong> We don't store customer data, so there is no data to encrypt at rest</li>
+        <li><strong>Secure Authentication:</strong> We use Shopify's OAuth for secure API access</li>
+      </ul>
     </section>
 
     <section class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-2">8. Your Rights</h2>
-      <p>You have the right to access, correct, export, or delete your personal data. You may request this by contacting us via email.</p>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">8. Data Retention</h2>
+      <p class="mb-2">
+        <strong>PDFify User Data:</strong> User data is stored for the duration of your account.
+        Deleted accounts are anonymized or purged after 30 days.
+      </p>
+      <p class="mb-2">
+        <strong>Merchants' Customer Data:</strong> We do not store customer data.
+        All order/customer data is immediately deleted from memory after invoice generation.
+        Merchants are responsible for storing downloaded invoices.
+      </p>
     </section>
 
     <section class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-2">9. Contact</h2>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">9. Your Rights</h2>
+      <p class="mb-2">
+        <strong>PDFify Users:</strong> You have the right to access, correct, export, or delete your personal data.
+      </p>
+      <p class="mb-2">
+        <strong>Merchants' Customers:</strong> Since we do not store customer data, you can exercise your
+        data rights through the merchant's Shopify store or by contacting us.
+      </p>
+      <p>To make a request, contact us at: <a href="mailto:pdfifyapi@gmail.com" class="text-blue-600 hover:underline">pdfifyapi@gmail.com</a></p>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">10. Contact</h2>
       <p>For any privacy-related inquiries, contact us at: 
         <a href="mailto:pdfifyapi@gmail.com" class="text-blue-600 hover:underline">pdfifyapi@gmail.com</a>
       </p>
     </section>
 
     <footer class="mt-12 text-center text-sm text-gray-400">
-      &copy; 2025 PDFify. All rights reserved.
+      &copy; 2026 PDFify. All rights reserved.
     </footer>
   </div>
 
