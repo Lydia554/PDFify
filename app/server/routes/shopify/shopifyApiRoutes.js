@@ -165,13 +165,6 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
     return result;
   };
 
-  // Build the customer address
-  const customerAddress = buildAddress(order.shipping_address) ||
-                          buildAddress(order.billing_address) ||
-                          buildAddress(order.customer?.default_address) ||
-                          "Customer Address Not Available";
-
-  // Build customer name
   // Build customer name
   const firstName = order.customer?.first_name || "";
   const lastName = order.customer?.last_name || "";
