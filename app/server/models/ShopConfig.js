@@ -17,6 +17,7 @@ const ShopConfigSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
   connectedAt: { type: Date },
   uninstalledAt: { type: Date },
+  shopifyAccessToken: { type: String }, // Store Shopify access token for embedded app
 
   // Branding settings
   primaryColor: { type: String, default: "#00a6cc" },

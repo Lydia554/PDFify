@@ -177,6 +177,124 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
 }
 
 // ----------------------------
+// Helper functions for invoice generation
+// ----------------------------
+
+/**
+ * Generate invoice using Java service (PDF/A-3b + ZUGFeRD)
+ */
+async function generateJavaInvoice(invoiceData, shopDomain, order) {
+  const shopConfig = await ShopConfig.findOne({ shopDomain: shopDomain }) || {};
+
+  // Add ZUGFeRD XML for paying customers
+  const user = await User.findOne({ connectedShopDomain: shopDomain });
+  const isPayingCustomer = user && (user.plan === "pro" || user.plan === "premium");
+
+  if (isPayingCustomer) {
+    try {
+      console.log(`🧾 [Shopify] Generating ZUGFeRD XML for ${user.plan} user...`);
+      const zugferdData = {
+        orderId: invoiceData.orderId,
+        date: invoiceData.date,
+        currency: invoiceData.currency,
+        customerName: invoiceData.customerName,
+        companyName: invoiceData.companyName,
+        iban: invoiceData.iban,
+        items: invoiceData.items,
+        subtotal: invoiceData.subtotal,
+        tax: invoiceData.tax,
+        total: invoiceData.total,
+        sellerAddress: {
+          postCode: "12345",
+          street: invoiceData.shopAddress || "Main Street 1",
+          city: "Anytown",
+          country: "DE"
+        },
+        buyerAddress: {
+          postCode: "12345",
+          street: invoiceData.customerAddress?.split(',')[0] || "Customer Street 1",
+          city: invoiceData.customerAddress?.split(',')[1] || "Customerton",
+          country: invoiceData.customerAddress?.split(',')[3] || "DE"
+        },
+        sellerVatId: "DE123456789",
+        vatRate: invoiceData.vatRate || 21
+      };
+      invoiceData.zugferdXml = generateZugferdXml(zugferdData);
+      console.log("🧾 [Shopify] ZUGFeRD XML generated:", invoiceData.zugferdXml.length, "bytes");
+    } catch (zugferdErr) {
+      console.error("🧾 [Shopify] Failed to generate ZUGFeRD XML:", zugferdErr.message);
+    }
+  }
+
+  // Try to fetch logo from Shopify
+  try {
+    const user = await User.findOne({ connectedShopDomain: shopDomain });
+    const token = user?.shopifyAccessToken || shopConfig.shopifyAccessToken;
+    if (token) {
+      const logoUrl = await getShopLogoUrl(shopDomain, token);
+      if (logoUrl) {
+        const logoBase64 = await getBase64Image(logoUrl);
+        if (logoBase64 && logoBase64.length > 0) {
+          invoiceData.logoData = logoBase64;
+        }
+      }
+    }
+  } catch (logoErr) {
+    console.warn("Failed to fetch logo:", logoErr.message);
+  }
+
+  const filename = `Invoice_${invoiceData.orderId}_${Date.now()}.pdf`;
+  return await createPdfA3WithJava(invoiceData, filename);
+}
+
+/**
+ * Generate invoice using Puppeteer (HTML to PDF)
+ */
+async function generatePuppeteerInvoice(invoiceData, order, shopDomain) {
+  const shopConfig = await ShopConfig.findOne({ shopDomain: shopDomain }) || {};
+  const lang = invoiceData.locale?.language || "en";
+  const locale = locales[lang] || locales["en"];
+
+  // Build HTML data
+  const htmlData = {
+    ...invoiceData,
+    items: invoiceData.items.map(i => ({
+      ...i,
+      formattedPrice: formatPrice(i.price, invoiceData.currency || "EUR", lang),
+      formattedNet: formatPrice(i.net, invoiceData.currency || "EUR", lang),
+      formattedTax: formatPrice(i.tax, invoiceData.currency || "EUR", lang),
+      formattedTotal: formatPrice(i.total, invoiceData.currency || "EUR", lang),
+    })),
+    formattedSubtotal: formatPrice(invoiceData.subtotal, invoiceData.currency || "EUR", lang),
+    formattedTaxTotal: formatPrice(invoiceData.tax, invoiceData.currency || "EUR", lang),
+    formattedTotal: formatPrice(invoiceData.total, invoiceData.currency || "EUR", lang),
+    shopName: shopConfig.shopName || shopDomain,
+    currency: invoiceData.currency || "EUR",
+    locale: lang,
+    customLogoUrl: "",
+  };
+
+  const html = generateCustomerInvoiceHTML(htmlData, true, lang, locale);
+
+  const browser = await puppeteer.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox"] });
+  const page = await browser.newPage();
+  await page.setContent(html, { waitUntil: "load", timeout: 15000 });
+  await page.evaluateHandle("document.fonts.ready");
+
+  const pdfBuffer = await page.pdf({
+    format: "A4",
+    printBackground: true,
+    margin: { top: "40px", bottom: "40px", left: "40px", right: "40px" },
+    preferCSSPageSize: true,
+    displayHeaderFooter: false,
+    pdfVersion: "1.4",
+  });
+
+  await browser.close();
+  return pdfBuffer;
+}
+
+// ----------------------------
 // Generate invoice PDF
 // ----------------------------
 router.post("/invoice", authenticate, dualAuth, async (req, res) => {
@@ -767,21 +885,21 @@ router.get("/callback", async (req, res) => {
 
     console.log(`✅ Access token received for shop: ${normalizedShop}`);
 
-    // Step 3: Save shop configuration to database
+    // Step 3: Save shop configuration with access token to database
     await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
       {
         shopDomain: normalizedShop,
         connectedAt: new Date(),
-        isActive: true
+        isActive: true,
+        shopifyAccessToken: access_token  // Store access token for embedded app
       },
       { upsert: true, new: true }
     );
 
     console.log(`✅ Shop config saved for: ${normalizedShop}`);
 
-    // Step 4: Check if there's an existing user with this shop, or create association
-    // The access token should be stored securely - you may want to encrypt it
+    // Step 4: Also update existing user if one exists with this shop
     const existingUser = await User.findOne({ connectedShopDomain: normalizedShop });
 
     if (existingUser) {
@@ -790,10 +908,7 @@ router.get("/callback", async (req, res) => {
       await existingUser.save();
       console.log(`✅ Updated existing user for shop: ${normalizedShop}`);
     } else {
-      // For new installations, you might want to create a pending user
-      // or handle this differently based on your business logic
-      console.log(`ℹ️ New shop installation: ${normalizedShop} (no existing user found)`);
-      // You could optionally create a new user here or store the token differently
+      console.log(`ℹ️ New shop installation: ${normalizedShop} (no existing user, token stored in ShopConfig)`);
     }
 
     // Step 5: Redirect to the embedded app
@@ -835,13 +950,13 @@ router.post("/uninstall", async (req, res) => {
 
     console.log(`🗑️ App uninstall requested for: ${shopDomain}`);
 
-    // Mark shop as inactive but keep config data
+    // Mark shop as inactive and clear access token
     await ShopConfig.findOneAndUpdate(
       { shopDomain },
-      { isActive: false, uninstalledAt: new Date() }
+      { isActive: false, uninstalledAt: new Date(), shopifyAccessToken: null }
     );
 
-    // Clear access token from user
+    // Clear access token from user if one exists
     await User.findOneAndUpdate(
       { connectedShopDomain: shopDomain },
       { shopifyAccessToken: null, connectedShopDomain: null }
@@ -876,14 +991,14 @@ router.get("/test-connection", async (req, res) => {
       return res.status(404).json({ error: "Shop not found. Please install the app first." });
     }
 
-    // Check if there's a user with access token
-    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+    // Check if shop has access token (from OAuth installation)
+    const hasAccessToken = !!shopConfig.shopifyAccessToken;
 
     return res.json({
       success: true,
       shop: normalizedShop,
       isActive: shopConfig.isActive || false,
-      hasAccessToken: !!user?.shopifyAccessToken,
+      hasAccessToken: hasAccessToken,
       connectedAt: shopConfig.connectedAt,
       message: "Shop is properly connected!"
     });
@@ -1036,7 +1151,7 @@ router.post("/payment-details", async (req, res) => {
 
 /**
  * Public orders endpoint for embedded app (no authentication required)
- * Uses shop domain to find user and access token
+ * Uses shop domain to find ShopConfig and access token
  * GET /api/shopify/orders-public?shopDomain=store.myshopify.com
  */
 router.get("/orders-public", async (req, res) => {
@@ -1048,9 +1163,9 @@ router.get("/orders-public", async (req, res) => {
 
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-    // Find user with this shop connected
-    const user = await User.findOne({ connectedShopDomain: normalizedShop });
-    if (!user || !user.shopifyAccessToken) {
+    // Find shop config with access token (from OAuth installation)
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
       return res.status(404).json({ error: "Shop not connected. Please install the app first." });
     }
 
@@ -1063,7 +1178,7 @@ router.get("/orders-public", async (req, res) => {
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { "X-Shopify-Access-Token": user.shopifyAccessToken },
+      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
     });
 
     const orders = response.data.orders.map(o => ({
@@ -1095,8 +1210,8 @@ router.post("/invoice-public", async (req, res) => {
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
     // Verify shop is connected via OAuth
-    const user = await User.findOne({ connectedShopDomain: normalizedShop });
-    if (!user || !user.shopifyAccessToken) {
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
       return res.status(401).json({ error: "Shop not connected. Please reinstall the app." });
     }
 
@@ -1107,16 +1222,13 @@ router.post("/invoice-public", async (req, res) => {
     }
 
     const orderResp = await axios.get(`https://${normalizedShop}/admin/api/2023-10/orders/${actualOrderId}.json`, {
-      headers: { "X-Shopify-Access-Token": user.shopifyAccessToken },
+      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
     });
     const order = orderResp.data.order;
 
     if (!order || !order.line_items) {
       return res.status(400).json({ error: "Invalid order data" });
     }
-
-    // Get shop config
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop }) || {};
 
     // Map order items
     const items = (order.line_items || []).map((item) => {
@@ -1152,8 +1264,12 @@ router.post("/invoice-public", async (req, res) => {
     };
 
     // Generate PDF using Java service for pro users
+    // Check if there's an associated user with a pro plan
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+    const userPlan = user?.plan || 'free';
+
     let pdfBuffer;
-    if (user.plan === 'pro') {
+    if (userPlan === 'pro') {
       try {
         pdfBuffer = await generateJavaInvoice(invoiceData, shopDomain, order);
       } catch (javaError) {
@@ -1165,7 +1281,9 @@ router.post("/invoice-public", async (req, res) => {
     }
 
     // Increment usage
-    await User.findByIdAndUpdate(user._id, { $inc: { usageCount: 1 } });
+    if (user) {
+      await User.findByIdAndUpdate(user._id, { $inc: { usageCount: 1 } });
+    }
     await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
       { $inc: { usageCount: 1 } }
@@ -1196,15 +1314,19 @@ router.post("/invoices/zip-public", async (req, res) => {
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
     // Verify shop is connected via OAuth
-    const user = await User.findOne({ connectedShopDomain: normalizedShop });
-    if (!user || !user.shopifyAccessToken) {
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
       return res.status(401).json({ error: "Shop not connected. Please reinstall the app." });
     }
 
-    // Check usage limits
+    // Check if there's an associated user with a plan for usage limits
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
     const planLimits = { free: 30, premium: 100, pro: Infinity };
-    const limit = planLimits[user.plan] || 30;
-    if (user.usageCount >= limit && limit !== Infinity) {
+    const userPlan = user?.plan || 'free';
+    const limit = planLimits[userPlan] || 30;
+    const currentUsage = user?.usageCount || 0;
+
+    if (currentUsage >= limit && limit !== Infinity) {
       return res.status(429).json({ error: "Monthly limit reached. Please upgrade your plan." });
     }
 
@@ -1216,7 +1338,7 @@ router.post("/invoices/zip-public", async (req, res) => {
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { "X-Shopify-Access-Token": user.shopifyAccessToken },
+      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
     });
     const orders = response.data.orders;
 
@@ -1225,7 +1347,6 @@ router.post("/invoices/zip-public", async (req, res) => {
     }
 
     const zip = new JSZip();
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop }) || {};
 
     // Process orders
     for (const order of orders) {
@@ -1262,7 +1383,7 @@ router.post("/invoices/zip-public", async (req, res) => {
       };
 
       let pdfBuffer;
-      if (user.plan === 'pro') {
+      if (userPlan === 'pro') {
         try {
           pdfBuffer = await generateJavaInvoice(invoiceData, shopDomain, order);
         } catch (javaError) {
@@ -1278,7 +1399,9 @@ router.post("/invoices/zip-public", async (req, res) => {
     }
 
     // Increment usage
-    await User.findByIdAndUpdate(user._id, { $inc: { usageCount: orders.length } });
+    if (user) {
+      await User.findByIdAndUpdate(user._id, { $inc: { usageCount: orders.length } });
+    }
     await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
       { $inc: { usageCount: orders.length } }
