@@ -972,6 +972,43 @@ router.post("/uninstall", async (req, res) => {
 });
 
 /**
+ * Save access token for embedded app (for manual connection)
+ * POST /api/shopify/save-token
+ */
+router.post("/save-token", async (req, res) => {
+  try {
+    const { shopDomain, accessToken } = req.body;
+    if (!shopDomain || !accessToken) {
+      return res.status(400).json({ error: "Missing shopDomain or accessToken" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Save to ShopConfig
+    await ShopConfig.findOneAndUpdate(
+      { shopDomain: normalizedShop },
+      {
+        shopDomain: normalizedShop,
+        shopifyAccessToken: accessToken,
+        connectedAt: new Date(),
+        isActive: true
+      },
+      { upsert: true, new: true }
+    );
+
+    console.log(`✅ Access token saved for shop: ${normalizedShop}`);
+
+    return res.json({
+      success: true,
+      message: "Access token saved successfully"
+    });
+  } catch (error) {
+    console.error("❌ Save token error:", error);
+    res.status(500).json({ error: "Failed to save access token" });
+  }
+});
+
+/**
  * Public connection test for embedded app (no authentication required)
  * GET /api/shopify/test-connection?shop=store.myshopify.com
  */
@@ -988,7 +1025,15 @@ router.get("/test-connection", async (req, res) => {
     const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
 
     if (!shopConfig) {
-      return res.status(404).json({ error: "Shop not found. Please install the app first." });
+      return res.status(404).json({
+        error: "Shop not found in database.",
+        message: "Please install the app first.",
+        shop: normalizedShop,
+        debug: {
+          hasShopConfig: false,
+          oauthConfigured: !!(process.env.SHOPIFY_CLIENT_ID && process.env.SHOPIFY_CLIENT_SECRET)
+        }
+      });
     }
 
     // Check if shop has access token (from OAuth installation)
@@ -1000,7 +1045,7 @@ router.get("/test-connection", async (req, res) => {
       isActive: shopConfig.isActive || false,
       hasAccessToken: hasAccessToken,
       connectedAt: shopConfig.connectedAt,
-      message: "Shop is properly connected!"
+      message: hasAccessToken ? "Shop is properly connected!" : "Shop found but no access token. Please reinstall."
     });
   } catch (error) {
     console.error("❌ Connection test error:", error);
