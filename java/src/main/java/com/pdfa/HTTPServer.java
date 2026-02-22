@@ -404,6 +404,7 @@ public class HTTPServer {
             content.beginText();
             content.setFont(font, 11);
             content.newLineAtOffset(billToX, fromY - 16);
+            System.out.println("[DEBUG PDF] Displaying customerName: '" + data.customerName + "'");
             content.showText(data.customerName);
             content.endText();
 

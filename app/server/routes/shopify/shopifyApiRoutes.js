@@ -1491,6 +1491,14 @@ router.post("/invoice-public", async (req, res) => {
       return res.status(400).json({ error: "Invalid order data" });
     }
 
+    // Debug log to see what customer data we got
+    console.log('[DEBUG] Order customer data:', JSON.stringify({
+      firstName: order.customer?.first_name,
+      lastName: order.customer?.last_name,
+      email: order.customer?.email,
+      fullCustomer: order.customer
+    }, null, 2));
+
     // Use saved language preference from shop config, or fallback to auto-detect
     const savedLang = shopConfig.invoiceLanguage;
     const { lang: detectedLang } = await resolveLanguage({ req, order, shopDomain, shopConfig });
@@ -1503,9 +1511,12 @@ router.post("/invoice-public", async (req, res) => {
     const isPayingCustomer = userPlan === 'pro' || userPlan === 'premium';
 
     console.log(`🧾 [Shopify Public] Generating invoice for ${userPlan} user, merchant=${merchant}, lang=${lang}`);
+    console.log(`🧾 [Shopify Public] shopConfig.primaryColor: ${shopConfig.primaryColor}`);
 
     // Use the proper merchant invoice generation logic (Java service for ALL users)
     const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop);
+    console.log(`🧾 [Shopify Public] invoiceData.primaryColor: ${invoiceData.primaryColor}`);
+    console.log(`🧾 [Shopify Public] invoiceData.customerName: ${invoiceData.customerName}`);
     // Override locale with selected language
     invoiceData.locale = { language: lang };
 
