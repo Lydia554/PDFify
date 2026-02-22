@@ -633,7 +633,7 @@ public class HTTPServer {
             // Payment Terms - move to new line, show label and value
             if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
                 content.newLineAtOffset(margin - payValueX, -14);
-                content.showText(t.paymentTermsLabel + ": " + data.paymentTerms);
+                content.showText(t.paymentTermsLabel + " " + data.paymentTerms);
             }
             content.endText();
 

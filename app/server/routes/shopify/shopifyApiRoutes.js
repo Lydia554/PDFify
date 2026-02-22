@@ -180,6 +180,18 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
   console.log('[DEBUG] Customer name:', customerName);
   console.log('[DEBUG] Raw customer object:', JSON.stringify(order.customer, null, 2));
 
+  // Get language for translations
+  const lang = shopConfig.invoiceLanguage || order.locale || "en";
+
+  // Translate payment terms if not set
+  const paymentTermsTranslations = {
+    en: "Due within 14 days",
+    de: "Zahlbar innerhalb von 14 Tagen",
+    sl: "Zapadno v 14 dneh"
+  };
+
+  const paymentTerms = order.payment_terms || shopConfig.paymentTerms || paymentTermsTranslations[lang] || paymentTermsTranslations.en;
+
   // Fetch shop details from Shopify to get shop address
   let shopAddress = shopConfig.shopAddress || null;
   if (token && shopDomain && !shopAddress) {
@@ -214,7 +226,7 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
     iban: shopConfig.iban || "DE89370400440532013000",
     bic: shopConfig.bic || "COBADEFFXXX",
     bankName: shopConfig.bankName || "",
-    paymentTerms: order.payment_terms || "Due within 14 days",
+    paymentTerms: paymentTerms,
     creator: "PDFify",
     companyName: shopConfig.companyName || prettyShopName,
     shopName: shopConfig.shopName || prettyShopName,
@@ -1278,6 +1290,7 @@ router.get("/branding", async (req, res) => {
 
     return res.json({
       primaryColor: shopConfig.primaryColor || "#00a6cc",
+      invoiceLanguage: shopConfig.invoiceLanguage || "en",
       companyName: shopConfig.companyName || "",
       bankName: shopConfig.bankName || "",
       iban: shopConfig.iban || "",
@@ -1306,16 +1319,22 @@ router.post("/branding", async (req, res) => {
     const validLanguages = ['en', 'de', 'sl'];
     const validatedLanguage = validLanguages.includes(invoiceLanguage) ? invoiceLanguage : 'en';
 
+    // Build update object with only fields that have values
+    const updateData = {
+      primaryColor: primaryColor || "#00a6cc",
+      invoiceLanguage: validatedLanguage,
+      companyName: companyName || ""
+    };
+
+    // Only update payment fields if they have actual values
+    if (companyName && companyName.trim()) updateData.companyName = companyName;
+    if (bankName && bankName.trim()) updateData.bankName = bankName;
+    if (iban && iban.trim()) updateData.iban = iban;
+    if (bic && bic.trim()) updateData.bic = bic;
+
     const shopConfig = await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
-      {
-        primaryColor: primaryColor || "#00a6cc",
-        invoiceLanguage: validatedLanguage,
-        companyName: companyName || "",
-        bankName: bankName || "",
-        iban: iban || "",
-        bic: bic || ""
-      },
+      updateData,
       { upsert: true, new: true }
     );
 
