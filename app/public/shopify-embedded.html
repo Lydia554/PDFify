@@ -504,7 +504,7 @@
             €4.99<span style="font-size: 14px; font-weight: 400; color: #a5b4fc;">/mo</span>
           </div>
           <ul style="list-style: none; padding: 0; margin: 0 0 12px 0; font-size: 13px; color: #a5b4fc;">
-            <li style="margin-bottom: 4px;">✓ <strong>100</strong> PDF pages/month</li>
+            <li style="margin-bottom: 4px;">✓ <strong>1000</strong> PDF pages/month</li>
             <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliant</li>
             <li style="margin-bottom: 4px;">✓ <strong>ZUGFeRD XML 2.4</strong> embedded</li>
             <li style="margin-bottom: 4px;">✓ SAP, DATEV compatible</li>
@@ -523,7 +523,7 @@
             €49.99<span style="font-size: 14px; font-weight: 400; color: #a5b4fc;">/mo</span>
           </div>
           <ul style="list-style: none; padding: 0; margin: 0 0 12px 0; font-size: 13px; color: #a5b4fc;">
-            <li style="margin-bottom: 4px;">✓ <strong>Unlimited</strong> PDF pages</li>
+            <li style="margin-bottom: 4px;">✓ <strong>10,000</strong> PDF pages/month</li>
             <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliant</li>
             <li style="margin-bottom: 4px;">✓ <strong>ZUGFeRD XML 2.4</strong> embedded</li>
             <li style="margin-bottom: 4px;">✓ Priority support</li>
@@ -760,12 +760,12 @@
               planInfoBanner.style.background = 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)';
               planInfoBanner.style.border = '1px solid rgba(251, 191, 36, 0.3)';
             } else if (plan === 'Premium') {
-              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> embedded + <strong>PDF/A-3b</strong> compliant invoices (100 pages/month). Compatible with SAP, DATEV.';
+              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> embedded + <strong>PDF/A-3b</strong> compliant invoices (1,000 pages/month). Compatible with SAP, DATEV.';
               planInfoBanner.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)';
               planInfoBanner.style.border = '1px solid rgba(34, 197, 94, 0.3)';
               document.querySelector('#planInfoBanner h3').style.color = '#86efac';
             } else if (plan === 'Pro') {
-              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> embedded + <strong>PDF/A-3b</strong> compliant invoices (unlimited). Priority support + bulk processing.';
+              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> embedded + <strong>PDF/A-3b</strong> compliant invoices (10,000 pages/month). Priority support + bulk processing.';
               planInfoBanner.style.background = 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%)';
               planInfoBanner.style.border = '1px solid rgba(234, 179, 8, 0.4)';
               document.querySelector('#planInfoBanner h3').style.color = '#fde047';
@@ -996,6 +996,20 @@
           responseType: 'blob'
         });
 
+        // Check if response is an error (not a ZIP file)
+        const contentType = res.headers['content-type'];
+        if (!contentType || !contentType.includes('application/zip')) {
+          const text = await new Response(res.data).text();
+          let errorDetails = 'Unknown error';
+          try {
+            const errorJson = JSON.parse(text);
+            errorDetails = errorJson.error || errorJson.details || text;
+          } catch {
+            errorDetails = text.substring(0, 300);
+          }
+          throw new Error(errorDetails);
+        }
+
         const blob = new Blob([res.data], { type: 'application/zip' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1006,11 +1020,14 @@
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
 
-        zipStatus.textContent = `ZIP archive downloaded successfully!`;
-        setTimeout(() => zipStatus.textContent = '', 5000);
+        zipStatus.textContent = `✅ ZIP archive downloaded successfully!`;
+        zipStatus.style.color = '#86efac';
+        setTimeout(() => zipStatus.textContent = '', 10000);
       } catch (err) {
         console.error('Failed to download ZIP:', err);
-        zipStatus.textContent = 'Failed to download: ' + (err.response?.data?.error || err.message);
+        zipStatus.textContent = `❌ ${err.message}`;
+        zipStatus.style.color = '#fca5a5';
+        setTimeout(() => zipStatus.textContent = '', 15000);
       }
     }
 

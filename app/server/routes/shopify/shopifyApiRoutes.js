@@ -165,6 +165,21 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
     return result;
   };
 
+  // Build the customer address
+  const customerAddress = buildAddress(order.shipping_address) ||
+                          buildAddress(order.billing_address) ||
+                          buildAddress(order.customer?.default_address) ||
+                          "Customer Address Not Available";
+
+  // Build customer name
+  const firstName = order.customer?.first_name || "";
+  const lastName = order.customer?.last_name || "";
+  const customerName = `${firstName} ${lastName}`.trim() || "Valued Customer";
+
+  console.log('[DEBUG] Final customer address:', customerAddress);
+  console.log('[DEBUG] Customer name:', customerName);
+  console.log('[DEBUG] Raw customer object:', JSON.stringify(order.customer, null, 2));
+
   const customerAddress = buildAddress(order.shipping_address) ||
                           buildAddress(order.billing_address) ||
                           buildAddress(order.customer?.default_address) ||
@@ -189,7 +204,7 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
   return {
     orderId: order.name || order.id,
     date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-    customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
+    customerName,
     customerEmail: order.customer?.email,
     customerAddress,
     items,
@@ -1232,7 +1247,7 @@ router.get("/usage-stats", async (req, res) => {
     const userPlan = user?.planType || user?.plan || 'free';
 
     // Determine limit based on plan
-    const planLimits = { free: 30, premium: 100, pro: Infinity };
+    const planLimits = { free: 30, premium: 1000, pro: 10000 };
     const limit = planLimits[userPlan] || 30;
 
     return res.json({
@@ -1597,17 +1612,13 @@ router.post("/invoices/zip-public", async (req, res) => {
 
     // Check if there's an associated user with a plan for usage limits
     const user = await User.findOne({ connectedShopDomain: normalizedShop });
-    const planLimits = { free: 30, premium: 100, pro: Infinity };
+    const planLimits = { free: 30, premium: 1000, pro: 10000 };
     const userPlan = user?.planType || user?.plan || 'free';
     const limit = planLimits[userPlan] || 30;
     const currentUsage = user?.usageCount || 0;
     const isPayingCustomer = userPlan === 'pro' || userPlan === 'premium';
 
-    if (currentUsage >= limit && limit !== Infinity) {
-      return res.status(429).json({ error: "Monthly limit reached. Please upgrade your plan." });
-    }
-
-    // Fetch orders from Shopify
+    // Fetch orders from Shopify FIRST to validate limit
     let shopifyOrdersUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=50&status=any&fields=id,name,created_at,line_items,customer,total_price,currency,payment_terms`;
     const params = [];
     if (from) params.push(`created_at_min=${encodeURIComponent(from + "T00:00:00Z")}`);
@@ -1621,6 +1632,15 @@ router.post("/invoices/zip-public", async (req, res) => {
 
     if (!orders.length) {
       return res.status(404).json({ error: "No orders found in this date range" });
+    }
+
+    // Check if bulk download would exceed the limit
+    if (currentUsage + orders.length > limit && limit !== Infinity) {
+      return res.status(429).json({
+        error: `Bulk download would exceed your monthly limit`,
+        details: `Your plan (${userPlan}) allows ${limit} invoices per month. You've used ${currentUsage}/${limit} invoices and this request contains ${orders.length} orders.`,
+        hint: "Please upgrade your plan or download fewer invoices"
+      });
     }
 
     // Use saved language preference

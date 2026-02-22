@@ -133,22 +133,16 @@ public class HTTPServer {
                 invoice.bic = params.has("bic") ? params.get("bic").getAsString() : "";
                 invoice.paymentTerms = params.has("paymentTerms") ? params.get("paymentTerms").getAsString() : "";
                 invoice.creator = params.has("creator") ? params.get("creator").getAsString() : "";
-                invoice.primaryColor = params.has("primaryColor") ? params.get("primaryColor").getAsString() : "#00a6cc"; // Default cyan
-                invoice.bankName = params.has("bankName") ? params.get("bankName").getAsString() : ""; // Bank name
-                invoice.logoData = params.has("logoData") ? params.get("logoData").getAsString() : ""; // Base64 logo
-                invoice.zugferdXml = params.has("zugferdXml") ? params.get("zugferdXml").getAsString() : ""; // ZUGFeRD XML
+                invoice.primaryColor = params.has("primaryColor") ? params.get("primaryColor").getAsString() : "#00a6cc";
+                invoice.bankName = params.has("bankName") ? params.get("bankName").getAsString() : "";
+                invoice.logoData = params.has("logoData") ? params.get("logoData").getAsString() : "";
+                invoice.zugferdXml = params.has("zugferdXml") ? params.get("zugferdXml").getAsString() : "";
 
-                System.out.println("[DEBUG] Java service received primaryColor: " + invoice.primaryColor);
-                if (invoice.logoData != null && !invoice.logoData.isEmpty()) {
-                    System.out.println("[Logo] Java service received logo data: " + invoice.logoData.length() + " characters");
-                } else {
-                    System.out.println("[Logo] No logo data received");
-                }
-                if (invoice.zugferdXml != null && !invoice.zugferdXml.isEmpty()) {
-                    System.out.println("[ZUGFeRD] Java service received ZUGFeRD XML: " + invoice.zugferdXml.length() + " characters");
-                } else {
-                    System.out.println("[ZUGFeRD] No ZUGFeRD XML received");
-                }
+                System.out.println("[DEBUG] Java service received:");
+                System.out.println("  - customerName: " + invoice.customerName);
+                System.out.println("  - customerAddress: " + invoice.customerAddress);
+                System.out.println("  - shopAddress: " + invoice.shopAddress);
+                System.out.println("  - primaryColor: " + invoice.primaryColor);
 
                 // Parse locale (for future use)
                 if (params.has("locale") && params.get("locale").isJsonObject()) {
@@ -244,6 +238,9 @@ public class HTTPServer {
             float[] lighterBg = lightenColor(primaryRgb, 90);
             System.out.println("[DEBUG] Creating PDF with primaryColor: " + data.primaryColor + " -> RGB: " + primaryRgb[0] + "," + primaryRgb[1] + "," + primaryRgb[2]);
             System.out.println("[DEBUG] Using locale: " + data.locale + ", invoice title: " + t.invoiceTitle);
+            System.out.println("[DEBUG] Customer name: '" + data.customerName + "'");
+            System.out.println("[DEBUG] Customer address: '" + data.customerAddress + "'");
+            System.out.println("[DEBUG] Shop address: '" + data.shopAddress + "'");
 
             // ========== TOP ACCENT LINE ==========
             content.setNonStrokingColor(primaryRgb[0], primaryRgb[1], primaryRgb[2]);
@@ -415,6 +412,7 @@ public class HTTPServer {
             content.setFont(font, 9);
             float billToAddrY = fromY - 32;
 
+            boolean hasAddress = false;
             if (data.customerAddress != null && !data.customerAddress.isEmpty()) {
                 String[] addr = splitText(data.customerAddress, 45);
                 for (String line : addr) {
@@ -422,10 +420,21 @@ public class HTTPServer {
                     content.showText(line);
                     billToAddrY -= 13;
                 }
+                hasAddress = true;
             }
             if (data.customerEmail != null && !data.customerEmail.isEmpty()) {
+                if (!hasAddress) {
+                    content.newLineAtOffset(billToX, billToAddrY);
+                    content.showText("Email: " + data.customerEmail);
+                    billToAddrY -= 13;
+                } else {
+                    content.newLineAtOffset(billToX, billToAddrY);
+                    content.showText(data.customerEmail);
+                }
+            }
+            if (!hasAddress && (data.customerEmail == null || data.customerEmail.isEmpty())) {
                 content.newLineAtOffset(billToX, billToAddrY);
-                content.showText(data.customerEmail);
+                content.showText("Address not provided");
             }
             content.endText();
 
@@ -603,27 +612,28 @@ public class HTTPServer {
             float payLabelY = payY - 20;
             float payValueX = margin + 90;
 
+            // Bank
             content.newLineAtOffset(margin, payLabelY);
             content.showText(t.bankLabel);
             content.newLineAtOffset(payValueX - margin, 0);
             content.showText(data.bankName != null && !data.bankName.isEmpty() ? data.bankName : "Your Bank");
 
+            // IBAN
             content.newLineAtOffset(margin - payValueX, -14);
             content.showText(t.ibanLabel);
             content.newLineAtOffset(payValueX - margin, 0);
             content.showText(data.iban != null && !data.iban.isEmpty() ? data.iban : "N/A");
 
+            // BIC
             content.newLineAtOffset(margin - payValueX, -14);
             content.showText(t.bicLabel);
             content.newLineAtOffset(payValueX - margin, 0);
             content.showText(data.bic != null && !data.bic.isEmpty() ? data.bic : "N/A");
 
+            // Payment Terms - move to new line, show label and value
             if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
                 content.newLineAtOffset(margin - payValueX, -14);
-                content.showText(t.paymentTermsLabel);
-                float labelWidth = font.getStringWidth(t.paymentTermsLabel) / 1000 * 8;
-                content.newLineAtOffset(payValueX - margin - labelWidth, 0);
-                content.showText(": " + data.paymentTerms);
+                content.showText(t.paymentTermsLabel + ": " + data.paymentTerms);
             }
             content.endText();
 
