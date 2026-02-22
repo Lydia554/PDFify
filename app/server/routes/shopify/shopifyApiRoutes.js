@@ -148,17 +148,26 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
   // Build address from Shopify order with proper handling of missing fields
   const buildAddress = (addr) => {
     if (!addr) return null;
+
+    console.log('[DEBUG] Building address from:', JSON.stringify(addr, null, 2));
+
     const parts = [
-      addr.address1 || '',
+      addr.address1 || addr.street || '',
+      addr.address2 || '',
       addr.city || '',
-      addr.zip || addr.postal_code || '',
-      addr.country_code || addr.country || ''
+      addr.zip || addr.postal_code || addr.zip_code || '',
+      addr.province_code || addr.province || '',
+      addr.country_code || addr.country_name || addr.country || ''
     ].filter(p => p && p.trim() !== '');
-    return parts.length > 0 ? parts.join(', ') : null;
+
+    const result = parts.length > 0 ? parts.join(', ') : null;
+    console.log('[DEBUG] Built address:', result);
+    return result;
   };
 
   const customerAddress = buildAddress(order.shipping_address) ||
                           buildAddress(order.billing_address) ||
+                          buildAddress(order.customer?.default_address) ||
                           "Customer Address Not Available";
 
   // Fetch shop details from Shopify to get shop address

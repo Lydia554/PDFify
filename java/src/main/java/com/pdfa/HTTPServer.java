@@ -601,7 +601,7 @@ public class HTTPServer {
             content.beginText();
             content.setFont(font, 8);
             float payLabelY = payY - 20;
-            float payValueX = margin + 75;
+            float payValueX = margin + 90;
 
             content.newLineAtOffset(margin, payLabelY);
             content.showText(t.bankLabel);
@@ -610,20 +610,20 @@ public class HTTPServer {
 
             content.newLineAtOffset(margin - payValueX, -14);
             content.showText(t.ibanLabel);
-            content.newLineAtOffset(75, 0);
+            content.newLineAtOffset(payValueX - margin, 0);
             content.showText(data.iban != null && !data.iban.isEmpty() ? data.iban : "N/A");
 
-            content.newLineAtOffset(-75, -14);
+            content.newLineAtOffset(margin - payValueX, -14);
             content.showText(t.bicLabel);
-            content.newLineAtOffset(75, 0);
+            content.newLineAtOffset(payValueX - margin, 0);
             content.showText(data.bic != null && !data.bic.isEmpty() ? data.bic : "N/A");
 
             if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
-                content.newLineAtOffset(-75, -14);
-                content.showText(t.paymentTermsLabel + ": ");
-                float labelWidth = font.getStringWidth(t.paymentTermsLabel + ": ") / 1000 * 8;
-                content.newLineAtOffset(75 - labelWidth, 0);
-                content.showText(data.paymentTerms);
+                content.newLineAtOffset(margin - payValueX, -14);
+                content.showText(t.paymentTermsLabel);
+                float labelWidth = font.getStringWidth(t.paymentTermsLabel) / 1000 * 8;
+                content.newLineAtOffset(payValueX - margin - labelWidth, 0);
+                content.showText(": " + data.paymentTerms);
             }
             content.endText();
 
@@ -639,7 +639,7 @@ public class HTTPServer {
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 8);
-            String thankYou = "Thank you for your business!";
+            String thankYou = t.thankYouMessage;
             float thankYouW = font.getStringWidth(thankYou) / 1000 * 8;
             content.newLineAtOffset((pageWidth - thankYouW) / 2, footerY + 4);
             content.showText(thankYou);
@@ -974,6 +974,7 @@ public class HTTPServer {
         public String bankLabel;
         public String paymentTermsLabel;
         public String paymentDetailsLabel;
+        public String thankYouMessage;
     }
 
     /**
@@ -1004,6 +1005,7 @@ public class HTTPServer {
                 t.bankLabel = "Bank:";
                 t.paymentTermsLabel = "Zahlungsbedingungen:";
                 t.paymentDetailsLabel = "ZAHLUNGSDETAILS";
+                t.thankYouMessage = "Vielen Dank für Ihren Einkauf!";
                 break;
             case "sl":
                 t.invoiceTitle = "RAČUN";
@@ -1024,6 +1026,7 @@ public class HTTPServer {
                 t.bankLabel = "Banka:";
                 t.paymentTermsLabel = "Pogoji plačila:";
                 t.paymentDetailsLabel = "PODATKI O PLAČILU";
+                t.thankYouMessage = "Hvala za vaš nakup!";
                 break;
             default: // English
                 t.invoiceTitle = "INVOICE";
@@ -1044,6 +1047,7 @@ public class HTTPServer {
                 t.bankLabel = "Bank:";
                 t.paymentTermsLabel = "Payment Terms:";
                 t.paymentDetailsLabel = "PAYMENT DETAILS";
+                t.thankYouMessage = "Thank you for your business!";
                 break;
         }
         return t;
