@@ -881,6 +881,9 @@ router.get("/callback", async (req, res) => {
       }
     );
 
+    console.log(`📦 Token response received. Keys:`, Object.keys(tokenResponse.data));
+    console.log(`📦 Full response:`, JSON.stringify(tokenResponse.data, null, 2));
+
     const { access_token } = tokenResponse.data;
 
     if (!access_token) {
@@ -889,6 +892,7 @@ router.get("/callback", async (req, res) => {
     }
 
     console.log(`✅ Access token received for shop: ${normalizedShop}, length: ${access_token.length}`);
+    console.log(`🔑 Token preview: ${access_token.substring(0, 20)}...${access_token.substring(access_token.length - 10)}`);
 
     // Step 3: Save shop configuration with access token to database
     console.log(`💾 Saving shop config to database...`);
