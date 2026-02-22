@@ -4,502 +4,444 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PDFify - Invoice Generator</title>
-
-  <!-- Shopify Polaris CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/@shopify/polaris@8.0.0/build/esm.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
-
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: #f6f6f7;
+      font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
+      min-height: 100vh;
       margin: 0;
       padding: 20px;
-      -webkit-font-smoothing: antialiased;
     }
 
-    .app-container {
-      max-width: 1000px;
-      margin: 0 auto;
+    .gradient-text {
+      background: linear-gradient(135deg, #22c55e 0%, #14b8a6 50%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
 
-    .Polaris-Card {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 0 0 1px rgba(63, 63, 68, 0.05), 0 1px 3px 0 rgba(63, 63, 68, 0.15);
+    .card {
+      background: rgba(30, 27, 75, 0.6);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(139, 92, 246, 0.2);
+      border-radius: 16px;
+      padding: 24px;
       margin-bottom: 20px;
-      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(139, 92, 246, 0.1);
     }
 
-    .Polaris-Header-Title {
-      padding: 20px;
-      border-bottom: 1px solid #e1e3e5;
-    }
-
-    .Polaris-Title {
-      font-size: 20px;
+    .card-title {
+      font-size: 18px;
       font-weight: 600;
-      color: #202223;
-      margin: 0;
+      color: #c4b5fd;
+      margin: 0 0 16px 0;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.2);
     }
 
-    .Polaris-Card__Section {
-      padding: 20px;
-    }
-
-    .Polaris-Labelled {
+    .input-group {
       margin-bottom: 16px;
     }
 
-    .Polaris-Label {
+    .input-label {
       display: block;
-      margin-bottom: 4px;
       font-size: 14px;
       font-weight: 500;
-      color: #6d7175;
+      color: #a5b4fc;
+      margin-bottom: 6px;
     }
 
-    .Polaris-TextField {
+    .input-field {
       width: 100%;
-    }
-
-    .Polaris-Select {
-      width: 100%;
-    }
-
-    .Polaris-Button {
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      font-size: 15px;
-      font-weight: 500;
-      line-height: 1;
+      padding: 10px 14px;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 14px;
       transition: all 0.2s ease;
     }
 
-    .Polaris-Button--primary {
-      background-color: #008060;
+    .input-field:focus {
+      outline: none;
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      text-decoration: none;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
       color: white;
-      border: 1px solid #008060;
+      box-shadow: 0 4px 14px rgba(139, 92, 246, 0.3);
     }
 
-    .Polaris-Button--primary:hover {
-      background-color: #006e52;
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
     }
 
-    .Polaris-Button--secondary {
-      background-color: white;
-      color: #008060;
-      border: 1px solid #008060;
+    .btn-secondary {
+      background: rgba(139, 92, 246, 0.1);
+      color: #c4b5fd;
+      border: 1px solid rgba(139, 92, 246, 0.3);
     }
 
-    .Polaris-Button--secondary:hover {
-      background-color: #f1f2f4;
+    .btn-secondary:hover {
+      background: rgba(139, 92, 246, 0.2);
     }
 
-    .Polaris-Button--destructive {
-      background-color: #de3640;
+    .btn-green {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
       color: white;
-      border: 1px solid #de3640;
+      box-shadow: 0 4px 14px rgba(34, 197, 94, 0.3);
     }
 
-    .Polaris-Button--destructive:hover {
-      background-color: #bd240d;
+    .btn-green:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
     }
 
-    .Polaris-Button--disabled {
-      background-color: #e1e3e5;
-      color: #8c919d;
-      border: 1px solid #e1e3e5;
-      cursor: not-allowed;
+    .btn-teal {
+      background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+      color: white;
+      box-shadow: 0 4px 14px rgba(20, 184, 166, 0.3);
     }
 
-    .Polaris-ButtonGroup {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
+    .btn-teal:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(20, 184, 166, 0.4);
     }
 
-    .Polaris-InlineError {
-      margin: 16px 0;
-      padding: 12px;
-      background: #ffebee;
-      border-radius: 4px;
-      color: #20072c;
+    .message {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
       font-size: 14px;
       display: none;
     }
 
-    .Polaris-Stack {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
+    .message.success {
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      color: #86efac;
     }
 
-    .Polaris-Stack--vertical {
-      gap: 8px;
+    .message.error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
     }
 
-    .Polaris-LegacyCard {
+    .stats-grid {
       display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 16px;
+      margin-bottom: 20px;
     }
 
-    .section-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #202223;
-      margin: 0 0 12px 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .section-title svg {
-      width: 20px;
-      height: 20px;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 12px;
+    .stat-card {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%);
+      border: 1px solid rgba(139, 92, 246, 0.3);
       border-radius: 12px;
-      font-size: 14px;
-      font-weight: 500;
+      padding: 16px;
+      text-align: center;
     }
 
-    .status-badge.connected {
-      background: #f1f8f4;
-      color: #065f46;
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #c4b5fd;
     }
 
-    .status-badge.disconnected {
-      background: #fef2f2;
-      color: #dc2626;
+    .stat-label {
+      font-size: 13px;
+      color: #a5b4fc;
+      margin-top: 4px;
     }
 
-    .Polaris-Checkbox {
-      margin-right: 8px;
+    .color-picker-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }
 
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
+    .color-picker {
+      width: 60px;
+      height: 40px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
     }
 
-    .grid-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 48px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(139, 92, 246, 0.2);
+      transition: 0.3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: 0.3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
     }
 
     .loading-skeleton {
-      background: linear-gradient(90deg, #f6f6f7 25%, #e8e8e8 50%, #f6f6f7 75%);
+      background: linear-gradient(90deg, rgba(139, 92, 246, 0.1) 25%, rgba(139, 92, 246, 0.2) 50%, rgba(139, 92, 246, 0.1) 75%);
       background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 4px;
-      height: 40px;
+      animation: loading 1.5s infinite;
+      border-radius: 8px;
+      height: 20px;
     }
 
-    @keyframes shimmer {
+    @keyframes loading {
       0% { background-position: 200% 0; }
       100% { background-position: -200% 0; }
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
     }
 
     .hidden {
       display: none !important;
     }
 
-    .text-muted {
-      color: #6d7175;
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .upgrade-cta {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(20, 184, 166, 0.15) 100%);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .upgrade-cta h3 {
+      color: #86efac;
+      font-size: 18px;
+      margin: 0 0 8px 0;
+    }
+
+    .upgrade-cta p {
+      color: #a5b4fc;
       font-size: 14px;
-    }
-
-    .mb-4 {
-      margin-bottom: 16px;
-    }
-
-    .mb-6 {
-      margin-bottom: 24px;
-    }
-
-    .mt-4 {
-      margin-top: 16px;
+      margin: 0 0 12px 0;
     }
   </style>
 </head>
 <body>
-  <div id="loading" class="app-container">
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h1 class="Polaris-Title">PDFify - Invoice Generator</h1>
-      </div>
-      <div class="Polaris-Card__Section">
-        <div class="loading-skeleton"></div>
-        <div class="loading-skeleton" style="height: 60px;"></div>
-        <div class="loading-skeleton"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="app" class="app-container hidden">
-
-    <!-- Header Section -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h1 class="PolarisTitle">PDFify Settings</h1>
-        <div class="status-badge connected">
-          <span>✓</span>
-          <span id="connectedShopName">Loading...</span>
-        </div>
+  <div id="app" class="hidden">
+    <!-- Header -->
+    <div class="card" style="text-align: center; padding: 30px;">
+      <h1 class="gradient-text" style="font-size: 36px; font-weight: 800; margin: 0;">
+        PDFify
+      </h1>
+      <p style="color: #a5b4fc; margin-top: 8px; font-size: 16px;">
+        Professional Invoice Generator for Shopify
+      </p>
+      <div style="margin-top: 12px;">
+        <span class="status-badge">✓ Connected to <span id="connectedShopName"></span></span>
       </div>
     </div>
 
-    <!-- Connected Store Info -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Card__Section">
-        <div class="section-title">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M3.00488 15.125H9.75115V21H18.7512V19H20.7511V15.125H21.0049C21.0049 15.125 21.0049 14.875 20.7549 14.625C20.2549 14.125 19.2549 14.125 18.7549 14.125H18.0049C16.2549 14.125 15.0049 14.125 13.7549 14.125V21H9.25115V21H6.25112V21H3.00488V15.125ZM4.50488 19C4.50488 19 5.00488 19 5.50488 19H8.50115V21H9.25115V19H9.50112C10.0011 19 10.5011 19 11.0011 19H18.0049C17.7549 19 17.2549 19 16.7549 19H17.5049V19H19.5049V15.125C19.5049 14.875 19.5049 14.125 19.2549 13.875C19.0049 13.625 19.0049 13.375 18.7549 13.375H4.50488Z"/>
-          </svg>
-          <span>Connected Store</span>
-        </div>
-        <p id="shopDomain" class="text-muted">Loading store information...</p>
+    <!-- Message Display -->
+    <div id="message" class="message"></div>
+
+    <!-- Usage Statistics -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="usageCount">0</div>
+        <div class="stat-label">Invoices Generated</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="usageLimit">30</div>
+        <div class="stat-label">Monthly Limit</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="usageRemaining">30</div>
+        <div class="stat-label">Remaining</div>
       </div>
     </div>
 
     <!-- Quick Actions -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Card__Section">
-        <div class="section-title">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10 2H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18c-1.1 0-2-.9-2-2H8c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h12c1.1 0 2-.9 2-2v-2h-2v2zM12 18H8V4h12v14z"/>
-          </svg>
-          <span>Quick Actions</span>
-        </div>
-
-        <div class="Polaris-ButtonGroup">
-          <button onclick="testConnection()" class="Polaris-Button Polaris-Button--secondary">
-            Test Connection
-          </button>
-          <button onclick="refreshData()" class="PolarisButton Polaris-Button--secondary">
-            Refresh Data
-          </button>
-        </div>
-
-        <div id="statusMessage" class="Polaris-InlineError"></div>
-      </div>
+    <div class="quick-actions">
+      <button onclick="testConnection()" class="btn btn-secondary">
+        🔍 Test Connection
+      </button>
+      <button onclick="refreshData()" class="btn btn-secondary">
+        🔄 Refresh Data
+      </button>
     </div>
 
-    <!-- Customer Invoices Section -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h2 class="Polaris-Title">Customer Invoices</h2>
+    <!-- Customer Invoices -->
+    <div class="card">
+      <h2 class="card-title">📧 Automatic Customer Invoices</h2>
+      <div class="input-group">
+        <label class="switch">
+          <input type="checkbox" id="allowCustomerPDF">
+          <span class="slider"></span>
+        </label>
+        <span style="color: #c4b5fd; margin-left: 12px; font-size: 14px;">
+          Enable automatic invoice generation for customers
+        </span>
       </div>
-      <div class="Polaris-Card__Section">
-        <p class="text-muted mb-4">
-          Automatically send PDF invoices to customers when they place an order.
-        </p>
-
-        <div class="Polaris-Labelled">
-          <label class="Polaris-Checkbox">
-            <input type="checkbox" id="allowCustomerPDF" class="Polaris-Checkbox" />
-            <span>Enable automatic customer invoices</span>
-          </label>
-        </div>
-
-        <div class="Polaris-ButtonGroup">
-          <button onclick="saveSettings()" class="Polaris-Button Polaris-Button--primary">
-            Save Settings
-          </button>
-          <button onclick="loadCustomerPDFSettings()" class="PolarisButton Polaris-Button--secondary">
-            Refresh
-          </button>
-        </div>
-      </div>
+      <button onclick="saveSettings()" class="btn btn-primary">💾 Save Settings</button>
     </div>
 
-    <!-- Branding Section -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h2 class="Polaris-Title">Branding</h2>
-      </div>
-      <div class="Polaris-Card__Section">
-        <div class="Polaris-LegacyCard">
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">Accent Color</label>
-            <div class="Polaris-Stack Polaris-Stack--vertical">
-              <input type="color" id="primaryColor" value="#00a6cc" class="Polaris-TextField" style="height: 40px; width: 100px;" />
-              <input type="text" id="primaryColorText" value="#00a6cc" class="Polaris-TextField" />
-            </div>
-          </div>
-
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">Company Name</label>
-            <input type="text" id="companyName" placeholder="Your Company Ltd" class="Polaris-TextField" />
-          </div>
-        </div>
-
-        <div class="mt-4">
-          <button onclick="saveBranding()" class="Polaris-Button Polaris-Button--primary">
-            Save Branding
-          </button>
+    <!-- Branding -->
+    <div class="card">
+      <h2 class="card-title">🎨 Branding & Appearance</h2>
+      <div class="input-group">
+        <label class="input-label">Accent Color</label>
+        <div class="color-picker-wrapper">
+          <input type="color" id="primaryColor" class="color-picker" value="#8b5cf6">
+          <input type="text" id="primaryColorText" class="input-field" value="#8b5cf6" style="width: 120px;">
         </div>
       </div>
+      <div class="input-group">
+        <label class="input-label">Company Name</label>
+        <input type="text" id="companyName" class="input-field" placeholder="Your Company Ltd.">
+      </div>
+      <button onclick="saveBranding()" class="btn btn-primary">💾 Save Branding</button>
     </div>
 
     <!-- Payment Details -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h2 class="Polaris-Title">Payment Details</h2>
+    <div class="card">
+      <h2 class="card-title">💳 Payment Details</h2>
+      <div class="input-group">
+        <label class="input-label">IBAN</label>
+        <input type="text" id="iban" class="input-field" placeholder="DE89370400440532013000">
       </div>
-      <div class="Polaris-Card__Section">
-        <p class="text-muted mb-4">
-          These will appear on your merchant invoices.
-        </p>
-
-        <div class="Polaris-LegacyCard">
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">IBAN</label>
-            <input type="text" id="iban" placeholder="DE89370400440532013000" class="Polaris-TextField" />
-          </div>
-
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">BIC</label>
-            <input type="text" id="bic" placeholder="COBADEFFXXX" class="Polaris-TextField" />
-          </div>
-
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">Bank Name</label>
-            <input type="text" id="bankName" placeholder="Your Bank Name" class="Polaris-TextField" />
-          </div>
-        </div>
-
-        <div class="mt-4">
-          <button onclick="savePaymentDetails()" class="Polaris-Button Polaris-Button--primary">
-            Save Payment Details
-          </button>
-        </div>
+      <div class="input-group">
+        <label class="input-label">BIC</label>
+        <input type="text" id="bic" class="input-field" placeholder="COBADEFFXXX">
       </div>
+      <div class="input-group">
+        <label class="input-label">Bank Name</label>
+        <input type="text" id="bankName" class="input-field" placeholder="Commerzbank">
+      </div>
+      <button onclick="savePaymentDetails()" class="btn btn-primary">💾 Save Payment Details</button>
     </div>
 
-    <!-- Download Invoices Section -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h2 class="Polaris-Title">Download Invoices</h2>
+    <!-- Order Download -->
+    <div class="card">
+      <h2 class="card-title">📥 Download Invoice</h2>
+      <div class="input-group">
+        <label class="input-label">Select Order</label>
+        <select id="orderSelector" class="input-field">
+          <option value="">Loading orders...</option>
+        </select>
       </div>
-      <div class="Polaris-Card__Section">
-        <div class="section-title">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M4 4a2 2 0 0 0 2-2h8a2 2 0 0 0 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4zm2-2h12v12H6V4z"/>
-          </svg>
-          <span>Download Single Invoice</span>
-        </div>
-
-        <div class="Polaris-Labelled">
-          <label class="Polaris-Label">Select Order</label>
-          <select id="orderSelector" class="Polaris-Select">
-            <option value="">Loading orders...</option>
-          </select>
-        </div>
-
-        <button id="downloadOrderPdf" onclick="downloadOrderInvoice()" class="Polaris-Button Polaris-Button--primary">
-          Download Invoice
-        </button>
-
-        <p id="downloadStatus" class="text-muted mt-4"></p>
-      </div>
+      <button onclick="downloadOrderInvoice()" class="btn btn-green">
+        📄 Download PDF Invoice
+      </button>
+      <p id="downloadStatus" style="margin-top: 12px; font-size: 14px; color: #a5b4fc;"></p>
     </div>
 
-    <!-- Date Range & ZIP Download -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h2 class="Polaris-Title">Bulk Download</h2>
-      </div>
-      <div class="Polaris-Card__Section">
-        <p class="text-muted mb-4">
-          Download multiple invoices as a ZIP file.
-        </p>
-
-        <div class="grid-3">
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">From Date</label>
-            <input type="date" id="fromDate" class="Polaris-TextField" />
-          </div>
-
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">To Date</label>
-            <input type="date" id="toDate" class="Polaris-TextField" />
-          </div>
-
-          <div class="Polaris-Labelled">
-            <label class="Polaris-Label">&nbsp;</label>
-            <button onclick="loadOrdersForDateRange()" class="Polaris-Button Polaris-Button--secondary">
-              Load Orders
-            </button>
-          </div>
+    <!-- Bulk Download -->
+    <div class="card">
+      <h2 class="card-title">📦 Bulk Invoice Download</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="input-group">
+          <label class="input-label">From Date</label>
+          <input type="date" id="fromDate" class="input-field">
         </div>
-
-        <div class="mt-4">
-          <button id="downloadAllZip" onclick="downloadAllInvoicesZip()" class="Polaris-Button Polaris-Button--primary">
-            Download All Invoices (ZIP)
-          </button>
-        </div>
-
-        <p id="zipStatus" class="text-muted mt-4"></p>
-      </div>
-    </div>
-
-    <!-- Usage Statistics -->
-    <div class="Polaris-Card">
-      <div class="Polaris-Header-Title">
-        <h2 class="Polaris-Title">Usage Statistics</h2>
-      </div>
-      <div class="PolarisCard__Section">
-        <div class="grid-3">
-          <div class="text-center">
-            <p class="text-muted">PDFs Generated</p>
-            <p class="Polaris-Title" style="font-size: 32px; margin: 0;" id="usageCount">0</p>
-          </div>
-          <div class="text-center">
-            <p class="text-muted">Monthly Limit</p>
-            <p class="Polaris-Title" style="font-size: 32px; margin: 0;" id="usageLimit">30</p>
-          </div>
-          <div class="text-center">
-            <p class="text-muted">Remaining</p>
-            <p class="Polaris-Title" style="font-size: 32px; margin: 0; color: #008060;" id="usageRemaining">30</p>
-          </div>
+        <div class="input-group">
+          <label class="input-label">To Date</label>
+          <input type="date" id="toDate" class="input-field">
         </div>
       </div>
+      <button onclick="downloadBulkInvoices()" class="btn btn-teal">
+        📦 Download ZIP Archive
+      </button>
+      <p id="zipStatus" style="margin-top: 12px; font-size: 14px; color: #a5b4fc;"></p>
     </div>
 
     <!-- Upgrade CTA -->
-    <div class="Polaris-Card" style="background: linear-gradient(135deg, #f6f6f7 0%, #e8e8e8 100%);">
-      <div class="PolarisCard__Section text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width: 48px; height: 48px; margin: 0 auto 16px;">
-          <path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-8-8Zm0 14c-3.31 0-6-2.69-6-6 0-3.31 2.69-6 6-6 1.79 0 3.36-.84 4.55-2.13 1.62-.28 2.08 1.12 3.76 2.83 3.76 3.76 0 003.4 0 2.89-2.13 4.55-.9 1.71-2.08 1.12-3.76 2.83ZM6 14.06c-1.94 0-3.5-1.56-3.5-3.5 0-1.94 1.56-3.5 3.5 1.94 0 3.5 1.56 3.5 3.5 0 1.94-1.56 3.5-3.5-3.5Zm6-8.06c-1.94 0-3.5-1.56-3.5-3.5 0-1.94 1.56-3.5 3.5 1.94 0 3.5 1.56 3.5 3.5 0 1.94-1.56 3.5-3.5-3.5Zm2.33 5.24c-1.14 0-2.08-.94-2.08-2.08 0-1.14.94-2.08 2.08-.94 2.08-2.08 2.08-2.08 2.08-2.08-.94-2.08-2.08Z" clip-rule="evenodd"/>
-        </svg>
-        <h3 class="Polaris-Title" style="margin-bottom: 8px;">Need More Pages?</h3>
-        <p class="text-muted">Purchase token packs to go beyond your monthly limit.</p>
-        <a href="https://pdfify.pro" target="_blank" style="color: #008060; text-decoration: none;">
-          Upgrade Your Plan →
-        </a>
-      </div>
+    <div class="upgrade-cta">
+      <h3>⭐ Upgrade to Pro</h3>
+      <p>Get unlimited invoices, PDF/A-3b compliance, and ZUGFeRD XML support</p>
+      <a href="https://pdfify.pro" target="_blank" class="btn btn-green" style="display: inline-flex;">
+        🚀 Upgrade Now
+      </a>
     </div>
-
   </div>
 
-  <!-- Shopify App Bridge -->
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- Loading -->
+  <div id="loading" class="card" style="text-align: center; padding: 60px 20px;">
+    <div class="loading-skeleton" style="height: 40px; width: 200px; margin: 0 auto 20px;"></div>
+    <div class="loading-skeleton" style="width: 100%;"></div>
+    <div class="loading-skeleton" style="width: 80%;"></div>
+    <p style="color: #a5b4fc; margin-top: 20px;">Loading your settings...</p>
+  </div>
+
   <script>
-    // Shopify API credentials
+    // Shopify App Bridge
+    let app;
     const SHOPIFY_API_KEY = 'e07548c088f572af4bbf103e4dee46bb';
 
     // Parse shop from URL
@@ -508,14 +450,6 @@
     const host = urlParams.get('host');
 
     // Initialize App Bridge
-    const AppBridge = window['app-bridge'];
-    const createApp = AppBridge.default;
-    const Redirect = AppBridge.actions.Redirect;
-    const Toast = AppBridge.actions.Toast;
-
-    let app;
-    let toast;
-
     if (shop && host) {
       app = createApp({
         apiKey: SHOPIFY_API_KEY,
@@ -523,28 +457,41 @@
         host: host,
         forceRedirect: false
       });
-
-      toast = Toast.create(app, { duration: 3000 });
     }
 
     // API client
     const api = axios.create({
       baseURL: 'https://pdfify.pro/api',
-      timeout: 10000
+      timeout: 30000
+    });
+
+    // Sync color picker
+    document.addEventListener('DOMContentLoaded', () => {
+      const colorPicker = document.getElementById('primaryColor');
+      const colorText = document.getElementById('primaryColorText');
+
+      if (colorPicker && colorText) {
+        colorPicker.addEventListener('input', (e) => {
+          colorText.value = e.target.value;
+        });
+        colorText.addEventListener('input', (e) => {
+          if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
+            colorPicker.value = e.target.value;
+          }
+        });
+      }
+
+      // Initialize app
+      loadInitialData();
     });
 
     // Show message
-    function showMessage(message, isError = false) {
-      const el = document.getElementById('statusMessage');
-      el.className = `Polaris-InlineError ${isError ? '' : 'hidden'}`;
-      el.textContent = message;
-      el.style.display = 'block';
-
-      if (toast) {
-        toast.dispatch(Toast.show(message, { duration: 3000, isError }));
-      }
-
-      setTimeout(() => el.style.display = 'none', 5000);
+    function showMessage(text, isError = false) {
+      const msgEl = document.getElementById('message');
+      msgEl.textContent = text;
+      msgEl.className = 'message ' + (isError ? 'error' : 'success');
+      msgEl.style.display = 'block';
+      setTimeout(() => msgEl.style.display = 'none', 5000);
     }
 
     // Load initial data
@@ -555,7 +502,6 @@
         const config = configRes.data;
 
         // Update UI
-        document.getElementById('shopDomain').textContent = shop;
         document.getElementById('connectedShopName').textContent = shop;
 
         // Load customer PDF settings
@@ -585,8 +531,8 @@
         const usageRes = await api.get(`/shopify/usage-stats?shopDomain=${encodeURIComponent(shop)}`);
         if (usageRes.data) {
           document.getElementById('usageCount').textContent = usageRes.data.used || 0;
-          document.getElementById('usageLimit').textContent = usageRes.data.limit || 30;
-          const remaining = (usageRes.data.limit || 30) - (usageRes.data.used || 0);
+          document.getElementById('usageLimit').textContent = usageRes.data.limit === Infinity ? '∞' : (usageRes.data.limit || 30);
+          const remaining = usageRes.data.limit === Infinity ? '∞' : Math.max(0, (usageRes.data.limit || 30) - (usageRes.data.used || 0));
           document.getElementById('usageRemaining').textContent = remaining;
         }
 
@@ -754,43 +700,21 @@
         return;
       }
 
-      try {
-        const select = document.getElementById('orderSelector');
-        select.innerHTML = '<option value="">Loading orders...</option>';
-
-        const res = await api.get(`/shopify/orders-public?shopDomain=${encodeURIComponent(shop)}&from=${fromDate}&to=${toDate}`);
-        const orders = res.data.orders || [];
-
-        if (orders.length === 0) {
-          select.innerHTML = '<option value="">No orders found in this date range</option>';
-          zipStatus.textContent = `Found 0 orders for selected dates`;
-        } else {
-          orders.forEach(order => {
-            const option = document.createElement('option');
-            option.value = order.id;
-            option.textContent = `${order.name} - ${order.total_price} ${order.currency || 'USD'}`;
-            select.appendChild(option);
-          });
-          zipStatus.textContent = `Found ${orders.length} orders for selected dates`;
-        }
-      } catch (err) {
-        console.error('Failed to load orders:', err);
-        showMessage('Failed to load orders. Please try again.', true);
-      }
+      zipStatus.textContent = 'Loading orders...';
     }
 
-    // Download all invoices as ZIP
-    async function downloadAllInvoicesZip() {
+    // Download bulk invoices
+    async function downloadBulkInvoices() {
       const fromDate = document.getElementById('fromDate').value;
       const toDate = document.getElementById('toDate').value;
       const zipStatus = document.getElementById('zipStatus');
 
       if (!fromDate && !toDate) {
-        zipStatus.textContent = 'Please select a date range first.';
+        showMessage('Please select at least one date.', true);
         return;
       }
 
-      zipStatus.textContent = 'Generating ZIP file... This may take a few minutes for large order sets...';
+      zipStatus.textContent = 'Generating ZIP archive...';
 
       try {
         const res = await api.post('/shopify/invoices/zip-public', {
@@ -805,37 +729,18 @@
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        const filename = `Invoices_${fromDate}_to_${toDate || 'end'}.zip`;
-        a.download = filename;
+        a.download = `Invoices_${fromDate || 'start'}_to_${toDate || 'end'}.zip`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
 
-        zipStatus.textContent = 'ZIP file downloaded successfully!';
+        zipStatus.textContent = `ZIP archive downloaded successfully!`;
         setTimeout(() => zipStatus.textContent = '', 5000);
       } catch (err) {
-        console.error('Failed to generate ZIP:', err);
-        zipStatus.textContent = 'Failed to generate ZIP. Please try again.';
+        console.error('Failed to download ZIP:', err);
+        zipStatus.textContent = 'Failed to download: ' + (err.response?.data?.error || err.message);
       }
-    }
-
-    // Color picker sync
-    document.getElementById('primaryColor').addEventListener('input', (e) => {
-      document.getElementById('primaryColorText').value = e.target.value;
-    });
-
-    document.getElementById('primaryColorText').addEventListener('input', (e) => {
-      if (/^#[0-9A-Fa-f]{6}$/.test(e.target.value)) {
-        document.getElementById('primaryColor').value = e.target.value;
-      }
-    });
-
-    // Initialize
-    if (shop) {
-      loadInitialData();
-    } else {
-      document.getElementById('loading').innerHTML = '<p class="text-red-600">Error: Shop parameter not found. Please reinstall the app.</p>';
     }
   </script>
 </body>
