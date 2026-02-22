@@ -322,7 +322,7 @@
     <div id="planInfoBanner" class="card" style="background: linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%); border: 1px solid rgba(251, 191, 36, 0.3);">
       <h3 style="color: #fde047; font-size: 16px; font-weight: 600; margin: 0 0 8px 0;">📋 Your Current Plan: <span id="currentPlanName">Free</span></h3>
       <p id="planFeatures" style="color: #a5b4fc; font-size: 13px; margin: 0; line-height: 1.6;">
-        Basic PDF invoices (30 pages/month). <strong style="color: #fca5a5;">No ZUGFeRD XML attachment.</strong> Upgrade for electronic invoice compliance.
+        PDF/A-3b compliant invoices (30 pages/month). <strong style="color: #fca5a5;">No ZUGFeRD XML attachment.</strong> Upgrade for electronic invoice compliance.
       </p>
     </div>
 
@@ -419,6 +419,17 @@
         </div>
       </div>
       <div class="input-group">
+        <label class="input-label">Invoice Language</label>
+        <select id="invoiceLanguage" class="input-field">
+          <option value="en">🇬🇧 English</option>
+          <option value="de">🇩🇪 German (Deutsch)</option>
+          <option value="sl">🇸🇮 Slovenian (Slovenščina)</option>
+        </select>
+        <p style="color: #a5b4fc; font-size: 12px; margin-top: 6px;">
+          Select the default language for your invoices
+        </p>
+      </div>
+      <div class="input-group">
         <label class="input-label">Company Name</label>
         <input type="text" id="companyName" class="input-field" placeholder="Your Company Ltd.">
       </div>
@@ -481,7 +492,7 @@
     <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(168, 85, 247, 0.1) 100%);">
       <h2 class="card-title">💎 Upgrade Your Plan</h2>
       <p style="color: #a5b4fc; margin-bottom: 16px; font-size: 14px;">
-        Free users get basic PDFs. Upgrade for <strong>ZUGFeRD XML 2.4</strong> + <strong>PDF/A-3b compliance</strong>.
+        All plans include <strong>PDF/A-3b compliant</strong> invoices. Upgrade for <strong>ZUGFeRD XML 2.4</strong> electronic invoicing.
       </p>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
@@ -493,9 +504,9 @@
             €4.99<span style="font-size: 14px; font-weight: 400; color: #a5b4fc;">/mo</span>
           </div>
           <ul style="list-style: none; padding: 0; margin: 0 0 12px 0; font-size: 13px; color: #a5b4fc;">
-            <li style="margin-bottom: 4px;">✓ <strong>1,000</strong> PDF pages/month</li>
+            <li style="margin-bottom: 4px;">✓ <strong>100</strong> PDF pages/month</li>
+            <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliant</li>
             <li style="margin-bottom: 4px;">✓ <strong>ZUGFeRD XML 2.4</strong> embedded</li>
-            <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliance</li>
             <li style="margin-bottom: 4px;">✓ SAP, DATEV compatible</li>
           </ul>
           <a href="https://pdfify.pro" target="_blank" class="btn btn-green" style="width: 100%; font-size: 13px; padding: 8px 16px;">
@@ -512,9 +523,9 @@
             €49.99<span style="font-size: 14px; font-weight: 400; color: #a5b4fc;">/mo</span>
           </div>
           <ul style="list-style: none; padding: 0; margin: 0 0 12px 0; font-size: 13px; color: #a5b4fc;">
-            <li style="margin-bottom: 4px;">✓ <strong>10,000</strong> PDF pages/month</li>
+            <li style="margin-bottom: 4px;">✓ <strong>Unlimited</strong> PDF pages</li>
+            <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliant</li>
             <li style="margin-bottom: 4px;">✓ <strong>ZUGFeRD XML 2.4</strong> embedded</li>
-            <li style="margin-bottom: 4px;">✓ <strong>PDF/A-3b</strong> compliance</li>
             <li style="margin-bottom: 4px;">✓ Priority support</li>
             <li style="margin-bottom: 4px;">✓ Bulk CSV processing</li>
           </ul>
@@ -698,6 +709,9 @@
           document.getElementById('primaryColor').value = config.primaryColor;
           document.getElementById('primaryColorText').value = config.primaryColor;
         }
+        if (config.invoiceLanguage) {
+          document.getElementById('invoiceLanguage').value = config.invoiceLanguage;
+        }
         if (config.companyName) {
           document.getElementById('companyName').value = config.companyName;
         }
@@ -742,16 +756,16 @@
             planNameEl.textContent = plan;
 
             if (plan === 'Free') {
-              planFeaturesEl.innerHTML = 'Basic PDF invoices (30 pages/month). <strong style="color: #fca5a5;">No ZUGFeRD XML attachment.</strong> Upgrade for electronic invoice compliance.';
+              planFeaturesEl.innerHTML = '<strong>PDF/A-3b compliant</strong> invoices (30 pages/month). <strong style="color: #fca5a5;">No ZUGFeRD XML attachment.</strong> Upgrade for electronic invoice compliance.';
               planInfoBanner.style.background = 'linear-gradient(135deg, rgba(251, 191, 36, 0.1) 0%, rgba(245, 158, 11, 0.05) 100%)';
               planInfoBanner.style.border = '1px solid rgba(251, 191, 36, 0.3)';
             } else if (plan === 'Premium') {
-              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> + <strong>PDF/A-3b</strong> compliant invoices (1,000 pages/month). Compatible with SAP, DATEV.';
+              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> embedded + <strong>PDF/A-3b</strong> compliant invoices (100 pages/month). Compatible with SAP, DATEV.';
               planInfoBanner.style.background = 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%)';
               planInfoBanner.style.border = '1px solid rgba(34, 197, 94, 0.3)';
               document.querySelector('#planInfoBanner h3').style.color = '#86efac';
             } else if (plan === 'Pro') {
-              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> + <strong>PDF/A-3b</strong> compliant invoices (10,000 pages/month). Priority support + bulk processing.';
+              planFeaturesEl.innerHTML = '✅ <strong>ZUGFeRD XML 2.4</strong> embedded + <strong>PDF/A-3b</strong> compliant invoices (unlimited). Priority support + bulk processing.';
               planInfoBanner.style.background = 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%)';
               planInfoBanner.style.border = '1px solid rgba(234, 179, 8, 0.4)';
               document.querySelector('#planInfoBanner h3').style.color = '#fde047';
@@ -847,12 +861,14 @@
     // Save branding
     async function saveBranding() {
       const primaryColor = document.getElementById('primaryColor').value;
+      const invoiceLanguage = document.getElementById('invoiceLanguage').value;
       const companyName = document.getElementById('companyName').value;
 
       try {
         await api.post('/shopify/branding', {
           shopDomain: shop,
           primaryColor,
+          invoiceLanguage,
           companyName
         });
         showMessage('Branding saved successfully!');
@@ -892,6 +908,7 @@
 
       const statusEl = document.getElementById('downloadStatus');
       statusEl.textContent = 'Generating invoice...';
+      statusEl.style.color = '#a5b4fc';
 
       try {
         const res = await api.post('/shopify/invoice-public', {
@@ -901,6 +918,26 @@
         }, {
           responseType: 'blob'
         });
+
+        // Check if response is actually a PDF
+        const contentType = res.headers['content-type'];
+        if (!contentType || !contentType.includes('application/pdf')) {
+          // Response is not a PDF, try to read as JSON error
+          const text = await new Response(res.data).text();
+          let errorDetails = 'Unknown error';
+          try {
+            const errorJson = JSON.parse(text);
+            errorDetails = errorJson.error || errorJson.details || text;
+          } catch {
+            errorDetails = text.substring(0, 200);
+          }
+          throw new Error('Server returned non-PDF response: ' + errorDetails);
+        }
+
+        // Check if blob has valid content (not empty)
+        if (!res.data || res.data.size < 100) {
+          throw new Error('Generated PDF is too small or empty');
+        }
 
         const blob = new Blob([res.data], { type: 'application/pdf' });
         const url = window.URL.createObjectURL(blob);
@@ -912,11 +949,14 @@
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
 
-        statusEl.textContent = `Invoice downloaded successfully!`;
-        setTimeout(() => statusEl.textContent = '', 5000);
+        statusEl.textContent = `✅ Invoice downloaded successfully! (${(res.data.size / 1024).toFixed(1)} KB)`;
+        statusEl.style.color = '#86efac';
+        setTimeout(() => statusEl.textContent = '', 10000);
       } catch (err) {
         console.error('Failed to download invoice:', err);
-        statusEl.textContent = 'Failed to download. Please try again.';
+        statusEl.textContent = `❌ ${err.message}`;
+        statusEl.style.color = '#fca5a5';
+        setTimeout(() => statusEl.textContent = '', 15000);
       }
     }
 

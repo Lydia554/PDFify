@@ -648,6 +648,7 @@ router.get("/config", async (req, res) => {
     res.json({
       allowCustomerPDF: shopConfig.allowCustomerPDF || false,
       primaryColor: shopConfig.primaryColor || "#00a6cc",
+      invoiceLanguage: shopConfig.invoiceLanguage || "en",
       companyName: shopConfig.companyName || "",
       iban: shopConfig.iban || "",
       bic: shopConfig.bic || "",
@@ -1189,12 +1190,17 @@ router.get("/usage-stats", async (req, res) => {
     // Get user to check plan tier
     const user = await User.findOne({ connectedShopDomain: normalizedShop });
 
-    // Determine limit based on plan (default 30 for free/premium, 500 for pro)
-    const limit = user?.plan === 'pro' ? 500 : 30;
+    // Check both planType and plan for backwards compatibility
+    const userPlan = user?.planType || user?.plan || 'free';
+
+    // Determine limit based on plan
+    const planLimits = { free: 30, premium: 100, pro: Infinity };
+    const limit = planLimits[userPlan] || 30;
 
     return res.json({
       used: shopConfig.usageCount || 0,
       limit: limit,
+      plan: userPlan,
       shop: normalizedShop
     });
   } catch (error) {
@@ -1241,17 +1247,22 @@ router.get("/branding", async (req, res) => {
  */
 router.post("/branding", async (req, res) => {
   try {
-    const { shopDomain, primaryColor, companyName, bankName, iban, bic } = req.body;
+    const { shopDomain, primaryColor, invoiceLanguage, companyName, bankName, iban, bic } = req.body;
     if (!shopDomain) {
       return res.status(400).json({ error: "Missing shopDomain" });
     }
 
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+    // Validate language is one of the supported locales
+    const validLanguages = ['en', 'de', 'sl'];
+    const validatedLanguage = validLanguages.includes(invoiceLanguage) ? invoiceLanguage : 'en';
+
     const shopConfig = await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
       {
         primaryColor: primaryColor || "#00a6cc",
+        invoiceLanguage: validatedLanguage,
         companyName: companyName || "",
         bankName: bankName || "",
         iban: iban || "",
@@ -1263,6 +1274,7 @@ router.post("/branding", async (req, res) => {
     return res.json({
       message: "Branding saved successfully",
       primaryColor: shopConfig.primaryColor,
+      invoiceLanguage: shopConfig.invoiceLanguage,
       companyName: shopConfig.companyName,
       bankName: shopConfig.bankName
     });
@@ -1412,54 +1424,98 @@ router.post("/invoice-public", async (req, res) => {
       return res.status(400).json({ error: "Invalid order data" });
     }
 
-    // Map order items
-    const items = (order.line_items || []).map((item) => {
-      const quantity = parseFloat(item.quantity || 1);
-      const price = parseFloat(item.price || 0);
-      const net = price * quantity;
-      const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
-      const total = net + tax;
-      return { name: item.title || item.name || "Item", quantity, price, net, tax, total, taxRate: 21 };
-    });
+    // Use saved language preference from shop config, or fallback to auto-detect
+    const savedLang = shopConfig.invoiceLanguage;
+    const { lang: detectedLang } = await resolveLanguage({ req, order, shopDomain, shopConfig });
+    const lang = savedLang || detectedLang;
+    const locale = locales[lang] || locales["en"];
 
-    const subtotal = items.reduce((sum, i) => sum + i.net, 0);
-    const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
-    const total = subtotal + taxTotal;
-
-    const invoiceData = {
-      orderId: order.name || order.id,
-      date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-      items,
-      subtotal,
-      tax: taxTotal,
-      total,
-      vatRate: 21,
-      customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
-      iban: shopConfig.iban || "DE89370400440532013000",
-      bic: shopConfig.bic || "COBADEFFXXX",
-      bankName: shopConfig.bankName || "",
-      companyName: shopConfig.companyName || "",
-      primaryColor: shopConfig.primaryColor || "#00a6cc",
-      paymentTerms: order.payment_terms || "Due within 14 days",
-      creator: "PDFify",
-      locale: { language: "en" },
-    };
-
-    // Generate PDF using Java service for pro users
-    // Check if there's an associated user with a pro plan
+    // Check if there's an associated user with a plan
     const user = await User.findOne({ connectedShopDomain: normalizedShop });
-    const userPlan = user?.plan || 'free';
+    const userPlan = user?.planType || user?.plan || 'free';
+    const isPayingCustomer = userPlan === 'pro' || userPlan === 'premium';
 
-    let pdfBuffer;
-    if (userPlan === 'pro') {
+    console.log(`🧾 [Shopify Public] Generating invoice for ${userPlan} user, merchant=${merchant}, lang=${lang}`);
+
+    // Use the proper merchant invoice generation logic (Java service for ALL users)
+    const invoiceData = mapOrderToPdfData(order, shopConfig, user);
+    // Override locale with selected language
+    invoiceData.locale = { language: lang };
+
+    // Add ZUGFeRD XML ONLY for paying customers (premium/pro)
+    if (isPayingCustomer) {
       try {
-        pdfBuffer = await generateJavaInvoice(invoiceData, shopDomain, order);
-      } catch (javaError) {
-        console.warn("Java service failed, falling back to Puppeteer:", javaError.message);
-        pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+        console.log(`🧾 [Shopify Public] Generating ZUGFeRD XML for ${userPlan} user...`);
+        const zugferdData = {
+          orderId: invoiceData.orderId,
+          date: invoiceData.date,
+          currency: invoiceData.currency,
+          customerName: invoiceData.customerName,
+          companyName: invoiceData.companyName,
+          iban: invoiceData.iban,
+          items: invoiceData.items,
+          subtotal: invoiceData.subtotal,
+          tax: invoiceData.tax,
+          total: invoiceData.total,
+          sellerAddress: {
+            postCode: "12345",
+            street: invoiceData.shopAddress || "Main Street 1",
+            city: "Anytown",
+            country: "DE"
+          },
+          buyerAddress: {
+            postCode: "12345",
+            street: invoiceData.customerAddress?.split(',')[0] || "Customer Street 1",
+            city: invoiceData.customerAddress?.split(',')[1] || "Customerton",
+            country: invoiceData.customerAddress?.split(',')[3] || "DE"
+          },
+          sellerVatId: "DE123456789",
+          vatRate: invoiceData.vatRate || 21
+        };
+        invoiceData.zugferdXml = generateZugferdXml(zugferdData);
+        console.log("🧾 [Shopify Public] ZUGFeRD XML generated:", invoiceData.zugferdXml.length, "bytes");
+      } catch (zugferdErr) {
+        console.error("🧾 [Shopify Public] Failed to generate ZUGFeRD XML:", zugferdErr.message);
+        // Continue without XML for paying customers if XML generation fails
       }
     } else {
-      pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+      console.log("🧾 [Shopify Public] Free user - generating compliant PDF WITHOUT ZUGFeRD XML");
+    }
+
+    // Fetch logo from Shopify
+    try {
+      const logoUrl = await getShopLogoUrl(normalizedShop, shopConfig.shopifyAccessToken);
+      if (logoUrl) {
+        const logoBase64 = await getBase64Image(logoUrl);
+        if (logoBase64 && logoBase64.length > 0) {
+          invoiceData.logoData = logoBase64;
+          console.log("🧾 [Shopify Public] Logo added to invoice");
+        }
+      }
+    } catch (logoErr) {
+      console.warn("Failed to fetch logo:", logoErr.message);
+    }
+
+    const filename = `Invoice_${invoiceData.orderId}_${Date.now()}.pdf`;
+    let pdfBuffer;
+
+    // Generate PDF using Java service - NO FALLBACK to Puppeteer
+    try {
+      pdfBuffer = await createPdfA3WithJava(invoiceData, filename);
+      console.log(`📄 PDF/A-3b invoice generated via Java service, size: ${pdfBuffer.length} bytes`);
+    } catch (javaError) {
+      console.error("❌ Java PDF service failed:", javaError.message);
+      return res.status(503).json({
+        error: "PDF generation service unavailable",
+        details: javaError.message,
+        hint: "Please ensure the Java PDF service is running on port 8080"
+      });
+    }
+
+    // Verify PDF buffer is valid before sending
+    if (!pdfBuffer || pdfBuffer.length < 100) {
+      console.error("❌ Invalid PDF buffer generated, size:", pdfBuffer?.length);
+      return res.status(500).json({ error: "Generated PDF is invalid or empty" });
     }
 
     // Increment usage
@@ -1504,9 +1560,10 @@ router.post("/invoices/zip-public", async (req, res) => {
     // Check if there's an associated user with a plan for usage limits
     const user = await User.findOne({ connectedShopDomain: normalizedShop });
     const planLimits = { free: 30, premium: 100, pro: Infinity };
-    const userPlan = user?.plan || 'free';
+    const userPlan = user?.planType || user?.plan || 'free';
     const limit = planLimits[userPlan] || 30;
     const currentUsage = user?.usageCount || 0;
+    const isPayingCustomer = userPlan === 'pro' || userPlan === 'premium';
 
     if (currentUsage >= limit && limit !== Infinity) {
       return res.status(429).json({ error: "Monthly limit reached. Please upgrade your plan." });
@@ -1528,52 +1585,79 @@ router.post("/invoices/zip-public", async (req, res) => {
       return res.status(404).json({ error: "No orders found in this date range" });
     }
 
+    // Use saved language preference
+    const savedLang = shopConfig.invoiceLanguage;
+    const lang = savedLang || "en";
+    const locale = locales[lang] || locales["en"];
+
+    console.log(`📦 [ZIP] Generating ${orders.length} invoices for ${userPlan} user, lang=${lang}`);
+
     const zip = new JSZip();
 
     // Process orders
     for (const order of orders) {
-      const items = (order.line_items || []).map((item) => {
-        const quantity = parseFloat(item.quantity || 1);
-        const price = parseFloat(item.price || 0);
-        const net = price * quantity;
-        const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
-        const total = net + tax;
-        return { name: item.title || item.name || "Item", quantity, price, net, tax, total, taxRate: 21 };
-      });
+      // Build invoice data using mapOrderToPdfData
+      const invoiceData = mapOrderToPdfData(order, shopConfig, user);
+      // Override locale with selected language
+      invoiceData.locale = { language: lang };
 
-      const subtotal = items.reduce((sum, i) => sum + i.net, 0);
-      const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
-      const total = subtotal + taxTotal;
-
-      const invoiceData = {
-        orderId: order.name || order.id,
-        date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-        items,
-        subtotal,
-        tax: taxTotal,
-        total,
-        vatRate: 21,
-        customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
-        iban: shopConfig.iban || "DE89370400440532013000",
-        bic: shopConfig.bic || "COBADEFFXXX",
-        bankName: shopConfig.bankName || "",
-        companyName: shopConfig.companyName || "",
-        primaryColor: shopConfig.primaryColor || "#00a6cc",
-        paymentTerms: order.payment_terms || "Due within 14 days",
-        creator: "PDFify",
-        locale: { language: "en" },
-      };
-
-      let pdfBuffer;
-      if (userPlan === 'pro') {
+      // Add ZUGFeRD XML ONLY for paying customers
+      if (isPayingCustomer) {
         try {
-          pdfBuffer = await generateJavaInvoice(invoiceData, shopDomain, order);
-        } catch (javaError) {
-          console.warn("Java service failed, falling back to Puppeteer:", javaError.message);
-          pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+          const zugferdData = {
+            orderId: invoiceData.orderId,
+            date: invoiceData.date,
+            currency: invoiceData.currency,
+            customerName: invoiceData.customerName,
+            companyName: invoiceData.companyName,
+            iban: invoiceData.iban,
+            items: invoiceData.items,
+            subtotal: invoiceData.subtotal,
+            tax: invoiceData.tax,
+            total: invoiceData.total,
+            sellerAddress: {
+              postCode: "12345",
+              street: invoiceData.shopAddress || "Main Street 1",
+              city: "Anytown",
+              country: "DE"
+            },
+            buyerAddress: {
+              postCode: "12345",
+              street: invoiceData.customerAddress?.split(',')[0] || "Customer Street 1",
+              city: invoiceData.customerAddress?.split(',')[1] || "Customerton",
+              country: invoiceData.customerAddress?.split(',')[3] || "DE"
+            },
+            sellerVatId: "DE123456789",
+            vatRate: invoiceData.vatRate || 21
+          };
+          invoiceData.zugferdXml = generateZugferdXml(zugferdData);
+        } catch (zugferdErr) {
+          console.error("Failed to generate ZUGFeRD XML:", zugferdErr.message);
         }
-      } else {
-        pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+      }
+
+      // Fetch logo from Shopify
+      try {
+        const logoUrl = await getShopLogoUrl(normalizedShop, shopConfig.shopifyAccessToken);
+        if (logoUrl) {
+          const logoBase64 = await getBase64Image(logoUrl);
+          if (logoBase64 && logoBase64.length > 0) {
+            invoiceData.logoData = logoBase64;
+          }
+        }
+      } catch (logoErr) {
+        // Skip logo on error
+      }
+
+      const filename = `Invoice_${invoiceData.orderId}_${Date.now()}.pdf`;
+      let pdfBuffer;
+
+      // Generate PDF using Java service - NO FALLBACK to Puppeteer
+      try {
+        pdfBuffer = await createPdfA3WithJava(invoiceData, filename);
+      } catch (javaError) {
+        console.error("❌ Java PDF service failed for order:", order.name, javaError.message);
+        throw new Error(`PDF generation failed for order ${order.name}: ${javaError.message}`);
       }
 
       const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
