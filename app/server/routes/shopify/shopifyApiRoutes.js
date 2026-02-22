@@ -165,10 +165,15 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
     return result;
   };
 
-  // Build customer name
+  // Build customer name - fallback to email if name not available
   const firstName = order.customer?.first_name || "";
   const lastName = order.customer?.last_name || "";
-  const customerName = `${firstName} ${lastName}`.trim() || "Valued Customer";
+  let customerName = `${firstName} ${lastName}`.trim();
+
+  // If no name, use email or fallback
+  if (!customerName || customerName === "") {
+    customerName = order.customer?.email?.split('@')[0] || "Valued Customer";
+  }
 
   // Build customer address
   const customerAddress = buildAddress(order.shipping_address) ||
@@ -183,14 +188,17 @@ async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null
   // Get language for translations
   const lang = shopConfig.invoiceLanguage || order.locale || "en";
 
-  // Translate payment terms if not set
+  // Translate payment terms - always use translated version based on language
   const paymentTermsTranslations = {
     en: "Due within 14 days",
     de: "Zahlbar innerhalb von 14 Tagen",
     sl: "Zapadno v 14 dneh"
   };
 
-  const paymentTerms = order.payment_terms || shopConfig.paymentTerms || paymentTermsTranslations[lang] || paymentTermsTranslations.en;
+  // Use the translated payment terms for the selected language
+  const paymentTerms = paymentTermsTranslations[lang] || paymentTermsTranslations.en;
+
+  console.log(`[DEBUG] Using language: ${lang}, paymentTerms: "${paymentTerms}"`);
 
   // Fetch shop details from Shopify to get shop address
   let shopAddress = shopConfig.shopAddress || null;
@@ -1511,12 +1519,13 @@ router.post("/invoice-public", async (req, res) => {
     const isPayingCustomer = userPlan === 'pro' || userPlan === 'premium';
 
     console.log(`🧾 [Shopify Public] Generating invoice for ${userPlan} user, merchant=${merchant}, lang=${lang}`);
-    console.log(`🧾 [Shopify Public] shopConfig.primaryColor: ${shopConfig.primaryColor}`);
+    console.log(`🧾 [Shopify Public] shopConfig.primaryColor: "${shopConfig.primaryColor}"`);
 
     // Use the proper merchant invoice generation logic (Java service for ALL users)
     const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop);
-    console.log(`🧾 [Shopify Public] invoiceData.primaryColor: ${invoiceData.primaryColor}`);
-    console.log(`🧾 [Shopify Public] invoiceData.customerName: ${invoiceData.customerName}`);
+    console.log(`🧾 [Shopify Public] invoiceData.primaryColor: "${invoiceData.primaryColor}"`);
+    console.log(`🧾 [Shopify Public] invoiceData.customerName: "${invoiceData.customerName}"`);
+    console.log(`🧾 [Shopify Public] invoiceData.paymentTerms: "${invoiceData.paymentTerms}"`);
     // Override locale with selected language
     invoiceData.locale = { language: lang };
 
