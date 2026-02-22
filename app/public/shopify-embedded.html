@@ -609,7 +609,7 @@
         const select = document.getElementById('orderSelector');
         select.innerHTML = '<option value="">Select an order...</option>';
 
-        const res = await api.get(`/shopify/orders?shopDomain=${encodeURIComponent(shop)}`);
+        const res = await api.get(`/shopify/orders-public?shopDomain=${encodeURIComponent(shop)}`);
         const orders = res.data.orders || [];
 
         orders.forEach(order => {
@@ -692,7 +692,7 @@
       const bankName = document.getElementById('bankName').value;
 
       try {
-        await api.post('/shopify/payment-details', {
+        await api.post('/shopify/branding', {
           shopDomain: shop,
           iban,
           bic,
@@ -717,7 +717,7 @@
       statusEl.textContent = 'Generating invoice...';
 
       try {
-        const res = await api.post('/shopify/invoice', {
+        const res = await api.post('/shopify/invoice-public', {
           shopDomain: shop,
           orderId,
           merchant: true
@@ -758,7 +758,7 @@
         const select = document.getElementById('orderSelector');
         select.innerHTML = '<option value="">Loading orders...</option>';
 
-        const res = await api.get(`/shopify/orders?shopDomain=${encodeURIComponent(shop)}&from=${fromDate}&to=${toDate}`);
+        const res = await api.get(`/shopify/orders-public?shopDomain=${encodeURIComponent(shop)}&from=${fromDate}&to=${toDate}`);
         const orders = res.data.orders || [];
 
         if (orders.length === 0) {
@@ -793,7 +793,7 @@
       zipStatus.textContent = 'Generating ZIP file... This may take a few minutes for large order sets...';
 
       try {
-        const res = await api.post('/shopify/invoices/zip', {
+        const res = await api.post('/shopify/invoices/zip-public', {
           shopDomain: shop,
           from: fromDate,
           to: toDate

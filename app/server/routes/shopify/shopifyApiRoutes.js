@@ -520,8 +520,21 @@ router.get("/config", async (req, res) => {
   if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
 
   try {
-    const shopConfig = await ShopConfig.findOne({ shopDomain });
-    res.json({ allowCustomerPDF: shopConfig?.allowCustomerPDF || false });
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    if (!shopConfig) {
+      return res.status(404).json({ error: "Shop not found" });
+    }
+
+    res.json({
+      allowCustomerPDF: shopConfig.allowCustomerPDF || false,
+      primaryColor: shopConfig.primaryColor || "#00a6cc",
+      companyName: shopConfig.companyName || "",
+      iban: shopConfig.iban || "",
+      bic: shopConfig.bic || "",
+      bankName: shopConfig.bankName || ""
+    });
   } catch (err) {
     console.error("Failed to fetch Shopify config:", err);
     res.status(500).json({ error: "Failed to fetch config" });
@@ -877,6 +890,410 @@ router.get("/test-connection", async (req, res) => {
   } catch (error) {
     console.error("❌ Connection test error:", error);
     res.status(500).json({ error: "Connection test failed" });
+  }
+});
+
+/**
+ * Get usage statistics for embedded app
+ * GET /api/shopify/usage-stats?shopDomain=store.myshopify.com
+ */
+router.get("/usage-stats", async (req, res) => {
+  try {
+    const { shopDomain } = req.query;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Get shop config with usage count
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    if (!shopConfig) {
+      return res.status(404).json({ error: "Shop not found" });
+    }
+
+    // Get user to check plan tier
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+
+    // Determine limit based on plan (default 30 for free/premium, 500 for pro)
+    const limit = user?.plan === 'pro' ? 500 : 30;
+
+    return res.json({
+      used: shopConfig.usageCount || 0,
+      limit: limit,
+      shop: normalizedShop
+    });
+  } catch (error) {
+    console.error("❌ Usage stats error:", error);
+    res.status(500).json({ error: "Failed to fetch usage stats" });
+  }
+});
+
+/**
+ * Get branding settings for embedded app
+ * GET /api/shopify/branding?shopDomain=store.myshopify.com
+ */
+router.get("/branding", async (req, res) => {
+  try {
+    const { shopDomain } = req.query;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    if (!shopConfig) {
+      return res.status(404).json({ error: "Shop not found" });
+    }
+
+    return res.json({
+      primaryColor: shopConfig.primaryColor || "#00a6cc",
+      companyName: shopConfig.companyName || "",
+      bankName: shopConfig.bankName || "",
+      iban: shopConfig.iban || "",
+      bic: shopConfig.bic || ""
+    });
+  } catch (error) {
+    console.error("❌ Get branding error:", error);
+    res.status(500).json({ error: "Failed to fetch branding settings" });
+  }
+});
+
+/**
+ * Save branding settings for embedded app
+ * POST /api/shopify/branding
+ */
+router.post("/branding", async (req, res) => {
+  try {
+    const { shopDomain, primaryColor, companyName, bankName, iban, bic } = req.body;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    const shopConfig = await ShopConfig.findOneAndUpdate(
+      { shopDomain: normalizedShop },
+      {
+        primaryColor: primaryColor || "#00a6cc",
+        companyName: companyName || "",
+        bankName: bankName || "",
+        iban: iban || "",
+        bic: bic || ""
+      },
+      { upsert: true, new: true }
+    );
+
+    return res.json({
+      message: "Branding saved successfully",
+      primaryColor: shopConfig.primaryColor,
+      companyName: shopConfig.companyName,
+      bankName: shopConfig.bankName
+    });
+  } catch (error) {
+    console.error("❌ Save branding error:", error);
+    res.status(500).json({ error: "Failed to save branding settings" });
+  }
+});
+
+/**
+ * Save payment details for embedded app
+ * POST /api/shopify/payment-details
+ */
+router.post("/payment-details", async (req, res) => {
+  try {
+    const { shopDomain, iban, bic, bankName } = req.body;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    const shopConfig = await ShopConfig.findOneAndUpdate(
+      { shopDomain: normalizedShop },
+      {
+        iban: iban || "",
+        bic: bic || "",
+        bankName: bankName || ""
+      },
+      { upsert: true, new: true }
+    );
+
+    return res.json({
+      message: "Payment details saved successfully",
+      iban: shopConfig.iban,
+      bic: shopConfig.bic,
+      bankName: shopConfig.bankName
+    });
+  } catch (error) {
+    console.error("❌ Save payment details error:", error);
+    res.status(500).json({ error: "Failed to save payment details" });
+  }
+});
+
+/**
+ * Public orders endpoint for embedded app (no authentication required)
+ * Uses shop domain to find user and access token
+ * GET /api/shopify/orders-public?shopDomain=store.myshopify.com
+ */
+router.get("/orders-public", async (req, res) => {
+  try {
+    const { shopDomain, from, to } = req.query;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Find user with this shop connected
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+    if (!user || !user.shopifyAccessToken) {
+      return res.status(404).json({ error: "Shop not connected. Please install the app first." });
+    }
+
+    // Fetch orders from Shopify
+    let shopifyOrdersUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=250&status=any&fields=id,name,created_at,total_price,currency`;
+
+    const params = [];
+    if (from) params.push(`created_at_min=${encodeURIComponent(from + "T00:00:00Z")}`);
+    if (to) params.push(`created_at_max=${encodeURIComponent(to + "T23:59:59Z")}`);
+    if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
+
+    const response = await axios.get(shopifyOrdersUrl, {
+      headers: { "X-Shopify-Access-Token": user.shopifyAccessToken },
+    });
+
+    const orders = response.data.orders.map(o => ({
+      id: o.id,
+      name: o.name,
+      date: new Date(o.created_at).toISOString().slice(0, 10),
+      total_price: o.total_price,
+      currency: o.currency
+    }));
+
+    res.json({ orders });
+  } catch (err) {
+    console.error("❌ Failed to fetch orders:", err.response?.data || err.message);
+    res.status(500).json({ error: "Failed to fetch orders" });
+  }
+});
+
+/**
+ * Public invoice endpoint for embedded app (no authentication required)
+ * POST /api/shopify/invoice-public
+ */
+router.post("/invoice-public", async (req, res) => {
+  try {
+    const { shopDomain, orderId, merchant } = req.body;
+    if (!shopDomain || !orderId) {
+      return res.status(400).json({ error: "Missing shopDomain or orderId" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Verify shop is connected via OAuth
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+    if (!user || !user.shopifyAccessToken) {
+      return res.status(401).json({ error: "Shop not connected. Please reinstall the app." });
+    }
+
+    // Fetch order from Shopify
+    let actualOrderId = orderId;
+    if (typeof actualOrderId === "string" && actualOrderId.startsWith("gid://")) {
+      actualOrderId = actualOrderId.split("/").pop();
+    }
+
+    const orderResp = await axios.get(`https://${normalizedShop}/admin/api/2023-10/orders/${actualOrderId}.json`, {
+      headers: { "X-Shopify-Access-Token": user.shopifyAccessToken },
+    });
+    const order = orderResp.data.order;
+
+    if (!order || !order.line_items) {
+      return res.status(400).json({ error: "Invalid order data" });
+    }
+
+    // Get shop config
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop }) || {};
+
+    // Map order items
+    const items = (order.line_items || []).map((item) => {
+      const quantity = parseFloat(item.quantity || 1);
+      const price = parseFloat(item.price || 0);
+      const net = price * quantity;
+      const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+      const total = net + tax;
+      return { name: item.title || item.name || "Item", quantity, price, net, tax, total, taxRate: 21 };
+    });
+
+    const subtotal = items.reduce((sum, i) => sum + i.net, 0);
+    const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
+    const total = subtotal + taxTotal;
+
+    const invoiceData = {
+      orderId: order.name || order.id,
+      date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+      items,
+      subtotal,
+      tax: taxTotal,
+      total,
+      vatRate: 21,
+      customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
+      iban: shopConfig.iban || "DE89370400440532013000",
+      bic: shopConfig.bic || "COBADEFFXXX",
+      bankName: shopConfig.bankName || "",
+      companyName: shopConfig.companyName || "",
+      primaryColor: shopConfig.primaryColor || "#00a6cc",
+      paymentTerms: order.payment_terms || "Due within 14 days",
+      creator: "PDFify",
+      locale: { language: "en" },
+    };
+
+    // Generate PDF using Java service for pro users
+    let pdfBuffer;
+    if (user.plan === 'pro') {
+      try {
+        pdfBuffer = await generateJavaInvoice(invoiceData, shopDomain, order);
+      } catch (javaError) {
+        console.warn("Java service failed, falling back to Puppeteer:", javaError.message);
+        pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+      }
+    } else {
+      pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+    }
+
+    // Increment usage
+    await User.findByIdAndUpdate(user._id, { $inc: { usageCount: 1 } });
+    await ShopConfig.findOneAndUpdate(
+      { shopDomain: normalizedShop },
+      { $inc: { usageCount: 1 } }
+    );
+
+    res.set({
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename=Invoice-${order.name || orderId}.pdf`,
+    });
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error("❌ Invoice generation error:", error);
+    res.status(500).json({ error: "Failed to generate invoice", details: error.message });
+  }
+});
+
+/**
+ * Public ZIP endpoint for embedded app (no authentication required)
+ * POST /api/shopify/invoices/zip-public
+ */
+router.post("/invoices/zip-public", async (req, res) => {
+  try {
+    const { shopDomain, from, to } = req.body;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Verify shop is connected via OAuth
+    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+    if (!user || !user.shopifyAccessToken) {
+      return res.status(401).json({ error: "Shop not connected. Please reinstall the app." });
+    }
+
+    // Check usage limits
+    const planLimits = { free: 30, premium: 100, pro: Infinity };
+    const limit = planLimits[user.plan] || 30;
+    if (user.usageCount >= limit && limit !== Infinity) {
+      return res.status(429).json({ error: "Monthly limit reached. Please upgrade your plan." });
+    }
+
+    // Fetch orders from Shopify
+    let shopifyOrdersUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=50&status=any&fields=id,name,created_at,line_items,customer,total_price,currency,payment_terms`;
+    const params = [];
+    if (from) params.push(`created_at_min=${encodeURIComponent(from + "T00:00:00Z")}`);
+    if (to) params.push(`created_at_max=${encodeURIComponent(to + "T23:59:59Z")}`);
+    if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
+
+    const response = await axios.get(shopifyOrdersUrl, {
+      headers: { "X-Shopify-Access-Token": user.shopifyAccessToken },
+    });
+    const orders = response.data.orders;
+
+    if (!orders.length) {
+      return res.status(404).json({ error: "No orders found in this date range" });
+    }
+
+    const zip = new JSZip();
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop }) || {};
+
+    // Process orders
+    for (const order of orders) {
+      const items = (order.line_items || []).map((item) => {
+        const quantity = parseFloat(item.quantity || 1);
+        const price = parseFloat(item.price || 0);
+        const net = price * quantity;
+        const tax = (item.tax_lines || []).reduce((sum, t) => sum + parseFloat(t.price || 0), 0);
+        const total = net + tax;
+        return { name: item.title || item.name || "Item", quantity, price, net, tax, total, taxRate: 21 };
+      });
+
+      const subtotal = items.reduce((sum, i) => sum + i.net, 0);
+      const taxTotal = items.reduce((sum, i) => sum + i.tax, 0);
+      const total = subtotal + taxTotal;
+
+      const invoiceData = {
+        orderId: order.name || order.id,
+        date: order.created_at ? new Date(order.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+        items,
+        subtotal,
+        tax: taxTotal,
+        total,
+        vatRate: 21,
+        customerName: `${order.customer?.first_name || ""} ${order.customer?.last_name || ""}`.trim() || "Valued Customer",
+        iban: shopConfig.iban || "DE89370400440532013000",
+        bic: shopConfig.bic || "COBADEFFXXX",
+        bankName: shopConfig.bankName || "",
+        companyName: shopConfig.companyName || "",
+        primaryColor: shopConfig.primaryColor || "#00a6cc",
+        paymentTerms: order.payment_terms || "Due within 14 days",
+        creator: "PDFify",
+        locale: { language: "en" },
+      };
+
+      let pdfBuffer;
+      if (user.plan === 'pro') {
+        try {
+          pdfBuffer = await generateJavaInvoice(invoiceData, shopDomain, order);
+        } catch (javaError) {
+          console.warn("Java service failed, falling back to Puppeteer:", javaError.message);
+          pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+        }
+      } else {
+        pdfBuffer = await generatePuppeteerInvoice(invoiceData, order, shopDomain);
+      }
+
+      const safeOrderId = (order.name || order.id || "unknown").replace(/[^a-zA-Z0-9_-]/g, "_");
+      zip.file(`Invoice-${safeOrderId}.pdf`, pdfBuffer);
+    }
+
+    // Increment usage
+    await User.findByIdAndUpdate(user._id, { $inc: { usageCount: orders.length } });
+    await ShopConfig.findOneAndUpdate(
+      { shopDomain: normalizedShop },
+      { $inc: { usageCount: orders.length } }
+    );
+
+    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+
+    res.set({
+      "Content-Type": "application/zip",
+      "Content-Disposition": `attachment; filename=Invoices_${from || "start"}_to_${to || "end"}.zip`,
+    });
+    res.send(zipBuffer);
+  } catch (error) {
+    console.error("❌ ZIP generation error:", error);
+    res.status(500).json({ error: "Failed to generate ZIP", details: error.message });
   }
 });
 
