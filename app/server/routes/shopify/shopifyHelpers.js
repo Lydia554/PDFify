@@ -102,9 +102,43 @@ async function getShopLogoUrl(shopDomain, token) {
   }
 }
 
+/**
+ * Fetch shop details from Shopify including address
+ */
+async function getShopDetails(shopDomain, token) {
+  try {
+    const response = await axios.get(`https://${shopDomain}/admin/api/2023-10/shop.json`, {
+      headers: { 'X-Shopify-Access-Token': token },
+    });
+    return response.data.shop;
+  } catch (err) {
+    console.warn(`Could not fetch shop details for ${shopDomain}:`, err.message);
+    return null;
+  }
+}
+
+/**
+ * Format shop address from Shopify shop object
+ */
+function formatShopAddress(shop) {
+  if (!shop) return null;
+
+  const parts = [
+    shop.address1,
+    shop.address2,
+    shop.city,
+    shop.zip,
+    shop.country || shop.country_code
+  ].filter(p => p && p.trim() !== '');
+
+  return parts.length > 0 ? parts.join(', ') : null;
+}
+
 module.exports = {
   resolveShopifyToken,
   fetchProductImage,
   enrichLineItemsWithImages,
-  getShopLogoUrl
+  getShopLogoUrl,
+  getShopDetails,
+  formatShopAddress
 };

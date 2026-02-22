@@ -297,10 +297,12 @@ public class HTTPServer {
             }
 
             // "INVOICE" title (large, dark) - TRANSLATED
+            // Position based on whether there's a logo
+            float titleX = margin + (logoHeight > 0 ? 200 : 0);
             content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
             content.beginText();
             content.setFont(font, 32);
-            content.newLineAtOffset(margin + 220, headerY);
+            content.newLineAtOffset(titleX, headerY);
             content.showText(t.invoiceTitle);
             content.endText();
 
@@ -310,7 +312,7 @@ public class HTTPServer {
             float detailLineHeight = 18;
 
             // Calculate widths for positioning - TRANSLATED
-            String invLabel = t.invoiceLabel + " Number:";
+            String invLabel = t.invoiceNumberLabel + ":";
             String invValue = data.orderId;
             String dateLabel = t.dateLabel;
             String dateValue = data.date;
@@ -356,12 +358,12 @@ public class HTTPServer {
             float fromY = headerY - 60;
             float columnWidth = (contentWidth - 40) / 2;
 
-            // FROM section
+            // FROM section - TRANSLATED
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 8);
             content.newLineAtOffset(margin, fromY);
-            content.showText("FROM");
+            content.showText(t.fromLabel);
             content.endText();
 
             content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
@@ -391,14 +393,14 @@ public class HTTPServer {
             }
             content.endText();
 
-            // BILL TO section
+            // BILL TO section - TRANSLATED
             float billToX = margin + columnWidth + 40;
 
             content.setNonStrokingColor(0.5f, 0.5f, 0.5f);
             content.beginText();
             content.setFont(font, 8);
             content.newLineAtOffset(billToX, fromY);
-            content.showText("BILL TO");
+            content.showText(t.billToLabel);
             content.endText();
 
             content.setNonStrokingColor(0.12f, 0.12f, 0.12f);
@@ -585,7 +587,7 @@ public class HTTPServer {
             content.beginText();
             content.setFont(font, 8);
             content.newLineAtOffset(margin, payY);
-            content.showText("PAYMENT DETAILS"); // Keep this in English for now or translate
+            content.showText(t.paymentDetailsLabel);
             content.endText();
 
             // Small divider
@@ -618,8 +620,9 @@ public class HTTPServer {
 
             if (data.paymentTerms != null && !data.paymentTerms.isEmpty()) {
                 content.newLineAtOffset(-75, -14);
-                content.showText(t.paymentTermsLabel);
-                content.newLineAtOffset(75, 0);
+                content.showText(t.paymentTermsLabel + ": ");
+                float labelWidth = font.getStringWidth(t.paymentTermsLabel + ": ") / 1000 * 8;
+                content.newLineAtOffset(75 - labelWidth, 0);
                 content.showText(data.paymentTerms);
             }
             content.endText();
@@ -955,6 +958,10 @@ public class HTTPServer {
     private static class Translations {
         public String invoiceTitle;
         public String invoiceLabel;
+        public String invoiceNumberLabel;
+        public String fromLabel;
+        public String toLabel;
+        public String billToLabel;
         public String dateLabel;
         public String descriptionLabel;
         public String qtyLabel;
@@ -966,6 +973,7 @@ public class HTTPServer {
         public String bicLabel;
         public String bankLabel;
         public String paymentTermsLabel;
+        public String paymentDetailsLabel;
     }
 
     /**
@@ -980,6 +988,10 @@ public class HTTPServer {
             case "de":
                 t.invoiceTitle = "RECHNUNG";
                 t.invoiceLabel = "Rechnung";
+                t.invoiceNumberLabel = "Rechnungsnummer";
+                t.fromLabel = "VON";
+                t.toLabel = "AN";
+                t.billToLabel = "RECHNUNGSEMPFÄNGER";
                 t.dateLabel = "Datum:";
                 t.descriptionLabel = "Beschreibung";
                 t.qtyLabel = "Menge";
@@ -991,10 +1003,15 @@ public class HTTPServer {
                 t.bicLabel = "BIC:";
                 t.bankLabel = "Bank:";
                 t.paymentTermsLabel = "Zahlungsbedingungen:";
+                t.paymentDetailsLabel = "ZAHLUNGSDETAILS";
                 break;
             case "sl":
                 t.invoiceTitle = "RAČUN";
                 t.invoiceLabel = "Račun";
+                t.invoiceNumberLabel = "Številka računa";
+                t.fromLabel = "OD";
+                t.toLabel = "ZA";
+                t.billToLabel = "PREJEMNIK";
                 t.dateLabel = "Datum:";
                 t.descriptionLabel = "Opis";
                 t.qtyLabel = "Količina";
@@ -1006,10 +1023,15 @@ public class HTTPServer {
                 t.bicLabel = "BIC:";
                 t.bankLabel = "Banka:";
                 t.paymentTermsLabel = "Pogoji plačila:";
+                t.paymentDetailsLabel = "PODATKI O PLAČILU";
                 break;
             default: // English
                 t.invoiceTitle = "INVOICE";
                 t.invoiceLabel = "Invoice";
+                t.invoiceNumberLabel = "Invoice Number";
+                t.fromLabel = "FROM";
+                t.toLabel = "TO";
+                t.billToLabel = "BILL TO";
                 t.dateLabel = "Date:";
                 t.descriptionLabel = "Description";
                 t.qtyLabel = "Qty";
@@ -1021,6 +1043,7 @@ public class HTTPServer {
                 t.bicLabel = "BIC:";
                 t.bankLabel = "Bank:";
                 t.paymentTermsLabel = "Payment Terms:";
+                t.paymentDetailsLabel = "PAYMENT DETAILS";
                 break;
         }
         return t;

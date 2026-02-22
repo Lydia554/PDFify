@@ -10,7 +10,7 @@ const ShopConfig = require("../../models/ShopConfig");
 const User = require("../../models/User");
 const authenticate = require("../../middleware/authenticate");
 const dualAuth = require("../../middleware/dualAuth");
-const { resolveShopifyToken, getShopLogoUrl } = require("./shopifyHelpers");
+const { resolveShopifyToken, getShopLogoUrl, getShopDetails, formatShopAddress } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = require("./customerInvoice");
@@ -105,10 +105,11 @@ async function getBase64Image(url) {
  * @param {object} order - Shopify order object
  * @param {object} shopConfig - Shop configuration
  * @param {object} user - User object
+ * @param {string} token - Shopify access token
+ * @param {string} shopDomain - Shop domain
  * @returns {object} Invoice data for Java service
  */
-function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
-  const shopDomain = user?.connectedShopDomain;
+async function mapOrderToPdfData(order, shopConfig = {}, user = {}, token = null, shopDomain = null) {
   const prettyShopName = shopDomain ? shopDomain.split('.')[0].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : "Your Shop";
 
   const items = (order.line_items || []).map((item, index) => {
@@ -148,7 +149,7 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
   const buildAddress = (addr) => {
     if (!addr) return null;
     const parts = [
-      addr.address1 || addr.name || '',
+      addr.address1 || '',
       addr.city || '',
       addr.zip || addr.postal_code || '',
       addr.country_code || addr.country || ''
@@ -159,6 +160,22 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
   const customerAddress = buildAddress(order.shipping_address) ||
                           buildAddress(order.billing_address) ||
                           "Customer Address Not Available";
+
+  // Fetch shop details from Shopify to get shop address
+  let shopAddress = shopConfig.shopAddress || null;
+  if (token && shopDomain && !shopAddress) {
+    try {
+      const shop = await getShopDetails(shopDomain, token);
+      shopAddress = formatShopAddress(shop);
+      // Cache the shop address in shopConfig for future use
+      if (shopAddress && shopConfig) {
+        shopConfig.shopAddress = shopAddress;
+        await shopConfig.save();
+      }
+    } catch (err) {
+      console.warn("Failed to fetch shop details from Shopify:", err.message);
+    }
+  }
 
   return {
     orderId: order.name || order.id,
@@ -178,11 +195,11 @@ function mapOrderToPdfData(order, shopConfig = {}, user = {}) {
     iban: shopConfig.iban || "DE89370400440532013000",
     bic: shopConfig.bic || "COBADEFFXXX",
     bankName: shopConfig.bankName || "",
-    paymentTerms: order.payment?.terms || "Due within 14 days",
+    paymentTerms: order.payment_terms || "Due within 14 days",
     creator: "PDFify",
     companyName: shopConfig.companyName || prettyShopName,
     shopName: shopConfig.shopName || prettyShopName,
-    shopAddress: shopConfig.shopAddress || "123 Main St, Anytown, Country",
+    shopAddress: shopAddress || "123 Main St, Anytown, Country",
     primaryColor: shopConfig.primaryColor || "#00a6cc",
     locale: { language: shopConfig.invoiceLanguage || order.locale || "en", format: locale },
   };
@@ -388,7 +405,7 @@ try {
   console.log("🧾 [Shopify] Customer:", order?.customer?.first_name, order?.customer?.last_name);
   console.log("🧾 [Shopify] Line items:", order?.line_items?.length);
 
-  const invoiceData = mapOrderToPdfData(order, shopConfig, user);
+  const invoiceData = await mapOrderToPdfData(order, shopConfig, user, token, shopDomain);
 
   console.log("🧾 [Shopify] Mapped invoiceData - orderId:", invoiceData.orderId);
   console.log("🧾 [Shopify] Mapped invoiceData - customerName:", invoiceData.customerName);
@@ -1450,7 +1467,7 @@ router.post("/invoice-public", async (req, res) => {
     console.log(`🧾 [Shopify Public] Generating invoice for ${userPlan} user, merchant=${merchant}, lang=${lang}`);
 
     // Use the proper merchant invoice generation logic (Java service for ALL users)
-    const invoiceData = mapOrderToPdfData(order, shopConfig, user);
+    const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop);
     // Override locale with selected language
     invoiceData.locale = { language: lang };
 
@@ -1609,7 +1626,7 @@ router.post("/invoices/zip-public", async (req, res) => {
     // Process orders
     for (const order of orders) {
       // Build invoice data using mapOrderToPdfData
-      const invoiceData = mapOrderToPdfData(order, shopConfig, user);
+      const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop);
       // Override locale with selected language
       invoiceData.locale = { language: lang };
 
