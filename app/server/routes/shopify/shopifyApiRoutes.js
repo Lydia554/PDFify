@@ -713,6 +713,15 @@ router.get("/config", async (req, res) => {
       return res.status(404).json({ error: "Shop not found" });
     }
 
+    // Fetch shop details to get owner email
+    let shopEmail = null;
+    try {
+      const shopDetails = await getShopDetails(normalizedShop, shopConfig.shopifyAccessToken);
+      shopEmail = shopDetails?.email;
+    } catch (err) {
+      console.warn("Could not fetch shop email:", err.message);
+    }
+
     res.json({
       allowCustomerPDF: shopConfig.allowCustomerPDF || false,
       primaryColor: shopConfig.primaryColor || "#00a6cc",
@@ -720,7 +729,8 @@ router.get("/config", async (req, res) => {
       companyName: shopConfig.companyName || "",
       iban: shopConfig.iban || "",
       bic: shopConfig.bic || "",
-      bankName: shopConfig.bankName || ""
+      bankName: shopConfig.bankName || "",
+      shopEmail: shopEmail || ""
     });
   } catch (err) {
     console.error("Failed to fetch Shopify config:", err);
@@ -1725,6 +1735,16 @@ router.post("/invoices/zip-public", async (req, res) => {
     const limit = planLimits[userPlan] || 30;
     const currentUsage = user?.usageCount || 0;
     const isPayingCustomer = userPlan === 'pro' || userPlan === 'premium';
+
+    // BLOCK bulk download for free users - only premium/pro can use bulk
+    if (userPlan === 'free') {
+      console.log(`🚫 [ZIP] Blocking bulk download for free user`);
+      return res.status(403).json({
+        error: "Bulk download is not available on your plan",
+        details: "Bulk download is a Premium feature. Please upgrade to Premium (€4.99/mo) or Pro (€49.99/mo) to use bulk download.",
+        hint: "Free users can download individual invoices using the single invoice download feature."
+      });
+    }
 
     // Fetch orders from Shopify FIRST to validate limit
     let shopifyOrdersUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=50&status=any&fields=id,name,created_at,line_items,customer,total_price,currency,payment_terms`;

@@ -35,8 +35,7 @@ router.post(
 
   try {
     const customerEmail = session.customer_details.email;
-    let user = await User.findOne({ email: customerEmail });
-
+    const shopDomain = session.metadata?.shopDomain;
     const priceId = session.metadata?.priceId || null;
 
     // --- Token pack mapping ---
@@ -46,75 +45,120 @@ router.post(
       price_token_10000: 10000
     };
 
+    // Handle token packs first
     if (priceId && tokenMapping[priceId]) {
-      
-      if (!user) {
-        console.warn("User not found for token pack:", customerEmail);
-        return;
+      let user;
+
+      // For Shopify purchases, find or create user by shopDomain
+      if (shopDomain) {
+        user = await User.findOne({ connectedShopDomain: shopDomain });
+
+        if (!user) {
+          // Create new user for this shop
+          const apiKey = require("crypto").randomBytes(24).toString("hex");
+          user = new User({
+            email: customerEmail,
+            apiKey,
+            password: require("crypto").randomBytes(24).toString("hex"),
+            connectedShopDomain: shopDomain,
+            extraPages: tokenMapping[priceId],
+          });
+          await user.save();
+          log(`🪙 Created new user for shop ${shopDomain} with ${tokenMapping[priceId]} extra pages`);
+        } else {
+          user.extraPages = (user.extraPages || 0) + tokenMapping[priceId];
+          await user.save();
+          log(`🪙 Added ${tokenMapping[priceId]} extra pages for shop ${shopDomain}`);
+        }
+      } else {
+        // Regular token purchase - find by email
+        user = await User.findOne({ email: customerEmail });
+        if (!user) {
+          console.warn("User not found for token pack:", customerEmail);
+          return;
+        }
+        user.extraPages = (user.extraPages || 0) + tokenMapping[priceId];
+        await user.save();
+        log(`🪙 Added ${tokenMapping[priceId]} extra pages for ${customerEmail}`);
       }
-
-      user.extraPages = (user.extraPages || 0) + tokenMapping[priceId];
-      await user.save();
-
-      log(`🪙 Added ${tokenMapping[priceId]} extra pages for ${customerEmail}`);
 
       await sendEmail({
         to: customerEmail,
         subject: "Token Pack Purchased",
-        text: `Hi ${user.email},\n\nYou have successfully purchased ${tokenMapping[priceId]} extra pages!\n\nBest regards,\nThe PDFify Team`,
+        text: `Hi,\n\nYou have successfully purchased ${tokenMapping[priceId]} extra pages for your Shopify store!\n\nBest regards,\nThe PDFify Team`,
       });
 
-      return; 
+      return;
     }
 
-   
+    // Handle subscription purchases
     const subscription = await stripe.subscriptions.retrieve(session.subscription);
     const subPriceId = subscription.items.data[0].price.id;
     const price = await stripe.prices.retrieve(subPriceId);
-    const planType = price.metadata.plan_type || "premium";
+    const planType = price.metadata.plan_type || session.metadata?.planType || "premium";
 
-    if (!user) {
-      console.warn("User not found for email:", customerEmail);
+    let user;
 
-      const apiKey = require("crypto").randomBytes(24).toString("hex");
-      user = new User({
-        email: customerEmail,
-        apiKey,
-        password: "temporaryPassword123",
-        stripeSubscriptionId: session.subscription,
-        isPremium: true,
-        maxUsage: planType === "pro" ? 10000 : 1000,
-        planType,
-      });
+    // For Shopify purchases, find by shopDomain
+    if (shopDomain) {
+      user = await User.findOne({ connectedShopDomain: shopDomain });
 
-      await user.save();
-
-      await sendEmail({
-        to: "admin@example.com",
-        subject: "User Not Found for Stripe Subscription",
-        text: `A Stripe subscription was completed for email: ${customerEmail}, and a new user was created.`,
-      });
-
-      log("New user created:", user);
-    } else {
-      user.stripeSubscriptionId = session.subscription;
-      user.isPremium = true;
-      user.planType = planType;
-
-      if (planType === "pro") {
-        user.maxUsage += 10000;
+      if (!user) {
+        // Create new user for this shop
+        const apiKey = require("crypto").randomBytes(24).toString("hex");
+        user = new User({
+          email: customerEmail,
+          apiKey,
+          password: require("crypto").randomBytes(24).toString("hex"),
+          connectedShopDomain: shopDomain,
+          stripeSubscriptionId: session.subscription,
+          isPremium: true,
+          planType,
+          maxUsage: planType === "pro" ? 10000 : 1000,
+        });
+        await user.save();
+        log(`✅ Created new user for shop ${shopDomain} with ${planType} subscription`);
       } else {
-        user.maxUsage += 1000;
+        user.stripeSubscriptionId = session.subscription;
+        user.isPremium = true;
+        user.planType = planType;
+        user.maxUsage = planType === "pro" ? 10000 : 1000;
+        await user.save();
+        log(`✅ Updated shop ${shopDomain} to ${planType} subscription`);
       }
+    } else {
+      // Regular subscription - find by email
+      user = await User.findOne({ email: customerEmail });
 
-      await user.save();
-      log("User updated:", user);
+      if (!user) {
+        console.warn("User not found for email:", customerEmail);
+        const apiKey = require("crypto").randomBytes(24).toString("hex");
+        user = new User({
+          email: customerEmail,
+          apiKey,
+          password: "temporaryPassword123",
+          stripeSubscriptionId: session.subscription,
+          isPremium: true,
+          maxUsage: planType === "pro" ? 10000 : 1000,
+          planType,
+        });
+
+        await user.save();
+        log("New user created:", user);
+      } else {
+        user.stripeSubscriptionId = session.subscription;
+        user.isPremium = true;
+        user.planType = planType;
+        user.maxUsage = planType === "pro" ? 10000 : 1000;
+        await user.save();
+        log("User updated:", user);
+      }
     }
 
     await sendEmail({
       to: customerEmail,
       subject: "Payment Successful - Thank You!",
-      text: `Hi ${user.email},\n\nThank you for your payment! Your ${planType} subscription is now active.\n\nBest regards,\nThe PDFify Team`,
+      text: `Hi,\n\nThank you for your payment! Your ${planType} subscription is now active for your Shopify store.\n\nBest regards,\nThe PDFify Team`,
     });
 
   } catch (error) {
@@ -131,7 +175,14 @@ router.post(
         const customer = await stripe.customers.retrieve(customerId);
         const customerEmail = customer.email;
 
-        const user = await User.findOne({ email: customerEmail });
+        // Try to find user by email first (regular users)
+        let user = await User.findOne({ email: customerEmail });
+
+        // If not found, try by connectedShopDomain from metadata
+        if (!user && subscription.metadata?.shopDomain) {
+          user = await User.findOne({ connectedShopDomain: subscription.metadata.shopDomain });
+        }
+
         if (!user) {
           console.warn("User not found for cancelled subscription:", customerEmail);
           return res.json({ received: true });
@@ -148,7 +199,7 @@ router.post(
         await sendEmail({
           to: customerEmail,
           subject: "Subscription Cancelled",
-          text: `Hi ${user.email},\n\nYour subscription has been cancelled. You're now on the free plan.\n\nBest regards,\nThe PDFify Team`,
+          text: `Hi,\n\nYour PDFify subscription has been cancelled. You're now on the free plan.\n\nBest regards,\nThe PDFify Team`,
         });
       } catch (error) {
         console.error("Error handling subscription cancellation:", error);
