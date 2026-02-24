@@ -963,7 +963,33 @@ router.get("/callback", async (req, res) => {
     console.log(`✅ Access token received for shop: ${normalizedShop}, length: ${access_token.length}`);
     console.log(`🔑 Token preview: ${access_token.substring(0, 20)}...${access_token.substring(access_token.length - 10)}`);
 
-    // Step 3: Save shop configuration with access token to database
+    // Step 3: VALIDATE the token before saving
+    console.log(`🔍 Validating token with Shopify...`);
+    try {
+      const testResponse = await axios.get(
+        `https://${normalizedShop}/admin/api/2023-10/shop.json`,
+        {
+          headers: { "X-Shopify-Access-Token": access_token },
+          timeout: 10000
+        }
+      );
+      console.log(`✅ Token validated successfully! Shop: ${testResponse.data.shop.name}`);
+    } catch (validationError) {
+      console.error(`❌ Token validation FAILED:`, validationError.response?.status, validationError.response?.data);
+      return res.status(500).send(`
+        <html>
+          <head><title>Token Validation Failed</title></head>
+          <body style="font-family: sans-serif; padding: 40px; text-align: center;">
+            <h1>Installation Failed</h1>
+            <p>The access token received from Shopify could not be validated.</p>
+            <p><strong>Error:</strong> ${validationError.response?.status} - ${validationError.response?.data?.errors || 'Invalid token'}</p>
+            <p>Please contact support if this persists.</p>
+          </body>
+        </html>
+      `);
+    }
+
+    // Step 4: Save shop configuration with access token to database
     console.log(`💾 Saving shop config to database...`);
 
     const shopConfig = await ShopConfig.findOneAndUpdate(
@@ -986,8 +1012,9 @@ router.get("/callback", async (req, res) => {
     const verifyConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
     console.log(`🔍 Verification - Token exists in DB: ${!!verifyConfig?.shopifyAccessToken}`);
     console.log(`🔍 Verification - Token length in DB: ${verifyConfig?.shopifyAccessToken?.length || 0}`);
+    console.log(`🔍 Verification - Tokens match: ${verifyConfig?.shopifyAccessToken === access_token}`);
 
-    // Step 4: Also update existing user if one exists with this shop
+    // Step 5: Also update existing user if one exists with this shop
     const existingUser = await User.findOne({ connectedShopDomain: normalizedShop });
 
     if (existingUser) {
@@ -999,7 +1026,7 @@ router.get("/callback", async (req, res) => {
       console.log(`ℹ️ New shop installation: ${normalizedShop} (no existing user, token stored in ShopConfig)`);
     }
 
-    // Step 5: Redirect to the embedded app
+    // Step 6: Redirect to the embedded app
     // The app will be loaded at: https://{shop}/admin/apps/pdfify-invoice-generator
     console.log(`🎉 Installation successful for: ${normalizedShop}, redirecting to embedded app`);
 
@@ -1461,9 +1488,11 @@ router.get("/orders-public", async (req, res) => {
     console.error("❌ Full error:", err);
 
     if (err.response?.status === 401 || err.response?.status === 403) {
+      console.error(`❌ Access token invalid for ${normalizedShop}. User needs to reinstall.`);
       res.status(401).json({
-        error: "Invalid or expired access token",
-        details: "Please reinstall the app to get a fresh token"
+        error: "Access denied. Please reinstall the app.",
+        details: "Your access token is invalid or has expired. Please reinstall PDFify Pro from the Shopify App Store.",
+        needsReinstall: true
       });
     } else {
       res.status(500).json({ error: "Failed to fetch orders" });
