@@ -1236,17 +1236,6 @@ router.get("/debug", async (req, res) => {
 });
 
 /**
- * Development Mode Check
- * Returns true if app is in development (not approved)
- */
-function isDevelopmentMode() {
-  // Check if running in development mode
-  return process.env.NODE_ENV === 'development' ||
-         !process.env.SHOPIFY_APP_APPROVED ||
-         process.env.SHOPIFY_APP_APPROVED !== 'true';
-}
-
-/**
  * Public connection test for embedded app (no authentication required)
  * GET /api/shopify/test-connection?shop=store.myshopify.com
  */
@@ -1265,10 +1254,9 @@ router.get("/test-connection", async (req, res) => {
     if (!shopConfig) {
       return res.status(404).json({
         error: "Shop not found in database.",
-        message: "Please connect your store first.",
+        message: "Please install the app first.",
         shop: normalizedShop,
-        hasAccessToken: false,
-        developmentMode: isDevelopmentMode()
+        hasAccessToken: false
       });
     }
 
@@ -1283,8 +1271,7 @@ router.get("/test-connection", async (req, res) => {
       connectedAt: shopConfig.connectedAt,
       message: hasAccessToken
         ? "Shop is properly connected!"
-        : "Shop found but no access token. Please connect using manual token entry.",
-      developmentMode: isDevelopmentMode()
+        : "Shop found but no access token. Please reinstall the app."
     });
   } catch (error) {
     console.error("❌ Connection test error:", error);
@@ -1514,11 +1501,10 @@ router.get("/orders-public", async (req, res) => {
     console.error("❌ Full error:", err);
 
     if (err.response?.status === 401 || err.response?.status === 403) {
-      console.error(`❌ Access token invalid for ${normalizedShop}. User needs to reinstall.`);
+      console.error(`❌ Access token invalid for ${normalizedShop}`);
       res.status(401).json({
-        error: "Access denied. Please reinstall the app.",
-        details: "Your access token is invalid or has expired. Please reinstall PDFify Pro from the Shopify App Store.",
-        needsReinstall: true
+        error: "Unable to connect to Shopify",
+        details: "Please ensure the app is properly installed."
       });
     } else {
       console.error("❌ Failed to fetch orders:", err.message);

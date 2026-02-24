@@ -465,39 +465,17 @@
 
     <!-- Installation Required -->
     <div id="installRequired" class="card hidden">
-      <h2 class="card-title">⚠️ Installation Required</h2>
+      <h2 class="card-title">⚠️ App Installation Required</h2>
       <p style="color: #a5b4fc; margin-bottom: 16px;">
-        This shop (<strong id="installShopName"></strong>) needs to be connected to PDFify.
+        This shop (<strong id="installShopName"></strong>) needs to be connected to PDFify Pro.
       </p>
       <p style="color: #a5b4fc; margin-bottom: 16px; font-size: 14px;">
-        Click the button below to authorize the app and connect your store.
+        Please click the button below to authorize the app and connect your store.
       </p>
       <button onclick="startInstallation()" class="btn btn-green">
-        🔐 Connect Store
+        🔐 Install PDFify Pro
       </button>
       <p id="installStatus" style="margin-top: 12px; font-size: 14px; color: #a5b4fc;"></p>
-
-      <div style="margin-top: 20px; padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border: 1px solid rgba(139, 92, 246, 0.3);">
-        <h3 style="color: #c4b5fd; font-size: 14px; margin: 0 0 8px 0;">🔧 Developer Options</h3>
-        <p style="color: #a5b4fc; font-size: 12px; margin: 0 0 8px 0;">
-          Alternatively, you can manually connect your store on the main page:
-        </p>
-        <a href="/shopify" target="_blank" class="btn btn-secondary" style="font-size: 12px; padding: 8px 16px;">
-          📋 Open Manual Connection Page
-        </a>
-        <div style="margin-top: 12px; border-top: 1px solid rgba(139, 92, 246, 0.2); padding-top: 12px;">
-          <p style="color: #a5b4fc; font-size: 12px; margin: 0 0 8px 0;">
-            Or enter your Shopify access token directly:
-          </p>
-          <div class="input-group">
-            <input type="text" id="manualAccessToken" class="input-field" placeholder="shpat_..." style="font-size: 12px;">
-          </div>
-          <button onclick="manualConnect()" class="btn btn-secondary" style="font-size: 12px; padding: 8px 16px;">
-            🔑 Connect with Token
-          </button>
-          <p id="manualConnectStatus" style="margin-top: 8px; font-size: 12px; color: #a5b4fc;"></p>
-        </div>
-      </div>
     </div>
 
     <!-- Dashboard Section -->
@@ -1008,96 +986,24 @@
       window.location.href = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
     }
 
-    // Manual connection with access token
-    async function manualConnect() {
-      const accessToken = document.getElementById('manualAccessToken').value.trim();
-      const statusEl = document.getElementById('manualConnectStatus');
-
-      if (!accessToken) {
-        statusEl.textContent = '❌ Please enter an access token.';
-        statusEl.style.color = '#fca5a5';
-        return;
-      }
-
-      if (!accessToken.startsWith('shpat_')) {
-        statusEl.textContent = '❌ Invalid token format. Token should start with "shpat_"';
-        statusEl.style.color = '#fca5a5';
-        return;
-      }
-
-      statusEl.textContent = '🔍 Validating token with Shopify...';
-      statusEl.style.color = '#a5b4fc';
-
-      try {
-        // Save to ShopConfig for embedded app (public endpoint)
-        const saveRes = await api.post('/shopify/save-token', {
-          shopDomain: shop,
-          accessToken: accessToken
-        });
-
-        if (saveRes.data.success) {
-          statusEl.textContent = '✅ Connected! Reloading...';
-          statusEl.style.color = '#86efac';
-          setTimeout(() => window.location.reload(), 1500);
-        }
-      } catch (err) {
-        console.error('Manual connection failed:', err);
-        const errorMsg = err.response?.data?.error || err.message;
-        statusEl.textContent = '❌ Failed: ' + errorMsg;
-        statusEl.style.color = '#fca5a5';
-
-        // Show helpful error message
-        if (errorMsg.includes('API') || errorMsg.includes('token') || errorMsg.includes('401') || errorMsg.includes('403')) {
-          statusEl.textContent += '\n\n💡 Make sure your token has these permissions: read_orders, read_products, read_themes';
-        }
-      }
-    }
-
     // Load initial data
     async function loadInitialData() {
       try {
         // First, test if shop is properly installed
         let isInstalled = false;
-        let installationError = null;
-        let developmentMode = false;
 
         try {
-          console.log('Testing connection for shop:', shop);
           const testRes = await api.get(`/shopify/test-connection?shop=${encodeURIComponent(shop)}`);
-          console.log('Connection test response:', testRes.data);
-
           isInstalled = testRes.data.success && testRes.data.hasAccessToken;
-          developmentMode = testRes.data.developmentMode || false;
-
-          if (!isInstalled && testRes.data.hasAccessToken === false) {
-            installationError = 'No valid access token found';
-          }
         } catch (testErr) {
-          console.log('Shop connection test failed:', testErr.response?.status, testErr.response?.data);
-          installationError = testErr.response?.data?.error || 'Connection test failed';
+          console.log('Shop connection test failed:', testErr.response?.status);
         }
 
         if (!isInstalled) {
           // Show installation screen
-          console.log('Shop not properly installed, showing installation screen. Error:', installationError);
           document.getElementById('loading').classList.add('hidden');
           document.getElementById('installRequired').classList.remove('hidden');
           document.getElementById('installShopName').textContent = shop;
-
-          // In development mode, focus on manual token entry
-          if (developmentMode) {
-            const statusEl = document.getElementById('installStatus');
-            if (statusEl) {
-              statusEl.innerHTML = '🔧 <strong>Development Mode:</strong> Enter your Shopify access token below to connect.';
-              statusEl.style.color = '#fde047';
-            }
-          } else if (installationError) {
-            const statusEl = document.getElementById('installStatus');
-            if (statusEl) {
-              statusEl.textContent = `Issue: ${installationError}. Please reinstall the app.`;
-              statusEl.style.color = '#fca5a5';
-            }
-          }
           return;
         }
 
@@ -1219,29 +1125,12 @@
       } catch (err) {
         console.error('Failed to load orders:', err);
         const select = document.getElementById('orderSelector');
-
         if (err.response?.status === 401) {
-          const errorData = err.response?.data;
-          if (errorData?.needsReinstall) {
-            select.innerHTML = '<option value="">⚠️ Access token invalid. Please reinstall the app.</option>';
-
-            // Show installation screen
-            document.getElementById('app').classList.add('hidden');
-            document.getElementById('installRequired').classList.remove('hidden');
-            document.getElementById('installShopName').textContent = shop;
-
-            const statusEl = document.getElementById('installStatus');
-            if (statusEl) {
-              statusEl.textContent = 'Your access token is invalid. Please click below to reinstall.';
-              statusEl.style.color = '#fca5a5';
-            }
-            return;
-          }
-          select.innerHTML = '<option value="">Access denied. Please reinstall the app.</option>';
+          select.innerHTML = '<option value="">⚠️ Unable to connect to Shopify. Please ensure the app is properly installed.</option>';
         } else if (err.response?.status === 404) {
-          select.innerHTML = '<option value="">Shop not installed. Click "Connect Store" to install.</option>';
+          select.innerHTML = '<option value="">Shop not found. Please install the app first.</option>';
         } else {
-          select.innerHTML = '<option value="">Failed to load orders. Try refreshing.</option>';
+          select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
         }
       }
     }
