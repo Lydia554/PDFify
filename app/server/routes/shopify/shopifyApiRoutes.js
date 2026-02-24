@@ -876,7 +876,7 @@ router.get("/install", (req, res) => {
 
   // Build OAuth authorization URL
   const scopes = "read_orders,write_orders,read_products,read_themes,read_locations";
-  const redirectUri = process.env.SHOPIFY_REDIRECT_URL || "https://pdfify.pro/shopify/callback";
+  const redirectUri = process.env.SHOPIFY_REDIRECT_URL || "https://pdfify.pro/api/shopify/callback";
   const clientId = process.env.SHOPIFY_CLIENT_ID;
 
   if (!clientId) {
