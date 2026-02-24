@@ -979,7 +979,7 @@
       showMessage(`Redirecting to Stripe checkout for ${plan} plan...`);
 
       try {
-        const response = await fetch('https://pdfify.pro/api/payment/subscribe-shopify', {
+        const response = await fetch('https://pdfify.pro/api/stripe/subscribe-shopify', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1421,7 +1421,7 @@
         resultEl.textContent = 'Redirecting to Stripe checkout...';
 
         try {
-          const response = await fetch('https://pdfify.pro/api/payment/buy-tokens-shopify', {
+          const response = await fetch('https://pdfify.pro/api/stripe/buy-tokens-shopify', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
