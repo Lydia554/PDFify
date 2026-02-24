@@ -980,6 +980,12 @@ router.get("/callback", async (req, res) => {
     console.log(`✅ Shop config saved for: ${normalizedShop}`);
     console.log(`   - Has access token: ${!!shopConfig.shopifyAccessToken}`);
     console.log(`   - Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
+    console.log(`   - Full shopConfig:`, JSON.stringify(shopConfig.toObject(), null, 2));
+
+    // Verify the token was actually saved by reading it back
+    const verifyConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    console.log(`🔍 Verification - Token exists in DB: ${!!verifyConfig?.shopifyAccessToken}`);
+    console.log(`🔍 Verification - Token length in DB: ${verifyConfig?.shopifyAccessToken?.length || 0}`);
 
     // Step 4: Also update existing user if one exists with this shop
     const existingUser = await User.findOne({ connectedShopDomain: normalizedShop });
@@ -1478,10 +1484,31 @@ router.post("/invoice-public", async (req, res) => {
 
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+    console.log(`🧾 [invoice-public] Request for shop: ${normalizedShop}, orderId: ${orderId}`);
+
     // Verify shop is connected via OAuth
     const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    console.log(`🧾 [invoice-public] ShopConfig found: ${!!shopConfig}`);
+    if (shopConfig) {
+      console.log(`🧾 [invoice-public] Has access token: ${!!shopConfig.shopifyAccessToken}`);
+      console.log(`🧾 [invoice-public] Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
+      console.log(`🧾 [invoice-public] isActive: ${shopConfig.isActive}`);
+      console.log(`🧾 [invoice-public] connectedAt: ${shopConfig.connectedAt}`);
+    }
+
     if (!shopConfig || !shopConfig.shopifyAccessToken) {
-      return res.status(401).json({ error: "Shop not connected. Please reinstall the app." });
+      console.error(`❌ [invoice-public] Shop not connected or missing token: ${normalizedShop}`);
+      return res.status(401).json({
+        error: "Shop not connected. Please reinstall the app.",
+        debug: {
+          shop: normalizedShop,
+          hasShopConfig: !!shopConfig,
+          hasAccessToken: !!shopConfig?.shopifyAccessToken,
+          isActive: shopConfig?.isActive,
+          connectedAt: shopConfig?.connectedAt
+        }
+      });
     }
 
     // Fetch order from Shopify
