@@ -1457,13 +1457,15 @@ router.post("/payment-details", async (req, res) => {
  * GET /api/shopify/orders-public?shopDomain=store.myshopify.com
  */
 router.get("/orders-public", async (req, res) => {
+  let normalizedShop = null;
+
   try {
     const { shopDomain, from, to } = req.query;
     if (!shopDomain) {
       return res.status(400).json({ error: "Missing shopDomain" });
     }
 
-    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
     console.log(`📦 Fetching orders for: ${normalizedShop}`);
 
