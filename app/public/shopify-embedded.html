@@ -1227,11 +1227,13 @@
 
       try {
         const selectedLanguage = document.getElementById('invoiceLanguage').value;
+        const selectedColor = document.getElementById('primaryColor').value;
         const res = await api.post('/shopify/invoice-public', {
           shopDomain: shop,
           orderId,
           merchant: true,
-          lang: selectedLanguage || 'en'
+          lang: selectedLanguage || 'en',
+          primaryColor: selectedColor
         }, {
           responseType: 'blob'
         });
@@ -1305,10 +1307,14 @@
       zipStatus.textContent = 'Generating ZIP archive...';
 
       try {
+        const selectedLanguage = document.getElementById('invoiceLanguage').value;
+        const selectedColor = document.getElementById('primaryColor').value;
         const res = await api.post('/shopify/invoices/zip-public', {
           shopDomain: shop,
           from: fromDate,
-          to: toDate
+          to: toDate,
+          lang: selectedLanguage || 'en',
+          primaryColor: selectedColor
         }, {
           responseType: 'blob'
         });

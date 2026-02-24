@@ -1519,7 +1519,7 @@ router.get("/orders-public", async (req, res) => {
  */
 router.post("/invoice-public", async (req, res) => {
   try {
-    const { shopDomain, orderId, merchant, lang: forcedLang } = req.body;
+    const { shopDomain, orderId, merchant, lang: forcedLang, primaryColor: forcedColor } = req.body;
     if (!shopDomain || !orderId) {
       return res.status(400).json({ error: "Missing shopDomain or orderId" });
     }
@@ -1588,11 +1588,17 @@ router.post("/invoice-public", async (req, res) => {
     const userPlan = user?.planType || user?.plan || 'free';
     const isPayingCustomer = userPlan === 'pro' || userPlan === 'premium';
 
+    // Use forced color from request, or saved color from shop config
+    const effectiveColor = forcedColor || shopConfig.primaryColor || "#00a6cc";
+
     console.log(`🧾 [Shopify Public] Generating invoice for ${userPlan} user, merchant=${merchant}, lang=${lang}`);
-    console.log(`🧾 [Shopify Public] shopConfig.primaryColor: "${shopConfig.primaryColor}"`);
+    console.log(`🧾 [Shopify Public] Color resolution - forced: "${forcedColor}", saved: "${shopConfig.primaryColor}", final: "${effectiveColor}"`);
+
+    // Update shopConfig with effective color for this request
+    const effectiveShopConfig = { ...shopConfig.toObject(), primaryColor: effectiveColor };
 
     // Use the proper merchant invoice generation logic (Java service for ALL users)
-    const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
+    const invoiceData = await mapOrderToPdfData(order, effectiveShopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
     console.log(`🧾 [Shopify Public] invoiceData.primaryColor: "${invoiceData.primaryColor}"`);
     console.log(`🧾 [Shopify Public] invoiceData.customerName: "${invoiceData.customerName}"`);
     console.log(`🧾 [Shopify Public] invoiceData.paymentTerms: "${invoiceData.paymentTerms}"`);
@@ -1699,7 +1705,7 @@ router.post("/invoice-public", async (req, res) => {
  */
 router.post("/invoices/zip-public", async (req, res) => {
   try {
-    const { shopDomain, from, to } = req.body;
+    const { shopDomain, from, to, lang: forcedLang, primaryColor: forcedColor } = req.body;
     if (!shopDomain) {
       return res.status(400).json({ error: "Missing shopDomain" });
     }
@@ -1745,19 +1751,24 @@ router.post("/invoices/zip-public", async (req, res) => {
       });
     }
 
-    // Use saved language preference
-    const savedLang = shopConfig.invoiceLanguage;
-    const lang = savedLang || "en";
+    // Use forced language from request, then saved preference from shop config
+    const lang = forcedLang || shopConfig.invoiceLanguage || "en";
     const locale = locales[lang] || locales["en"];
 
-    console.log(`📦 [ZIP] Generating ${orders.length} invoices for ${userPlan} user, lang=${lang}`);
+    // Use forced color from request, then saved color from shop config
+    const effectiveColor = forcedColor || shopConfig.primaryColor || "#00a6cc";
+
+    console.log(`📦 [ZIP] Generating ${orders.length} invoices for ${userPlan} user, lang=${lang}, color=${effectiveColor}`);
 
     const zip = new JSZip();
+
+    // Update shopConfig with effective color for this request
+    const effectiveShopConfig = { ...shopConfig.toObject(), primaryColor: effectiveColor };
 
     // Process orders
     for (const order of orders) {
       // Build invoice data using mapOrderToPdfData
-      const invoiceData = await mapOrderToPdfData(order, shopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
+      const invoiceData = await mapOrderToPdfData(order, effectiveShopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
 
       // Add ZUGFeRD XML ONLY for paying customers
       if (isPayingCustomer) {
