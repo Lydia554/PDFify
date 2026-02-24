@@ -1100,26 +1100,31 @@ router.post("/save-token", async (req, res) => {
 
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+    console.log(`💾 Saving manual token for shop: ${normalizedShop}`);
+    console.log(`   Token length: ${accessToken.length}`);
+    console.log(`   Token preview: ${accessToken.substring(0, 15)}...`);
+
     // Validate the token by making a test API call to Shopify
     try {
-      const testUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=1`;
-      await axios.get(testUrl, {
+      const testUrl = `https://${normalizedShop}/admin/api/2023-10/shop.json`;
+      const testResponse = await axios.get(testUrl, {
         headers: { "X-Shopify-Access-Token": accessToken },
         timeout: 10000
       });
-      console.log(`✅ Token validated for shop: ${normalizedShop}`);
+      console.log(`✅ Token validated for shop: ${normalizedShop}, shop name: ${testResponse.data.shop.name}`);
     } catch (validationErr) {
-      console.error("❌ Token validation failed:", validationErr.response?.data || validationErr.message);
+      console.error("❌ Token validation failed:", validationErr.response?.status, validationErr.response?.data);
       if (validationErr.response?.status === 401 || validationErr.response?.status === 403) {
         return res.status(400).json({
-          error: "Invalid or expired access token. Please check your token and ensure it has the required permissions: read_orders, read_products, read_themes"
+          error: "Invalid or expired access token",
+          details: "Please check your token and ensure it has the required permissions: read_orders, read_products, read_themes"
         });
       }
       throw validationErr;
     }
 
     // Save to ShopConfig
-    await ShopConfig.findOneAndUpdate(
+    const shopConfig = await ShopConfig.findOneAndUpdate(
       { shopDomain: normalizedShop },
       {
         shopDomain: normalizedShop,
@@ -1130,11 +1135,18 @@ router.post("/save-token", async (req, res) => {
       { upsert: true, new: true }
     );
 
-    console.log(`✅ Access token saved for shop: ${normalizedShop}`);
+    console.log(`✅ Access token saved to database for: ${normalizedShop}`);
+    console.log(`   Token in DB: ${!!shopConfig.shopifyAccessToken}`);
+    console.log(`   Token length in DB: ${shopConfig.shopifyAccessToken?.length || 0}`);
+
+    // Verify it was saved correctly
+    const verifyConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    console.log(`🔍 Verification - Token saved correctly: ${verifyConfig?.shopifyAccessToken === accessToken}`);
 
     return res.json({
       success: true,
-      message: "Access token saved successfully"
+      message: "Access token saved successfully",
+      shop: normalizedShop
     });
   } catch (error) {
     console.error("❌ Save token error:", error);
@@ -1224,6 +1236,17 @@ router.get("/debug", async (req, res) => {
 });
 
 /**
+ * Development Mode Check
+ * Returns true if app is in development (not approved)
+ */
+function isDevelopmentMode() {
+  // Check if running in development mode
+  return process.env.NODE_ENV === 'development' ||
+         !process.env.SHOPIFY_APP_APPROVED ||
+         process.env.SHOPIFY_APP_APPROVED !== 'true';
+}
+
+/**
  * Public connection test for embedded app (no authentication required)
  * GET /api/shopify/test-connection?shop=store.myshopify.com
  */
@@ -1242,12 +1265,10 @@ router.get("/test-connection", async (req, res) => {
     if (!shopConfig) {
       return res.status(404).json({
         error: "Shop not found in database.",
-        message: "Please install the app first.",
+        message: "Please connect your store first.",
         shop: normalizedShop,
-        debug: {
-          hasShopConfig: false,
-          oauthConfigured: !!(process.env.SHOPIFY_CLIENT_ID && process.env.SHOPIFY_CLIENT_SECRET)
-        }
+        hasAccessToken: false,
+        developmentMode: isDevelopmentMode()
       });
     }
 
@@ -1260,7 +1281,10 @@ router.get("/test-connection", async (req, res) => {
       isActive: shopConfig.isActive || false,
       hasAccessToken: hasAccessToken,
       connectedAt: shopConfig.connectedAt,
-      message: hasAccessToken ? "Shop is properly connected!" : "Shop found but no access token. Please reinstall."
+      message: hasAccessToken
+        ? "Shop is properly connected!"
+        : "Shop found but no access token. Please connect using manual token entry.",
+      developmentMode: isDevelopmentMode()
     });
   } catch (error) {
     console.error("❌ Connection test error:", error);
@@ -1495,6 +1519,7 @@ router.get("/orders-public", async (req, res) => {
         needsReinstall: true
       });
     } else {
+      console.error("❌ Failed to fetch orders:", err.message);
       res.status(500).json({ error: "Failed to fetch orders" });
     }
   }

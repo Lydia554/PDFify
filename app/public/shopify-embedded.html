@@ -1014,12 +1014,18 @@
       const statusEl = document.getElementById('manualConnectStatus');
 
       if (!accessToken) {
-        statusEl.textContent = 'Please enter an access token.';
+        statusEl.textContent = '❌ Please enter an access token.';
         statusEl.style.color = '#fca5a5';
         return;
       }
 
-      statusEl.textContent = 'Connecting and validating token...';
+      if (!accessToken.startsWith('shpat_')) {
+        statusEl.textContent = '❌ Invalid token format. Token should start with "shpat_"';
+        statusEl.style.color = '#fca5a5';
+        return;
+      }
+
+      statusEl.textContent = '🔍 Validating token with Shopify...';
       statusEl.style.color = '#a5b4fc';
 
       try {
@@ -1041,8 +1047,8 @@
         statusEl.style.color = '#fca5a5';
 
         // Show helpful error message
-        if (errorMsg.includes('API') || errorMsg.includes('token')) {
-          statusEl.textContent += '\n\nMake sure your token has these permissions: read_orders, read_products, read_themes';
+        if (errorMsg.includes('API') || errorMsg.includes('token') || errorMsg.includes('401') || errorMsg.includes('403')) {
+          statusEl.textContent += '\n\n💡 Make sure your token has these permissions: read_orders, read_products, read_themes';
         }
       }
     }
@@ -1053,6 +1059,7 @@
         // First, test if shop is properly installed
         let isInstalled = false;
         let installationError = null;
+        let developmentMode = false;
 
         try {
           console.log('Testing connection for shop:', shop);
@@ -1060,6 +1067,7 @@
           console.log('Connection test response:', testRes.data);
 
           isInstalled = testRes.data.success && testRes.data.hasAccessToken;
+          developmentMode = testRes.data.developmentMode || false;
 
           if (!isInstalled && testRes.data.hasAccessToken === false) {
             installationError = 'No valid access token found';
@@ -1076,7 +1084,14 @@
           document.getElementById('installRequired').classList.remove('hidden');
           document.getElementById('installShopName').textContent = shop;
 
-          if (installationError) {
+          // In development mode, focus on manual token entry
+          if (developmentMode) {
+            const statusEl = document.getElementById('installStatus');
+            if (statusEl) {
+              statusEl.innerHTML = '🔧 <strong>Development Mode:</strong> Enter your Shopify access token below to connect.';
+              statusEl.style.color = '#fde047';
+            }
+          } else if (installationError) {
             const statusEl = document.getElementById('installStatus');
             if (statusEl) {
               statusEl.textContent = `Issue: ${installationError}. Please reinstall the app.`;
