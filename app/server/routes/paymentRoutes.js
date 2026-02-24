@@ -1,6 +1,9 @@
 const express = require("express");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
+
+// Debug: Log Stripe key (first 7 and last 4 chars only for security)
+console.log("[DEBUG] Stripe Secret Key loaded:", process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 7) + "..." + process.env.STRIPE_SECRET_KEY.slice(-4) : "NOT SET");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
 const User = require("../models/User");
