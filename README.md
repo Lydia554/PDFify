@@ -166,7 +166,7 @@ curl -X POST http://localhost:3002/api/html/generate-pdf-from-html \
 ## 📹 Demo
 
 **Shopify App Demo:** Watch the PDFify Shopify app in action
-[Download Demo Video](https://github.com/Lydia554/PDFify/releases/download/v1.0/Pdfify.Pro.for.Shopify.mp4)
+[Download Demo Video](https://github.com/user-attachments/assets/e86abb71-9b30-4f8c-a7dd-8e08439c155b)
 
 ---
 
