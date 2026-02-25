@@ -1,8 +1,17 @@
-# 📄 PDFify API: Enterprise-Grade Document Generation
+# 📄 PDFify API: Enterprise-Grade Document Generation Platform
 
-**PDFify** is a production-ready, enterprise-grade PDF generation service, offering a versatile suite of tools to create a wide range of documents—from standards-compliant e-invoices for E-Commerce to branded recipes and reports. It features a powerful pure Node.js engine for high-compliance documents and a flexible HTML-to-PDF engine for general-purpose use.
+**PDFify** is a production-ready, enterprise-grade PDF generation platform, offering a versatile suite of tools to create a wide range of documents—from standards-compliant e-invoices for E-Commerce to branded recipes and reports.
 
-This project is a complete, multi-tenant SaaS solution, including user authentication, API key management, subscription plans, and Stripe integration.
+## 🎯 Multi-Platform Solution
+
+PDFify is a **complete platform** with multiple ways to generate documents:
+
+- **🌐 [PDFify.pro](https://pdfify.pro)** – Standalone API service for developers and businesses
+- **🛍️ [Shopify App]()** – One-click installation for Shopify merchants
+- **🛒 WooCommerce Plugin** – Seamless integration for WooCommerce stores
+- **🔌 REST API** – Build custom integrations with any platform
+
+This is a complete, multi-tenant SaaS solution, including user authentication, API key management, subscription plans, and Stripe integration.
 
 ---
 
@@ -10,22 +19,34 @@ This project is a complete, multi-tenant SaaS solution, including user authentic
 
 PDFify is more than just a single-purpose tool; it's a complete platform with a dual-engine architecture to meet diverse PDF generation needs.
 
--   ### **Dual PDF Engines**
-    -   **🚀 Compliant Engine (`pdf-lib`):** A high-performance, pure Node.js engine for creating standards-compliant documents from scratch. It offers unparalleled control and performance by programmatically building PDFs without external dependencies like headless browsers.
-    -   **🌐 Legacy Engine (`puppeteer`):** A flexible engine that renders HTML and CSS into beautiful PDFs using a headless Chrome instance. Ideal for creating visually rich documents from web-standard technologies.
+-   ### **PDF Generation Architecture**
+    -   **☕ Java Service (Apache PDFBox 3.0.3):** Creates PDF/A-3b compliant documents programmatically with proper XMP metadata, ICC profiles, and structure. High-performance microservice running on port 8080.
+    -   **📎 pdf-lib:** Embeds ZUGFeRD 2.4 XML attachments into PDFs for German e-invoicing compliance. Used for XML attachment, not PDF creation.
+    -   **🌐 Puppeteer:** HTML-to-PDF engine for non-compliant documents (recipes, therapy reports, etc.). Renders HTML/CSS into visual PDFs.
 
 -   ### **E-Commerce Integration**
-    -   **🛍️ Shopify:** Deep integration for generating compliant merchant invoices, customer-facing invoices, packing slips, and more directly from order data. Supports bulk-generation and ZIP file creation.
-    -   **🛒 WooCommerce:** Connect your WooCommerce store to generate customer invoices and bulk-download them in a ZIP archive.
+    -   **🛍️ [Shopify App]():**
+        - One-click OAuth installation from Shopify App Store
+        - Generate **PDF/A-3b + ZUGFeRD 2.4 compliant** invoices automatically
+        - Multi-language support 
+        - Custom branding (logos, colors, company details)
+        - Bulk download invoices as ZIP
+        - Usage tracking per store (Free: 30, Premium: 100, Pro: Unlimited)
+        - Perfect for German merchants requiring GoBD compliance
+
+    -   **🛒 WooCommerce:**
+        - Connect your WooCommerce store to generate customer invoices
+        - Bulk-download invoices in ZIP archive
+        - Same ZUGFeRD compliance for EU merchants
 
 -   ### **Standards-Compliant E-Invoicing**
     -   **✅ PDF/A-3b Compliance:** Creates PDFs that meet the **ISO 19005-3** standard for long-term electronic document preservation, ensuring your invoices are future-proof.
-    -   **✅ ZUGFeRD 2.3 E-Invoicing:** Embeds a structured XML invoice directly within the PDF, creating a "hybrid" document that is both human-readable and machine-parseable for automated B2B and B2G processing.
+    -   **✅ ZUGFeRD 2.4 E-Invoicing:** Embeds a structured XML invoice directly within the PDF, creating a "hybrid" document that is both human-readable and machine-parseable for automated B2B and B2G processing.
 
 -   ### **Flexible Generation Modes**
-    -   **👩‍⚖️ Compliant Mode:** The flagship feature for generating PDF/A-3b and ZUGFeRD 2.3 merchant invoices for Shopify.
-    -   **😊 Friendly Mode:** For non-developers. Generate beautiful PDFs (invoices, recipes) from simple JSON data using pre-built server-side templates. It even includes ZUGFeRD support for Pro plan users!
-    -   **Developer Mode:** For developers. Send raw HTML content and get a pixel-perfect PDF back, complete with optional branding and watermarking based on your plan.
+    -   **👩‍⚖️ Compliant Mode:** PDF/A-3b + ZUGFeRD 2.4 invoices via Java service (Shopify merchant invoices, Pro/Premium plans)
+    -   **😊 Friendly Mode:** Generate PDFs from simple JSON using server-side templates (invoices, recipes, therapy reports)
+    -   **👨‍💻 Developer Mode:** Send raw HTML and get PDF back via Puppeteer (with branding based on plan)
 
 -   ### **Wide Variety of Templates**
     -   The platform is built to be extensible and supports various document types beyond e-commerce, including:
@@ -47,16 +68,22 @@ PDFify is more than just a single-purpose tool; it's a complete platform with a 
 
 ## 🧰 Tech Stack
 
--   **Backend:** Node.js, Express.js
+### Platform Architecture
+-   **API Layer:** Node.js + Express.js (request handling, business logic)
+-   **PDF Generation Service:** Java microservice with Apache PDFBox 3.0.3
+    -   Programmatic PDF construction (not HTML-to-PDF conversion)
+    -   True PDF/A-3b compliance with proper XMP metadata
+    -   ZUGFeRD XML embedding for German e-invoicing
+    -   High performance: generates PDFs in milliseconds
 -   **Database:** MongoDB with Mongoose
--   **PDF Engines:**
-    -   **Compliant:** `pdf-lib`, `@pdf-lib/fontkit`
-    -   **Legacy:** `puppeteer`
--   **E-Invoicing:** `xmlbuilder2`, `fast-xml-parser`
+-   **PDF Manipulation:** `pdf-lib`, `@pdf-lib/fontkit`
+-   **E-Invoicing:** `xmlbuilder2`, `fast-xml-parser` (ZUGFeRD 2.4 XML generation)
 -   **Authentication:** `jsonwebtoken`, `bcryptjs`, `express-session`
--   **E-Commerce:** `@woocommerce/woocommerce-rest-api` for WooCommerce; `axios`/`node-fetch` for Shopify.
+-   **E-Commerce:**
+    -   `@woocommerce/woocommerce-rest-api` for WooCommerce
+    -   `axios` for Shopify Admin API & webhooks
 -   **Payments:** `stripe`
--   **Deployment:** Docker Compose
+-   **Deployment:** Docker Compose (multi-stage build with Java compilation)
 
 
 ---
@@ -133,6 +160,13 @@ curl -X POST http://localhost:3002/api/html/generate-pdf-from-html \
 -d 
 '{ "html": "<h1>Hello, World!</h1><p>This is my PDF.</p>" }'
 ```
+
+---
+
+## 📹 Demo
+
+**Shopify App Demo:** Watch the PDFify Shopify app in action
+[Download Demo Video](https://github.com/Lydia554/PDFify/releases/download/v1.0/Pdfify.Pro.for.Shopify.mp4)
 
 ---
 
