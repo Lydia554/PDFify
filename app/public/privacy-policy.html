@@ -107,7 +107,22 @@
         <li>We <strong>do not</strong> sell or share customer data with third parties</li>
       </ul>
 
-      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">7.4 Data Security</h3>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">7.4 Merchant Consent and Authorization</h3>
+      <p class="mb-2">
+        <strong>How Merchants Grant Consent:</strong> When you install PDFify from the Shopify App Store:
+      </p>
+      <ol class="list-decimal pl-5 space-y-1">
+        <li>Shopify displays a permission screen showing exactly what data PDFify will access</li>
+        <li>You must explicitly click "Install app" to grant permission</li>
+        <li>This authorization acts as your consent to process your customers' data for invoice generation</li>
+        <li>You can revoke consent at any time by uninstalling the app from your Shopify store</li>
+      </ol>
+      <p class="mt-2 text-sm bg-blue-50 border-l-4 border-blue-400 p-3">
+        <strong>Note:</strong> As the merchant, you are responsible for ensuring that your use of PDFify
+        complies with your legal obligations to your customers, including providing privacy notices and obtaining any required consents.
+      </p>
+
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">7.5 Data Security</h3>
       <ul class="list-disc pl-5 space-y-1">
         <li><strong>Encryption in Transit:</strong> All data is transmitted using HTTPS/TLS encryption</li>
         <li><strong>No Data at Rest:</strong> We don't store customer data, so there is no data to encrypt at rest</li>
@@ -141,13 +156,154 @@
     </section>
 
     <section class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-2">10. Security Incident Response</h2>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">10. Shopify Protected Customer Data Access Compliance</h2>
+      <p class="mb-4">
+        PDFify complies with Shopify's requirements for apps that access protected customer data.
+        This section details how we meet each Level 1 and Level 2 requirement.
+      </p>
+
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">10.1 Level 1 Requirements</h3>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Minimum Data Processing</h4>
+      <p class="mb-2">✅ <strong>We process only the minimum personal data required:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li><strong>Customer Name:</strong> Required to display on invoices</li>
+        <li><strong>Customer Email:</strong> Required for payment reference on invoices</li>
+        <li><strong>Customer Address:</strong> Required for shipping/billing address on invoices</li>
+        <li><strong>Order Details:</strong> Required to generate invoice line items</li>
+      </ul>
+      <p class="mt-2 text-sm bg-green-50 border-l-4 border-green-400 p-3">
+        <strong>No additional customer data</strong> is accessed or processed beyond what is necessary for invoice generation.
+      </p>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Transparency About Data Processing</h4>
+      <p class="mb-2">✅ <strong>We inform merchants what data we process and why:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>This privacy policy explicitly lists all customer data accessed (Section 7.1)</li>
+        <li>Shopify App Store listing describes data processing purposes</li>
+        <li>Our Shopify OAuth permission screen shows requested scopes before installation</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Limited Processing Purposes</h4>
+      <p class="mb-2">✅ <strong>We limit processing to stated purposes:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>Customer data is used <strong>solely</strong> to generate PDF invoices</li>
+        <li>Customer data is <strong>not</strong> used for analytics, marketing, or any other purpose</li>
+        <li>Customer data is <strong>not</strong> shared with third parties</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Customer Consent</h4>
+      <p class="mb-2">✅ <strong>We respect merchant and customer consent decisions:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>Merchants provide explicit consent during app installation via Shopify OAuth</li>
+        <li>Merchants can revoke consent by uninstalling the app at any time</li>
+        <li>Upon uninstall, access tokens are immediately invalidated</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Opt-Out of Data Sharing</h4>
+      <p class="mb-2">✅ <strong>We do not sell or share customer data:</strong></p>
+      <p class="text-sm bg-green-50 border-l-4 border-green-400 p-3">
+        PDFify does <strong>not</strong> sell, rent, or share customer data with any third parties.
+        No opt-out is necessary because no data sharing occurs.
+      </p>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Automated Decision-Making</h4>
+      <p class="mb-2">✅ <strong>We do not use automated decision-making:</strong></p>
+      <p class="text-sm bg-green-50 border-l-4 border-green-400 p-3">
+        PDFify does <strong>not</strong> use profiling, scoring, or any automated decision-making
+        that has legal or significant effects on customers. We only generate PDF invoices.
+      </p>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Data Protection Agreements</h4>
+      <p class="mb-2">✅ <strong>We have privacy and data protection agreements:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>This privacy policy serves as our data protection agreement</li>
+        <li>Section 7.3 defines our role as Data Processor and merchants as Data Controllers</li>
+        <li>Merchants accept these terms by installing and using the app</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Data Retention</h4>
+      <p class="mb-2">✅ <strong>We apply appropriate retention periods:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li><strong>Customer Data:</strong> <strong>NOT STORED</strong> - processed only in memory and immediately deleted after PDF generation</li>
+        <li><strong>Merchant Data:</strong> Stored for account duration; deleted 30 days after account deletion</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Data Encryption</h4>
+      <p class="mb-2">✅ <strong>We encrypt data in transit and at rest:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li><strong>In Transit:</strong> All data transmitted via HTTPS/TLS 1.2+ encryption</li>
+        <li><strong>At Rest:</strong> MongoDB Atlas provides encryption at rest for stored data</li>
+        <li><strong>API Keys:</strong> Encrypted using AES-256-CBC before storage</li>
+        <li><strong>Passwords:</strong> Hashed using bcrypt (one-way encryption)</li>
+      </ul>
+
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-6">10.2 Level 2 Requirements</h3>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Backup Encryption</h4>
+      <p class="mb-2">✅ <strong>Our database backups are encrypted:</strong></p>
+      <p class="text-sm">
+        MongoDB Atlas provides automatic encrypted backups. All backup data is encrypted
+        using the same AES-256 encryption as the primary database.
+      </p>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Test/Production Data Separation</h4>
+      <p class="mb-2">✅ <strong>We keep test and production data separate:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>Development uses separate MongoDB databases from production</li>
+        <li>Production customer data is never used for testing</li>
+        <li><code>NODE_ENV</code> environment variable controls environment separation</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Data Loss Prevention Strategy</h4>
+      <p class="mb-2">✅ <strong>We have data loss prevention controls:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li><strong>Minimal Data Storage:</strong> Customer data is not stored, eliminating the primary data loss risk</li>
+        <li><strong>Authentication Required:</strong> All API endpoints require valid authentication</li>
+        <li><strong>Input Validation:</strong> All user inputs are validated and sanitized</li>
+        <li><strong>Rate Limiting:</strong> API usage limits prevent excessive data extraction</li>
+        <li><strong>CORS Protection:</strong> Cross-origin requests restricted to authorized domains</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Staff Access Limits</h4>
+      <p class="mb-2">✅ <strong>We limit staff access to customer data:</strong></p>
+      <p class="text-sm bg-green-50 border-l-4 border-green-400 p-3">
+        PDFify is operated by a single individual (Lidija Jokić). There are no employees,
+        contractors, or third parties with access to customer data. Since customer data
+        is not stored, there is no database of customer information for staff to access.
+      </p>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Strong Password Requirements</h4>
+      <p class="mb-2">✅ <strong>We require strong passwords for staff accounts:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li>Single-operator model (no shared staff accounts)</li>
+        <li>Admin accounts require passwords with minimum 8 characters</li>
+        <li>Two-factor authentication (2FA) is enabled for all admin access</li>
+        <li>Passwords are hashed using bcrypt with salt rounds</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Access Logging</h4>
+      <p class="mb-2">✅ <strong>We log access to personal data:</strong></p>
+      <ul class="list-disc pl-5 space-y-1 text-sm">
+        <li><strong>API Requests:</strong> All invoice generation requests are logged with timestamp, shop domain, and order ID</li>
+        <li><strong>Authentication Events:</strong> Login attempts and token usage are logged</li>
+        <li><strong>Access Attempts:</strong> Failed authentication attempts are logged for security monitoring</li>
+        <li><strong>Logs are reviewed:</strong> System logs are reviewed regularly for suspicious activity</li>
+      </ul>
+
+      <h4 class="text-lg font-semibold text-gray-700 mb-1 mt-3">Security Incident Response Policy</h4>
+      <p class="mb-2">✅ <strong>We have a documented incident response policy:</strong></p>
+      <p class="text-sm">See Section 11 below for our complete Security Incident Response Policy.</p>
+    </section>
+
+    <section class="mb-8">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">11. Security Incident Response</h2>
       <p class="mb-4">
         <strong>Our Commitment:</strong> We take the security of your data seriously and have established
         procedures to detect, respond to, and recover from security incidents.
       </p>
 
-      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">10.1 What is a Security Incident?</h3>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">11.1 What is a Security Incident?</h3>
       <p class="mb-2">A security incident includes but is not limited to:</p>
       <ul class="list-disc pl-5 space-y-1">
         <li>Unauthorized access to user accounts or merchant data</li>
@@ -156,7 +312,7 @@
         <li>Malicious attacks on our infrastructure</li>
       </ul>
 
-      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">10.2 Our Response Process</h3>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">11.2 Our Response Process</h3>
       <p class="mb-2">If a security incident is detected, we will:</p>
       <ol class="list-decimal pl-5 space-y-1">
         <li><strong>Immediately contain</strong> the incident to prevent further damage</li>
@@ -166,7 +322,7 @@
         <li><strong>Implement remediation</strong> measures to prevent recurrence</li>
       </ol>
 
-      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">10.3 Preventive Measures</h3>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">11.3 Preventive Measures</h3>
       <ul class="list-disc pl-5 space-y-1">
         <li><strong>Access Logging:</strong> All API access is logged for monitoring</li>
         <li><strong>Encryption:</strong> Data encrypted in transit (HTTPS/TLS) and at rest (MongoDB Atlas)</li>
@@ -175,7 +331,7 @@
         <li><strong>Separate Environments:</strong> Development and production data are kept separate</li>
       </ul>
 
-      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">10.4 Report a Security Incident</h3>
+      <h3 class="text-xl font-semibold text-gray-800 mb-2 mt-4">11.4 Report a Security Incident</h3>
       <p class="mb-2">
         If you suspect a security vulnerability or incident involving PDFify, please contact us immediately:
       </p>
@@ -185,7 +341,7 @@
     </section>
 
     <section class="mb-8">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-2">11. Contact</h2>
+      <h2 class="text-2xl font-semibold text-gray-800 mb-2">12. Contact</h2>
       <p>For any privacy-related inquiries, contact us at:
         <a href="mailto:pdfifyapi@gmail.com" class="text-blue-600 hover:underline">pdfifyapi@gmail.com</a>
       </p>
