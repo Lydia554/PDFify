@@ -1,0 +1,33 @@
+# Run these commands in your terminal (PowerShell or Command Prompt)
+
+# 1. Navigate to project directory
+cd "C:\Users\goldb\Pro\PDF-API"
+
+# 2. Login to Shopify (will open browser for authentication)
+shopify login
+
+# 3. Link the config to your existing Partner app (this registers the webhooks)
+shopify app config link
+
+# 4. Deploy the configuration to Shopify (optional, or use 'shopify app deploy' to push config)
+shopify app deploy config-only
+
+# =================================================================
+# ALTERNATIVE: If link doesn't work, you can manually register webhooks
+# in Shopify Partner Dashboard at:
+# https://partners.shopify.com/xxxxxx/apps/xxxxxx/webhooks
+#
+# Add these 4 webhook subscriptions:
+#
+# 1. Topic: customers/data_request
+#    Endpoint: https://pdfify.pro/webhook/customers-data-request
+#
+# 2. Topic: customers/redact
+#    Endpoint: https://pdfify.pro/webhook/customers-redact
+#
+# 3. Topic: shop/redact
+#    Endpoint: https://pdfify.pro/webhook/shop-redact
+#
+# 4. Topic: orders/create
+#    Endpoint: https://pdfify.pro/webhook/order-created
+# =================================================================

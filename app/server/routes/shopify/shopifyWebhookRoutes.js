@@ -73,6 +73,118 @@ router.post(
   }
 );
 
+// ================================
+// MANDATORY GDPR COMPLIANCE WEBHOOKS
+// ================================
+
+// customers/data_request - When customer requests copy of their data (GDPR right to access)
+router.post(
+  "/customers-data-request",
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => { req.rawBody = buf; },
+  }),
+  verifyShopifyWebhook,
+  async (req, res) => {
+    let parsedPayload;
+    try {
+      parsedPayload = JSON.parse(req.rawBody.toString());
+    } catch {
+      return res.status(200).send("OK");
+    }
+
+    const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
+    console.log(`📋 [GDPR] Customer data request for shop: ${shopDomain}`);
+
+    res.status(200).send("OK");
+
+    try {
+      // Since we do NOT store customer data, there's nothing to return
+      // Customer data is processed in real-time and not persisted
+      console.log(`ℹ️ [GDPR] No customer data stored for ${shopDomain} - only processed in real-time`);
+    } catch (err) {
+      console.error("❌ Error handling customer data request:", err);
+    }
+  }
+);
+
+// customers/redact - When customer requests deletion of their data (GDPR right to erasure)
+router.post(
+  "/customers-redact",
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => { req.rawBody = buf; },
+  }),
+  verifyShopifyWebhook,
+  async (req, res) => {
+    let parsedPayload;
+    try {
+      parsedPayload = JSON.parse(req.rawBody.toString());
+    } catch {
+      return res.status(200).send("OK");
+    }
+
+    const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
+    console.log(`🗑️ [GDPR] Customer redaction request for shop: ${shopDomain}`);
+
+    res.status(200).send("OK");
+
+    try {
+      // Since we do NOT store customer data, there's nothing to delete
+      // Customer data is processed in real-time and already deleted from memory after invoice generation
+      console.log(`ℹ️ [GDPR] No customer data stored for ${shopDomain} - nothing to delete`);
+    } catch (err) {
+      console.error("❌ Error handling customer redaction:", err);
+    }
+  }
+);
+
+// shop/redact - When merchant requests deletion of their shop data (app uninstall)
+router.post(
+  "/shop-redact",
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => { req.rawBody = buf; },
+  }),
+  verifyShopifyWebhook,
+  async (req, res) => {
+    let parsedPayload;
+    try {
+      parsedPayload = JSON.parse(req.rawBody.toString());
+    } catch {
+      return res.status(200).send("OK");
+    }
+
+    const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
+    console.log(`🗑️ [GDPR] Shop redaction request for: ${shopDomain}`);
+
+    res.status(200).send("OK");
+
+    try {
+      // Delete all merchant data from our database
+      const shopConfigDelete = await ShopConfig.findOneAndDelete({ shopDomain });
+      const userDelete = await User.findOneAndDelete({ connectedShopDomain: shopDomain });
+
+      if (shopConfigDelete) {
+        console.log(`✅ [GDPR] Deleted ShopConfig for ${shopDomain}`);
+      }
+      if (userDelete) {
+        console.log(`✅ [GDPR] Deleted User record for ${shopDomain}`);
+      }
+
+      if (!shopConfigDelete && !userDelete) {
+        console.log(`ℹ️ [GDPR] No data found for ${shopDomain}`);
+      }
+    } catch (err) {
+      console.error("❌ Error handling shop redaction:", err);
+    }
+  }
+);
+
+// ================================
+// ORDER WEBHOOK
+// ================================
+
 async function processOrderAsync({ order, user, accessToken, shopDomain, lang, allowCustomerPDF }) {
   try {
     order.line_items = await enrichLineItemsWithImages(order.line_items, shopDomain, accessToken);
