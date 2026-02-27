@@ -8,11 +8,17 @@ embedded = true
 [webhooks]
 api_version = "2025-01"
 
-# App-specific webhooks
+# App-specific webhooks (non-mandatory only)
 [[webhooks]]
 topics = ["orders/create"]
 uri = "/webhook/order-created"
-compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+
+# NOTE: Mandatory GDPR compliance webhooks (customers/data_request, customers/redact, shop/redact)
+# must be configured during App Store submission review process, NOT in this file.
+# Your webhook endpoints are already implemented and working:
+# - https://pdfify.pro/webhook/customers-data-request
+# - https://pdfify.pro/webhook/customers-redact
+# - https://pdfify.pro/webhook/shop-redact
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration#access_scopes
