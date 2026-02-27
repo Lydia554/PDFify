@@ -8,12 +8,14 @@ embedded = true
 [webhooks]
 api_version = "2025-01"
 
-# Orders webhook
+# App-specific webhooks (non-mandatory)
 [[webhooks]]
 topics = ["orders/create"]
 uri = "/webhook/order-created"
 
-# NOTE: GDPR webhooks will be added manually after successful deployment
+# NOTE: GDPR compliance webhooks (customers/data_request, customers/redact, shop/redact)
+# are MANDATORY and must be configured in Shopify Partner Dashboard, NOT in this file.
+# Go to: https://partners.shopify.com/145227133/apps/325530976257/webhooks
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration#access_scopes
