@@ -13,18 +13,7 @@ api_version = "2025-01"
 topics = ["orders/create"]
 uri = "/webhook/order-created"
 
-# GDPR Compliance webhooks (MANDATORY for Shopify App Store)
-[[webhooks]]
-topics = ["customers/data_request"]
-uri = "/webhook/customers-data-request"
-
-[[webhooks]]
-topics = ["customers/redact"]
-uri = "/webhook/customers-redact"
-
-[[webhooks]]
-topics = ["shop/redact"]
-uri = "/webhook/shop-redact"
+# NOTE: GDPR webhooks will be added manually after successful deployment
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration#access_scopes
