@@ -43,3 +43,7 @@ java/*.jar
 # Old Java service folder (replaced by java/)
 java-pdfa-service/
 nul
+
+# Scripts with secrets (NEVER commit these)
+delete-webhooks*.ps1
+*webhooks*.js
