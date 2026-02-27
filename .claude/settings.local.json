@@ -3,7 +3,9 @@
     "allow": [
       "Bash(curl:*)",
       "Bash(node:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(dir:*)",
+      "Bash(findstr:*)"
     ]
   },
   "enabledPlugins": {

@@ -6,18 +6,25 @@ application_url = "https://pdfify.pro/"
 embedded = true
 
 [webhooks]
-api_version = "2026-01"
+api_version = "2024-10"
 
 # Standard webhooks
-[[webhooks.subscriptions]]
-topics = ["orders/create"]
-uri = "/webhook/order-created"
+[[webhooks]]
+topic = "orders/create"
+endpoint = "https://pdfify.pro/webhook/order-created"
 
 # GDPR Compliance webhooks (MANDATORY for public apps)
-[webhooks.privacy_compliance]
-customer_data_request_url = "https://pdfify.pro/webhook/customers-data-request"
-customer_deletion_url = "https://pdfify.pro/webhook/customers-redact"
-shop_deletion_url = "https://pdfify.pro/webhook/shop-redact"
+[[webhooks]]
+topic = "customers/data_request"
+endpoint = "https://pdfify.pro/webhook/customers-data-request"
+
+[[webhooks]]
+topic = "customers/redact"
+endpoint = "https://pdfify.pro/webhook/customers-redact"
+
+[[webhooks]]
+topic = "shop/redact"
+endpoint = "https://pdfify.pro/webhook/shop-redact"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
