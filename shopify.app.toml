@@ -1,4 +1,4 @@
-# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+# Learn more about configuring your app at https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration
 
 client_id = "e07548c088f572af4bbf103e4dee46bb"
 name = "PDFify Pro"
@@ -6,28 +6,28 @@ application_url = "https://pdfify.pro/"
 embedded = true
 
 [webhooks]
-api_version = "2024-10"
+api_version = "2025-01"
 
-# Standard webhooks
+# Orders webhook
 [[webhooks]]
-topic = "orders/create"
-endpoint = "https://pdfify.pro/webhook/order-created"
+topics = ["orders/create"]
+uri = "/webhook/order-created"
 
-# GDPR Compliance webhooks (MANDATORY for public apps)
+# GDPR Compliance webhooks (MANDATORY for Shopify App Store)
 [[webhooks]]
-topic = "customers/data_request"
-endpoint = "https://pdfify.pro/webhook/customers-data-request"
-
-[[webhooks]]
-topic = "customers/redact"
-endpoint = "https://pdfify.pro/webhook/customers-redact"
+topics = ["customers/data_request"]
+uri = "/webhook/customers-data-request"
 
 [[webhooks]]
-topic = "shop/redact"
-endpoint = "https://pdfify.pro/webhook/shop-redact"
+topics = ["customers/redact"]
+uri = "/webhook/customers-redact"
+
+[[webhooks]]
+topics = ["shop/redact"]
+uri = "/webhook/shop-redact"
 
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+# Learn more at https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration#access_scopes
 scopes = "read_locations,read_orders,read_products,read_themes"
 optional_scopes = [ ]
 use_legacy_install_flow = false
