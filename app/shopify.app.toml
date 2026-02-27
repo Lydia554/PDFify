@@ -17,12 +17,12 @@ api_version = "2026-01"
   uri = "/webhook/customers-redact"
 
   [[webhooks.subscriptions]]
-  topics = [ "shop/redact" ]
-  uri = "/webhook/shop-redact"
-
-  [[webhooks.subscriptions]]
   topics = [ "orders/create" ]
   uri = "/webhook/order-created"
+
+  [[webhooks.subscriptions]]
+  topics = [ "shop/redact" ]
+  uri = "/webhook/shop-redact"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
