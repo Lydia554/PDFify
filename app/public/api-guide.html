@@ -11,13 +11,13 @@
 
 </head>
 
-<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white min-h-screen">
+<body class="bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 text-white min-h-screen">
 
   <div id="loadingOverlay" class="fixed top-0 left-0 w-full h-full bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center">
     <div class="border-4 border-purple-300 border-l-purple-600 rounded-full w-12 h-12 animate-spin"></div>
   </div>
 
-<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-violet-900 via-purple-900 to-fuchsia-900">
+<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
       <h1 class="text-4xl font-bold">
   <a href="https://pdfify.pro" 
@@ -50,8 +50,8 @@
 
   <main class="max-w-6xl mx-auto px-6 py-12">
     <div class="flex justify-center mb-8">
-      <button id="developerBtn" class="px-6 py-3 rounded-l-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold hover:from-violet-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl">💻 Developer Mode</button>
-      <button id="friendlyBtn" class="px-6 py-3 rounded-r-xl bg-gradient-to-r from-pink-400 to-rose-400 text-gray-800 font-semibold hover:from-pink-500 hover:to-rose-500 transition-all duration-300 shadow-lg hover:shadow-xl">😊 Friendly Mode</button>
+      <button id="developerBtn" class="px-6 py-3 rounded-l-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-xl">💻 Developer Mode</button>
+      <button id="friendlyBtn" class="px-6 py-3 rounded-r-xl bg-gradient-to-r from-amber-400 to-orange-500 text-gray-900 font-semibold hover:from-amber-500 hover:to-orange-600 transition-all duration-300 shadow-lg hover:shadow-xl">😊 Friendly Mode</button>
     </div>
 
      <div id="developerSection">
@@ -62,8 +62,8 @@
         Learn how to use our PDF Generator API. This guide walks you through step-by-step instructions for generating beautiful, branded PDFs from your data.
       </p>
 
-      <section class="mb-10 bg-gradient-to-r from-indigo-900/50 via-purple-900/50 to-violet-900/50 p-6 rounded-2xl border-2 border-purple-500/30 shadow-xl">
-        <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">🛍️ What Can You Do With It?</h3>
+      <section class="mb-10 bg-gradient-to-r from-blue-900/30 via-cyan-900/30 to-blue-900/30 p-6 rounded-2xl border-2 border-cyan-500/30 shadow-xl">
+        <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">🛍️ What Can You Do With It?</h3>
         <ul class="list-disc pl-6 text-lg space-y-2 text-gray-100">
           <li>Generate product information sheets directly from your data</li>
           <li>Create downloadable invoices for orders</li>
@@ -71,39 +71,39 @@
           <li>Design custom PDFs for gift cards or marketing inserts</li>
         </ul>
       </section>
-      <section class="mb-10 bg-gradient-to-br from-fuchsia-900 via-purple-900 to-indigo-900 text-white p-8 rounded-2xl shadow-xl border-2 border-purple-500/30">
-        <h3 class="text-2xl font-semibold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-pink-400">⚙️ How It Works</h3>
+      <section class="mb-10 bg-gradient-to-br from-amber-900/30 via-orange-900/30 to-amber-900/30 text-white p-8 rounded-2xl shadow-xl border-2 border-amber-500/30">
+        <h3 class="text-2xl font-semibold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">⚙️ How It Works</h3>
         <ol class="list-decimal pl-6 text-lg space-y-4 text-gray-100">
           <li>
-            <strong class="text-cyan-300">Prepare Your JSON or Raw HTML</strong>
+            <strong class="text-amber-300">Prepare Your JSON or Raw HTML</strong>
             <p class="text-gray-200 ml-6">You can provide structured JSON data or raw HTML content to generate a PDF.</p>
           </li>
           <li>
-            <strong class="text-cyan-300">Upload to PDF Generator</strong>
+            <strong class="text-amber-300">Upload to PDF Generator</strong>
             <p class="text-gray-200 ml-6">Submit your data or HTML through our interface. JSON will be parsed with the selected template, while HTML is directly rendered.</p>
           </li>
           <li>
-            <strong class="text-cyan-300">Choose or Customize Template</strong>
+            <strong class="text-amber-300">Choose or Customize Template</strong>
             <p class="text-gray-200 ml-6">Select a built-in template or design your layout with HTML and CSS.</p>
           </li>
           <li>
-            <strong class="text-cyan-300">Download the Result</strong>
+            <strong class="text-amber-300">Download the Result</strong>
             <p class="text-gray-200 ml-6">Click 'Generate' and your file will be ready to download.</p>
           </li>
           <li>
-            <strong class="text-amber-400">Each successful POST that returns a PDF counts toward your usage.</strong>
+            <strong class="text-orange-400">Each successful POST that returns a PDF counts toward your usage.</strong>
           </li>
         </ol>
           <div class="mt-10 bg-white/10 backdrop-blur p-6 rounded-xl shadow-lg border-2 border-white/20">
-        <h3 class="text-xl font-semibold mb-3 text-cyan-300">📢 Note for Developers: Handling the PDF Response</h3>
+        <h3 class="text-xl font-semibold mb-3 text-amber-300">📢 Note for Developers: Handling the PDF Response</h3>
         <p class="mb-2 text-gray-100">
           Our API returns the full PDF file data immediately in the response. Your application is responsible for processing this data to download or save the PDF file.
         </p>
         <p class="mb-2 text-gray-200">
-          <strong>In Postman:</strong> After making the POST request, switch to the <code class="bg-purple-900/50 px-2 py-1 rounded">Body</code> tab of the response, click <em>Save Response</em> (floppy disk icon), and save the file with a <code class="bg-purple-900/50 px-2 py-1 rounded">.pdf</code> extension.
+          <strong>In Postman:</strong> After making the POST request, switch to the <code class="bg-amber-900/50 px-2 py-1 rounded">Body</code> tab of the response, click <em>Save Response</em> (floppy disk icon), and save the file with a <code class="bg-amber-900/50 px-2 py-1 rounded">.pdf</code> extension.
         </p>
         <p class="mb-2 text-gray-200">
-          <strong>In your code:</strong> Handle the API response as a binary <code class="bg-purple-900/50 px-2 py-1 rounded">Blob</code> (JavaScript) or save the raw response stream to disk (server-side), then trigger a file download or store the PDF as needed.
+          <strong>In your code:</strong> Handle the API response as a binary <code class="bg-amber-900/50 px-2 py-1 rounded">Blob</code> (JavaScript) or save the raw response stream to disk (server-side), then trigger a file download or store the PDF as needed.
         </p>
         <p class="text-gray-300 text-sm mt-4">
           This approach gives you full control over how and when the PDF is saved or shown to your users.
@@ -118,32 +118,32 @@
      
 
 
-  <section class="mb-12 bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-900 text-white p-8 rounded-2xl shadow-xl border-2 border-emerald-500/30">
-    <h3 class="text-2xl font-semibold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">📄 PDF Templates (Premium - Developer Mode)</h3>
+  <section class="mb-12 bg-gradient-to-br from-indigo-900/30 via-violet-900/30 to-indigo-900/30 text-white p-8 rounded-2xl shadow-xl border-2 border-indigo-500/30">
+    <h3 class="text-2xl font-semibold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">📄 PDF Templates (Premium - Developer Mode)</h3>
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
 
       <!-- Shop Order (single image) -->
-      <div class="relative border-2 border-emerald-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300">
-        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
-        <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
+      <div class="relative border-2 border-indigo-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-slate-50 to-blue-50 hover:shadow-xl transition-all duration-300">
+        <span class="absolute top-2 left-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+        <span class="absolute top-2 right-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
         <img src="/demo/Shop-Order-Dev-Premium.jpg" ...  class="rounded zoomable" alt="Shop Order" />
-        <a href="/demo/Shop-Order-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-emerald-700 hover:text-emerald-800 font-semibold text-sm transition-colors">
+        <a href="/demo/Shop-Order-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-indigo-700 hover:text-indigo-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
         <h4 class="font-semibold mt-2 text-gray-800">Shop Order</h4>
       </div>
 
       <!-- Therapy Report (two images with toggle) -->
-      <div class="relative border-2 border-emerald-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300">
-        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
-        <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
+      <div class="relative border-2 border-indigo-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-slate-50 to-blue-50 hover:shadow-xl transition-all duration-300">
+        <span class="absolute top-2 left-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+        <span class="absolute top-2 right-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
 
         <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
           <img src="/demo/Therapy-Report-Dev-Premium-1.jpg" ...  class="rounded zoomable" alt="Therapy Report" />
           <img src="/demo/Therapy-Report-Dev-Premium-2.jpg" ...  class="rounded zoomable hidden" alt="Therapy Report" />
         </div>
 
-        <a href="/demo/Therapy-Report-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-emerald-700 hover:text-emerald-800 font-semibold text-sm transition-colors">
+        <a href="/demo/Therapy-Report-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-indigo-700 hover:text-indigo-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
 
@@ -151,19 +151,19 @@
       </div>
 
       <!-- Packing Slip (single image) -->
-      <div class="relative border-2 border-emerald-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300">
-        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+      <div class="relative border-2 border-indigo-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-slate-50 to-blue-50 hover:shadow-xl transition-all duration-300">
+        <span class="absolute top-2 left-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
         <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
         <img src="/demo/Packing-Slip-Dev-Premium.jpg?" ...  class="rounded zoomable" alt="Packing Slip" />
-        <a href="/demo/Packing-Slip-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-emerald-700 hover:text-emerald-800 font-semibold text-sm transition-colors">
+        <a href="/demo/Packing-Slip-Dev-Premium.pdf?v=2" ...  target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-indigo-700 hover:text-indigo-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
         <h4 class="font-semibold mt-2 text-gray-800">Packing Slip</h4>
       </div>
 
       <!-- Invoice (two images with toggle) -->
-      <div class="relative border-2 border-emerald-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300">
-        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+      <div class="relative border-2 border-indigo-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-slate-50 to-blue-50 hover:shadow-xl transition-all duration-300">
+        <span class="absolute top-2 left-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
         <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
 
         <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
@@ -171,7 +171,7 @@
 
         </div>
 
-        <a href="/demo/Invoice-Dev-Premium.pdf" ...  target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-emerald-700 hover:text-emerald-800 font-semibold text-sm transition-colors">
+        <a href="/demo/Invoice-Dev-Premium.pdf" ...  target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-indigo-700 hover:text-indigo-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
 
@@ -179,8 +179,8 @@
       </div>
 
       <!-- Recipe (single image, Basic badge) -->
-        <div class="relative border-2 border-emerald-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300">
-        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+        <div class="relative border-2 border-indigo-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-slate-50 to-blue-50 hover:shadow-xl transition-all duration-300">
+        <span class="absolute top-2 left-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
         <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
 
         <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
@@ -188,7 +188,7 @@
           <img src="/demo/Recipe-Dev-Premium-2.jpg ... class="rounded zoomable hidden" alt="Recipe" />
         </div>
 
-        <a href="/demo/Recipe-Dev-Premium.pdf?v=2" ... target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-emerald-700 hover:text-emerald-800 font-semibold text-sm transition-colors">
+        <a href="/demo/Recipe-Dev-Premium.pdf?v=2" ... target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-indigo-700 hover:text-indigo-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
 
@@ -196,11 +196,11 @@
       </div>
 
       <!-- Raw HTML (single image) -->
-      <div class="relative border-2 border-emerald-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-emerald-50 to-teal-50 hover:shadow-xl transition-all duration-300">
-        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+      <div class="relative border-2 border-indigo-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-slate-50 to-blue-50 hover:shadow-xl transition-all duration-300">
+        <span class="absolute top-2 left-2 bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
         <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-600 to-rose-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Developer Only</span>
         <img src="/demo/Raw-HTML-Dev-Premium.jpg" ... class="rounded zoomable" alt="Raw HTML" />
-        <a href="/demo/Raw-HTML-Dev-Premium.pdf" ... target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-emerald-700 hover:text-emerald-800 font-semibold text-sm transition-colors">
+        <a href="/demo/Raw-HTML-Dev-Premium.pdf" ... target="_blank" rel="noopener noreferrer" class="inline-block mt-3 text-indigo-700 hover:text-indigo-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
         <h4 class="font-semibold mt-2 text-gray-800">Raw HTML</h4>
@@ -220,31 +220,31 @@
 
     <!-- Friendly Mode Section -->
     <div id="friendlySection" class="hidden">
-      <h2 class="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">PDF Templates (Basic - Friendly Mode)</h2>
+      <h2 class="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-pink-400">PDF Templates (Basic - Friendly Mode)</h2>
       <p class="text-lg mb-6 text-gray-200">Choose a PDF layout that fits your needs. Visual previews help you pick your favorite.</p>
 
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <div class="relative border-2 border-teal-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-teal-50 to-cyan-50 hover:shadow-xl transition-all duration-300">
+        <div class="relative border-2 border-rose-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-rose-50 to-pink-50 hover:shadow-xl transition-all duration-300">
           <span class="absolute top-2 left-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Basic</span>
-          <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
+          <span class="absolute top-2 right-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
           <img src="/demo/Friendly-Invoice-Basic.jpg?v=2" ... class="rounded" alt="Invoice" />
-           <a href="/demo/Friendly-Recipe-Basic.pdf?v=2" ... target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-teal-700 hover:text-teal-800 font-semibold text-sm transition-colors">
+           <a href="/demo/Friendly-Recipe-Basic.pdf?v=2" ... target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-rose-700 hover:text-rose-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
           <h4 class="font-semibold mt-2 text-gray-800">Invoice</h4>
         </div>
 
 
-      <div class="relative border-2 border-teal-500/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-teal-50 to-cyan-50 hover:shadow-xl transition-all duration-300">
+      <div class="relative border-2 border-rose-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-rose-50 to-pink-50 hover:shadow-xl transition-all duration-300">
         <span class="absolute top-2 left-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Basic</span>
-        <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
+        <span class="absolute top-2 right-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
 <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
   <img src="/demo/Friendly-Recipe-Basic-1.jpg?v=2" ... class="rounded zoomable" alt="Recipe" />
   <img src="/demo/Friendly-Recipe-Basic-2.jpg?v=2" ... class="rounded zoomable hidden" alt="Recipe" />
   <img src="/demo/Friendly-Recipe-Basic-3.jpg?v=2" ... class="rounded zoomable hidden" alt="Recipe" />
 </div>
 
-          <a href="/demo/Friendly-Recipe-Basic.pdf?v=2" ... target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-teal-700 hover:text-teal-800 font-semibold text-sm transition-colors">
+          <a href="/demo/Friendly-Recipe-Basic.pdf?v=2" ... target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-rose-700 hover:text-rose-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
         </a>
          <h4 class="font-semibold mt-2 text-gray-800">Recipe</h4>
@@ -260,13 +260,13 @@
       </div>
 
 
-      <h2 class="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-purple-400">PDF Templates (Premium - Friendly Mode)</h2>
+      <h2 class="text-3xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">PDF Templates (Premium - Friendly Mode)</h2>
       <p class="text-lg mb-6 text-gray-200">Premium templates require an upgrade.</p>
 
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3  bg-gradient-to-br from-violet-900/50 via-purple-900/50 to-fuchsia-900/50 text-white shadow-xl rounded-2xl p-6 mb-6 border-2 border-violet-500/30">
-        <div class="relative border-2 border-violet-400/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-violet-50 to-purple-50 hover:shadow-xl transition-all duration-300">
-          <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
-          <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
+      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3  bg-gradient-to-br from-violet-900/30 via-fuchsia-900/30 to-violet-900/30 text-white shadow-xl rounded-2xl p-6 mb-6 border-2 border-violet-500/30">
+        <div class="relative border-2 border-violet-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-violet-50 to-fuchsia-50 hover:shadow-xl transition-all duration-300">
+          <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+          <span class="absolute top-2 right-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
           <img src="/demo/Friendly-Invoice-Premium.jpg?v=2" ... class="rounded" alt="Invoice" />
            <a href="/demo/Friendly-Invoice-Premium.pdf?v=2" ... target="_blank" rel="noopener noreferrer" class="inline-block mb-2 text-violet-700 hover:text-violet-800 font-semibold text-sm transition-colors">
           📄 Preview PDF
@@ -275,9 +275,9 @@
         </div>
 
 
-      <div class="relative border-2 border-violet-400/30 p-4 rounded-xl shadow-lg bg-gradient-to-br from-violet-50 to-purple-50 hover:shadow-xl transition-all duration-300">
-        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
-        <span class="absolute top-2 right-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
+      <div class="relative border-2 border-violet-200 p-4 rounded-xl shadow-lg bg-gradient-to-br from-violet-50 to-fuchsia-50 hover:shadow-xl transition-all duration-300">
+        <span class="absolute top-2 left-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Premium</span>
+        <span class="absolute top-2 right-2 bg-gradient-to-r from-rose-500 to-pink-500 text-white text-xs font-semibold px-3 py-1 rounded-full z-10 select-none shadow-md">Friendly Only</span>
 <div class="image-toggle-container mb-2 cursor-pointer" onclick="toggleImage(this)" title="Click to toggle images">
   <img src="/demo/Friendly-Recipe-Premium-1.jpg?v=2" ... class="rounded zoomable" alt="Recipe" />
   <img src="/demo/Friendly-Recipe-Premium-2.jpg?v=2" ... class="rounded zoomable hidden" alt="Recipe" />
@@ -309,9 +309,9 @@
 <!-- Mode Toggle Buttons -->
 <div id="modeToggleContainer" class="my-8">
   <div class="flex flex-col items-center">
-    <div class="flex rounded-xl overflow-hidden border-2 border-purple-500/30 shadow-lg">
-      <button id="userModeBtn" class="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-l-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 font-semibold">🧑 For Everyone</button>
-      <button id="devModeBtn" class="px-6 py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-gray-800 rounded-r-xl hover:from-purple-500 hover:to-pink-500 transition-all duration-300 font-semibold">💻 For Developers</button>
+    <div class="flex rounded-xl overflow-hidden border-2 border-cyan-500/30 shadow-lg">
+      <button id="userModeBtn" class="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-l-xl hover:from-cyan-700 hover:to-blue-700 transition-all duration-300 font-semibold">🧑 For Everyone</button>
+      <button id="devModeBtn" class="px-6 py-3 bg-gradient-to-r from-slate-400 to-gray-500 text-gray-800 rounded-r-xl hover:from-slate-500 hover:to-gray-600 transition-all duration-300 font-semibold">💻 For Developers</button>
     </div>
 
   </div>
@@ -319,8 +319,8 @@
     
 
   <!-- Friendly Mode Section -->
-  <section id="userSection" class="py-16 max-w-4xl mx-auto text-center px-4 bg-gradient-to-br from-cyan-900 via-teal-900 to-emerald-900 text-white shadow-xl rounded-2xl p-8 mb-6 border-2 border-cyan-500/30">
-    <h2 class="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">Generate Beautiful PDFs Without Writing a Single Line of Code</h2>
+  <section id="userSection" class="py-16 max-w-4xl mx-auto text-center px-4 bg-gradient-to-br from-cyan-900/30 via-blue-900/30 to-cyan-900/30 text-white shadow-xl rounded-2xl p-8 mb-6 border-2 border-cyan-500/30">
+    <h2 class="text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Generate Beautiful PDFs Without Writing a Single Line of Code</h2>
     <p class="text-lg mb-6 text-gray-200">
       Select a template, fill out a simple form, and download a polished PDF in seconds. Whether it's a recipe, invoice, or report—no coding or formatting required.
     </p>
@@ -349,13 +349,13 @@
   <section>
    <!-- Packing Slip -->
 <div class="dev-mode-only mb-10">
-  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">📦 Packing Slip</h3>
+  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">📦 Packing Slip</h3>
 
   <!-- Developer-only section, starts hidden -->
   <div id="dev-only">
-    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-purple-500/30 overflow-hidden">
+    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-blue-500/30 overflow-hidden">
       <button
-        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
         data-target="packing-slip-js">
         ⚙️ JavaScript
       </button>
@@ -366,7 +366,7 @@
       </button>
     </div>
 
-    <pre id="packing-slip-js" class="code-js bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30">
+    <pre id="packing-slip-js" class="code-js bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30">
 fetch("https://pdfify.pro/api/generate-packing-slip", {
   method: "POST",
   headers: {
@@ -399,7 +399,7 @@ fetch("https://pdfify.pro/api/generate-packing-slip", {
 });
     </pre>
 
-    <pre id="packing-slip-curl" class="code-cl bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30 hidden">
+    <pre id="packing-slip-curl" class="code-cl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30 hidden">
 curl -X POST "https://pdfify.pro/api/generate-packing-slip" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -422,13 +422,13 @@ curl -X POST "https://pdfify.pro/api/generate-packing-slip" \
 
   <!-- Invoice -->
 <div class="dev-mode-only mb-10">
-  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">🧾 Invoice</h3>
+  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">🧾 Invoice</h3>
 
   <!-- Developer-only section -->
   <div id="dev-only">
-    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-purple-500/30 overflow-hidden">
+    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-blue-500/30 overflow-hidden">
       <button
-        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
         data-target="invoice-js">
         JavaScript
       </button>
@@ -439,7 +439,7 @@ curl -X POST "https://pdfify.pro/api/generate-packing-slip" \
       </button>
     </div>
 
-    <pre id="invoice-js" class="code-js bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30">
+    <pre id="invoice-js" class="code-js bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30">
 fetch("https://pdfify.pro/api/generate-invoice", {
   method: "POST",
   headers: {
@@ -469,7 +469,7 @@ fetch("https://pdfify.pro/api/generate-invoice", {
 });
     </pre>
 
-    <pre id="invoice-curl" class="code-cl bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30 hidden">
+    <pre id="invoice-curl" class="code-cl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30 hidden">
 curl -X POST "https://pdfify.pro/api/generate-invoice" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -489,13 +489,13 @@ curl -X POST "https://pdfify.pro/api/generate-invoice" \
 
   <!-- Recipe -->
 <div class="dev-mode-only mb-10">
-  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">🍳 Recipe</h3>
+  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">🍳 Recipe</h3>
 
   <!-- Developer-only section -->
   <div id="dev-only">
-    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-purple-500/30 overflow-hidden">
+    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-blue-500/30 overflow-hidden">
       <button
-        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
         data-target="recipe-js">
         JavaScript
       </button>
@@ -506,7 +506,7 @@ curl -X POST "https://pdfify.pro/api/generate-invoice" \
       </button>
     </div>
 
-    <pre id="recipe-js" class="code-js bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30">
+    <pre id="recipe-js" class="code-js bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30">
 fetch("https://pdfify.pro/api/generate-recipe", {
   method: "POST",
   headers: {
@@ -543,7 +543,7 @@ fetch("https://pdfify.pro/api/generate-recipe", {
 });
     </pre>
 
-    <pre id="recipe-curl" class="code-cl bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30 hidden">
+    <pre id="recipe-curl" class="code-cl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30 hidden">
 curl -X POST "https://pdfify.pro/api/generate-recipe" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -570,13 +570,13 @@ curl -X POST "https://pdfify.pro/api/generate-recipe" \
 
    <!-- Therapy Report -->
 <div class="dev-mode-only mb-10">
-  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">📝 Therapy Report</h3>
+  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">📝 Therapy Report</h3>
 
   <!-- Developer-only section -->
   <div id="dev-only">
-    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-purple-500/30 overflow-hidden">
+    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-blue-500/30 overflow-hidden">
       <button
-        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
         data-target="therapy-js">
         JavaScript
       </button>
@@ -587,7 +587,7 @@ curl -X POST "https://pdfify.pro/api/generate-recipe" \
       </button>
     </div>
 
-    <pre id="therapy-js" class="code-js bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30">
+    <pre id="therapy-js" class="code-js bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30">
 fetch("https://pdfify.pro/api/generate-therapy-report", {
   method: "POST",
   headers: {
@@ -613,7 +613,7 @@ fetch("https://pdfify.pro/api/generate-therapy-report", {
 });
     </pre>
 
-    <pre id="therapy-curl" class="code-cl bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30 hidden">
+    <pre id="therapy-curl" class="code-cl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30 hidden">
 curl -X POST "https://pdfify.pro/api/generate-therapy-report" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -629,13 +629,13 @@ curl -X POST "https://pdfify.pro/api/generate-therapy-report" \
 
 <!-- Shop Order -->
 <div class="dev-mode-only mb-10">
-  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">🛒 Shop Order</h3>
+  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">🛒 Shop Order</h3>
 
   <!-- Developer-only section -->
   <div id="dev-only">
-    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-purple-500/30 overflow-hidden">
+    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-blue-500/30 overflow-hidden">
       <button
-        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
         data-target="shoporder-js">
         JavaScript
       </button>
@@ -646,7 +646,7 @@ curl -X POST "https://pdfify.pro/api/generate-therapy-report" \
       </button>
     </div>
 
-    <pre id="shoporder-js" class="code-js bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30">
+    <pre id="shoporder-js" class="code-js bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30">
 fetch("https://pdfify.pro/api/generate-shop-order", {
   method: "POST",
   headers: {
@@ -676,7 +676,7 @@ fetch("https://pdfify.pro/api/generate-shop-order", {
 });
     </pre>
 
-    <pre id="shoporder-curl" class="code-cl bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30 hidden">
+    <pre id="shoporder-curl" class="code-cl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30 hidden">
 curl -X POST "https://pdfify.pro/api/generate-shop-order" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -697,13 +697,13 @@ curl -X POST "https://pdfify.pro/api/generate-shop-order" \
 
 <!-- Raw HTML -->
 <div class="dev-mode-only mb-10">
-  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">🧱 Raw HTML</h3>
+  <h3 class="text-2xl font-semibold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">🧱 Raw HTML</h3>
 
   <!-- Developer-only section -->
   <div id="dev-only">
-    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-purple-500/30 overflow-hidden">
+    <div class="toggle-buttons mb-3 inline-flex rounded-xl shadow-lg border-2 border-blue-500/30 overflow-hidden">
       <button
-        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+        class="toggle-btn px-4 py-2 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all duration-200"
         data-target="html-js">
         JavaScript
       </button>
@@ -714,7 +714,7 @@ curl -X POST "https://pdfify.pro/api/generate-shop-order" \
       </button>
     </div>
 
-    <pre id="html-js" class="code-js bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30">
+    <pre id="html-js" class="code-js bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30">
 fetch("https://pdfify.pro/api/generate-pdf-from-html", {
   method: "POST",
   headers: {
@@ -737,7 +737,7 @@ fetch("https://pdfify.pro/api/generate-pdf-from-html", {
 });
     </pre>
 
-    <pre id="html-curl" class="code-cl bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 text-emerald-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-purple-500/30 hidden">
+    <pre id="html-curl" class="code-cl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-cyan-400 p-4 rounded-xl shadow-lg overflow-x-auto border-2 border-blue-500/30 hidden">
 curl -X POST "https://pdfify.pro/api/generate-pdf-from-html" \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -759,7 +759,7 @@ curl -X POST "https://pdfify.pro/api/generate-pdf-from-html" \
 
 
    <!-- Footer -->
-  <footer class="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-t-2 border-purple-500/30 mt-12">
+  <footer class="bg-gradient-to-r from-slate-950 via-gray-900 to-slate-950 border-t-2 border-gray-700 mt-12">
       <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-400">
         &copy; 2025 PDFify. Built with ❤️ for creators and developers.
       </div>
@@ -781,11 +781,11 @@ curl -X POST "https://pdfify.pro/api/generate-pdf-from-html" \
 
   devSubTabs.classList.add('hidden');
 
-  userModeBtn.classList.add('from-emerald-600', 'to-teal-600', 'text-white');
-  userModeBtn.classList.remove('from-purple-400', 'to-pink-400', 'text-gray-800');
+  userModeBtn.classList.add('from-cyan-600', 'to-blue-600', 'text-white');
+  userModeBtn.classList.remove('from-slate-400', 'to-gray-500', 'text-gray-800');
 
-  devModeBtn.classList.remove('from-emerald-600', 'to-teal-600', 'text-white');
-  devModeBtn.classList.add('from-purple-400', 'to-pink-400', 'text-gray-800');
+  devModeBtn.classList.remove('from-cyan-600', 'to-blue-600', 'text-white');
+  devModeBtn.classList.add('from-slate-400', 'to-gray-500', 'text-gray-800');
 });
 
 devModeBtn.addEventListener('click', () => {
@@ -796,11 +796,11 @@ devModeBtn.addEventListener('click', () => {
 
   devSubTabs.classList.remove('hidden');
 
-  devModeBtn.classList.add('from-emerald-600', 'to-teal-600', 'text-white');
-  devModeBtn.classList.remove('from-purple-400', 'to-pink-400', 'text-gray-800');
+  devModeBtn.classList.add('from-cyan-600', 'to-blue-600', 'text-white');
+  devModeBtn.classList.remove('from-slate-400', 'to-gray-500', 'text-gray-800');
 
-  userModeBtn.classList.remove('from-emerald-600', 'to-teal-600', 'text-white');
-  userModeBtn.classList.add('from-purple-400', 'to-pink-400', 'text-gray-800');
+  userModeBtn.classList.remove('from-cyan-600', 'to-blue-600', 'text-white');
+  userModeBtn.classList.add('from-slate-400', 'to-gray-500', 'text-gray-800');
 });
 
      window.addEventListener("pageshow", () => {
@@ -860,20 +860,20 @@ devModeBtn.addEventListener('click', () => {
     const friendlySection = document.getElementById('friendlySection');
 
     developerBtn.addEventListener('click', () => {
-      developerBtn.classList.add('from-violet-600', 'to-purple-600', 'text-white');
-      developerBtn.classList.remove('from-pink-400', 'to-rose-400', 'text-gray-800');
-      friendlyBtn.classList.add('from-pink-400', 'to-rose-400', 'text-gray-800');
-      friendlyBtn.classList.remove('from-violet-600', 'to-purple-600', 'text-white');
+      developerBtn.classList.add('from-blue-600', 'to-indigo-600', 'text-white');
+      developerBtn.classList.remove('from-amber-400', 'to-orange-500', 'text-gray-900');
+      friendlyBtn.classList.add('from-amber-400', 'to-orange-500', 'text-gray-900');
+      friendlyBtn.classList.remove('from-blue-600', 'to-indigo-600', 'text-white');
 
       developerSection.classList.remove('hidden');
       friendlySection.classList.add('hidden');
     });
 
     friendlyBtn.addEventListener('click', () => {
-      friendlyBtn.classList.add('from-violet-600', 'to-purple-600', 'text-white');
-      friendlyBtn.classList.remove('from-pink-400', 'to-rose-400', 'text-gray-800');
-      developerBtn.classList.add('from-pink-400', 'to-rose-400', 'text-gray-800');
-      developerBtn.classList.remove('from-violet-600', 'to-purple-600', 'text-white');
+      friendlyBtn.classList.add('from-blue-600', 'to-indigo-600', 'text-white');
+      friendlyBtn.classList.remove('from-amber-400', 'to-orange-500', 'text-gray-900');
+      developerBtn.classList.add('from-amber-400', 'to-orange-500', 'text-gray-900');
+      developerBtn.classList.remove('from-blue-600', 'to-indigo-600', 'text-white');
 
       friendlySection.classList.remove('hidden');
       developerSection.classList.add('hidden');
@@ -921,8 +921,8 @@ function toggleImage(container) {
     top: 0;
     left: 0;
     right: 0;
-    background: linear-gradient(to right, #4c1d95, #7c3aed, #a21caf);
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+    background: linear-gradient(to right, #1e3a8a, #3730a3, #1e3a8a);
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
     z-index: 1000;
 
   }
