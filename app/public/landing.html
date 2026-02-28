@@ -692,68 +692,259 @@
 
 
 <!-- Pricing -->
-<section id="pricing" class="relative bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 text-white py-28 px-6 text-center overflow-hidden">
-  <div class="max-w-7xl mx-auto text-center mb-16">
-    <h2 class="text-5xl font-extrabold mb-4">Pricing Plans</h2>
-    <p class="max-w-3xl mx-auto text-lg text-white-900 dark:text-white-900">
-      Everyone gets beautiful, professional invoice templates. Upgrade to Premium+ for legally compliant electronic invoices with ZUGFeRD XML and PDF/A-3b archiving.
+<section id="pricing" class="relative bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white py-28 px-6 text-center overflow-hidden">
+  <!-- Animated background elements -->
+  <div aria-hidden="true" class="absolute top-20 left-10 w-72 h-72 bg-purple-500 rounded-full opacity-20 blur-3xl"></div>
+  <div aria-hidden="true" class="absolute bottom-20 right-10 w-96 h-96 bg-pink-500 rounded-full opacity-20 blur-3xl"></div>
+
+  <div class="max-w-7xl mx-auto text-center mb-16 relative z-10">
+    <h2 class="text-5xl font-extrabold mb-4 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+      Simple, Transparent Pricing
+    </h2>
+    <p class="max-w-3xl mx-auto text-lg text-gray-300">
+      Choose the plan that fits your needs. All plans include our beautiful templates. Upgrade for legally compliant electronic invoices.
     </p>
   </div>
 
-  <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-12">
+  <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-8 relative z-10">
 
     <!-- Free Plan -->
-    <div class="border border-gray-300 dark:border-gray-700 rounded-3xl p-10 shadow hover:shadow-xl transition cursor-default">
-      <h3 class="text-3xl font-bold mb-6">Free</h3>
-      <p class="text-lg mb-8">High-quality PDF invoices for testing and personal use.</p>
-      <ul class="mb-8 space-y-3 text-white-900 dark:text-white-900">
-        <li>✔️ Beautiful professional templates</li>
-        <li>✔️ Custom logo support</li>
-        <li>✔️ Custom colors & branding</li>
-        <li>✔️ API access</li>
-        <li>✔️ Shopify webhook integration</li>
-        <li>✘ No ZUGFeRD electronic invoice</li>
-        <li>✘ No PDF/A-3b compliance</li>
-        <li>📄 30 PDF pages/month</li>
+    <div class="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-600 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:border-slate-500 transition-all duration-300 cursor-default relative overflow-hidden">
+      <!-- Plan Badge -->
+      <div class="absolute top-0 right-0 bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl">
+        STARTER
+      </div>
+
+      <!-- Icon -->
+      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-slate-500 to-slate-600 flex items-center justify-center">
+        <svg class="w-8 h-8 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+      </div>
+
+      <h3 class="text-3xl font-bold mb-2 text-slate-100">Free</h3>
+      <p class="text-slate-400 mb-6">Perfect for testing and small projects</p>
+
+      <div class="mb-8">
+        <span class="text-5xl font-extrabold text-white">€0</span>
+        <span class="text-slate-400 text-lg">/month</span>
+      </div>
+
+      <ul class="mb-8 space-y-3 text-left">
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-300">Professional invoice templates</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-300">Custom colors & branding</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-300">API access</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-slate-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-300">Friendly & Developer modes</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-500">No ZUGFeRD electronic invoice</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-slate-500">No PDF/A-3b compliance</span>
+        </li>
       </ul>
-      <div class="text-4xl font-extrabold mb-6">€0 <span class="text-base font-normal">/month</span></div>
+
+      <div class="pt-6 border-t border-slate-700">
+        <div class="text-center">
+          <span class="text-3xl font-bold text-slate-200">30</span>
+          <span class="text-slate-400 ml-1">PDF pages/month</span>
+        </div>
+      </div>
+
+      <a href="/user-creation.html" class="mt-6 block w-full bg-slate-600 hover:bg-slate-500 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300">
+        Get Started Free
+      </a>
     </div>
 
-<!-- Premium Plan -->
-<div class="bg-gray-800 dark:bg-gray-700 text-white rounded-3xl p-10 shadow-2xl transform hover:scale-105 transition cursor-default">
-  <h3 class="text-3xl font-bold mb-6">Premium</h3>
-  <p class="text-lg mb-8">Everything in Free + legally compliant electronic invoices for business use.</p>
-  <ul class="mb-8 space-y-3">
-    <li>✔️ All Free features</li>
-    <li>✔️ <strong>ZUGFeRD XML</strong> (electronic invoice)</li>
-    <li>✔️ <strong>PDF/A-3b compliance</strong> (long-term archiving)</li>
-    <li>✔️ Compatible with SAP, DATEV, accounting systems</li>
-    <li>✔️ Automated invoice processing</li>
-    <li>📄 <strong>1,000</strong> PDF pages/month</li>
-  </ul>
-  <div class="text-4xl font-extrabold mb-6">
-    <span class="line-through text-red-500 mr-3">€9.99</span> €4.99 <span class="text-base font-normal">/month</span>
-  </div>
-</div>
+    <!-- Premium Plan -->
+    <div class="bg-gradient-to-br from-emerald-600 to-teal-700 border-2 border-emerald-400 rounded-3xl p-8 shadow-2xl transform hover:scale-105 transition-all duration-300 cursor-default relative overflow-hidden">
+      <!-- Popular Badge -->
+      <div class="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl shadow-lg">
+        ⭐ MOST POPULAR
+      </div>
 
+      <!-- Glow effect -->
+      <div class="absolute -top-20 -right-20 w-40 h-40 bg-emerald-400 rounded-full opacity-20 blur-3xl"></div>
+
+      <!-- Icon -->
+      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-emerald-300 to-teal-400 flex items-center justify-center">
+        <svg class="w-8 h-8 text-emerald-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+        </svg>
+      </div>
+
+      <h3 class="text-3xl font-bold mb-2 text-white">Premium</h3>
+      <p class="text-emerald-100 mb-6">For businesses needing legal compliance</p>
+
+      <div class="mb-8">
+        <span class="text-5xl font-extrabold text-white">€4.99</span>
+        <span class="text-emerald-200 text-lg line-through ml-2">€9.99</span>
+        <span class="text-emerald-100 text-lg block">/month</span>
+      </div>
+
+      <ul class="mb-8 space-y-3 text-left">
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-emerald-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white"><strong class="text-emerald-200">All Free features</strong></span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-emerald-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white"><strong class="text-emerald-200">ZUGFeRD 2.4 XML</strong> electronic invoice</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-emerald-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white"><strong class="text-emerald-200">PDF/A-3b compliance</strong> (ISO 19005-3)</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-emerald-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white">SAP, DATEV compatible</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-emerald-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white">Automated B2B/B2G processing</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-emerald-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white">Compliant Mode access</span>
+        </li>
+      </ul>
+
+      <div class="pt-6 border-t border-emerald-500">
+        <div class="text-center">
+          <span class="text-3xl font-bold text-white">1,000</span>
+          <span class="text-emerald-100 ml-1">PDF pages/month</span>
+        </div>
+      </div>
+
+      <a href="/user-creation.html" class="mt-6 block w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl">
+        Start Premium Trial
+      </a>
+    </div>
 
     <!-- Pro Plan -->
-    <div class="bg-yellow-100 dark:bg-yellow-900 text-yellow-900 dark:text-yellow-100 border border-yellow-300 dark:border-yellow-600 rounded-3xl p-10 shadow-2xl transform hover:scale-105 transition cursor-default">
-      <h3 class="text-3xl font-bold mb-6">Pro</h3>
-      <p class="text-lg mb-8">For high-volume businesses: everything Premium offers plus priority support and enterprise limits.</p>
-      <ul class="mb-8 space-y-3 text-gray-700 dark:text-gray-400">
-        <li>✔️ All Premium features</li>
-        <li>✔️ ZUGFeRD XML + PDF/A-3b compliance</li>
-        <li>✔️ Priority support</li>
-        <li>✔️ Higher API rate limits</li>
-        <li>✔️ Bulk CSV processing</li>
-        <li>📄 10,000 PDF pages/month</li>
-      </ul>
-      <div class="text-4xl font-extrabold mb-6">
-        <span class="line-through text-red-600 mr-3">€69.99</span> €49.99 <span class="text-base font-normal">/month</span>
+    <div class="bg-gradient-to-br from-violet-600 to-purple-700 border-2 border-violet-400 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:border-violet-300 transition-all duration-300 cursor-default relative overflow-hidden">
+      <!-- Plan Badge -->
+      <div class="absolute top-0 right-0 bg-gradient-to-r from-violet-400 to-purple-500 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl shadow-lg">
+        🚀 ENTERPRISE
       </div>
+
+      <!-- Glow effect -->
+      <div class="absolute -top-20 -right-20 w-40 h-40 bg-violet-400 rounded-full opacity-20 blur-3xl"></div>
+
+      <!-- Icon -->
+      <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-violet-300 to-purple-400 flex items-center justify-center">
+        <svg class="w-8 h-8 text-violet-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+
+      <h3 class="text-3xl font-bold mb-2 text-white">Pro</h3>
+      <p class="text-violet-100 mb-6">High-volume with priority support</p>
+
+      <div class="mb-8">
+        <span class="text-5xl font-extrabold text-white">€49.99</span>
+        <span class="text-violet-200 text-lg line-through ml-2">€69.99</span>
+        <span class="text-violet-100 text-lg block">/month</span>
+      </div>
+
+      <ul class="mb-8 space-y-3 text-left">
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-violet-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white"><strong class="text-violet-200">All Premium features</strong></span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-violet-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white"><strong class="text-violet-200">Priority support</strong></span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-violet-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white">Higher API rate limits</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-violet-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white">Bulk CSV processing</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-violet-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white">Custom integrations</span>
+        </li>
+        <li class="flex items-start">
+          <svg class="w-5 h-5 mr-3 mt-0.5 text-violet-300 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-white">Dedicated account manager</span>
+        </li>
+      </ul>
+
+      <div class="pt-6 border-t border-violet-500">
+        <div class="text-center">
+          <span class="text-3xl font-bold text-white">10,000</span>
+          <span class="text-violet-100 ml-1">PDF pages/month</span>
+        </div>
+      </div>
+
+      <a href="/user-creation.html" class="mt-6 block w-full bg-gradient-to-r from-violet-400 to-purple-500 hover:from-violet-500 hover:to-purple-600 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl">
+        Start Pro Trial
+      </a>
     </div>
 
+  </div>
+
+  <!-- Money-back guarantee -->
+  <div class="max-w-3xl mx-auto mt-12 text-center">
+    <div class="inline-flex items-center bg-white/10 backdrop-blur rounded-full px-6 py-3">
+      <svg class="w-5 h-5 mr-2 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      <span class="text-white font-medium">All plans include a 14-day free trial • No credit card required</span>
+    </div>
   </div>
 </section>
 
