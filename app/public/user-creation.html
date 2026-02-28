@@ -3,80 +3,203 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create User</title>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-
-   <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="images/Icon.png?v=2">
-
+  <title>Create User | PDFify</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="images/Icon.png?v=2">
 </head>
-<body>
-  <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.8); z-index: 9999; display: flex; justify-content: center; align-items: center;">
-    <div class="spinner" style="border: 4px solid rgba(0, 0, 0, 0.1); border-left-color: #2196f3; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite;"></div>
+<body class="bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-md">
+    <!-- Logo/Brand -->
+    <div class="text-center mb-8">
+      <h1 class="text-5xl font-bold mb-2">
+        <a href="/" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition">
+          PDFify
+        </a>
+      </h1>
+      <p class="text-gray-400 text-lg">Create your account</p>
+    </div>
+
+    <!-- User Creation Card -->
+    <div class="bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-indigo-500/10 p-8 rounded-3xl shadow-2xl border-2 border-blue-500/30 backdrop-blur-sm">
+      <form id="createUserForm" class="space-y-6">
+        <!-- Email Field -->
+        <div>
+          <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+          <input
+            type="email"
+            id="email"
+            placeholder="Enter your email"
+            required
+            class="w-full px-4 py-3 bg-white/90 border-2 border-blue-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
+          />
+          <div id="emailFeedback" class="mt-1 text-sm text-red-500 hidden"></div>
+        </div>
+
+        <!-- Password Field -->
+        <div>
+          <label for="password" class="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+          <div class="relative">
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              required
+              class="w-full px-4 py-3 pr-12 bg-white/90 border-2 border-blue-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300"
+            />
+            <button
+              type="button"
+              id="togglePassword"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-blue-600 transition-colors duration-200 p-1"
+              aria-label="Toggle password visibility"
+            >
+              <!-- Eye Open Icon -->
+              <svg id="eyeOpen" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <!-- Eye Closed Icon -->
+              <svg id="eyeClosed" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+              </svg>
+            </button>
+          </div>
+          <div id="passwordFeedback" class="mt-1 text-sm text-red-500 hidden"></div>
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          id="createUserButton"
+          class="w-full py-3 px-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+        >
+          <span class="btn-text">Create User</span>
+          <svg id="spinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </button>
+
+        <!-- Login Button -->
+        <button
+          type="button"
+          id="loginButton"
+          class="w-full py-3 px-6 bg-white/80 border-2 border-blue-400 text-blue-600 font-semibold rounded-xl hover:bg-blue-50 hover:border-blue-500 transition-all duration-300 shadow-md hover:shadow-lg"
+        >
+          Already have an account? Login
+        </button>
+      </form>
+
+      <!-- Result Message -->
+      <div id="result" class="mt-6 text-center text-sm opacity-0 transition-opacity duration-300 rounded-xl p-3 hidden" role="status" aria-live="polite"></div>
+    </div>
   </div>
 
-  <div class="container">
-    <h1>Create User</h1>
-
-    <!-- User creation form -->
-    <form id="createUserForm">
-      <label for="email">Email</label>
-      <input type="email" id="email" placeholder="Enter your email" required>
-      <div id="emailFeedback" class="feedback"></div>
-
-      <label for="password">Password</label>
-      <div class="password-container">
-        <input type="password" id="password" placeholder="Enter your password" required>
-        <button type="button" id="togglePassword" class="toggle-btn">👁️</button>
-      </div>
-      <div id="passwordFeedback" class="feedback"></div>
-
-      <button type="submit">Create User</button>
-      <button type="button" id="loginButton">Already have an account? Login</button>
-    </form>
-
-    <div id="result" class="result"></div>
-  </div>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="js/cookie-consent.js"></script>
 
   <script>
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?{}\[\]~]).{8,}$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?{}\[\]~]).{8,}$/;
 
+    // Elements
+    const result = document.getElementById("result");
+    const emailFeedback = document.getElementById("emailFeedback");
+    const passwordFeedback = document.getElementById("passwordFeedback");
+    const createUserButton = document.getElementById("createUserButton");
+    const spinner = document.getElementById("spinner");
+    const btnText = document.querySelector(".btn-text");
+    const eyeOpen = document.getElementById("eyeOpen");
+    const eyeClosed = document.getElementById("eyeClosed");
+
+    // Show result message
+    function showResult(msg, type) {
+      result.textContent = msg;
+      result.classList.remove("hidden", "opacity-0");
+      result.classList.add("opacity-100");
+
+      // Remove old classes
+      result.classList.remove("bg-red-500/10", "text-red-600", "border-2", "border-red-500/30");
+      result.classList.remove("bg-green-500/10", "text-green-600", "border-2", "border-green-500/30");
+
+      if (type === "error") {
+        result.classList.add("bg-red-500/10", "text-red-600", "border-2", "border-red-500/30");
+      } else {
+        result.classList.add("bg-green-500/10", "text-green-600", "border-2", "border-green-500/30");
+      }
+
+      // Auto-hide after 6 seconds
+      setTimeout(() => {
+        result.classList.add("opacity-0");
+        setTimeout(() => result.classList.add("hidden"), 300);
+      }, 6000);
+    }
+
+    // Show/hide feedback messages
+    function showFeedback(element, message, show) {
+      element.textContent = message;
+      element.classList.toggle("hidden", !show);
+    }
+
+    // Loading state helper
+    function setLoadingState(isLoading) {
+      if (isLoading) {
+        createUserButton.disabled = true;
+        spinner.classList.remove("hidden");
+        btnText.textContent = "Creating...";
+      } else {
+        createUserButton.disabled = false;
+        spinner.classList.add("hidden");
+        btnText.textContent = "Create User";
+      }
+    }
+
+    // Toggle password visibility
     document.getElementById("togglePassword").addEventListener("click", () => {
       const passwordField = document.getElementById("password");
-      const toggleButton = document.getElementById("togglePassword");
       if (passwordField.type === "password") {
         passwordField.type = "text";
-        toggleButton.textContent = "🙈";
+        eyeOpen.classList.add("hidden");
+        eyeClosed.classList.remove("hidden");
       } else {
         passwordField.type = "password";
-        toggleButton.textContent = "👁️";
+        eyeOpen.classList.remove("hidden");
+        eyeClosed.classList.add("hidden");
       }
     });
 
+    // Login button click
     document.getElementById("loginButton").addEventListener("click", () => {
       window.location.href = "/login.html";
     });
 
+    // Email input validation
     document.getElementById("email").addEventListener("input", () => {
       const email = document.getElementById("email").value.trim();
-      const emailFeedback = document.getElementById("emailFeedback");
-      emailFeedback.textContent = emailRegex.test(email) ? "" : "Invalid email format.";
+      if (email && !emailRegex.test(email)) {
+        showFeedback(emailFeedback, "Invalid email format.", true);
+      } else {
+        showFeedback(emailFeedback, "", false);
+      }
     });
 
+    // Password input validation
     document.getElementById("password").addEventListener("input", () => {
       const password = document.getElementById("password").value.trim();
-      const passwordFeedback = document.getElementById("passwordFeedback");
-      passwordFeedback.textContent = passwordRegex.test(password)
-        ? ""
-        : "Password must include upper/lowercase, number, special character, and be 8+ chars.";
+      if (password && !passwordRegex.test(password)) {
+        showFeedback(passwordFeedback, "Must include upper/lowercase, number, special character, 8+ chars.", true);
+      } else {
+        showFeedback(passwordFeedback, "", false);
+      }
     });
 
+    // Form submit
     document.getElementById("createUserForm").addEventListener("submit", async (event) => {
       event.preventDefault();
+
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
-      const result = document.getElementById("result");
 
       if (!email || !password) {
         showResult("Please enter both email and password.", "error");
@@ -93,219 +216,45 @@ const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=<>?{}
         return;
       }
 
+      setLoadingState(true);
+
       try {
         const response = await axios.post(`/api/user/user-creation`, { email, password });
 
         const message = response.data.message || "Account created successfully.";
-   if (message.includes("previously deleted")) {
-  showResult(`🔁 ${message}`, "success");
- 
-} else {
-  showResult(`🎉 Success: ${message}`, "success");
-  
-}
+        if (message.includes("previously deleted")) {
+          showResult(`🔁 ${message}`, "success");
+        } else {
+          showResult(`🎉 Success: ${message}`, "success");
+        }
 
+        // Redirect to login after 2 seconds on success
+        setTimeout(() => {
+          window.location.href = "/login.html";
+        }, 2000);
 
       } catch (error) {
         const errMsg = error.response?.data?.error || "Something went wrong";
         showResult(`❌ Error: ${errMsg}`, "error");
+      } finally {
+        setLoadingState(false);
       }
     });
 
-    function showResult(msg, type) {
-      const result = document.getElementById("result");
-      result.innerText = msg;
-      result.className = "result " + type;
-      result.style.display = "block";
-    }
-
+    // Hide loading overlay on page load
     window.addEventListener("load", () => {
       const loadingOverlay = document.getElementById("loadingOverlay");
-      loadingOverlay.style.display = "none";
-      console.log("Spinner hidden on page load");
+      if (loadingOverlay) {
+        loadingOverlay.style.display = "none";
+      }
     });
 
     window.addEventListener("pageshow", () => {
       const loadingOverlay = document.getElementById("loadingOverlay");
-      loadingOverlay.style.display = "none";
-      console.log("Spinner hidden on page show (e.g., back navigation)");
+      if (loadingOverlay) {
+        loadingOverlay.style.display = "none";
+      }
     });
   </script>
-
-
-  
-
-  <style>
-    body {
-      font-family: 'Arial', sans-serif;
-       background-color: #1f2937;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-      padding: 20px;
-    }
-
-    .container {
-       background: linear-gradient(to right, #4338ca, #6b21a8, #be185d);
-      padding: 80px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 450px;
-      text-align: center;
-    }
-
-    h1 {
-      color: #000000;
-      margin-bottom: 20px;
-      font-size: 28px;
-      font-weight: bold;
-    }
-
-    label {
-      text-align: left;
-      display: block;
-      font-weight: 600;
-      margin: 12px 0 6px;
-      font-size: 16px;
-      color: #000000;
-    }
-
-    input {
-      width: 100%;
-      padding: 14px;
-      margin-bottom: 20px;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      font-size: 16px;
-      transition: border-color 0.3s, box-shadow 0.3s;
-      background-color: #f9f9f9;
-    }
-
-    input:focus {
-      border-color: #5e60ce;
-      box-shadow: 0 0 4px rgba(94, 96, 206, 0.5);
-      outline: none;
-    }
-
-    button {
-      background-color: #5e60ce;
-      color: white;
-      padding: 14px;
-      border: none;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background-color 0.3s, transform 0.2s;
-      width: 100%;
-      margin-bottom: 10px;
-    }
-
-    button:hover {
-      background-color: #4b4dbf;
-      transform: translateY(-2px);
-    }
-
-    .password-container {
-      position: relative;
-    }
-
-
-
-    
-.toggle-btn {
-  position: static; 
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 0; 
-  line-height: 1; 
-}
-
-
-
-    .result {
-      margin-top: 20px;
-      font-size: 16px;
-      padding: 15px;
-      border-radius: 8px;
-      display: none; 
-    }
-
-    .result.success {
-      background-color: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-
-    .result.error {
-      background-color: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-
-   @media (max-width: 420px) {
-  body {
-    padding: 1rem;
-    height: auto;
-    align-items: flex-start;
-     margin-top: 10%;
-  }
-
-  .container {
-    padding: 2rem 1rem;
-    border-radius: 10px;
-    max-width: 100%;
-    box-shadow: none;
-  }
-
-  h1 {
-    font-size: 22px;
-    margin-bottom: 1.25rem;
-  }
-
-  label {
-    font-size: 14px;
-    margin: 10px 0 5px;
-  }
-
-
-  input {
-    padding: 0.9rem;
-    font-size: 15px;
-    width: 90%;
-    
-  }
-
-  .password-container {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .toggle-btn {
-    font-size: 16px;
-    padding: 0 0.5rem;
-    margin-left: -0.5rem;
-  }
-
-  button {
-    padding: 0.75rem;
-    font-size: 15px;
-    margin-top: 0.5rem;
-  }
-
-  .result {
-    font-size: 14px;
-    padding: 0.75rem;
-    margin-top: 1rem;
-  }
-}
-
-  </style>
 </body>
 </html>
