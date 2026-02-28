@@ -13,18 +13,18 @@
 
 
   </head>
-<body class="bg-gray-900 text-gray-200 font-mono">
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-gray-200 font-mono">
 
-  <div id="loadingOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center">
-    <div class="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+  <div id="loadingOverlay" class="hidden fixed inset-0 bg-gray-900/95 z-50 flex items-center justify-center">
+    <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
   </div>
 
 <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 shadow">
+<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 backdrop-blur">
   <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
        <h1 class="text-4xl font-bold">
-  <a href="https://pdfify.pro" 
-     class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
+  <a href="https://pdfify.pro"
+     class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent hover:opacity-80 transition">
      PDFify
   </a>
 </h1>
@@ -34,19 +34,19 @@
 
     <!-- Navigation -->
     <nav id="mobileNav" class="hidden sm:flex flex-wrap gap-6">
-      <a href="/api-guide" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+      <a href="/api-guide" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
         📑 API Guide
       </a>
-      <a href="/shopify" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+      <a href="/shopify" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
         📑 Shopify
       </a>
-      <a href="/woocommerce" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+      <a href="/woocommerce" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
         📑 WooCommerce
       </a>
-      <a href="/pdf-generator-demo" class="text-base font-semibold px-6 py-3 bg-indigo-700 hover:bg-indigo-800 rounded text-white transition duration-200">
+      <a href="/pdf-generator-demo" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
         📄 PDF Generator
       </a>
-      <button id="logoutButton" class="text-base font-semibold px-6 py-3 bg-pink-600 hover:bg-pink-700 rounded text-white transition duration-200">
+      <button id="logoutButton" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
         🚪 Logout
       </button>
     </nav>
@@ -54,9 +54,9 @@
 </header>
 
     <main class="max-w-3xl mx-auto px-4 pt-24">
-      <h1 class="text-3xl font-bold mb-6 text-center">👋 Welcome!</h1>
+      <h1 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">👋 Welcome!</h1>
 
-   <section class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow rounded p-6 mb-6 text-white">
+   <section class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 shadow-xl rounded-2xl p-6 mb-6 text-white border-2 border-purple-500">
   <h2 class="text-xl font-semibold mb-4">🔐 Your Account Details</h2>
   <ul class="space-y-2 text-sm">
     <li><strong>Email:</strong> <span id="email">Loading your email...</span></li>
@@ -68,77 +68,78 @@
 </section>
 
 
-      <section class="bg-gray-700 shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">💳 Subscription Management</h2>
+      <section class="bg-gray-800 shadow-lg rounded-2xl p-6 mb-6 border-2 border-gray-700">
+        <h2 class="text-xl font-semibold mb-4 text-purple-300">💳 Subscription Management</h2>
         <div class="flex flex-col gap-3 sm:flex-row">
-          <button id="upgradeSubscriptionButton" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">Upgrade to Premium</button>
-          <button id="downgradeSubscriptionButton" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 w-full">Switch to Free Plan</button>
+          <button id="upgradeSubscriptionButton" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 hover:scale-105 shadow-lg">Upgrade to Premium</button>
+          <button id="downgradeSubscriptionButton" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-3 rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all duration-300 hover:scale-105 shadow-lg">Switch to Free Plan</button>
         </div>
       </section>
 
       
 
-      <section class="bg-gray-700 shadow rounded p-6 mb-6">
-        <h2 class="text-xl font-semibold mb-4">🛠 Update Account Information</h2>
+      <section class="bg-gray-800 shadow-lg rounded-2xl p-6 mb-6 border-2 border-gray-700">
+        <h2 class="text-xl font-semibold mb-4 text-blue-300">🛠 Update Account Information</h2>
         <form id="updateUserForm">
-          <label class="text-sm font-semibold">New Email</label>
-          <input type="email" id="newEmail" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new email address" />
+          <label class="text-sm font-semibold text-gray-300">New Email</label>
+          <input type="email" id="newEmail" class="w-full p-3 border-2 border-gray-600 rounded-xl mb-4 bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="Enter new email address" />
 
-          <label class="text-sm font-semibold">New Password</label>
-          <input type="password" id="newPassword" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="Enter new password" />
+          <label class="text-sm font-semibold text-gray-300">New Password</label>
+          <input type="password" id="newPassword" class="w-full p-3 border-2 border-gray-600 rounded-xl mb-4 bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white" placeholder="Enter new password" />
 
-          <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Changes</button>
+          <button type="submit" class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg w-full">Save Changes</button>
         </form>
       </section>
 
-      <section class="bg-gray-700 shadow rounded p-6 mb-6">
-  <h2 class="text-xl font-semibold mb-4">🏦 Bank Details for Invoices</h2>
+      <section class="bg-gray-800 shadow-lg rounded-2xl p-6 mb-6 border-2 border-gray-700">
+  <h2 class="text-xl font-semibold mb-4 text-green-300">🏦 Bank Details for Invoices</h2>
   <form id="updateBankForm">
-    <label class="text-sm font-semibold">IBAN</label>
-    <input type="text" id="iban" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="DE89 3704 0044 0532 0130 00" />
+    <label class="text-sm font-semibold text-gray-300">IBAN</label>
+    <input type="text" id="iban" class="w-full p-3 border-2 border-gray-600 rounded-xl mb-4 bg-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 text-white" placeholder="DE89 3704 0044 0532 0130 00" />
 
-    <label class="text-sm font-semibold">BIC / SWIFT</label>
-    <input type="text" id="bic" class="w-full p-2 border rounded mb-4 bg-gray-800 border-gray-600 text-white" placeholder="COBADEFFXXX" />
+    <label class="text-sm font-semibold text-gray-300">BIC / SWIFT</label>
+    <input type="text" id="bic" class="w-full p-3 border-2 border-gray-600 rounded-xl mb-4 bg-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 text-white" placeholder="COBADEFFXXX" />
 
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">Save Bank Details</button>
+    <button type="submit" class="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 hover:scale-105 shadow-lg w-full">Save Bank Details</button>
     <p id="bankResult" class="text-sm mt-2 font-bold"></p>
   </form>
 </section>
 
 
-<section class="mt-16 text-center border-t border-gray-700 pt-12 pb-16 bg-gradient-to-br from-gray-800 via-gray-900 to-black rounded-lg shadow-xl mx-auto max-w-4xl">
-  <h3 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 mb-4">
+<section class="mt-16 text-center pt-12 pb-16 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 rounded-2xl shadow-2xl border-2 border-purple-500 mx-auto max-w-4xl">
+  <h3 class="text-3xl font-extrabold bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 bg-clip-text text-transparent mb-4">
     🪙 Buy Token Packs
   </h3>
-  <p class="text-gray-400 mb-10 text-lg">Get extra PDF pages to go beyond your monthly limit.</p>
+  <p class="text-gray-300 mb-10 text-lg">Get extra PDF pages to go beyond your monthly limit.</p>
 
   <div class="grid gap-6 sm:grid-cols-3 px-4">
     <!-- 1,000 Pages Pack -->
-    <div class="bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-2xl transition transform hover:-translate-y-1 border border-gray-700">
-      <h4 class="text-emerald-400 font-bold text-xl mb-3">1,000 Pages</h4>
-      <p class="text-2xl font-extrabold text-white mb-4">€5</p>
-      <button data-pack="1000" 
-        class="token-pack-btn w-full py-2 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition duration-200 hover:scale-105">
+    <div class="bg-gradient-to-br from-emerald-900/50 to-green-900/50 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-emerald-500">
+      <h4 class="text-emerald-300 font-bold text-xl mb-3">1,000 Pages</h4>
+      <p class="text-3xl font-extrabold text-white mb-4">€5</p>
+      <button data-pack="1000"
+        class="token-pack-btn w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg">
         Buy Now
       </button>
     </div>
 
     <!-- 5,000 Pages Pack -->
-    <div class="bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-2xl transition transform hover:-translate-y-1 border border-gray-700">
-      <h4 class="text-blue-400 font-bold text-xl mb-3">5,000 Pages</h4>
-      <p class="text-2xl font-extrabold text-white mb-4">€25</p>
-      <button data-pack="5000" 
-        class="token-pack-btn w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition duration-200 hover:scale-105">
+    <div class="bg-gradient-to-br from-blue-900/50 to-indigo-900/50 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-blue-500">
+      <h4 class="text-blue-300 font-bold text-xl mb-3">5,000 Pages</h4>
+      <p class="text-3xl font-extrabold text-white mb-4">€25</p>
+      <button data-pack="5000"
+        class="token-pack-btn w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg">
         Buy Now
       </button>
     </div>
 
     <!-- 10,000 Pages Pack -->
-    <div class="bg-gray-800 rounded-xl p-6 shadow-md hover:shadow-2xl transition transform hover:-translate-y-1 border border-gray-700">
-      <h4 class="text-purple-400 font-bold text-xl mb-3">10,000 Pages</h4>
-      <p class="text-2xl font-extrabold text-white mb-4">€50</p>
-      <button data-pack="10000" 
-        class="token-pack-btn w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition duration-200 hover:scale-105">
+    <div class="bg-gradient-to-br from-violet-900/50 to-purple-900/50 rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 border-2 border-violet-500 relative">
+      <div class="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full">BEST VALUE</div>
+      <h4 class="text-violet-300 font-bold text-xl mb-3">10,000 Pages</h4>
+      <p class="text-3xl font-extrabold text-white mb-4">€50</p>
+      <button data-pack="10000"
+        class="token-pack-btn w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 shadow-lg">
         Buy Now
       </button>
     </div>
@@ -150,16 +151,16 @@
 
 
 
-      <section class="bg-gray-700 shadow rounded p-6 mb-10">
-        <h2 class="text-xl font-semibold mb-4">🗑 Delete Your Account</h2>
-        <button id="deleteAccountButton" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">Delete Account</button>
+      <section class="bg-gray-800 shadow-lg rounded-2xl p-6 mb-10 border-2 border-red-900">
+        <h2 class="text-xl font-semibold mb-4 text-red-400">🗑 Delete Your Account</h2>
+        <button id="deleteAccountButton" class="bg-gradient-to-r from-red-600 to-rose-600 text-white px-6 py-3 rounded-xl hover:from-red-700 hover:to-rose-700 transition-all duration-300 hover:scale-105 shadow-lg w-full">Delete Account</button>
         <p id="result" class="text-sm mt-4 font-bold"></p>
       </section>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-gray-800 border-t border-gray-700 mt-12">
-      <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
+    <footer class="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 border-t border-gray-800 mt-12">
+      <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-400">
         &copy; 2025 PDFify. Built with ❤️ for creators and developers.
       </div>
     </footer>
