@@ -128,21 +128,171 @@
 </section>
 
 <!-- Technical Highlights -->
-<section class="bg-gray-900 text-white py-16 px-6">
-  <div class="max-w-5xl mx-auto">
-    <h2 class="text-2xl font-extrabold mb-8 text-center">🔧 Technical Highlights</h2>
-    <ul class="grid sm:grid-cols-2 md:grid-cols-3 gap-6 text-md list-disc list-inside">
-      <li>📄 Branded document generation (invoices + more templates )</li>
-      <li>🔐 Auth-based access control (JWT + dual auth)</li>
-      <li>🌐 API-first architecture (ideal for integration)</li>
-      <li>💳 Stripe-based billing and quotas</li>
-      <li>🛍️ Shopify integration via webhooks</li>
-      <li>📬 Email delivery of PDFs</li>
-      <li>🧩 Dynamic templates (free vs premium with logo/image logic)</li>
-      <li>👥 Friendly Mode for non-dev users</li>
-      <li>🇩🇪 ZUGFeRD support (B2G-compliant invoicing for Germany)</li>
-      <li>📦 Dockerized and deploy-anywhere microservice</li>
-    </ul>
+<section class="bg-gray-900 text-white py-20 px-6">
+  <div class="max-w-6xl mx-auto">
+    <h2 class="text-4xl font-extrabold mb-16 text-center">🔧 Technical Highlights</h2>
+
+    <!-- Architecture Section -->
+    <div class="mb-16">
+      <h3 class="text-2xl font-bold mb-6 gradient-text">Dual-Engine PDF Architecture</h3>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-gray-800 rounded-xl p-6 border-l-4 border-blue-500">
+          <div class="text-3xl mb-3">☕</div>
+          <h4 class="font-bold text-lg mb-2">Java Microservice</h4>
+          <p class="text-gray-400 text-sm mb-3">Apache PDFBox 3.0.3 powered</p>
+          <ul class="text-sm text-gray-300 space-y-1">
+            <li>✓ True PDF/A-3b compliance (ISO 19005-3)</li>
+            <li>✓ Proper XMP metadata & ICC profiles</li>
+            <li>✓ Millisecond-grade performance</li>
+            <li>✓ Programmatic document construction</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-6 border-l-4 border-green-500">
+          <div class="text-3xl mb-3">📎</div>
+          <h4 class="font-bold text-lg mb-2">ZUGFeRD 2.4 Engine</h4>
+          <p class="text-gray-400 text-sm mb-3">pdf-lib + xmlbuilder2</p>
+          <ul class="text-sm text-gray-300 space-y-1">
+            <li>✓ EN16931 COMFORT profile</li>
+            <li>✓ XML embedding via pdf-lib</li>
+            <li>✓ German B2G e-invoicing compliant</li>
+            <li>✓ SAP/DATEV compatible</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-6 border-l-4 border-purple-500">
+          <div class="text-3xl mb-3">🌐</div>
+          <h4 class="font-bold text-lg mb-2">HTML-to-PDF Engine</h4>
+          <p class="text-gray-400 text-sm mb-3">Puppeteer for non-compliant docs</p>
+          <ul class="text-sm text-gray-300 space-y-1">
+            <li>✓ Visual document rendering</li>
+            <li>✓ CSS styling support</li>
+            <li>✓ Charts & graphics</li>
+            <li>✓ Therapy reports, recipes, etc.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Platform Features Grid -->
+    <div class="mb-16">
+      <h3 class="text-2xl font-bold mb-6 gradient-text">Enterprise Platform Features</h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-gradient-to-br from-blue-900 to-blue-800 rounded-xl p-5 text-center">
+          <div class="text-3xl mb-2">🔐</div>
+          <h4 class="font-bold">JWT Auth</h4>
+          <p class="text-sm text-blue-200 mt-1">Secure token-based access</p>
+        </div>
+        <div class="bg-gradient-to-br from-green-900 to-green-800 rounded-xl p-5 text-center">
+          <div class="text-3xl mb-2">💳</div>
+          <h4 class="font-bold">Stripe Billing</h4>
+          <p class="text-sm text-green-200 mt-1">Subscription management</p>
+        </div>
+        <div class="bg-gradient-to-br from-purple-900 to-purple-800 rounded-xl p-5 text-center">
+          <div class="text-3xl mb-2">👥</div>
+          <h4 class="font-bold">Multi-Tenancy</h4>
+          <p class="text-sm text-purple-200 mt-1">Isolated user configs</p>
+        </div>
+        <div class="bg-gradient-to-br from-pink-900 to-pink-800 rounded-xl p-5 text-center">
+          <div class="text-3xl mb-2">🔑</div>
+          <h4 class="font-bold">API Key Mgmt</h4>
+          <p class="text-sm text-pink-200 mt-1">Self-service credentials</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- E-Commerce Integration -->
+    <div class="mb-16">
+      <h3 class="text-2xl font-bold mb-6 gradient-text">E-Commerce Integration</h3>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-gray-800 rounded-xl p-6">
+          <div class="flex items-center mb-4">
+            <div class="text-4xl mr-4">🛍️</div>
+            <div>
+              <h4 class="font-bold text-xl">Shopify Embedded App</h4>
+              <p class="text-green-400 text-sm">One-click OAuth install</p>
+            </div>
+          </div>
+          <ul class="text-sm text-gray-300 space-y-2">
+            <li>✓ PDF/A-3b + ZUGFeRD 2.4 compliant invoices</li>
+            <li>✓ Multi-language support (EN, DE, SL)</li>
+            <li>✓ Custom branding (colors, logos, company details)</li>
+            <li>✓ Bulk ZIP download for date ranges</li>
+            <li>✓ Per-store usage tracking (30/100/Unlimited)</li>
+            <li>✓ GoBD compliant for German merchants</li>
+          </ul>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-6">
+          <div class="flex items-center mb-4">
+            <div class="text-4xl mr-4">🛒</div>
+            <div>
+              <h4 class="font-bold text-xl">WooCommerce Plugin</h4>
+              <p class="text-purple-400 text-sm">REST API integration</p>
+            </div>
+          </div>
+          <ul class="text-sm text-gray-300 space-y-2">
+            <li>✓ Automatic customer invoice generation</li>
+            <li>✓ Bulk ZIP archive downloads</li>
+            <li>✓ ZUGFeRD compliance for EU merchants</li>
+            <li>✓ Store configuration sync</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Generation Modes -->
+    <div class="mb-16">
+      <h3 class="text-2xl font-bold mb-6 gradient-text">Flexible Generation Modes</h3>
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="bg-gradient-to-br from-yellow-900 to-yellow-800 rounded-xl p-6">
+          <h4 class="font-bold text-lg mb-3">👩‍⚖️ Compliant Mode</h4>
+          <p class="text-sm text-yellow-100 mb-3">Java service for legally binding invoices</p>
+          <div class="text-xs bg-yellow-950 rounded p-2">
+            <p class="font-mono">PDF/A-3b + ZUGFeRD XML</p>
+            <p class="text-yellow-300 mt-1">Shopify merchants, Pro/Premium plans</p>
+          </div>
+        </div>
+        <div class="bg-gradient-to-br from-cyan-900 to-cyan-800 rounded-xl p-6">
+          <h4 class="font-bold text-lg mb-3">😊 Friendly Mode</h4>
+          <p class="text-sm text-cyan-100 mb-3">No-code JSON to PDF conversion</p>
+          <div class="text-xs bg-cyan-950 rounded p-2">
+            <p class="font-mono">POST /api/friendly/generate</p>
+            <p class="text-cyan-300 mt-1">Pre-built templates, no HTML needed</p>
+          </div>
+        </div>
+        <div class="bg-gradient-to-br from-indigo-900 to-indigo-800 rounded-xl p-6">
+          <h4 class="font-bold text-lg mb-3">👨‍💻 Developer Mode</h4>
+          <p class="text-sm text-indigo-100 mb-3">Raw HTML to PDF via Puppeteer</p>
+          <div class="text-xs bg-indigo-950 rounded p-2">
+            <p class="font-mono">POST /api/html/generate-pdf-from-html</p>
+            <p class="text-indigo-300 mt-1">Full control, custom branding</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Document Types & Deployment -->
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-gray-800 rounded-xl p-6">
+        <h4 class="font-bold text-lg mb-4">📋 Supported Document Types</h4>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div class="flex items-center"><span class="text-green-400 mr-2">✓</span> Invoices</div>
+          <div class="flex items-center"><span class="text-green-400 mr-2">✓</span> Packing Slips</div>
+          <div class="flex items-center"><span class="text-green-400 mr-2">✓</span> Shop Orders</div>
+          <div class="flex items-center"><span class="text-green-400 mr-2">✓</span> Recipes</div>
+          <div class="flex items-center"><span class="text-green-400 mr-2">✓</span> Therapy Reports</div>
+          <div class="flex items-center"><span class="text-blue-400 mr-2">+</span> Custom templates</div>
+        </div>
+      </div>
+      <div class="bg-gray-800 rounded-xl p-6">
+        <h4 class="font-bold text-lg mb-4">🐳 Deployment & Stack</h4>
+        <ul class="text-sm text-gray-300 space-y-1">
+          <li><strong class="text-white">API Layer:</strong> Node.js + Express.js</li>
+          <li><strong class="text-white">Database:</strong> MongoDB + Mongoose</li>
+          <li><strong class="text-white">Deployment:</strong> Docker multi-stage build</li>
+          <li><strong class="text-white">Scalability:</strong> Stateless microservices</li>
+        </ul>
+      </div>
+    </div>
+
   </div>
 </section>
 
