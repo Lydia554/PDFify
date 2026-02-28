@@ -70,9 +70,18 @@
 
       <section class="bg-gray-800 shadow-lg rounded-2xl p-6 mb-6 border-2 border-gray-700">
         <h2 class="text-xl font-semibold mb-4 text-purple-300">💳 Subscription Management</h2>
-        <div class="flex flex-col gap-3 sm:flex-row">
-          <button id="upgradeSubscriptionButton" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 hover:scale-105 shadow-lg">Upgrade to Premium</button>
-          <button id="downgradeSubscriptionButton" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-3 rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all duration-300 hover:scale-105 shadow-lg">Switch to Free Plan</button>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button id="upgradeSubscriptionButton" class="bg-gradient-to-r from-emerald-600 to-teal-600 text-white px-6 py-3 rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-300 hover:scale-105 shadow-lg">
+            💎 Premium
+            <span class="block text-xs opacity-80">€4.99/mo</span>
+          </button>
+          <button id="upgradeProButton" class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 hover:scale-105 shadow-lg">
+            🚀 Pro
+            <span class="block text-xs opacity-80">€49.99/mo</span>
+          </button>
+          <button id="downgradeSubscriptionButton" class="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-6 py-3 rounded-xl hover:from-amber-600 hover:to-orange-700 transition-all duration-300 hover:scale-105 shadow-lg">
+            ⬇️ Free Plan
+          </button>
         </div>
       </section>
 
@@ -320,6 +329,155 @@ document.getElementById("logoutButton").addEventListener("click", async () => {
   }
 });
 
+// -------------------- Subscription Management --------------------
+fetch('/api/get-stripe-key')
+  .then(res => res.json())
+  .then(async (data) => {
+    const stripe = Stripe(data.stripePublishableKey);
+
+    // Fetch user data to check current plan
+    let userData;
+    try {
+      const userRes = await api.get("/user/me");
+      userData = userRes.data;
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+      return;
+    }
+
+    // Helper to disable/enable buttons
+    function disableButton(btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function enableButton(btn) {
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    // Get buttons
+    const premiumBtn = document.getElementById('upgradeSubscriptionButton');
+    const proBtn = document.getElementById('upgradeProButton');
+    const freeBtn = document.getElementById('downgradeSubscriptionButton');
+
+    // Disable buttons based on current plan
+    switch (userData.planType) {
+      case 'free':
+        // All upgrade buttons enabled
+        break;
+      case 'premium':
+        disableButton(premiumBtn);
+        break;
+      case 'pro':
+        disableButton(proBtn);
+        disableButton(premiumBtn);
+        break;
+    }
+
+    // Premium Upgrade
+    premiumBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await fetchApiKey()}`
+          },
+          body: JSON.stringify({
+            email: userData.email,
+            plan: 'premium'
+          }),
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert(`Error: ${error.error || "Failed to create checkout session"}`);
+          return;
+        }
+
+        const session = await response.json();
+        if (!session.id) {
+          alert('Error: No session ID returned from backend.');
+          return;
+        }
+
+        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (error) {
+          console.error(error);
+          alert('Error during checkout');
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        alert('An unexpected error occurred. Please try again.');
+      }
+    });
+
+    // Pro Upgrade
+    proBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/stripe/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${await fetchApiKey()}`
+          },
+          body: JSON.stringify({
+            email: userData.email,
+            plan: 'pro'
+          }),
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert(`Error: ${error.error || "Failed to create checkout session"}`);
+          return;
+        }
+
+        const session = await response.json();
+        if (!session.id) {
+          alert('Error: No session ID returned from backend.');
+          return;
+        }
+
+        const { error } = await stripe.redirectToCheckout({ sessionId: session.id });
+        if (error) {
+          console.error(error);
+          alert('Error during checkout');
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
+        alert('An unexpected error occurred. Please try again.');
+      }
+    });
+
+    // Downgrade to Free
+    freeBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to downgrade to the Free plan? You will lose Premium/Pro features.')) {
+        return;
+      }
+
+      try {
+        const response = await api.post('/user/subscription/downgrade');
+        if (response.status === 200) {
+          alert('Successfully downgraded to Free plan.');
+          location.reload();
+        } else {
+          alert('Failed to downgrade. Please try again.');
+        }
+      } catch (err) {
+        console.error('Error downgrading:', err);
+        alert('Error downgrading subscription. Please try again.');
+      }
+    });
+  })
+  .catch(error => {
+    console.error('Error fetching Stripe key:', error);
+    document.getElementById('result').textContent = 'Payment system temporarily unavailable.';
+  });
+
 // -------------------- Init --------------------
 fetchAndDisplayApiKey();
 fetchUserData();
@@ -341,8 +499,8 @@ header {
   top: 0;
   left: 0;
   right: 0;
-  background: linear-gradient(to right, #0b1a2b, #1e2a47, #4b367c); 
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(to right, #0f172a, #581c87, #0f172a);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
   z-index: 1000;
 }
 
@@ -358,17 +516,17 @@ main {
 
 @media (max-width: 640px) {
   #mobileNav {
-    display: none; 
+    display: none;
     flex-direction: column;
-    position: absolute;   
-    top: 100%;           
+    position: absolute;
+    top: 100%;
     left: 0;
     width: 100%;
-    background-color: rgba(11, 26, 43, 0.95);
-    justify-content: center; 
-    align-items: center;      
-    gap: 1rem;              
-    padding: 1rem 0;         
+    background-color: rgba(15, 23, 42, 0.98);
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
     z-index: 1001;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
@@ -376,9 +534,9 @@ main {
 
   #mobileNav a,
   #mobileNav button {
-    width: 90%;              
-    text-align: center;       
-    padding: 0.75rem 0;      
+    width: 90%;
+    text-align: center;
+    padding: 0.75rem 0;
     font-size: 16px;
   }
 }
