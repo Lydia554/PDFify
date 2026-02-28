@@ -20,11 +20,11 @@
   </div>
 
   <!-- Header -->
-  <header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 backdrop-blur">
+  <header class="fixed top-0 left-0 right-0 z-50 shadow bg-gray-800">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <h1 class="text-4xl font-bold">
   <a href="https://pdfify.pro"
-     class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent hover:opacity-80 transition">
+     class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
      PDFify
   </a>
 </h1>
@@ -35,19 +35,19 @@
         <a href="/shopify" class="nav-link">📑 Shopify</a>
         <a href="/woocommerce" class="nav-link">📑 WooCommerce</a>
         <a href="/user-dashboard" class="nav-link">👤 User Dashboard</a>
-        <button id="logoutButton" class="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-4 py-2 rounded-md hover:from-rose-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg ml-4">
+        <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
           🚪 Logout
         </button>
       </nav>
     </div>
 
     <!-- Mobile Nav -->
-    <nav id="mobileNav" class="hidden flex-col bg-slate-900/95 backdrop-blur px-4 py-4 space-y-2 md:hidden">
+    <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
       <a href="/api-guide" class="block text-gray-300 hover:text-purple-400">📑 API Guide</a>
       <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
       <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
      <a href="/user-dashboard" class="block text-gray-300 hover:text-purple-400">👤 User Dashboard</a>
-      <button id="logoutButton" class="bg-gradient-to-r from-rose-500 to-pink-600 text-white px-4 py-2 rounded-md hover:from-rose-600 hover:to-pink-700 transition-all duration-300 hover:scale-105 shadow-lg">
+      <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
         🚪 Logout
       </button>
     </nav>
@@ -171,7 +171,7 @@ John Smith,john@example.com,12346,Slovenia,2025-04-12,EUR,22%,Due within 30 days
       <h2 class="text-xl font-bold text-purple-300 mb-4">📝 Single PDF (JSON)</h2>
       <div class="space-y-4">
         <label for="json" class="block mb-1 font-semibold text-gray-100">Data (JSON):</label>
-        <textarea id="json" rows="15" class="w-full border border-gray-600 bg-gray-800 rounded-xl p-3 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-purple-500 transition text-gray-100"></textarea>
+        <textarea id="json" rows="35" class="w-full border border-gray-600 bg-gray-800 rounded-xl p-3 font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-purple-500 transition text-gray-100"></textarea>
         <div class="flex gap-4">
           <button onclick="sendRequest(true)" class="flex-1 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 hover:scale-105 shadow-lg">
             🔍 Preview
