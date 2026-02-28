@@ -1,37 +1,54 @@
-<!-- success.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-     <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
-<link rel="apple-touch-icon" href="images/Icon.png?v=2">
-
   <meta charset="UTF-8">
-  <title>Payment Successful</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      text-align: center;
-      padding-top: 100px;
-      background-color: #f0fff4;
-      color: #2f855a;
-    }
-    h1 {
-      font-size: 2.5rem;
-    }
-    p {
-      font-size: 1.2rem;
-    }
-    a {
-      margin-top: 20px;
-      display: inline-block;
-      color: #2b6cb0;
-      text-decoration: none;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Successful | PDFify</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="images/Icon.png?v=2">
 </head>
-<body>
-  <h1>🎉 Payment Successful!</h1>
-  <p>Thank you for your purchase. You're all set.</p>
-  <a href="/pdf-generator-demo">Back to PDFify Generator</a>
+<body class="bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 min-h-screen flex items-center justify-center p-4">
+
+  <div class="w-full max-w-md">
+    <!-- Success Card -->
+    <div class="bg-gradient-to-br from-emerald-900/50 via-green-900/50 to-teal-900/50 p-12 rounded-3xl shadow-2xl border-2 border-emerald-500/30 backdrop-blur-sm text-center">
+      <!-- Success Icon -->
+      <div class="mb-8">
+        <div class="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br from-emerald-400 to-green-500 shadow-lg">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Heading -->
+      <h1 class="text-4xl font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-green-400">
+        Payment Successful!
+      </h1>
+
+      <!-- Message -->
+      <p class="text-xl text-gray-200 mb-8">
+        Thank you for your purchase. You're all set.
+      </p>
+
+      <!-- Button -->
+      <a
+        href="/pdf-generator-demo"
+        class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white font-semibold rounded-xl hover:from-emerald-600 hover:via-green-600 hover:to-teal-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Back to PDFify Generator
+      </a>
+    </div>
+
+    <!-- Additional Info -->
+    <p class="text-center text-gray-500 mt-6 text-sm">
+      A confirmation email has been sent to your inbox.
+    </p>
+  </div>
+
 </body>
 </html>
