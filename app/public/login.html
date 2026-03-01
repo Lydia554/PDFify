@@ -14,38 +14,7 @@
     <div class="border-4 border-purple-300 border-l-purple-600 rounded-full w-12 h-12 animate-spin"></div>
   </div>
 
-<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-      <h1 class="text-4xl font-bold">
-  <a href="https://pdfify.pro"
-     class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
-     PDFify
-  </a>
-</h1>
-
-      <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
-
-      <nav id="mainNav" class="md:flex space-x-4">
-        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
-        <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑API Guide</a>
-        <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
-        <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
-        <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
-        <a href="/login.html" class="text-purple-400 font-semibold">🔐 Login</a>
-      </nav>
-    </div>
-
-    <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
-      <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
-      <a href="/api-guide" class="block text-gray-300 hover:text-purple-400">📑 API Guide</a>
-      <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
-      <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
-      <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
-      <a href="/login.html" class="block text-purple-400 font-semibold">🔐 Login</a>
-    </nav>
-  </header>
-
-  <div class="w-full max-w-md flex items-center justify-center min-h-screen p-4 mt-20">
+  <div class="w-full max-w-md flex items-center justify-center min-h-screen p-4">
     <!-- Logo/Brand -->
     <div class="text-center mb-8 w-full">
       <h1 class="text-5xl font-bold mb-2">
@@ -292,40 +261,9 @@
       const loadingOverlay = document.getElementById("loadingOverlay");
       if (loadingOverlay) loadingOverlay.style.display = "none";
     });
-
-    // Particle effect on header
-    const header = document.querySelector('header');
-    if (header) {
-      for (let i = 0; i < 15; i++) {
-        const particle = document.createElement('div');
-        particle.className = 'particle';
-        particle.style.cssText = `
-          position: absolute;
-          width: ${Math.random() * 6 + 2}px;
-          height: ${Math.random() * 6 + 2}px;
-          background: rgba(139, 92, 246, ${Math.random() * 0.5 + 0.2});
-          border-radius: 50%;
-          left: ${Math.random() * 100}%;
-          top: ${Math.random() * 100}%;
-          animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
-          pointer-events: none;
-          z-index: 0;
-        `;
-        header.appendChild(particle);
-      }
-    }
   </script>
 
 <style>
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0px);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-
   /* Mobile menu styles */
   #mobileMenuBtn {
     display: none;
