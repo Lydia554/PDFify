@@ -56,7 +56,7 @@
       </div>
 
       <!-- Compliant Mode -->
-      <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-10 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-default border-2 border-transparent hover:border-amber-300">
+      <div class="feature-card bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-10 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-default border-2 border-transparent hover:border-amber-300">
         <div class="mx-auto w-20 h-20 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-8 text-white shadow-lg">
           <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
@@ -71,7 +71,7 @@
       </div>
 
       <!-- Friendly Mode -->
-      <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-3xl p-10 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-default border-2 border-transparent hover:border-violet-300">
+      <div class="feature-card bg-gradient-to-br from-violet-500 to-purple-600 rounded-3xl p-10 shadow-xl hover:shadow-2xl transition-all duration-300 cursor-default border-2 border-transparent hover:border-violet-300">
         <div class="mx-auto w-20 h-20 rounded-full bg-white/20 backdrop-blur flex items-center justify-center mb-8 text-white shadow-lg">
           <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v16H4V4z"/></svg>
         </div>
@@ -478,7 +478,7 @@
       <!-- Tabs for the three modes -->
       <div class="text-left">
         <!-- Compliant Mode -->
-        <div class="mb-8 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-2xl p-8 border-2 border-yellow-300 dark:border-yellow-600">
+        <div class="feature-card mb-8 bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-900/30 dark:to-yellow-800/30 rounded-2xl p-8 border-2 border-yellow-300 dark:border-yellow-600">
           <div class="flex items-center mb-4">
             <span class="text-4xl mr-4">👩‍⚖️</span>
             <div>
@@ -504,7 +504,7 @@
         </div>
 
         <!-- Friendly Mode -->
-        <div class="mb-8 bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 rounded-2xl p-8 border-2 border-cyan-300 dark:border-cyan-600">
+        <div class="feature-card mb-8 bg-gradient-to-r from-cyan-50 to-cyan-100 dark:from-cyan-900/30 dark:to-cyan-800/30 rounded-2xl p-8 border-2 border-cyan-300 dark:border-cyan-600">
           <div class="flex items-center mb-4">
             <span class="text-4xl mr-4">😊</span>
             <div>
@@ -710,7 +710,7 @@
   <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-8 relative z-10">
 
     <!-- Free Plan -->
-    <div class="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-600 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:border-slate-500 transition-all duration-300 cursor-default relative overflow-hidden">
+    <div class="pricing-card bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-600 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:border-slate-500 transition-all duration-300 cursor-default relative overflow-hidden">
       <!-- Plan Badge -->
       <div class="absolute top-0 right-0 bg-slate-600 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl">
         STARTER
@@ -772,7 +772,7 @@
 
       <div class="pt-6 border-t border-slate-700">
         <div class="text-center">
-          <span class="text-3xl font-bold text-slate-200">30</span>
+          <span class="counter text-3xl font-bold text-slate-200" data-count="30">0</span>
           <span class="text-slate-400 ml-1">PDF pages/month</span>
         </div>
       </div>
@@ -783,7 +783,7 @@
     </div>
 
     <!-- Premium Plan -->
-    <div class="bg-gradient-to-br from-emerald-600 to-teal-700 border-2 border-emerald-400 rounded-3xl p-8 shadow-2xl transform hover:scale-105 transition-all duration-300 cursor-default relative overflow-hidden">
+    <div class="pricing-card bg-gradient-to-br from-emerald-600 to-teal-700 border-2 border-emerald-400 rounded-3xl p-8 shadow-2xl transform hover:scale-105 transition-all duration-300 cursor-default relative overflow-hidden">
       <!-- Popular Badge -->
       <div class="absolute top-0 right-0 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl shadow-lg">
         ⭐ MOST POPULAR
@@ -849,7 +849,7 @@
 
       <div class="pt-6 border-t border-emerald-500">
         <div class="text-center">
-          <span class="text-3xl font-bold text-white">1,000</span>
+          <span class="counter text-3xl font-bold text-white" data-count="1000">0</span>
           <span class="text-emerald-100 ml-1">PDF pages/month</span>
         </div>
       </div>
@@ -860,7 +860,7 @@
     </div>
 
     <!-- Pro Plan -->
-    <div class="bg-gradient-to-br from-violet-600 to-purple-700 border-2 border-violet-400 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:border-violet-300 transition-all duration-300 cursor-default relative overflow-hidden">
+    <div class="pricing-card bg-gradient-to-br from-violet-600 to-purple-700 border-2 border-violet-400 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:border-violet-300 transition-all duration-300 cursor-default relative overflow-hidden">
       <!-- Plan Badge -->
       <div class="absolute top-0 right-0 bg-gradient-to-r from-violet-400 to-purple-500 text-white text-xs font-bold px-4 py-2 rounded-bl-2xl shadow-lg">
         🚀 ENTERPRISE
@@ -926,7 +926,7 @@
 
       <div class="pt-6 border-t border-violet-500">
         <div class="text-center">
-          <span class="text-3xl font-bold text-white">10,000</span>
+          <span class="counter text-3xl font-bold text-white" data-count="10000">0</span>
           <span class="text-violet-100 ml-1">PDF pages/month</span>
         </div>
       </div>
@@ -1056,7 +1056,152 @@
     const loadingOverlay = document.getElementById("loadingOverlay");
     if (loadingOverlay) loadingOverlay.style.display = "none";
   });
+
+  // Gamified animations
+  document.addEventListener('DOMContentLoaded', () => {
+    // Float animation for cards
+    const cards = document.querySelectorAll('.feature-card, .pricing-card');
+    cards.forEach((card, index) => {
+      card.style.animation = `float 3s ease-in-out ${index * 0.2}s infinite`;
+    });
+
+    // Scroll-triggered animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-in');
+          entry.target.style.animation = 'fadeInUp 0.6s ease-out forwards';
+        }
+      });
+    }, observerOptions);
+
+    // Observe all sections
+    document.querySelectorAll('section > div').forEach(el => {
+      observer.observe(el);
+    });
+
+    // Typing effect for main heading
+    const heading = document.querySelector('h1 .gradient-text');
+    if (heading && !heading.dataset.animated) {
+      const text = heading.textContent;
+      heading.textContent = '';
+      heading.dataset.animated = 'true';
+
+      let i = 0;
+      const typeWriter = () => {
+        if (i < text.length) {
+          heading.textContent += text.charAt(i);
+          i++;
+          setTimeout(typeWriter, 100);
+        }
+      };
+      setTimeout(typeWriter, 500);
+    }
+
+    // Hover glow effect on cards
+    document.querySelectorAll('.feature-card, .pricing-card').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        card.style.transform = 'translateY(-10px) scale(1.02)';
+        card.style.boxShadow = '0 20px 40px rgba(139, 92, 246, 0.3)';
+        card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'translateY(0) scale(1)';
+        card.style.boxShadow = '0 10px 30px rgba(0, 0, 0, 0.1)';
+      });
+    });
+
+    // Particle effect on hero section
+    const hero = document.querySelector('header');
+    if (hero) {
+      for (let i = 0; i < 20; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.cssText = `
+          position: absolute;
+          width: ${Math.random() * 6 + 2}px;
+          height: ${Math.random() * 6 + 2}px;
+          background: rgba(139, 92, 246, ${Math.random() * 0.5 + 0.2});
+          border-radius: 50%;
+          left: ${Math.random() * 100}%;
+          top: ${Math.random() * 100}%;
+          animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
+          pointer-events: none;
+        `;
+        hero.appendChild(particle);
+      }
+    }
+
+    // Counter animation for stats
+    const counters = document.querySelectorAll('.counter');
+    counters.forEach(counter => {
+      const target = parseInt(counter.dataset.count);
+      const duration = 2000;
+      const increment = target / (duration / 16);
+      let current = 0;
+
+      const updateCounter = () => {
+        current += increment;
+        if (current < target) {
+          counter.textContent = Math.ceil(current);
+          requestAnimationFrame(updateCounter);
+        } else {
+          counter.textContent = target;
+        }
+      };
+
+      const counterObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+          updateCounter();
+          counterObserver.unobserve(counter);
+        }
+      });
+
+      counterObserver.observe(counter);
+    });
+  });
 </script>
+
+<style>
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .particle {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .feature-card,
+  .pricing-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .animate-in {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+</style>
 
 <style>
   body.dark-mode {
