@@ -1,7 +1,26 @@
-tree 36edd4630f1d17178e875a104ebcd66b81c8e5fc
-parent 13161140124153d4ca47d2d831a7f200dbc8b85a
-parent 785af23119936bd1e50cd2d1646eecb5a9ad2d57
-author Lydia554 <73587947+Lydia554@users.noreply.github.com> 1754749365 +0200
-committer Lydia554 <73587947+Lydia554@users.noreply.github.com> 1754749365 +0200
+tree 08eb3f4c057a450e0cab0e99a161e9a16897967e
+parent 56839e0126812d22f23b2e24ce368ef2b8209243
+parent 920fc93b299cbf37722f1d17a4389f4c2157dabd
+author Goran Obradović <goran.obradovic@gmail.com> 1756718601 +0200
+committer GitHub <noreply@github.com> 1756718601 +0200
+gpgsig -----BEGIN PGP SIGNATURE-----
+ 
+ wsFcBAABCAAQBQJotWYJCRC1aQ7uu5UhlAAATY4QAIoK8yZ/azcDjc+5Jn/TtdQH
+ Rx5S+Fr84kZtjS2iO3ZZpMV7Yr5cpIBC6pTeU0a60vI7W9SgL2RMFb0wCkWvh1jN
+ db4n2S3/L0+nk7n5qz0stn2mRBRiswNHuzZVmXTO4AhU57f8zAGvU+75NGTt8Wib
+ djYUCQ/Bmx0RnB+UCqxNxVn1l2Gnm62xZf9i5UrXN3sXfuXJIfsjJ0uxXqVVjr6T
+ /daZkOsRSoOJaNuhbQHHxZsqL7DvqvYKZu7hB9Wfs/ZixBk/z5fGecQkPRykP/Y8
+ WExdsHHqwOwK88uJPfFvWj1l4oNvd5KRY0IYZEbfH8sbWCODvUp/zFGbJvBWJ24N
+ g8beZYeg1YrWMzGNSEHmEuh6ALL4vD3WleqqUovmkPUm9CW46qBJIjoOPR72W5bK
+ fpmKY168HUfE2o3bT8aK487uh2AaxYrSJbIas1ew4sxMvWFVllKd1Ig1oARDDOBx
+ pZ0Ps14zRxskDtJHVfQmspYMKd0mjs5fv/Ce9RhHZIL22HHSS2dffxMo5++bPrld
+ dOi/y8iODJQa/1FnyWaUlpY8EvpllN6V/HsfRbvNRaRcmEGi8uPsdnhe9eY8qWU2
+ sZmfih9VM94ffjVO6CQjl2jNmLhYMIGu4q0dsz9xjg9cXWVy6Gb8W9I8sDK7yvmF
+ nOX8Mj0HKyZjPW9/Ryac
+ =RDmf
+ -----END PGP SIGNATURE-----
+ 
 
-Merge branch 'main' of https://github.com/Lydia554/PDFify
+Merge pull request #1 from Lydia554/pdf-a-3b-compatibility
+
+new pdf a-3b compatibility changes
