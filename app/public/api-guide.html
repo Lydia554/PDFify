@@ -886,18 +886,81 @@ devModeBtn.addEventListener('click', () => {
   
 function toggleImage(container) {
   const images = container.querySelectorAll('img');
-  if (images.length < 2) return; 
+  if (images.length < 2) return;
 
   if (images[0].classList.contains('hidden')) {
 
     images[0].classList.remove('hidden');
     images[1].classList.add('hidden');
   } else {
-   
+
     images[0].classList.add('hidden');
     images[1].classList.remove('hidden');
   }
 }
+
+  // Gamified animations
+  document.addEventListener('DOMContentLoaded', () => {
+    // Scroll-triggered animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('animate-in');
+          entry.target.style.animation = 'fadeInUp 0.6s ease-out forwards';
+        }
+      });
+    }, observerOptions);
+
+    // Observe all sections
+    document.querySelectorAll('section, .mb-10').forEach(el => {
+      observer.observe(el);
+    });
+
+    // Hover glow effect on cards
+    document.querySelectorAll('.mb-10, pre').forEach(card => {
+      card.addEventListener('mouseenter', () => {
+        card.style.transform = 'translateY(-5px) scale(1.01)';
+        card.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'translateY(0) scale(1)';
+      });
+    });
+
+    // Particle effect on header
+    const header = document.querySelector('header');
+    if (header) {
+      for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.cssText = `
+          position: absolute;
+          width: ${Math.random() * 6 + 2}px;
+          height: ${Math.random() * 6 + 2}px;
+          background: rgba(139, 92, 246, ${Math.random() * 0.5 + 0.2});
+          border-radius: 50%;
+          left: ${Math.random() * 100}%;
+          top: ${Math.random() * 100}%;
+          animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
+          pointer-events: none;
+          z-index: 0;
+        `;
+        header.appendChild(particle);
+      }
+    }
+
+    // Float animation for sections
+    const sections = document.querySelectorAll('.mb-10');
+    sections.forEach((section, index) => {
+      section.style.animation = `float 4s ease-in-out ${index * 0.1}s infinite`;
+    });
+  });
 
 
   </script>
@@ -1033,6 +1096,55 @@ function toggleImage(container) {
     to {
       transform: rotate(360deg);
     }
+  }
+
+  /* Gamified animations */
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  .particle {
+    animation: float 8s ease-in-out infinite;
+  }
+
+  .feature-card,
+  .code-js,
+  .code-cl {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .animate-in {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  .mb-10 {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .mb-10:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(139, 92, 246, 0.2);
   }
 
   /* ----------------------- */
