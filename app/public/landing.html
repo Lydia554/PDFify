@@ -15,8 +15,8 @@
 
 <!-- Hero -->
 <section class="bg-gray-900 text-white py-20 text-center px-4 relative overflow-hidden">
-  <!-- Rocket Animation Container -->
-  <div class="rocket-container" id="rocketContainer">
+  <!-- Flying PDF Animation Container -->
+  <div class="pdf-container" id="pdfContainer">
     <!-- Stars -->
     <div class="star star-1"></div>
     <div class="star star-2"></div>
@@ -39,6 +39,12 @@
     <div class="trajectory trajectory-2"></div>
     <div class="trajectory trajectory-3"></div>
 
+    <!-- Floating Papers -->
+    <div class="mini-paper mini-paper-1">📄</div>
+    <div class="mini-paper mini-paper-2">📋</div>
+    <div class="mini-paper mini-paper-3">📑</div>
+    <div class="mini-paper mini-paper-4">📄</div>
+
     <!-- Planets -->
     <div class="planet planet-1">
       <svg viewBox="0 0 50 50" class="w-12 h-12">
@@ -58,27 +64,39 @@
       </svg>
     </div>
 
-    <!-- Rocket Ship -->
-    <div class="rocket" id="rocket">
-      <svg viewBox="0 0 100 150" class="w-20 h-30">
-        <!-- Rocket Body -->
-        <ellipse cx="50" cy="60" rx="20" ry="50" fill="#e0e0e0"/>
-        <!-- Rocket Nose -->
-        <path d="M30 30 L50 5 L70 30 Z" fill="#ff6b6b"/>
-        <!-- Window -->
-        <circle cx="50" cy="50" r="10" fill="#4ecdc4" stroke="#333" stroke-width="2"/>
-        <!-- Fins -->
-        <path d="M30 80 L20 110 L35 95 Z" fill="#ff6b6b"/>
-        <path d="M70 80 L80 110 L65 95 Z" fill="#ff6b6b"/>
-        <!-- Engine -->
-        <rect x="40" y="100" width="20" height="15" fill="#666"/>
-        <!-- Flame -->
-        <ellipse cx="50" cy="120" rx="8" ry="15" fill="#ff9f43" class="flame">
-          <animate attributeName="ry" values="15;20;15" dur="0.2s" repeatCount="indefinite"/>
-          <animate attributeName="opacity" values="1;0.7;1" dur="0.2s" repeatCount="indefinite"/>
-        </ellipse>
-        <ellipse cx="50" cy="125" rx="5" ry="10" fill="#ff6348" class="flame-inner">
-          <animate attributeName="ry" values="10;14;10" dur="0.15s" repeatCount="indefinite"/>
+    <!-- Flying PDF Document -->
+    <div class="flying-pdf" id="flyingPdf">
+      <svg viewBox="0 0 120 140" class="w-24 h-28">
+        <!-- PDF Body -->
+        <rect x="20" y="10" width="80" height="110" rx="5" fill="#f40f02" class="pdf-body"/>
+
+        <!-- PDF Folded Corner (Top Right) -->
+        <path d="M85 10 L100 25 L85 25 Z" fill="#d40a02" class="pdf-corner"/>
+
+        <!-- PDF Text Lines -->
+        <line x1="35" y1="40" x2="85" y2="40" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+        <line x1="35" y1="55" x2="85" y2="55" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+        <line x1="35" y1="70" x2="70" y2="70" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+        <line x1="35" y1="85" x2="85" y2="85" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+        <line x1="35" y1="100" x2="60" y2="100" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+
+        <!-- PDF Logo/Text -->
+        <text x="60" y="125" text-anchor="middle" font-size="16" font-weight="bold" fill="white" font-family="Arial, sans-serif">PDF</text>
+
+        <!-- Left Wing (Page Flap) -->
+        <path d="M20 40 Q5 50 10 65 Q15 75 25 70" fill="#ff6b6b" opacity="0.8" class="wing-left">
+          <animate attributeName="d" values="M20 40 Q5 50 10 65 Q15 75 25 70;M20 40 Q5 55 15 60 Q20 70 25 65;M20 40 Q5 50 10 65 Q15 75 25 70" dur="0.3s" repeatCount="indefinite"/>
+        </path>
+
+        <!-- Right Wing (Page Flap) -->
+        <path d="M100 40 Q115 50 110 65 Q105 75 95 70" fill="#ff6b6b" opacity="0.8" class="wing-right">
+          <animate attributeName="d" values="M100 40 Q115 50 110 65 Q105 75 95 70;M100 40 Q115 55 105 60 Q100 70 95 65;M100 40 Q115 50 110 65 Q105 75 95 70" dur="0.3s" repeatCount="indefinite"/>
+        </path>
+
+        <!-- Motion Trail -->
+        <ellipse cx="60" cy="130" rx="15" ry="8" fill="#4ecdc4" opacity="0.4" class="trail">
+          <animate attributeName="rx" values="15;20;15" dur="0.2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.4;0.2;0.4" dur="0.2s" repeatCount="indefinite"/>
         </ellipse>
       </svg>
     </div>
@@ -1272,8 +1290,8 @@
     animation: fadeInUp 0.6s ease-out forwards;
   }
 
-  /* Rocket Animation Styles */
-  .rocket-container {
+  /* PDF Flying Animation Styles */
+  .pdf-container {
     position: absolute;
     top: 0;
     left: 0;
@@ -1316,7 +1334,7 @@
   .trajectory {
     position: absolute;
     height: 2px;
-    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent);
+    background: linear-gradient(90deg, transparent, rgba(244, 15, 2, 0.5), transparent);
     transform-origin: left center;
     animation: flyLine 3s linear infinite;
   }
@@ -1350,6 +1368,28 @@
     10% { opacity: 1; }
     90% { opacity: 1; }
     100% { left: 120%; opacity: 0; }
+  }
+
+  /* Mini Papers (Trailing behind) */
+  .mini-paper {
+    position: absolute;
+    font-size: 1.5rem;
+    animation: floatPaper var(--float-duration) ease-in-out infinite;
+    opacity: 0.6;
+  }
+
+  .mini-paper-1 { top: 25%; left: 10%; --float-duration: 3s; animation-delay: 0s; }
+  .mini-paper-2 { top: 45%; left: 85%; --float-duration: 4s; animation-delay: 1s; }
+  .mini-paper-3 { top: 15%; right: 15%; --float-duration: 3.5s; animation-delay: 0.5s; }
+  .mini-paper-4 { top: 55%; left: 20%; --float-duration: 4.5s; animation-delay: 1.5s; }
+
+  @keyframes floatPaper {
+    0%, 100% {
+      transform: translateY(0) rotate(0deg);
+    }
+    50% {
+      transform: translateY(-15px) rotate(5deg);
+    }
   }
 
   /* Planets */
@@ -1394,20 +1434,20 @@
     }
   }
 
-  /* Rocket */
-  .rocket {
+  /* Flying PDF */
+  .flying-pdf {
     position: absolute;
     top: 30%;
-    left: -100px;
-    animation: rocketFly 8s linear infinite;
-    transform: rotate(45deg);
+    left: -120px;
+    animation: pdfFly 8s linear infinite;
+    transform: rotate(-5deg);
   }
 
-  @keyframes rocketFly {
+  @keyframes pdfFly {
     0% {
-      left: -100px;
+      left: -120px;
       top: 50%;
-      transform: rotate(45deg) scale(0.8);
+      transform: rotate(-5deg) scale(0.8);
       opacity: 0;
     }
     5% {
@@ -1415,12 +1455,15 @@
     }
     25% {
       top: 35%;
+      transform: rotate(5deg) scale(1);
     }
     50% {
       top: 25%;
+      transform: rotate(-3deg) scale(1.1);
     }
     75% {
       top: 35%;
+      transform: rotate(3deg) scale(1);
     }
     95% {
       opacity: 1;
@@ -1428,7 +1471,7 @@
     100% {
       left: 110%;
       top: 50%;
-      transform: rotate(45deg) scale(1.2);
+      transform: rotate(5deg) scale(0.8);
       opacity: 0;
     }
   }
