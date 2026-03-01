@@ -1,6 +1,7 @@
-tree 9eb826d13ac75b1db1421cc770f04aa215c1391e
-parent 0983ff4913e4a6d6f9d14d9ac9afab10b401e6b5
-author Lydia554 <73587947+Lydia554@users.noreply.github.com> 1753466270 +0200
-committer Lydia554 <73587947+Lydia554@users.noreply.github.com> 1753466270 +0200
+tree 36edd4630f1d17178e875a104ebcd66b81c8e5fc
+parent 13161140124153d4ca47d2d831a7f200dbc8b85a
+parent 785af23119936bd1e50cd2d1646eecb5a9ad2d57
+author Lydia554 <73587947+Lydia554@users.noreply.github.com> 1754749365 +0200
+committer Lydia554 <73587947+Lydia554@users.noreply.github.com> 1754749365 +0200
 
-Update
+Merge branch 'main' of https://github.com/Lydia554/PDFify
