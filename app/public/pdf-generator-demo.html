@@ -12,7 +12,7 @@
   <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="images/Icon.png?v=2">
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 font-sans max-w-3xl mx-auto p-8 text-gray-100 pt-20">
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 font-sans max-w-3xl mx-auto p-8 text-gray-100">
 
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="fixed inset-0 bg-gray-900/95 flex justify-center items-center z-50 hidden">
@@ -435,8 +435,30 @@ menuBtn.addEventListener("click", () => {
       const loadingOverlay = document.getElementById("loadingOverlay");
       loadingOverlay.style.display = "none";
       console.log("Spinner hidden on page load");
+
+      // Particle effect on header
+      const header = document.querySelector('header');
+      if (header) {
+        for (let i = 0; i < 15; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.style.cssText = `
+            position: absolute;
+            width: ${Math.random() * 6 + 2}px;
+            height: ${Math.random() * 6 + 2}px;
+            background: rgba(139, 92, 246, ${Math.random() * 0.5 + 0.2});
+            border-radius: 50%;
+            left: ${Math.random() * 100}%;
+            top: ${Math.random() * 100}%;
+            animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 0;
+          `;
+          header.appendChild(particle);
+        }
+      }
     });
-    
+
     async function sendRequest() {
       showProgressBar();
     
@@ -1117,6 +1139,15 @@ async function connectShopify(domain, token) {
 
 
 <style>
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
   body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;

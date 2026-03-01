@@ -8,7 +8,7 @@
   <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/Icon.png?v=2">
 </head>
-<body class="bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 min-h-screen pt-20">
+<body class="bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 min-h-screen">
 
   <div id="loadingOverlay" class="fixed top-0 left-0 w-full h-full bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center">
     <div class="border-4 border-purple-300 border-l-purple-600 rounded-full w-12 h-12 animate-spin"></div>
@@ -43,7 +43,7 @@
     </nav>
   </header>
 
-  <div class="w-full max-w-md flex items-center justify-center min-h-[calc(100vh-5rem)] p-4">
+  <div class="w-full max-w-md flex items-center justify-center min-h-screen p-4 mt-20">
     <!-- Success Card -->
     <div class="bg-gradient-to-br from-emerald-900/50 via-green-900/50 to-teal-900/50 p-12 rounded-3xl shadow-2xl border-2 border-emerald-500/30 backdrop-blur-sm text-center w-full">
       <!-- Success Icon -->
@@ -104,9 +104,40 @@
     const loadingOverlay = document.getElementById("loadingOverlay");
     if (loadingOverlay) loadingOverlay.style.display = "none";
   });
+
+  // Particle effect on header
+  const header = document.querySelector('header');
+  if (header) {
+    for (let i = 0; i < 15; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.cssText = `
+        position: absolute;
+        width: ${Math.random() * 6 + 2}px;
+        height: ${Math.random() * 6 + 2}px;
+        background: rgba(139, 92, 246, ${Math.random() * 0.5 + 0.2});
+        border-radius: 50%;
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+      `;
+      header.appendChild(particle);
+    }
+  }
 </script>
 
 <style>
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+
   /* Mobile menu styles */
   #mobileMenuBtn {
     display: none;

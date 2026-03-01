@@ -490,6 +490,30 @@ fetchUserData();
 loadBankDetails();
 initBuyTokens();
 
+// Particle effect on header
+window.addEventListener('load', () => {
+  const header = document.querySelector('header');
+  if (header) {
+    for (let i = 0; i < 15; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.cssText = `
+        position: absolute;
+        width: ${Math.random() * 6 + 2}px;
+        height: ${Math.random() * 6 + 2}px;
+        background: rgba(139, 92, 246, ${Math.random() * 0.5 + 0.2});
+        border-radius: 50%;
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+      `;
+      header.appendChild(particle);
+    }
+  }
+});
+
 </script>
 
 
@@ -500,6 +524,15 @@ initBuyTokens();
 </html>
 
 <style>
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
 header {
   position: fixed;
   top: 0;

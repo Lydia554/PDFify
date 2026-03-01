@@ -11,11 +11,7 @@
 <link rel="apple-touch-icon" href="images/Icon.png?v=2">
 
 </head>
-<body class="font-sans antialiased text-gray-800 dark:text-gray-100 dark:bg-gray-900 pt-20">
-
-  <div id="loadingOverlay" class="fixed top-0 left-0 w-full h-full bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center">
-    <div class="border-4 border-purple-300 border-l-purple-600 rounded-full w-12 h-12 animate-spin"></div>
-  </div>
+<body class="font-sans antialiased text-gray-800 dark:text-gray-100 dark:bg-gray-900">
 
 <header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -49,7 +45,7 @@
   </header>
 
 <!-- Hero -->
-<section class="bg-gray-900 text-white py-20 text-center px-4 relative overflow-hidden">
+<section class="bg-gray-900 text-white py-32 text-center px-4 relative overflow-hidden">
   <!-- Rocket Animation Container -->
   <div class="rocket-container" id="rocketContainer">
     <!-- Stars -->
@@ -1221,10 +1217,10 @@
       });
     });
 
-    // Particle effect on hero section
-    const hero = document.querySelector('header');
-    if (hero) {
-      for (let i = 0; i < 20; i++) {
+    // Particle effect on header
+    const header = document.querySelector('header');
+    if (header) {
+      for (let i = 0; i < 15; i++) {
         const particle = document.createElement('div');
         particle.className = 'particle';
         particle.style.cssText = `
@@ -1237,8 +1233,9 @@
           top: ${Math.random() * 100}%;
           animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
           pointer-events: none;
+          z-index: 0;
         `;
-        hero.appendChild(particle);
+        header.appendChild(particle);
       }
     }
 
