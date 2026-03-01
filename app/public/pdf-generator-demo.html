@@ -12,7 +12,7 @@
   <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="images/Icon.png?v=2">
 </head>
-<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 font-sans max-w-3xl mx-auto p-8 text-gray-100">
+<body class="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 font-sans max-w-3xl mx-auto p-8 text-gray-100 pt-20">
 
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="fixed inset-0 bg-gray-900/95 flex justify-center items-center z-50 hidden">
@@ -20,7 +20,7 @@
   </div>
 
   <!-- Header -->
-  <header class="fixed top-0 left-0 right-0 z-50 shadow bg-gray-800">
+  <header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
     <h1 class="text-4xl font-bold">
   <a href="https://pdfify.pro"
@@ -30,12 +30,14 @@
 </h1>
 
       <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
-      <nav id="mainNav" class="hidden md:flex space-x-4">
-        <a href="/api-guide" class="nav-link">📑 API Guide</a>
-        <a href="/shopify" class="nav-link">📑 Shopify</a>
-        <a href="/woocommerce" class="nav-link">📑 WooCommerce</a>
-        <a href="/user-dashboard" class="nav-link">👤 User Dashboard</a>
-        <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
+      <nav id="mainNav" class="md:flex space-x-4">
+        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+        <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑API Guide</a>
+        <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
+        <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
+        <a href="/pdf-generator-demo" class="text-purple-400 font-semibold">📄 PDF Generator</a>
+        <a href="/user-dashboard" class="text-gray-400 hover:text-purple-400">👤 Dashboard</a>
+        <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md">
           🚪 Logout
         </button>
       </nav>
@@ -43,11 +45,13 @@
 
     <!-- Mobile Nav -->
     <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+      <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
       <a href="/api-guide" class="block text-gray-300 hover:text-purple-400">📑 API Guide</a>
       <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
       <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
-     <a href="/user-dashboard" class="block text-gray-300 hover:text-purple-400">👤 User Dashboard</a>
-      <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md ml-4">
+      <a href="/pdf-generator-demo" class="block text-purple-400 font-semibold">📄 PDF Generator</a>
+      <a href="/user-dashboard" class="block text-gray-300 hover:text-purple-400">👤 Dashboard</a>
+      <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md w-full">
         🚪 Logout
       </button>
     </nav>

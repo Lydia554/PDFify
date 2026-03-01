@@ -20,38 +20,44 @@
   </div>
 
 <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 backdrop-blur">
-  <div class="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
-       <h1 class="text-4xl font-bold">
+<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-4xl font-bold">
   <a href="https://pdfify.pro"
-     class="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent hover:opacity-80 transition">
+     class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
      PDFify
   </a>
 </h1>
 
-    <!-- Hamburger button for mobile -->
-    <button id="mobileMenuBtn" class="sm:hidden text-white text-2xl">☰</button>
+      <!-- Hamburger button (mobile only) -->
+      <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
 
-    <!-- Navigation -->
-    <nav id="mobileNav" class="hidden sm:flex flex-wrap gap-6">
-      <a href="/api-guide" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
-        📑 API Guide
-      </a>
-      <a href="/shopify" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
-        📑 Shopify
-      </a>
-      <a href="/woocommerce" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
-        📑 WooCommerce
-      </a>
-      <a href="/pdf-generator-demo" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
-        📄 PDF Generator
-      </a>
-      <button id="logoutButton" class="text-base font-semibold px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 rounded-xl text-white transition-all duration-300 shadow-md hover:shadow-lg">
+      <nav id="mainNav" class="md:flex space-x-4">
+        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+        <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑API Guide</a>
+        <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
+        <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
+        <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
+        <a href="/user-dashboard" class="text-purple-400 font-semibold">👤 Dashboard</a>
+        <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md">
+          🚪 Logout
+        </button>
+      </nav>
+    </div>
+
+    <!-- Mobile dropdown -->
+    <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+      <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="block text-gray-300 hover:text-purple-400">📑 API Guide</a>
+      <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
+      <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
+      <a href="/user-dashboard" class="block text-purple-400 font-semibold">👤 Dashboard</a>
+      <button id="logoutButton" class="bg-rose-500 text-white px-4 py-2 rounded-md hover:bg-rose-600 transition-transform duration-300 hover:scale-105 shadow-md w-full">
         🚪 Logout
       </button>
     </nav>
-  </div>
-</header>
+  </header>
 
     <main class="max-w-3xl mx-auto px-4 pt-24">
       <h1 class="text-3xl font-bold mb-6 text-center bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">👋 Welcome!</h1>

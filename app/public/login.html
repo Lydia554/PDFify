@@ -8,11 +8,46 @@
   <link rel="icon" href="images/Icon.png?v=2" type="image/png" sizes="32x32">
   <link rel="apple-touch-icon" href="images/Icon.png?v=2">
 </head>
-<body class="bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gradient-to-br from-slate-950 via-gray-900 to-slate-950 min-h-screen pt-20">
 
-  <div class="w-full max-w-md">
+  <div id="loadingOverlay" class="fixed top-0 left-0 w-full h-full bg-slate-900/80 backdrop-blur-sm z-50 hidden flex justify-center items-center">
+    <div class="border-4 border-purple-300 border-l-purple-600 rounded-full w-12 h-12 animate-spin"></div>
+  </div>
+
+<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+      <h1 class="text-4xl font-bold">
+  <a href="https://pdfify.pro"
+     class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
+     PDFify
+  </a>
+</h1>
+
+      <button id="mobileMenuBtn" class="md:hidden text-white text-2xl">☰</button>
+
+      <nav id="mainNav" class="md:flex space-x-4">
+        <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
+        <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑API Guide</a>
+        <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
+        <a href="/woocommerce" class="text-gray-400 hover:text-purple-400">📑WooCommerce</a>
+        <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
+        <a href="/login.html" class="text-purple-400 font-semibold">🔐 Login</a>
+      </nav>
+    </div>
+
+    <nav id="mobileNav" class="hidden flex-col bg-[#0b1a2b] px-4 py-4 space-y-2 md:hidden">
+      <a href="/" class="block text-gray-300 hover:text-purple-400">🏠 Home</a>
+      <a href="/api-guide" class="block text-gray-300 hover:text-purple-400">📑 API Guide</a>
+      <a href="/shopify" class="block text-gray-300 hover:text-purple-400">📑 Shopify</a>
+      <a href="/woocommerce" class="block text-gray-300 hover:text-purple-400">📑 WooCommerce</a>
+      <a href="/pdf-generator-demo" class="block text-gray-300 hover:text-purple-400">📄 PDF Generator</a>
+      <a href="/login.html" class="block text-purple-400 font-semibold">🔐 Login</a>
+    </nav>
+  </header>
+
+  <div class="w-full max-w-md flex items-center justify-center min-h-[calc(100vh-5rem)] p-4">
     <!-- Logo/Brand -->
-    <div class="text-center mb-8">
+    <div class="text-center mb-8 w-full">
       <h1 class="text-5xl font-bold mb-2">
         <a href="/" class="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition">
           PDFify
@@ -236,6 +271,90 @@
         setLoadingState(false);
       }
     });
+
+    // Mobile menu toggle
+    const menuBtn = document.getElementById("mobileMenuBtn");
+    const mobileNav = document.getElementById("mobileNav");
+
+    if (menuBtn && mobileNav) {
+      menuBtn.addEventListener("click", () => {
+        mobileNav.classList.toggle("hidden");
+
+        if (!mobileNav.classList.contains("hidden")) {
+          mobileNav.style.display = "flex";
+        } else {
+          mobileNav.style.display = "none";
+        }
+      });
+    }
+
+    window.addEventListener("pageshow", () => {
+      const loadingOverlay = document.getElementById("loadingOverlay");
+      if (loadingOverlay) loadingOverlay.style.display = "none";
+    });
   </script>
+
+<style>
+  /* Mobile menu styles */
+  #mobileMenuBtn {
+    display: none;
+  }
+
+  #mobileNav {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    background-color: rgba(11, 26, 43, 0.95);
+    padding: 1rem;
+    border-radius: 0 0 0.5rem 0.5rem;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  #mobileNav a {
+    display: block;
+    text-align: center;
+    padding: 0.75rem;
+    font-size: 0.95rem;
+    color: #ddd;
+    border-radius: 6px;
+    transition: background 0.2s;
+  }
+
+  #mobileNav a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #c084fc;
+  }
+
+  @media (max-width: 768px) {
+    #mainNav {
+      display: none;
+    }
+
+    #mobileMenuBtn {
+      display: block;
+      padding-bottom: 0.2rem;
+    }
+
+    #mobileNav a:hover {
+      background-color: rgba(192, 132, 252, 0.1);
+      border-radius: 6px;
+    }
+  }
+
+  @media (min-width: 769px) {
+    #mobileNav {
+      display: none !important;
+    }
+
+    #mainNav {
+      display: flex;
+    }
+  }
+</style>
 </body>
 </html>
