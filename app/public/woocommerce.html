@@ -14,10 +14,10 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 <!-- Header -->
-<header class="fixed top-0 left-0 right-0 z-50 shadow">
+<header class="fixed top-0 left-0 right-0 z-50 shadow-lg bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900">
     <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
          <h1 class="text-4xl font-bold">
-  <a href="https://pdfify.pro" 
+  <a href="https://pdfify.pro"
      class="bg-gradient-to-r from-indigo-700 via-purple-800 to-pink-700 bg-clip-text text-transparent hover:opacity-80 transition">
      PDFify
   </a>
@@ -30,7 +30,7 @@
         <a href="/" class="text-gray-400 hover:text-purple-400">🏠 Home</a>
         <a href="/api-guide" class="text-gray-400 hover:text-purple-400">📑API Guide</a>
         <a href="/shopify" class="text-gray-400 hover:text-purple-400">📑 Shopify</a>
-        <a href="/woocommerce" class="block text-purple-400 font-semibold">📑WooCommerce</a>
+        <a href="/woocommerce" class="text-purple-400 font-semibold">📑WooCommerce</a>
         <a href="/pdf-generator-demo" class="text-gray-400 hover:text-purple-400">📄 PDF Generator</a>
       </nav>
     </div>
@@ -428,6 +428,30 @@ document.getElementById("applyDateFilter").addEventListener("click", async () =>
 
 // -------------------- Init --------------------
 loadConnectedStore();
+
+// -------------------- Particle Effect --------------------
+window.addEventListener('load', () => {
+  const header = document.querySelector('header');
+  if (header) {
+    for (let i = 0; i < 15; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.cssText = `
+        position: absolute;
+        width: ${Math.random() * 6 + 2}px;
+        height: ${Math.random() * 6 + 2}px;
+        background: rgba(139, 92, 246, ${Math.random() * 0.5 + 0.2});
+        border-radius: 50%;
+        left: ${Math.random() * 100}%;
+        top: ${Math.random() * 100}%;
+        animation: float ${Math.random() * 10 + 10}s ease-in-out infinite;
+        pointer-events: none;
+        z-index: 0;
+      `;
+      header.appendChild(particle);
+    }
+  }
+});
 </script>
 
 
@@ -435,6 +459,14 @@ loadConnectedStore();
 </html>
 
 <style>
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
 
   body {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
