@@ -16,6 +16,7 @@ const { incrementUsage } = require("../../utils/usageUtils");
 const { generateCustomerInvoiceHTML, formatPrice: customerFormatPrice } = require("./customerInvoice");
 const { createPdfA3WithJava } = require("../../Helpers/pdf-helpers");
 const generateZugferdXml = require("../../../xml/generateZugferdXml");
+const { syncWebhooks } = require("./webhookManager");
 
 const locales = {
   sl: require("../../../locales/sl.json"),
@@ -1036,7 +1037,16 @@ router.get("/callback", async (req, res) => {
       console.log(`ℹ️ New shop installation: ${normalizedShop} (no existing user, token stored in ShopConfig)`);
     }
 
-    // Step 6: Redirect to the embedded app
+    // Step 6: Sync webhooks (register missing, clean up duplicates)
+    console.log(`🔄 Syncing webhooks for: ${normalizedShop}`);
+    try {
+      await syncWebhooks(normalizedShop, access_token);
+    } catch (webhookErr) {
+      console.error("⚠️ Failed to sync webhooks:", webhookErr.message);
+      // Don't fail installation if webhook sync fails
+    }
+
+    // Step 7: Redirect to the embedded app
     // The app will be loaded at: https://{shop}/admin/apps/pdfify-invoice-generator
     console.log(`🎉 Installation successful for: ${normalizedShop}, redirecting to embedded app`);
 
@@ -1198,6 +1208,44 @@ router.post("/clear", async (req, res) => {
   } catch (error) {
     console.error("❌ Clear error:", error);
     res.status(500).json({ error: "Failed to clear shop data" });
+  }
+});
+
+/**
+ * Manual webhook cleanup endpoint (for fixing old webhook issues)
+ * POST /api/shopify/cleanup-webhooks
+ * Body: { shopDomain }
+ */
+router.post("/cleanup-webhooks", async (req, res) => {
+  try {
+    const { shopDomain } = req.body;
+    if (!shopDomain) {
+      return res.status(400).json({ error: "Missing shopDomain" });
+    }
+
+    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    // Find shop config
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
+      return res.status(404).json({ error: "Shop not found or no access token" });
+    }
+
+    // Remove all webhooks and re-register
+    const { removeAllWebhooks, syncWebhooks } = require("./webhookManager");
+
+    console.log(`🧹 Manual webhook cleanup requested for: ${normalizedShop}`);
+    const removedCount = await removeAllWebhooks(normalizedShop, shopConfig.shopifyAccessToken);
+    await syncWebhooks(normalizedShop, shopConfig.shopifyAccessToken);
+
+    res.json({
+      success: true,
+      message: `Removed ${removedCount} old webhooks and re-registered required webhooks`,
+      shop: normalizedShop
+    });
+  } catch (error) {
+    console.error("❌ Manual webhook cleanup error:", error);
+    res.status(500).json({ error: "Failed to cleanup webhooks" });
   }
 });
 

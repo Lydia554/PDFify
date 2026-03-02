@@ -10,22 +10,32 @@ const { enrichLineItemsWithImages } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 
-// Shopify webhook verification
+// Shopify webhook verification (ALWAYS verify, even in development)
 function verifyShopifyWebhook(req, res, next) {
-  if (process.env.NODE_ENV !== "production") return next();
-
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
 
-  if (!hmacHeader || !body) return res.status(200).send("OK");
+  // Log for debugging
+  console.log(`🔐 [Webhook] Verifying HMAC for: ${req.path}`);
+
+  if (!hmacHeader || !body) {
+    console.error(`❌ [Webhook] Missing HMAC or body`);
+    return res.status(401).send("Webhook verification failed");
+  }
 
   const generatedHmac = crypto
     .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
     .update(body, "utf8")
     .digest("base64");
 
-  if (generatedHmac !== hmacHeader) return res.status(200).send("OK");
+  if (generatedHmac !== hmacHeader) {
+    console.error(`❌ [Webhook] HMAC verification FAILED`);
+    console.error(`   Expected: ${generatedHmac.substring(0, 20)}...`);
+    console.error(`   Received: ${hmacHeader.substring(0, 20)}...`);
+    return res.status(401).send("Webhook verification failed");
+  }
 
+  console.log(`✅ [Webhook] HMAC verified successfully`);
   next();
 }
 
@@ -177,6 +187,65 @@ router.post(
       }
     } catch (err) {
       console.error("❌ Error handling shop redaction:", err);
+    }
+  }
+);
+
+// app/uninstalled - When app is uninstalled from shop (MANDATORY)
+router.post(
+  "/app-uninstalled",
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => { req.rawBody = buf; },
+  }),
+  verifyShopifyWebhook,
+  async (req, res) => {
+    let parsedPayload;
+    try {
+      parsedPayload = JSON.parse(req.rawBody.toString());
+    } catch {
+      return res.status(200).send("OK");
+    }
+
+    const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
+    console.log(`🗑️ [App Uninstall] Uninstall request for: ${shopDomain}`);
+
+    res.status(200).send("OK");
+
+    try {
+      // Mark shop as inactive and clear access token
+      const shopConfigUpdate = await ShopConfig.findOneAndUpdate(
+        { shopDomain },
+        {
+          isActive: false,
+          uninstalledAt: new Date(),
+          shopifyAccessToken: null
+        }
+      );
+
+      // Clear access token from user if one exists
+      const userUpdate = await User.findOneAndUpdate(
+        { connectedShopDomain: shopDomain },
+        {
+          shopifyAccessToken: null,
+          connectedShopDomain: null,
+          planType: "free",
+          isPremium: false
+        }
+      );
+
+      if (shopConfigUpdate) {
+        console.log(`✅ [App Uninstall] Marked shop as inactive: ${shopDomain}`);
+      }
+      if (userUpdate) {
+        console.log(`✅ [App Uninstall] Cleared user access token: ${shopDomain}`);
+      }
+
+      if (!shopConfigUpdate && !userUpdate) {
+        console.log(`ℹ️ [App Uninstall] No data found for ${shopDomain}`);
+      }
+    } catch (err) {
+      console.error("❌ Error handling app uninstall:", err);
     }
   }
 );
