@@ -16,13 +16,7 @@ api_version = "2026-01"
   topics = [ "orders/create" ]
   uri = "/webhook/order-created"
 
-  # NOTE: GDPR webhooks (customers/redact, customers/data_request, shop/redact)
-  # are implemented as handlers but cannot be declared in TOML as
-  # Shopify deprecated these topics. Handlers are registered via API
-  # during app installation in shopifyApiRoutes.js
-
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_locations,read_orders,read_products,read_themes"
 optional_scopes = [ ]
 use_legacy_install_flow = false
