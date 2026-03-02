@@ -34,22 +34,66 @@ const REQUIRED_WEBHOOKS = [
   }
 ];
 
+// Alternative GDPR topic names (for older API versions)
+const FALLBACK_GDPR_WEBHOOKS = [
+  {
+    topic: "customers/redact",
+    address: "https://pdfify.pro/webhook/customers-redact",
+    format: "json"
+  },
+  {
+    topic: "customers/data_request",
+    address: "https://pdfify.pro/webhook/customers-data-request",
+    format: "json"
+  },
+  {
+    topic: "shop/redact",
+    address: "https://pdfify.pro/webhook/shop-redact",
+    format: "json"
+  }
+];
+
 /**
  * Get all existing webhooks for a shop
  */
 async function getExistingWebhooks(shopDomain, accessToken) {
+  let allWebhooks = [];
+
   try {
+    // Try 2024-01 first
     const response = await axios.get(
       `https://${shopDomain}/admin/api/2024-01/webhooks.json`,
       {
         headers: { "X-Shopify-Access-Token": accessToken }
       }
     );
-    return response.data.webhooks || [];
+    allWebhooks = response.data.webhooks || [];
   } catch (error) {
-    console.error("❌ Failed to fetch existing webhooks:", error.message);
-    return [];
+    console.error("❌ Failed to fetch webhooks from 2024-01 API:", error.message);
   }
+
+  // Also check 2023-10 for older webhooks
+  try {
+    const response = await axios.get(
+      `https://${shopDomain}/admin/api/2023-10/webhooks.json`,
+      {
+        headers: { "X-Shopify-Access-Token": accessToken }
+      }
+    );
+    const oldWebhooks = response.data.webhooks || [];
+
+    // Merge without duplicates (by ID)
+    const existingIds = new Set(allWebhooks.map(w => w.id));
+    oldWebhooks.forEach(w => {
+      if (!existingIds.has(w.id)) {
+        allWebhooks.push(w);
+      }
+    });
+  } catch (error) {
+    console.log("ℹ️ No webhooks found in 2023-10 API (normal if all are 2024-01)");
+  }
+
+  return allWebhooks;
 }
 
 /**
@@ -94,6 +138,31 @@ async function registerWebhook(shopDomain, accessToken, webhook) {
     return response.data.webhook;
   } catch (error) {
     console.error(`❌ Failed to register webhook ${webhook.topic}:`, error.response?.data || error.message);
+
+    // If GDPR webhook fails, try older API version
+    if (webhook.topic.includes('redact') || webhook.topic.includes('data_request')) {
+      console.log(`   Retrying with 2023-10 API version for ${webhook.topic}...`);
+      try {
+        const response = await axios.post(
+          `https://${shopDomain}/admin/api/2023-10/webhooks.json`,
+          {
+            webhook: {
+              topic: webhook.topic,
+              address: webhook.address,
+              format: webhook.format
+            }
+          },
+          {
+            headers: { "X-Shopify-Access-Token": accessToken }
+          }
+        );
+        console.log(`✅ Registered webhook (2023-10): ${webhook.topic}`);
+        return response.data.webhook;
+      } catch (retryError) {
+        console.error(`   Still failed with 2023-10:`, retryError.response?.data || retryError.message);
+      }
+    }
+
     return null;
   }
 }
