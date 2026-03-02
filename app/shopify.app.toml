@@ -11,11 +11,23 @@ compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
-  uri = "/webhook/app-uninstalled"
+  uri = "https://pdfify.pro/webhook/app-uninstalled"
 
   [[webhooks.subscriptions]]
   topics = [ "orders/create" ]
-  uri = "/webhook/order-created"
+  uri = "https://pdfify.pro/webhook/order-created"
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/redact" ]
+  uri = "https://pdfify.pro/webhook/customers-redact"
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/data_request" ]
+  uri = "https://pdfify.pro/webhook/customers-data-request"
+
+  [[webhooks.subscriptions]]
+  topics = [ "shop/redact" ]
+  uri = "https://pdfify.pro/webhook/shop-redact"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
