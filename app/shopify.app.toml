@@ -9,6 +9,10 @@ embedded = true
 api_version = "2026-01"
 
   [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhook/app-uninstalled"
+
+  [[webhooks.subscriptions]]
   topics = [ "customers/data_request" ]
   uri = "/webhook/customers-data-request"
 
