@@ -84,13 +84,42 @@ router.post("/buy-tokens", authenticate, async (req, res) => {
   }
 });
 
-// --- Shopify-specific token purchase (REMOVED - Using Shopify Billing API) ---
-// DEPRECATED: Token packs now handled through Shopify Billing
-// router.post("/buy-tokens-shopify", ...) - REMOVED
+// --- Shopify-specific token purchase (using Stripe) ---
+router.post("/buy-tokens-shopify", async (req, res) => {
+  const { pack, shopDomain, email } = req.body;
+
+  if (!pack || !shopDomain || !email) {
+    return res.status(400).json({ error: "Missing pack, shopDomain, or email" });
+  }
+  if (!TOKEN_PRICE_IDS[pack]) return res.status(400).json({ error: "Invalid token pack" });
+
+  console.log("Creating Shopify checkout for:", email, "pack:", pack, "shop:", shopDomain);
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [{ price: TOKEN_PRICE_IDS[pack], quantity: 1 }],
+      mode: "payment",
+      customer_email: email,
+      success_url: `https://pdfify.pro/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://${shopDomain}/admin/apps/pdfify-invoice-generator`,
+      metadata: {
+        shopDomain,
+        priceId: TOKEN_PRICE_IDS[pack],
+      },
+    });
+
+    console.log("Stripe session created:", session.url);
+    res.json({ url: session.url });
+  } catch (err) {
+    console.error("❌ Error creating Shopify token checkout:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // --- Shopify-specific subscription checkout (REMOVED - Using Shopify Billing API) ---
-// DEPRECATED: Subscriptions now handled through Shopify Billing
-// router.post("/subscribe-shopify", ...) - REMOVED
+// DEPRECATED: Subscriptions now handled through Shopify Billing API
+// Use /api/shopify/billing/subscribe instead
 
 
 // --- Unsubscribe endpoint ---

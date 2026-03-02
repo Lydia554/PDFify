@@ -5,7 +5,7 @@ const axios = require("axios");
  * Handles registration and cleanup of webhooks
  */
 
-// All required webhooks for the app
+// All required webhooks for the app (only topics that exist in Shopify 2024 API)
 const REQUIRED_WEBHOOKS = [
   {
     topic: "app/uninstalled",
@@ -16,42 +16,12 @@ const REQUIRED_WEBHOOKS = [
     topic: "orders/create",
     address: "https://pdfify.pro/webhook/order-created",
     format: "json"
-  },
-  {
-    topic: "customers/redact",
-    address: "https://pdfify.pro/webhook/customers-redact",
-    format: "json"
-  },
-  {
-    topic: "customers/data_request",
-    address: "https://pdfify.pro/webhook/customers-data-request",
-    format: "json"
-  },
-  {
-    topic: "shop/redact",
-    address: "https://pdfify.pro/webhook/shop-redact",
-    format: "json"
   }
 ];
 
-// Alternative GDPR topic names (for older API versions)
-const FALLBACK_GDPR_WEBHOOKS = [
-  {
-    topic: "customers/redact",
-    address: "https://pdfify.pro/webhook/customers-redact",
-    format: "json"
-  },
-  {
-    topic: "customers/data_request",
-    address: "https://pdfify.pro/webhook/customers-data-request",
-    format: "json"
-  },
-  {
-    topic: "shop/redact",
-    address: "https://pdfify.pro/webhook/shop-redact",
-    format: "json"
-  }
-];
+// NOTE: GDPR webhooks (customers/redact, customers/data_request, shop/redact) were deprecated by Shopify
+// GDPR compliance is now handled through direct API endpoints, not webhook subscriptions
+// See: https://shopify.dev/docs/api/admin-rest/latest/resources/webhook
 
 /**
  * Get all existing webhooks for a shop
@@ -138,31 +108,6 @@ async function registerWebhook(shopDomain, accessToken, webhook) {
     return response.data.webhook;
   } catch (error) {
     console.error(`❌ Failed to register webhook ${webhook.topic}:`, error.response?.data || error.message);
-
-    // If GDPR webhook fails, try older API version
-    if (webhook.topic.includes('redact') || webhook.topic.includes('data_request')) {
-      console.log(`   Retrying with 2023-10 API version for ${webhook.topic}...`);
-      try {
-        const response = await axios.post(
-          `https://${shopDomain}/admin/api/2023-10/webhooks.json`,
-          {
-            webhook: {
-              topic: webhook.topic,
-              address: webhook.address,
-              format: webhook.format
-            }
-          },
-          {
-            headers: { "X-Shopify-Access-Token": accessToken }
-          }
-        );
-        console.log(`✅ Registered webhook (2023-10): ${webhook.topic}`);
-        return response.data.webhook;
-      } catch (retryError) {
-        console.error(`   Still failed with 2023-10:`, retryError.response?.data || retryError.message);
-      }
-    }
-
     return null;
   }
 }
