@@ -9,7 +9,9 @@
       "Bash(shopify app info:*)",
       "Bash(shopify app webhook:*)",
       "Bash(shopify app deploy:*)",
-      "Bash(shopify config:*)"
+      "Bash(shopify config:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   },
   "enabledPlugins": {
