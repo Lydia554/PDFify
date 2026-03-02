@@ -1225,11 +1225,40 @@ router.post("/cleanup-webhooks", async (req, res) => {
 
     const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
+    console.log(`🔍 [Webhook Cleanup] Looking up shop: ${normalizedShop}`);
+
     // Find shop config
     const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
-    if (!shopConfig || !shopConfig.shopifyAccessToken) {
-      return res.status(404).json({ error: "Shop not found or no access token" });
+
+    if (!shopConfig) {
+      console.log(`❌ [Webhook Cleanup] Shop not found in database`);
+      return res.status(404).json({
+        error: "Shop not found in database",
+        hint: "Please install the app via OAuth first",
+        shop: normalizedShop
+      });
     }
+
+    if (!shopConfig.shopifyAccessToken) {
+      console.log(`❌ [Webhook Cleanup] Shop exists but no access token`);
+      console.log(`   ShopConfig data:`, {
+        shopDomain: shopConfig.shopDomain,
+        hasAccessToken: !!shopConfig.shopifyAccessToken,
+        isActive: shopConfig.isActive,
+        connectedAt: shopConfig.connectedAt
+      });
+      return res.status(404).json({
+        error: "Shop found but no access token",
+        hint: "Please reinstall the app via OAuth to get a fresh access token",
+        debug: {
+          shop: normalizedShop,
+          isActive: shopConfig.isActive,
+          connectedAt: shopConfig.connectedAt
+        }
+      });
+    }
+
+    console.log(`✅ [Webhook Cleanup] Found shop with access token (length: ${shopConfig.shopifyAccessToken.length})`);
 
     // Remove all webhooks and re-register
     const { removeAllWebhooks, syncWebhooks } = require("./webhookManager");
@@ -1245,7 +1274,7 @@ router.post("/cleanup-webhooks", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Manual webhook cleanup error:", error);
-    res.status(500).json({ error: "Failed to cleanup webhooks" });
+    res.status(500).json({ error: "Failed to cleanup webhooks", details: error.message });
   }
 });
 
