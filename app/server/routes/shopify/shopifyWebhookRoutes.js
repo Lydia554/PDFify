@@ -10,16 +10,53 @@ const { enrichLineItemsWithImages } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 
+// ================================
+// REQUEST LOGGING MIDDLEWARE
+// Logs EVERY request to webhook endpoints
+// ================================
+router.use((req, res, next) => {
+  const timestamp = new Date().toISOString();
+  console.log(`\n${timestamp} ⚡ [WEBHOOK MIDDLEWARE] Incoming request`);
+  console.log(`⚡ [WEBHOOK MIDDLEWARE] Method: ${req.method}`);
+  console.log(`⚡ [WEBHOOK MIDDLEWARE] Path: ${req.path}`);
+  console.log(`⚡ [WEBHOOK MIDDLEWARE] URL: ${req.originalUrl}`);
+  console.log(`⚡ [WEBHOOK MIDDLEWARE] IP: ${req.ip}`);
+  console.log(`⚡ [WEBHOOK MIDDLEWARE] Headers:`, JSON.stringify({
+    "x-shopify-hmac-sha256": req.get("X-Shopify-Hmac-Sha256") ? 'Present' : 'Missing',
+    "x-shopify-shop-domain": req.get("X-Shopify-Shop-Domain") || 'Not provided',
+    "x-shopify-topic": req.get("X-Shopify-Topic") || 'Not provided',
+    "x-shopify-api-version": req.get("X-Shopify-Api-Version") || 'Not provided',
+    "content-type": req.get("Content-Type"),
+    "user-agent": req.get("User-Agent"),
+    "host": req.get("host")
+  }, null, 2));
+  next();
+});
+
 // Shopify webhook verification (ALWAYS verify, even in development)
 function verifyShopifyWebhook(req, res, next) {
+  const timestamp = new Date().toISOString();
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
+  const shopDomain = req.get("X-Shopify-Shop-Domain");
 
-  // Log for debugging
-  console.log(`🔐 [Webhook] Verifying HMAC for: ${req.path}`);
+  // EXTENSIVE LOGGING for debugging
+  console.log(`\n${timestamp} ===================== WEBHOOK REQUEST START =====================`);
+  console.log(`🔐 [Webhook] Path: ${req.method} ${req.path}`);
+  console.log(`🔐 [Webhook] Shop Domain: ${shopDomain || 'NOT PROVIDED'}`);
+  console.log(`🔐 [Webhook] X-Shopify-Topic: ${req.get("X-Shopify-Topic") || 'NOT PROVIDED'}`);
+  console.log(`🔐 [Webhook] X-Shopify-Api-Version: ${req.get("X-Shopify-Api-Version") || 'NOT PROVIDED'}`);
+  console.log(`🔐 [Webhook] Content-Type: ${req.get("Content-Type")}`);
+  console.log(`🔐 [Webhook] User-Agent: ${req.get("User-Agent")}`);
+  console.log(`🔐 [Webhook] HMAC Header Present: ${hmacHeader ? 'YES' : 'NO'} (${hmacHeader ? hmacHeader.substring(0, 20) + '...' : 'N/A'})`);
+  console.log(`🔐 [Webhook] Raw Body Length: ${body ? body.length : 0} bytes`);
 
   if (!hmacHeader || !body) {
-    console.error(`❌ [Webhook] Missing HMAC or body`);
+    console.error(`❌ [Webhook] MISSING HMAC OR BODY`);
+    console.error(`   HMAC Header: ${hmacHeader ? 'Present' : 'MISSING'}`);
+    console.error(`   Body: ${body ? `Present (${body.length} bytes)` : 'MISSING'}`);
+    console.error(`   Returning: 401 Unauthorized`);
+    console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
     return res.status(401).send("Unauthorized");
   }
 
@@ -29,13 +66,19 @@ function verifyShopifyWebhook(req, res, next) {
     .digest("base64");
 
   if (generatedHmac !== hmacHeader) {
-    console.error(`❌ [Webhook] HMAC verification FAILED`);
-    console.error(`   Expected: ${generatedHmac.substring(0, 20)}...`);
-    console.error(`   Received: ${hmacHeader.substring(0, 20)}...`);
+    console.error(`❌ [Webhook] HMAC VERIFICATION FAILED`);
+    console.error(`   Generated HMAC: ${generatedHmac.substring(0, 30)}...`);
+    console.error(`   Received HMAC:  ${hmacHeader.substring(0, 30)}...`);
+    console.error(`   Match: ${generatedHmac === hmacHeader ? 'YES' : 'NO'}`);
+    console.error(`   SHOPIFY_WEBHOOK_SECRET exists: ${!!process.env.SHOPIFY_WEBHOOK_SECRET}`);
+    console.error(`   SHOPIFY_WEBHOOK_SECRET length: ${process.env.SHOPIFY_WEBHOOK_SECRET?.length || 0}`);
+    console.error(`   Returning: 401 Unauthorized`);
+    console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
     return res.status(401).send("Unauthorized");
   }
 
-  console.log(`✅ [Webhook] HMAC verified successfully`);
+  console.log(`✅ [Webhook] HMAC VERIFIED SUCCESSFULLY`);
+  console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
   next();
 }
 
@@ -48,17 +91,32 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n${timestamp} 📦 [ORDER/CREATED] Handler started`);
+    console.log(`📦 [ORDER/CREATED] Headers:`, JSON.stringify({
+      "x-shopify-shop-domain": req.get("X-Shopify-Shop-Domain"),
+      "x-shopify-topic": req.get("X-Shopify-Topic"),
+      "x-shopify-api-version": req.get("X-Shopify-Api-Version")
+    }, null, 2));
+
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
-    } catch {
+      console.log(`📦 [ORDER/CREATED] Payload parsed successfully`);
+    } catch (err) {
+      console.error(`📦 [ORDER/CREATED] Failed to parse payload:`, err.message);
       return res.status(200).send("OK");
     }
 
     const order = parsedPayload.order || parsedPayload;
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
-    if (!shopDomain) return res.status(200).send("OK");
+    if (!shopDomain) {
+      console.error(`📦 [ORDER/CREATED] No shop domain found`);
+      return res.status(200).send("OK");
+    }
 
+    console.log(`📦 [ORDER/CREATED] Shop: ${shopDomain}, Order: ${order.name || order.id}`);
+    console.log(`📦 [ORDER/CREATED] Responding: 200 OK`);
     res.status(200).send("Webhook received");
 
     try {
@@ -77,9 +135,11 @@ router.post(
         lang,
         allowCustomerPDF: shopConfig?.allowCustomerPDF || false
       });
+      console.log(`📦 [ORDER/CREATED] Async processing completed`);
     } catch (err) {
-      console.error("❌ Error in webhook async handler:", err);
+      console.error(`❌ [ORDER/CREATED] Error in webhook handler:`, err);
     }
+    console.log(`===================== [ORDER/CREATED] END =====================\n`);
   }
 );
 
@@ -96,25 +156,31 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n${timestamp} 📋 [GDPR/CUSTOMERS_DATA_REQUEST] Handler started`);
+
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
     } catch {
+      console.error(`📋 [GDPR/CUSTOMERS_DATA_REQUEST] Failed to parse payload`);
       return res.status(200).send("OK");
     }
 
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
-    console.log(`📋 [GDPR] Customer data request for shop: ${shopDomain}`);
+    console.log(`📋 [GDPR/CUSTOMERS_DATA_REQUEST] Shop: ${shopDomain}`);
 
+    console.log(`📋 [GDPR/CUSTOMERS_DATA_REQUEST] Responding: 200 OK`);
     res.status(200).send("OK");
 
     try {
       // Since we do NOT store customer data, there's nothing to return
       // Customer data is processed in real-time and not persisted
-      console.log(`ℹ️ [GDPR] No customer data stored for ${shopDomain} - only processed in real-time`);
+      console.log(`📋 [GDPR/CUSTOMERS_DATA_REQUEST] No customer data stored - processed in real-time only`);
     } catch (err) {
-      console.error("❌ Error handling customer data request:", err);
+      console.error(`❌ [GDPR/CUSTOMERS_DATA_REQUEST] Error:`, err);
     }
+    console.log(`===================== [GDPR/CUSTOMERS_DATA_REQUEST] END =====================\n`);
   }
 );
 
@@ -127,25 +193,31 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n${timestamp} 🗑️ [GDPR/CUSTOMERS_REDACT] Handler started`);
+
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
     } catch {
+      console.error(`🗑️ [GDPR/CUSTOMERS_REDACT] Failed to parse payload`);
       return res.status(200).send("OK");
     }
 
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
-    console.log(`🗑️ [GDPR] Customer redaction request for shop: ${shopDomain}`);
+    console.log(`🗑️ [GDPR/CUSTOMERS_REDACT] Shop: ${shopDomain}`);
 
+    console.log(`🗑️ [GDPR/CUSTOMERS_REDACT] Responding: 200 OK`);
     res.status(200).send("OK");
 
     try {
       // Since we do NOT store customer data, there's nothing to delete
       // Customer data is processed in real-time and already deleted from memory after invoice generation
-      console.log(`ℹ️ [GDPR] No customer data stored for ${shopDomain} - nothing to delete`);
+      console.log(`🗑️ [GDPR/CUSTOMERS_REDACT] No customer data stored - nothing to delete`);
     } catch (err) {
-      console.error("❌ Error handling customer redaction:", err);
+      console.error(`❌ [GDPR/CUSTOMERS_REDACT] Error:`, err);
     }
+    console.log(`===================== [GDPR/CUSTOMERS_REDACT] END =====================\n`);
   }
 );
 
@@ -158,16 +230,21 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n${timestamp} 🗑️ [GDPR/SHOP_REDACT] Handler started`);
+
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
     } catch {
+      console.error(`🗑️ [GDPR/SHOP_REDACT] Failed to parse payload`);
       return res.status(200).send("OK");
     }
 
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
-    console.log(`🗑️ [GDPR] Shop redaction request for: ${shopDomain}`);
+    console.log(`🗑️ [GDPR/SHOP_REDACT] Shop: ${shopDomain}`);
 
+    console.log(`🗑️ [GDPR/SHOP_REDACT] Responding: 200 OK`);
     res.status(200).send("OK");
 
     try {
@@ -176,18 +253,19 @@ router.post(
       const userDelete = await User.findOneAndDelete({ connectedShopDomain: shopDomain });
 
       if (shopConfigDelete) {
-        console.log(`✅ [GDPR] Deleted ShopConfig for ${shopDomain}`);
+        console.log(`✅ [GDPR/SHOP_REDACT] Deleted ShopConfig for ${shopDomain}`);
       }
       if (userDelete) {
-        console.log(`✅ [GDPR] Deleted User record for ${shopDomain}`);
+        console.log(`✅ [GDPR/SHOP_REDACT] Deleted User record for ${shopDomain}`);
       }
 
       if (!shopConfigDelete && !userDelete) {
-        console.log(`ℹ️ [GDPR] No data found for ${shopDomain}`);
+        console.log(`ℹ️ [GDPR/SHOP_REDACT] No data found for ${shopDomain}`);
       }
     } catch (err) {
-      console.error("❌ Error handling shop redaction:", err);
+      console.error(`❌ [GDPR/SHOP_REDACT] Error:`, err);
     }
+    console.log(`===================== [GDPR/SHOP_REDACT] END =====================\n`);
   }
 );
 
@@ -200,16 +278,21 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
+    const timestamp = new Date().toISOString();
+    console.log(`\n${timestamp} 🗑️ [APP/UNINSTALLED] Handler started`);
+
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
     } catch {
+      console.error(`🗑️ [APP/UNINSTALLED] Failed to parse payload`);
       return res.status(200).send("OK");
     }
 
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
-    console.log(`🗑️ [App Uninstall] Uninstall request for: ${shopDomain}`);
+    console.log(`🗑️ [APP/UNINSTALLED] Shop: ${shopDomain}`);
 
+    console.log(`🗑️ [APP/UNINSTALLED] Responding: 200 OK`);
     res.status(200).send("OK");
 
     try {
@@ -235,18 +318,19 @@ router.post(
       );
 
       if (shopConfigUpdate) {
-        console.log(`✅ [App Uninstall] Marked shop as inactive: ${shopDomain}`);
+        console.log(`✅ [APP/UNINSTALLED] Marked shop as inactive: ${shopDomain}`);
       }
       if (userUpdate) {
-        console.log(`✅ [App Uninstall] Cleared user access token: ${shopDomain}`);
+        console.log(`✅ [APP/UNINSTALLED] Cleared user access token: ${shopDomain}`);
       }
 
       if (!shopConfigUpdate && !userUpdate) {
-        console.log(`ℹ️ [App Uninstall] No data found for ${shopDomain}`);
+        console.log(`ℹ️ [APP/UNINSTALLED] No data found for ${shopDomain}`);
       }
     } catch (err) {
-      console.error("❌ Error handling app uninstall:", err);
+      console.error(`❌ [APP/UNINSTALLED] Error:`, err);
     }
+    console.log(`===================== [APP/UNINSTALLED] END =====================\n`);
   }
 );
 
