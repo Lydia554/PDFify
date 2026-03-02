@@ -144,36 +144,72 @@ async function deleteWebhook(shopDomain, accessToken, webhookId) {
 }
 
 /**
- * Register a new webhook (try different API versions for GDPR webhooks)
+ * Register a new webhook using GraphQL (allows specifying secret)
  */
 async function registerWebhook(shopDomain, accessToken, webhook) {
-  // For GDPR webhooks, try older API versions where topics still exist
-  if (webhook.topic.includes('redact') || webhook.topic.includes('data_request')) {
-    console.log(`   Trying older API version (2023-07) for ${webhook.topic}...`);
-
-    try {
-      const response = await axios.post(
-        `https://${shopDomain}/admin/api/2023-07/webhooks.json`,
-        {
-          webhook: {
-            topic: webhook.topic,
-            address: webhook.address,
-            format: webhook.format
+  // Use GraphQL mutation with webhookSubscriptionCreate
+  const mutation = `
+    mutation webhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
+      webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
+        webhookSubscription {
+          id
+          topic
+          endpoint {
+            __typename
+            ... on WebhookHttpEndpoint {
+              url
+            }
           }
-        },
-        {
-          headers: { "X-Shopify-Access-Token": accessToken }
         }
-      );
-
-      console.log(`✅ Registered webhook (2023-07 API): ${webhook.topic}`);
-      return response.data.webhook;
-    } catch (oldApiError) {
-      console.log(`   2023-07 API failed:`, oldApiError.response?.data?.errors || oldApiError.message);
+        userErrors {
+          field
+          message
+        }
+      }
     }
+  `;
+
+  const variables = {
+    topic: webhook.topic.toUpperCase().replace(/\//g, '_'), // Convert app/uninstalled to APP_UNINSTALLED
+    webhookSubscription: {
+      httpEndpoint: {
+        url: webhook.address
+      }
+    }
+  };
+
+  try {
+    const response = await axios.post(
+      `https://${shopDomain}/admin/api/2024-01/graphql.json`,
+      {
+        query: mutation,
+        variables
+      },
+      {
+        headers: {
+          'X-Shopify-Access-Token': accessToken,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    const result = response.data.data?.webhookSubscriptionCreate;
+
+    if (result?.userErrors?.length > 0) {
+      console.error(`❌ Failed to register GraphQL webhook:`, result.userErrors[0].message);
+      return null;
+    }
+
+    if (result?.webhookSubscription) {
+      console.log(`✅ Registered webhook (GraphQL): ${webhook.topic}`);
+      console.log(`   ID: ${result.webhookSubscription.id}`);
+      return result.webhookSubscription;
+    }
+  } catch (error) {
+    console.error(`❌ Failed to register webhook ${webhook.topic}:`, error.response?.data || error.message);
   }
 
-  // Try current REST API (2024-01) for non-GDPR webhooks
+  // Fallback to REST API if GraphQL fails
   try {
     const response = await axios.post(
       `https://${shopDomain}/admin/api/2024-01/webhooks.json`,
@@ -192,12 +228,6 @@ async function registerWebhook(shopDomain, accessToken, webhook) {
     console.log(`✅ Registered webhook (2024-01 REST): ${webhook.topic}`);
     return response.data.webhook;
   } catch (error) {
-    // If webhook topic doesn't exist, log but don't fail
-    if (error.response?.data?.errors?.includes('Could not find the webhook topic')) {
-      console.log(`⚠️ Webhook topic '${webhook.topic}' not available in this API version`);
-      console.log(`   Handler exists at ${webhook.address} but cannot be registered`);
-      return { topic: webhook.topic, address: webhook.address, deprecated: true };
-    }
     console.error(`❌ Failed to register webhook ${webhook.topic}:`, error.response?.data || error.message);
     return null;
   }
