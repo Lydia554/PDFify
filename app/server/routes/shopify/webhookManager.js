@@ -39,13 +39,13 @@ const REQUIRED_WEBHOOKS = [
 // tests endpoints directly regardless of registration status
 
 /**
- * Get all existing webhooks for a shop
+ * Get all existing webhooks for a shop (both REST and GraphQL)
  */
 async function getExistingWebhooks(shopDomain, accessToken) {
   let allWebhooks = [];
 
+  // Fetch REST webhooks
   try {
-    // Try 2024-01 first
     const response = await axios.get(
       `https://${shopDomain}/admin/api/2024-01/webhooks.json`,
       {
@@ -54,37 +54,66 @@ async function getExistingWebhooks(shopDomain, accessToken) {
     );
     allWebhooks = response.data.webhooks || [];
   } catch (error) {
-    console.error("❌ Failed to fetch webhooks from 2024-01 API:", error.message);
+    console.error("❌ Failed to fetch REST webhooks:", error.message);
   }
 
-  // Also check 2023-10 for older webhooks
+  // Fetch GraphQL webhook subscriptions (for GDPR webhooks)
   try {
-    const response = await axios.get(
-      `https://${shopDomain}/admin/api/2023-10/webhooks.json`,
+    const query = `
+      query {
+        webhookSubscriptions(first: 50) {
+          edges {
+            node {
+              id
+              topic
+              endpoint {
+                url
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await axios.post(
+      `https://${shopDomain}/admin/api/2024-01/graphql.json`,
+      { query },
       {
-        headers: { "X-Shopify-Access-Token": accessToken }
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+          "Content-Type": "application/json"
+        }
       }
     );
-    const oldWebhooks = response.data.webhooks || [];
 
-    // Merge without duplicates (by ID)
-    const existingIds = new Set(allWebhooks.map(w => w.id));
-    oldWebhooks.forEach(w => {
-      if (!existingIds.has(w.id)) {
-        allWebhooks.push(w);
-      }
+    const graphqlWebhooks = response.data.data?.webhookSubscriptions?.edges || [];
+
+    // Convert GraphQL webhooks to REST format for consistency
+    graphqlWebhooks.forEach(({ node }) => {
+      // Convert GraphQL topic back to REST format
+      const topic = node.topic.toLowerCase().replace(/_/g, '/');
+      // CUSTOMERS_REDACT -> customers/redact
+
+      allWebhooks.push({
+        id: node.id,
+        topic: topic,
+        address: node.endpoint.url,
+        format: 'json'
+      });
     });
   } catch (error) {
-    console.log("ℹ️ No webhooks found in 2023-10 API (normal if all are 2024-01)");
+    console.log("ℹ️ No GraphQL webhook subscriptions found");
   }
 
+  console.log(`   Found ${allWebhooks.length} total webhooks (REST + GraphQL)`);
   return allWebhooks;
 }
 
 /**
- * Delete a webhook
+ * Delete a webhook (try both REST and GraphQL)
  */
 async function deleteWebhook(shopDomain, accessToken, webhookId) {
+  // Try REST delete first
   try {
     await axios.delete(
       `https://${shopDomain}/admin/api/2024-01/webhooks/${webhookId}.json`,
@@ -92,18 +121,121 @@ async function deleteWebhook(shopDomain, accessToken, webhookId) {
         headers: { "X-Shopify-Access-Token": accessToken }
       }
     );
-    console.log(`🗑️ Deleted webhook ${webhookId}`);
+    console.log(`🗑️ Deleted webhook (REST) ${webhookId}`);
     return true;
-  } catch (error) {
-    console.error(`❌ Failed to delete webhook ${webhookId}:`, error.message);
+  } catch (restError) {
+    // Try GraphQL delete (for webhook subscriptions)
+    try {
+      const mutation = `
+        mutation webhookSubscriptionDelete($id: ID!) {
+          webhookSubscriptionDelete(id: $id) {
+            deletedWebhookSubscriptionId
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `;
+
+      const response = await axios.post(
+        `https://${shopDomain}/admin/api/2024-01/graphql.json`,
+        {
+          query: mutation,
+          variables: { id: webhookId }
+        },
+        {
+          headers: {
+            "X-Shopify-Access-Token": accessToken,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      const result = response.data.data?.webhookSubscriptionDelete;
+
+      if (result?.deletedWebhookSubscriptionId) {
+        console.log(`🗑️ Deleted webhook (GraphQL) ${webhookId}`);
+        return true;
+      }
+
+      if (result?.userErrors?.length > 0) {
+        console.error(`❌ Failed to delete GraphQL webhook:`, result.userErrors[0].message);
+      }
+    } catch (graphQLError) {
+      console.error(`❌ Failed to delete webhook ${webhookId}:`, restError.message, graphQLError.message);
+    }
     return false;
   }
 }
 
 /**
- * Register a new webhook (gracefully handles deprecated topics)
+ * Register a new webhook (try both REST and GraphQL)
  */
 async function registerWebhook(shopDomain, accessToken, webhook) {
+  // For GDPR webhooks, try GraphQL first (they use different topic names)
+  if (webhook.topic.includes('redact') || webhook.topic.includes('data_request')) {
+    try {
+      // Convert REST topic to GraphQL topic format
+      const graphqlTopic = webhook.topic.toUpperCase().replace(/\//g, '_');
+      // customers/redact -> CUSTOMERS_REDACT
+      // customers/data_request -> CUSTOMERS_DATA_REQUEST
+      // shop/redact -> SHOP_REDACT
+
+      const mutation = `
+        mutation webhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
+          webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhookSubscription) {
+            webhookSubscription {
+              id
+              topic
+            }
+            userErrors {
+              field
+              message
+            }
+          }
+        }
+      `;
+
+      const response = await axios.post(
+        `https://${shopDomain}/admin/api/2024-01/graphql.json`,
+        {
+          query: mutation,
+          variables: {
+            topic: graphqlTopic,
+            webhookSubscription: {
+              httpMethod: "POST",
+              endpoint: {
+                url: webhook.address
+              },
+              format: "JSON"
+            }
+          }
+        },
+        {
+          headers: {
+            "X-Shopify-Access-Token": accessToken,
+            "Content-Type": "application/json"
+          }
+        }
+      );
+
+      const result = response.data.data?.webhookSubscriptionCreate;
+
+      if (result && result.webhookSubscription) {
+        console.log(`✅ Registered webhook (GraphQL): ${webhook.topic}`);
+        return result.webhookSubscription;
+      }
+
+      if (result?.userErrors?.length > 0) {
+        console.log(`   GraphQL error: ${result.userErrors[0].message}`);
+      }
+    } catch (graphqlError) {
+      console.log(`   GraphQL failed, trying REST...`);
+    }
+  }
+
+  // Try REST API (for non-GDPR webhooks or fallback)
   try {
     const response = await axios.post(
       `https://${shopDomain}/admin/api/2024-01/webhooks.json`,
@@ -119,12 +251,13 @@ async function registerWebhook(shopDomain, accessToken, webhook) {
       }
     );
 
-    console.log(`✅ Registered webhook: ${webhook.topic}`);
+    console.log(`✅ Registered webhook (REST): ${webhook.topic}`);
     return response.data.webhook;
   } catch (error) {
-    // If webhook topic doesn't exist (like GDPR topics), log but don't fail
+    // If webhook topic doesn't exist, log but don't fail
     if (error.response?.data?.errors?.includes('Could not find the webhook topic')) {
-      console.log(`⚠️ Webhook topic not found: ${webhook.topic} (handler exists but cannot be registered)`);
+      console.log(`⚠️ Webhook topic '${webhook.topic}' not available in this API version`);
+      console.log(`   Handler exists at ${webhook.address} but cannot be registered`);
       return { topic: webhook.topic, address: webhook.address, deprecated: true };
     }
     console.error(`❌ Failed to register webhook ${webhook.topic}:`, error.response?.data || error.message);
