@@ -35,6 +35,8 @@ services:
   mongo:
     image: mongo:5.0
     container_name: pdf-api-mongo
+    ports:
+      - "27018:27017"
     networks:
       - pdf-api-network
 
