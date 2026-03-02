@@ -20,7 +20,7 @@ function verifyShopifyWebhook(req, res, next) {
 
   if (!hmacHeader || !body) {
     console.error(`❌ [Webhook] Missing HMAC or body`);
-    return res.status(200).send("OK"); // Return 200 to not leak endpoint info
+    return res.status(401).send("Unauthorized");
   }
 
   const generatedHmac = crypto
@@ -32,7 +32,7 @@ function verifyShopifyWebhook(req, res, next) {
     console.error(`❌ [Webhook] HMAC verification FAILED`);
     console.error(`   Expected: ${generatedHmac.substring(0, 20)}...`);
     console.error(`   Received: ${hmacHeader.substring(0, 20)}...`);
-    return res.status(200).send("OK"); // Return 200 to not leak endpoint info
+    return res.status(401).send("Unauthorized");
   }
 
   console.log(`✅ [Webhook] HMAC verified successfully`);
