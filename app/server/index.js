@@ -35,6 +35,7 @@ const friendlyMode = require("./routes/friendlyMode");
 const foodTrekRoutes = require("./routes/foodTrekRoutes");
 const shopifyWebhookRoutes = require('./routes/shopify/shopifyWebhookRoutes');
 const shopifyApiRoutes = require('./routes/shopify/shopifyApiRoutes');
+const shopifyBillingRoutes = require('./routes/shopify/billingRoutes');
 const woocommerceApiRoutes = require("./routes/woocommerce/woocommerceApiRoutes");
 const woocommerceWebhookRoutes = require("./routes/woocommerce/woocommerceWebhookRoutes");
 const betaRegistrationRoutes = require("./routes/betaRegistrationRoutes");
@@ -123,6 +124,7 @@ app.use("/api/stripe", paymentRoutes);
 app.use("/woocommerce-webhook", woocommerceWebhookRoutes);
 
 app.use("/api/shopify", (req, res, next) => { req.invoiceSource = "shopify"; next(); }, shopifyApiRoutes);
+app.use("/api/shopify/billing", shopifyBillingRoutes);
 app.use("/api/woocommerce", (req, res, next) => { req.invoiceSource = "woocommerce"; next(); }, woocommerceApiRoutes);
 app.use("/api/friendly", (req, res, next) => { req.invoiceSource = "friendly"; next(); }, friendlyMode);
 app.use("/api", (req, res, next) => { req.invoiceSource = "dev"; next(); }, invoiceRoutes);
