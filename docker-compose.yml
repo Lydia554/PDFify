@@ -37,6 +37,8 @@ services:
     container_name: pdf-api-mongo
     ports:
       - "27018:27017"
+    volumes:
+      - mongo-data:/data/db
     networks:
       - pdf-api-network
 
