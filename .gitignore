@@ -47,3 +47,9 @@ nul
 # Scripts with secrets (NEVER commit these)
 delete-webhooks*.ps1
 *webhooks*.js
+
+# Temporary webhook test scripts
+*.secret.js
+fix-webhook-secret.js
+get-webhook-secret.js
+reregister-webhooks.js
