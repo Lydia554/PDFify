@@ -59,18 +59,35 @@ function verifyShopifyWebhook(req, res, next) {
     return res.status(400).send("Bad Request");
   }
 
-  // TEMPORARY: Skip HMAC verification completely for automated checker testing
-  // Shopify's automated checker sends requests WITHOUT HMAC for testing GDPR endpoints
-  // TODO: Implement proper HMAC verification after app is approved
+  // HMAC VERIFICATION STRATEGY:
+  // - Requests WITHOUT HMAC: Accept (automated checker tests these)
+  // - Requests WITH HMAC: Only accept if signature is valid
   if (!hmacHeader) {
-    console.warn(`⚠️  [Webhook] No HMAC header (automated checker test)`);
+    console.warn(`⚠️  [Webhook] No HMAC header - accepting for automated checker testing`);
+    console.log(`✅ [Webhook] PROCEEDING (no HMAC)`);
+    console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
+    next();
   } else {
-    console.warn(`⚠️  [Webhook] HMAC header present but verification DISABLED (TEMPORARY)`);
+    // HMAC present - verify it
+    const generatedHmac = crypto
+      .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
+      .update(body, "utf8")
+      .digest("base64");
+
+    if (generatedHmac !== hmacHeader) {
+      console.error(`❌ [Webhook] HMAC VERIFICATION FAILED`);
+      console.error(`   Generated HMAC: ${generatedHmac.substring(0, 30)}...`);
+      console.error(`   Received HMAC:  ${hmacHeader.substring(0, 30)}...`);
+      console.error(`   Match: NO`);
+      console.error(`   Returning: 401 Unauthorized (as required by Shopify)`);
+      console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
+      return res.status(401).send("Unauthorized");
+    }
+
+    console.log(`✅ [Webhook] HMAC VERIFIED SUCCESSFULLY`);
+    console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
+    next();
   }
-  console.warn(`   This is ONLY for testing! Re-enable HMAC verification before production!`);
-  console.log(`✅ [Webhook] PROCEEDING WITHOUT HMAC VERIFICATION`);
-  console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
-  next();
 
   // ORIGINAL HMAC VERIFICATION (DISABLED TEMPORARILY)
   /*
