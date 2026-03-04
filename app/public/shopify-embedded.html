@@ -913,6 +913,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const host = urlParams.get('host');
+    const idToken = urlParams.get('id_token'); // JWT token from URL
 
     // Validate shop parameter
     if (!shop) {
@@ -931,13 +932,36 @@
     let shopConfig = null;
     let shopEmail = null;
 
+    // Fallback: Use id_token from URL if App Bridge fails
+    let fallbackToken = null;
+    if (idToken) {
+      console.log('[PDFify] Found id_token in URL, will use as fallback');
+      fallbackToken = idToken;
+    }
+
     // Wait for DOM to be ready before initializing App Bridge
     document.addEventListener('DOMContentLoaded', function() {
       // Check if App Bridge is loaded
       if (typeof window['app-bridge'] === 'undefined') {
-        console.error('App Bridge failed to load - showing UI without it');
-        // Show UI anyway even without App Bridge
-        loadInitialData();
+        console.error('App Bridge failed to load - using fallback token from URL');
+        // Use fallback token from URL
+        if (fallbackToken) {
+          window.getSessionToken = async function() {
+            console.log('[PDFify] Using fallback token from URL');
+            return fallbackToken;
+          };
+          loadInitialData().catch(err => {
+            console.error('Fatal error in loadInitialData:', err);
+          });
+        } else {
+          // No token available at all
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('app').classList.remove('hidden');
+          const msgEl = document.getElementById('message');
+          msgEl.textContent = 'Error: Unable to authenticate. No valid token found.';
+          msgEl.className = 'message error';
+          msgEl.style.display = 'block';
+        }
         return;
       }
 
