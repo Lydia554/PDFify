@@ -1,34 +1,30 @@
 const express = require("express");
 const router = express.Router();
 const ShopConfig = require("../../models/ShopConfig");
-const User = require("../../models/User");
 const axios = require("axios");
 
 /**
- * DEBUG ENDPOINT: List all users with their shopify-related fields
+ * DEBUG ENDPOINT: List all ShopConfigs with their access tokens
  *
- * Usage: GET /api/shopify/util/debug-users
+ * Usage: GET /api/shopify/util/debug-shops
  */
-router.get("/debug-users", async (req, res) => {
+router.get("/debug-shops", async (req, res) => {
   try {
-    // Find all users that have Shopify connection data
-    const users = await User.find({
-      $or: [
-        { connectedShopDomain: { $exists: true } },
-        { shopifyAccessToken: { $exists: true } }
-      ]
-    }).select('email connectedShopDomain shopifyAccessToken planType isPremium');
+    // Find all shop configs
+    const shops = await ShopConfig.find({
+      shopifyAccessToken: { $exists: true }
+    }).select('shopDomain companyName shopifyAccessToken invoiceLanguage primaryColor');
 
     res.json({
       success: true,
-      count: users.length,
-      users: users.map(u => ({
-        email: u.email,
-        connectedShopDomain: u.connectedShopDomain,
-        hasAccessToken: !!u.shopifyAccessToken,
-        accessTokenPreview: u.shopifyAccessToken ? u.shopifyAccessToken.substring(0, 15) + '...' : 'N/A',
-        planType: u.planType || 'N/A',
-        isPremium: u.isPremium || false
+      count: shops.length,
+      shops: shops.map(s => ({
+        shopDomain: s.shopDomain,
+        companyName: s.companyName,
+        hasAccessToken: !!s.shopifyAccessToken,
+        accessTokenPreview: s.shopifyAccessToken ? s.shopifyAccessToken.substring(0, 15) + '...' : 'N/A',
+        invoiceLanguage: s.invoiceLanguage || 'N/A',
+        primaryColor: s.primaryColor || 'N/A'
       }))
     });
   } catch (error) {
@@ -46,23 +42,17 @@ router.get("/debug-users", async (req, res) => {
  */
 router.get("/list-shops", async (req, res) => {
   try {
-    // Get all shops from ShopConfig
-    const shopConfigs = await ShopConfig.find({});
-
-    // For each shop, check if they have access token in User model
-    const shops = await Promise.all(shopConfigs.map(async (shop) => {
-      const user = await User.findOne({ connectedShopDomain: shop.shopDomain });
-      return {
-        shopDomain: shop.shopDomain,
-        companyName: shop.companyName,
-        hasAccessToken: !!(user && user.shopifyAccessToken)
-      };
-    }));
+    // Get all shops from ShopConfig (ShopConfig IS the user in this architecture)
+    const shops = await ShopConfig.find({}).select('shopDomain companyName shopifyAccessToken');
 
     res.json({
       success: true,
       count: shops.length,
-      shops
+      shops: shops.map(s => ({
+        shopDomain: s.shopDomain,
+        companyName: s.companyName,
+        hasAccessToken: !!s.shopifyAccessToken
+      }))
     });
   } catch (error) {
     res.status(500).json({
@@ -107,19 +97,19 @@ router.post("/cleanup-webhooks", async (req, res) => {
 
     console.log(`\n🧹 [CLEANUP] Starting webhook cleanup for ${shopDomain}`);
 
-    // Find the user to get access token (stored in User model, not ShopConfig)
-    const user = await User.findOne({
-      connectedShopDomain: shopDomain.toLowerCase().trim()
+    // Find the shop config to get access token (ShopConfig IS the user)
+    const shopConfig = await ShopConfig.findOne({
+      shopDomain: shopDomain.toLowerCase().trim()
     });
 
-    if (!user || !user.shopifyAccessToken) {
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
       return res.status(404).json({
         success: false,
         error: "Shop not found or no access token available"
       });
     }
 
-    const accessToken = user.shopifyAccessToken;
+    const accessToken = shopConfig.shopifyAccessToken;
     console.log(`✅ [CLEANUP] Found access token: ${accessToken.substring(0, 15)}...`);
 
     // Fetch all existing webhooks
@@ -228,12 +218,12 @@ router.post("/list-webhooks", async (req, res) => {
       });
     }
 
-    // Find the user to get access token (stored in User model)
-    const user = await User.findOne({
-      connectedShopDomain: shopDomain.toLowerCase().trim()
+    // Find the shop config to get access token (ShopConfig IS the user)
+    const shopConfig = await ShopConfig.findOne({
+      shopDomain: shopDomain.toLowerCase().trim()
     });
 
-    if (!user || !user.shopifyAccessToken) {
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
       return res.status(404).json({
         success: false,
         error: "Shop not found or no access token"
@@ -244,7 +234,7 @@ router.post("/list-webhooks", async (req, res) => {
       `https://${shopDomain}/admin/api/2026-01/webhooks.json`,
       {
         headers: {
-          "X-Shopify-Access-Token": user.shopifyAccessToken
+          "X-Shopify-Access-Token": shopConfig.shopifyAccessToken
         }
       }
     );
