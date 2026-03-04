@@ -64,7 +64,7 @@ function verifyShopifyWebhook(req, res, next) {
   // Verify HMAC signature using timing-safe comparison to prevent timing attacks
   const generatedHmac = crypto
     .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
-    .update(body, "utf8")
+    .update(body)  // Use buffer directly, NOT "utf8" encoding!
     .digest("base64");
 
   // Use timing-safe comparison to prevent timing attacks
