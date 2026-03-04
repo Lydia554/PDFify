@@ -10,6 +10,7 @@ const ShopConfig = require("../../models/ShopConfig");
 const User = require("../../models/User");
 const authenticate = require("../../middleware/authenticate");
 const dualAuth = require("../../middleware/dualAuth");
+const verifyShopifySession = require("../../middleware/verifyShopifySession");
 const { resolveShopifyToken, getShopLogoUrl, getShopDetails, formatShopAddress } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
@@ -702,16 +703,20 @@ router.post("/disconnect", authenticate, dualAuth, async (req, res) => {
 
 
 
-router.get("/config", async (req, res) => {
-  const { shopDomain } = req.query;
-  if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
+router.get("/config", verifyShopifySession, async (req, res) => {
+  // shopDomain is extracted from session token by verifyShopifySession middleware
+  const shopDomain = req.shopDomain;
 
   try {
-    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    const shopConfig = req.shop; // Already fetched by middleware
 
-    if (!shopConfig) {
-      return res.status(404).json({ error: "Shop not found" });
+    // Fetch shop details to get owner email
+    let shopEmail = null;
+    try {
+      const shopDetails = await getShopDetails(shopDomain, shopConfig.shopifyAccessToken);
+      shopEmail = shopDetails?.email;
+    } catch (err) {
+      console.warn("Could not fetch shop email:", err.message);
     }
 
     // Fetch shop details to get owner email
@@ -741,17 +746,16 @@ router.get("/config", async (req, res) => {
 
 
 
-router.post("/settings", async (req, res) => {
-  const { shopDomain, allowCustomerPDF } = req.body;
-  if (!shopDomain) return res.status(400).json({ error: "Missing shopDomain" });
+router.post("/settings", verifyShopifySession, async (req, res) => {
+  const { allowCustomerPDF } = req.body;
+  // shopDomain is extracted from session token by verifyShopifySession middleware
 
   try {
-  const normalizedShopDomain = shopDomain.trim().toLowerCase();
-const shopConfig = await ShopConfig.findOneAndUpdate(
-  { shopDomain: normalizedShopDomain },
-  { allowCustomerPDF },
-  { upsert: true, new: true }
-);
+    const shopConfig = await ShopConfig.findOneAndUpdate(
+      { shopDomain: req.shopDomain },
+      { allowCustomerPDF },
+      { new: true }
+    );
 
     res.json({ message: "Settings saved", allowCustomerPDF: shopConfig.allowCustomerPDF });
   } catch (err) {
@@ -1323,39 +1327,20 @@ router.get("/debug", async (req, res) => {
 });
 
 /**
- * Public connection test for embedded app (no authentication required)
- * GET /api/shopify/test-connection?shop=store.myshopify.com
+ * Connection test for embedded app (uses session token)
+ * GET /api/shopify/test-connection
  */
-router.get("/test-connection", async (req, res) => {
+router.get("/test-connection", verifyShopifySession, async (req, res) => {
   try {
-    const { shop } = req.query;
-    if (!shop) {
-      return res.status(400).json({ error: "Missing shop parameter" });
-    }
-
-    const normalizedShop = shop.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-    // Check if shop exists in database (was installed via OAuth)
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
-
-    if (!shopConfig) {
-      return res.status(404).json({
-        error: "Shop not found in database.",
-        message: "Please install the app first.",
-        shop: normalizedShop,
-        hasAccessToken: false
-      });
-    }
-
-    // Check if shop has access token (from OAuth installation)
-    const hasAccessToken = !!shopConfig.shopifyAccessToken;
+    // shopDomain and shop are extracted from session token by verifyShopifySession middleware
+    const hasAccessToken = !!req.shop.shopifyAccessToken;
 
     return res.json({
       success: true,
-      shop: normalizedShop,
-      isActive: shopConfig.isActive || false,
+      shop: req.shopDomain,
+      isActive: req.shop.isActive || false,
       hasAccessToken: hasAccessToken,
-      connectedAt: shopConfig.connectedAt,
+      connectedAt: req.shop.connectedAt,
       message: hasAccessToken
         ? "Shop is properly connected!"
         : "Shop found but no access token. Please reinstall the app."
@@ -1368,26 +1353,15 @@ router.get("/test-connection", async (req, res) => {
 
 /**
  * Get usage statistics for embedded app
- * GET /api/shopify/usage-stats?shopDomain=store.myshopify.com
+ * GET /api/shopify/usage-stats
  */
-router.get("/usage-stats", async (req, res) => {
+router.get("/usage-stats", verifyShopifySession, async (req, res) => {
   try {
-    const { shopDomain } = req.query;
-    if (!shopDomain) {
-      return res.status(400).json({ error: "Missing shopDomain" });
-    }
-
-    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-    // Get shop config with usage count
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
-
-    if (!shopConfig) {
-      return res.status(404).json({ error: "Shop not found" });
-    }
+    // shopDomain is extracted from session token by verifyShopifySession middleware
+    const shopConfig = req.shop;
 
     // Get user to check plan tier
-    const user = await User.findOne({ connectedShopDomain: normalizedShop });
+    const user = await User.findOne({ connectedShopDomain: req.shopDomain });
 
     // Check both planType and plan for backwards compatibility
     const userPlan = user?.planType || user?.plan || 'free';
@@ -1400,7 +1374,7 @@ router.get("/usage-stats", async (req, res) => {
       used: shopConfig.usageCount || 0,
       limit: limit,
       plan: userPlan,
-      shop: normalizedShop
+      shop: req.shopDomain
     });
   } catch (error) {
     console.error("❌ Usage stats error:", error);
@@ -1410,22 +1384,12 @@ router.get("/usage-stats", async (req, res) => {
 
 /**
  * Get branding settings for embedded app
- * GET /api/shopify/branding?shopDomain=store.myshopify.com
+ * GET /api/shopify/branding
  */
-router.get("/branding", async (req, res) => {
+router.get("/branding", verifyShopifySession, async (req, res) => {
   try {
-    const { shopDomain } = req.query;
-    if (!shopDomain) {
-      return res.status(400).json({ error: "Missing shopDomain" });
-    }
-
-    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
-
-    if (!shopConfig) {
-      return res.status(404).json({ error: "Shop not found" });
-    }
+    // shop is extracted from session token by verifyShopifySession middleware
+    const shopConfig = req.shop;
 
     return res.json({
       primaryColor: shopConfig.primaryColor || "#00a6cc",
@@ -1445,14 +1409,10 @@ router.get("/branding", async (req, res) => {
  * Save branding settings for embedded app
  * POST /api/shopify/branding
  */
-router.post("/branding", async (req, res) => {
+router.post("/branding", verifyShopifySession, async (req, res) => {
   try {
-    const { shopDomain, primaryColor, invoiceLanguage, companyName, bankName, iban, bic } = req.body;
-    if (!shopDomain) {
-      return res.status(400).json({ error: "Missing shopDomain" });
-    }
-
-    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const { primaryColor, invoiceLanguage, companyName, bankName, iban, bic } = req.body;
+    // shopDomain is extracted from session token by verifyShopifySession middleware
 
     // Validate language is one of the supported locales
     const validLanguages = ['en', 'de', 'sl'];
@@ -1472,9 +1432,9 @@ router.post("/branding", async (req, res) => {
     if (bic && bic.trim()) updateData.bic = bic;
 
     const shopConfig = await ShopConfig.findOneAndUpdate(
-      { shopDomain: normalizedShop },
+      { shopDomain: req.shopDomain },
       updateData,
-      { upsert: true, new: true }
+      { new: true }
     );
 
     return res.json({
@@ -1526,25 +1486,19 @@ router.post("/payment-details", async (req, res) => {
 });
 
 /**
- * Public orders endpoint for embedded app (no authentication required)
- * Uses shop domain to find ShopConfig and access token
- * GET /api/shopify/orders-public?shopDomain=store.myshopify.com
+ * Public orders endpoint for embedded app (uses session token)
+ * GET /api/shopify/orders-public
  */
-router.get("/orders-public", async (req, res) => {
-  let normalizedShop = null;
-
+router.get("/orders-public", verifyShopifySession, async (req, res) => {
   try {
-    const { shopDomain, from, to } = req.query;
-    if (!shopDomain) {
-      return res.status(400).json({ error: "Missing shopDomain" });
-    }
-
-    normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const { from, to } = req.query;
+    // shopDomain and shop are extracted from session token by verifyShopifySession middleware
+    const normalizedShop = req.shopDomain;
 
     console.log(`📦 Fetching orders for: ${normalizedShop}`);
 
-    // Find shop config with access token (from OAuth installation)
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    // shopConfig is already fetched by verifyShopifySession middleware
+    const shopConfig = req.shop;
 
     console.log(`📦 Shop config found: ${!!shopConfig}`);
     if (shopConfig) {
@@ -1601,12 +1555,14 @@ router.get("/orders-public", async (req, res) => {
 });
 
 /**
- * Public invoice endpoint for embedded app (no authentication required)
+ * Public invoice endpoint for embedded app (uses session token)
  * POST /api/shopify/invoice-public
  */
-router.post("/invoice-public", async (req, res) => {
+router.post("/invoice-public", verifyShopifySession, async (req, res) => {
   try {
-    const { shopDomain, orderId, merchant, lang: forcedLang, primaryColor: forcedColor } = req.body;
+    const { orderId, merchant, lang: forcedLang, primaryColor: forcedColor } = req.body;
+    // shopDomain is extracted from session token by verifyShopifySession middleware
+    const shopDomain = req.shopDomain;
     if (!shopDomain || !orderId) {
       return res.status(400).json({ error: "Missing shopDomain or orderId" });
     }
@@ -1787,23 +1743,17 @@ router.post("/invoice-public", async (req, res) => {
 });
 
 /**
- * Public ZIP endpoint for embedded app (no authentication required)
+ * Public ZIP endpoint for embedded app (uses session token)
  * POST /api/shopify/invoices/zip-public
  */
-router.post("/invoices/zip-public", async (req, res) => {
+router.post("/invoices/zip-public", verifyShopifySession, async (req, res) => {
   try {
-    const { shopDomain, from, to, lang: forcedLang, primaryColor: forcedColor } = req.body;
-    if (!shopDomain) {
-      return res.status(400).json({ error: "Missing shopDomain" });
-    }
+    const { from, to, lang: forcedLang, primaryColor: forcedColor } = req.body;
+    // shopDomain is extracted from session token by verifyShopifySession middleware
+    const normalizedShop = req.shopDomain;
 
-    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-    // Verify shop is connected via OAuth
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
-    if (!shopConfig || !shopConfig.shopifyAccessToken) {
-      return res.status(401).json({ error: "Shop not connected. Please reinstall the app." });
-    }
+    // shopConfig is already fetched by verifyShopifySession middleware
+    const shopConfig = req.shop;
 
     // Check if there's an associated user with a plan for usage limits
     const user = await User.findOne({ connectedShopDomain: normalizedShop });

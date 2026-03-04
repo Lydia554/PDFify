@@ -6,6 +6,8 @@
   <title>PDFify Pro - Invoice Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <!-- Shopify App Bridge -->
+  <script src="https://cdn.shopify.com/shopifyapp/app-bridge.js"></script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
@@ -428,6 +430,9 @@
   </style>
 </head>
 <body>
+  <!-- App Bridge Title Bar -->
+  <div id="app-bridge-title"></div>
+
   <div class="container">
     <div id="app" class="hidden">
     <!-- Header -->
@@ -912,10 +917,59 @@
     let shopConfig = null;
     let shopEmail = null;
 
-    // API client
+    // Initialize Shopify App Bridge
+    const AppBridge = window['app-bridge'];
+    const createApp = AppBridge.default;
+    const app = createApp({
+      apiKey: 'e07548c088f572af4bbf103e4dee46bb',
+      shop: shop,
+      host: urlParams.get('host'),
+    });
+
+    // Create session token fetcher
+    const sessionToken = AppBridge.SessionToken;
+    const sessionTokenProvider = sessionToken(app);
+
+    // Get session token for authentication
+    async function getSessionToken() {
+      try {
+        const token = await sessionTokenProvider.getToken();
+        return token;
+      } catch (err) {
+        console.error('Failed to get session token:', err);
+        throw err;
+      }
+    }
+
+    // Initialize App Bridge components
+    const TitleBar = AppBridge.TitleBar;
+    const titleBar = TitleBar.create(app, {
+      title: 'PDFify Pro',
+    });
+
+    // Add breadcrumbs (optional, improves UX)
+    titleBar.set({
+      buttons: {
+        buttons: [],
+      },
+    });
+
+    // API client with session token interceptor
     const api = axios.create({
       baseURL: 'https://pdfify.pro/api',
       timeout: 30000
+    });
+
+    // Add session token to every request
+    api.interceptors.request.use(async (config) => {
+      try {
+        const token = await getSessionToken();
+        config.headers['Authorization'] = `Bearer ${token}`;
+        return config;
+      } catch (err) {
+        console.error('Failed to add session token to request:', err);
+        return config;
+      }
     });
 
     // Sync color picker
@@ -974,10 +1028,12 @@
       showMessage(`Setting up ${plan} subscription via Shopify Billing...`);
 
       try {
+        const token = await getSessionToken();
         const response = await fetch('https://pdfify.pro/api/shopify/billing/subscribe', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             shopDomain: shop,
@@ -999,7 +1055,11 @@
         }
 
         showMessage(`Redirecting to Shopify billing...`);
-        window.location.href = confirmationUrl;
+
+        // Use App Bridge Redirect for navigation
+        const Redirect = AppBridge.Redirect;
+        const redirect = Redirect.create(app);
+        redirect.dispatch(Redirect.Action.REMOTE, confirmationUrl);
       } catch (err) {
         console.error("Unexpected error:", err);
         showMessage('❌ An unexpected error occurred. Please try again.', true);
@@ -1020,8 +1080,11 @@
       const installStatus = document.getElementById('installStatus');
       installStatus.textContent = 'Redirecting to Shopify...';
 
-      // Redirect to OAuth install
-      window.location.href = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
+      // Use App Bridge Redirect for navigation
+      const Redirect = AppBridge.Redirect;
+      const redirect = Redirect.create(app);
+      const installUrl = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
+      redirect.dispatch(Redirect.Action.REMOTE, installUrl);
     }
 
     // Load initial data
@@ -1416,10 +1479,12 @@
         resultEl.textContent = 'Redirecting to Stripe checkout...';
 
         try {
+          const token = await getSessionToken();
           const response = await fetch('https://pdfify.pro/api/stripe/buy-tokens-shopify', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
               shopDomain: shop,
@@ -1443,7 +1508,10 @@
             return;
           }
 
-          window.location.href = url;
+          // Use App Bridge Redirect for Stripe checkout
+          const Redirect = AppBridge.Redirect;
+          const redirect = Redirect.create(app);
+          redirect.dispatch(Redirect.Action.REMOTE, url);
         } catch (err) {
           console.error("Unexpected error:", err);
           resultEl.textContent = '❌ An unexpected error occurred. Please try again.';
