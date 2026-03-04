@@ -980,8 +980,11 @@
       // Continue with initial data loading
       loadInitialData().catch(err => {
         console.error('Fatal error in loadInitialData:', err);
-        debugEl.textContent = 'Debug: ERROR - ' + err.message;
+        console.error('Error stack:', err.stack);
+        debugEl.textContent = 'Debug: FATAL ERROR - ' + err.message;
         debugEl.style.background = 'red';
+        debugEl.style.fontSize = '10px';
+        debugEl.style.maxWidth = '300px';
       });
     });
 
@@ -998,10 +1001,12 @@
         if (typeof window.getSessionToken === 'function') {
           const token = await window.getSessionToken();
           config.headers['Authorization'] = `Bearer ${token}`;
+          console.log('🔑 Added session token to request:', config.url);
         }
         return config;
       } catch (err) {
-        console.error('Failed to add session token to request:', err);
+        console.error('❌ Failed to add session token to request:', err);
+        console.error('Request config:', config);
         return config;
       }
     });
@@ -1137,8 +1142,11 @@
           isInstalled = testRes.data.success && testRes.data.hasAccessToken;
         } catch (testErr) {
           console.log('❌ Shop connection test failed:', testErr.response?.status, testErr.response?.data);
-          debugEl.textContent = 'Debug: Connection failed - ' + testErr.response?.status;
+          console.error('Full error:', testErr);
+          debugEl.textContent = 'Debug: Connection failed - ' + (testErr.response?.status || 'network error') + ': ' + (testErr.message || 'unknown');
           debugEl.style.background = 'red';
+          debugEl.style.fontSize = '10px';
+          debugEl.style.maxWidth = '300px';
         }
 
         if (!isInstalled) {
