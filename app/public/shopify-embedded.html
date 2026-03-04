@@ -8,17 +8,6 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <!-- Shopify App Bridge -->
   <script src="https://cdn.shopify.com/shopifyapp/app-bridge.js"></script>
-  <script>
-    // IMMEDIATE debug - runs as soon as script loads
-    console.log('🚀 Script loaded!');
-    setTimeout(() => {
-      const debugEl = document.getElementById('debug-info');
-      if (debugEl) {
-        debugEl.textContent = 'Debug: Script executed!';
-        debugEl.style.background = 'purple';
-      }
-    }, 100);
-  </script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
@@ -439,45 +428,10 @@
       margin: 0 0 12px 0;
     }
   </style>
-  <script>
-    // IMMEDIATE debug - runs RIGHT NOW
-    console.log('🚀 HTML head script running!');
-    window.DEBUG_MODE = true;
-  </script>
 </head>
 <body>
   <!-- App Bridge Title Bar -->
   <div id="app-bridge-title"></div>
-
-  <!-- Test if HTML renders -->
-  <div style="position: fixed; top: 0; left: 0; background: brightred; color: white; padding: 5px; z-index: 99999;">
-    HTML LOADED!
-  </div>
-
-  <!-- Debug info -->
-  <div id="debug-info" style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 12px;">
-    Debug: Loading...
-  </div>
-
-  <!-- No JS warning -->
-  <noscript>
-    <div style="position: fixed; top: 50px; left: 0; background: red; color: white; padding: 20px; z-index: 99999;">
-      JAVASCRIPT IS DISABLED - Please enable JavaScript to use this app
-    </div>
-  </noscript>
-
-  <script>
-    // This runs IMMEDIATELY when body starts rendering
-    console.log('🚀 BODY script running!');
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('✅ DOMContentLoaded fired');
-      const debugEl = document.getElementById('debug-info');
-      if (debugEl) {
-        debugEl.textContent = 'Debug: DOM Ready!';
-        debugEl.style.background = 'blue';
-      }
-    });
-  </script>
 
   <div class="container">
     <div id="app" class="hidden">
@@ -966,19 +920,11 @@
 
     // Wait for DOM to be ready before initializing App Bridge
     document.addEventListener('DOMContentLoaded', function() {
-      const debugEl = document.getElementById('debug-info');
-      debugEl.textContent = 'Debug: DOM loaded';
-
       // Check if App Bridge is loaded
       if (typeof window['app-bridge'] === 'undefined') {
         console.error('App Bridge failed to load');
-        debugEl.textContent = 'Debug: App Bridge NOT loaded!';
-        debugEl.style.background = 'red';
         return;
       }
-
-      debugEl.textContent = 'Debug: App Bridge loaded';
-      debugEl.style.background = 'orange';
 
       // Initialize Shopify App Bridge
       const AppBridge = window['app-bridge'];
@@ -1014,17 +960,9 @@
       window.shopifyApp = app;
       window.getSessionToken = getSessionToken;
 
-      debugEl.textContent = 'Debug: About to load initial data';
-      debugEl.style.background = 'yellow';
-
       // Continue with initial data loading
       loadInitialData().catch(err => {
         console.error('Fatal error in loadInitialData:', err);
-        console.error('Error stack:', err.stack);
-        debugEl.textContent = 'Debug: FATAL ERROR - ' + err.message;
-        debugEl.style.background = 'red';
-        debugEl.style.fontSize = '10px';
-        debugEl.style.maxWidth = '300px';
       });
     });
 
@@ -1041,12 +979,10 @@
         if (typeof window.getSessionToken === 'function') {
           const token = await window.getSessionToken();
           config.headers['Authorization'] = `Bearer ${token}`;
-          console.log('🔑 Added session token to request:', config.url);
         }
         return config;
       } catch (err) {
-        console.error('❌ Failed to add session token to request:', err);
-        console.error('Request config:', config);
+        console.error('Failed to add session token to request:', err);
         return config;
       }
     });
@@ -1166,47 +1102,27 @@
 
     // Load initial data
     async function loadInitialData() {
-      const debugEl = document.getElementById('debug-info');
-
       try {
-        console.log('🔄 Loading initial data...');
-        debugEl.textContent = 'Debug: Testing connection...';
-        debugEl.style.background = 'lightblue';
-
         // First, test if shop is properly installed
         let isInstalled = false;
 
         try {
           const testRes = await api.get('/shopify/test-connection');
-          console.log('✅ Connection test response:', testRes.data);
           isInstalled = testRes.data.success && testRes.data.hasAccessToken;
         } catch (testErr) {
-          console.log('❌ Shop connection test failed:', testErr.response?.status, testErr.response?.data);
-          console.error('Full error:', testErr);
-          debugEl.textContent = 'Debug: Connection failed - ' + (testErr.response?.status || 'network error') + ': ' + (testErr.message || 'unknown');
-          debugEl.style.background = 'red';
-          debugEl.style.fontSize = '10px';
-          debugEl.style.maxWidth = '300px';
+          console.error('Shop connection test failed:', testErr);
         }
 
         if (!isInstalled) {
           // Show installation screen
-          console.log('⚠️ Shop not installed, showing install screen');
-          debugEl.textContent = 'Debug: Shop not installed';
-          debugEl.style.background = 'orange';
-
           document.getElementById('loading').classList.add('hidden');
           document.getElementById('installRequired').classList.remove('hidden');
           document.getElementById('installShopName').textContent = shop;
           return;
         }
 
-        debugEl.textContent = 'Debug: Loading config...';
-        debugEl.style.background = 'lightgreen';
-
         // Load shop config
         const configRes = await api.get('/shopify/config');
-        console.log('✅ Config loaded:', configRes.data);
         shopConfig = configRes.data;
         shopEmail = shopConfig.shopEmail;
 
@@ -1294,25 +1210,14 @@
         }
 
         // Load orders
-        debugEl.textContent = 'Debug: Loading orders...';
         await loadOrders();
 
         // Hide loading, show app
-        debugEl.textContent = 'Debug: Showing UI!';
-        debugEl.style.background = 'green';
-
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
 
-        // Hide debug after 3 seconds
-        setTimeout(() => {
-          debugEl.style.display = 'none';
-        }, 3000);
-
       } catch (err) {
         console.error('Failed to load initial data:', err);
-        debugEl.textContent = 'Debug: ERROR - ' + err.message;
-        debugEl.style.background = 'red';
         showMessage('Failed to load settings. Please try again.', true);
       }
     }
