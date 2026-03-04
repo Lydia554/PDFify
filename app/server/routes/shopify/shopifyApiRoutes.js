@@ -713,16 +713,7 @@ router.get("/config", verifyShopifySession, async (req, res) => {
     // Fetch shop details to get owner email
     let shopEmail = null;
     try {
-      const shopDetails = await getShopDetails(shopDomain, shopConfig.shopifyAccessToken);
-      shopEmail = shopDetails?.email;
-    } catch (err) {
-      console.warn("Could not fetch shop email:", err.message);
-    }
-
-    // Fetch shop details to get owner email
-    let shopEmail = null;
-    try {
-      const shopDetails = await getShopDetails(normalizedShop, shopConfig.shopifyAccessToken);
+      const shopDetails = await getShopDetails(req.shopDomain, shopConfig.shopifyAccessToken);
       shopEmail = shopDetails?.email;
     } catch (err) {
       console.warn("Could not fetch shop email:", err.message);
