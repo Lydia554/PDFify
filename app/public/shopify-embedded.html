@@ -958,9 +958,24 @@
       async function getSessionToken() {
         try {
           const token = await sessionTokenProvider.getToken();
+          console.log('[PDFify] Session token obtained (first 50 chars):', token.substring(0, 50) + '...');
+
+          // Decode JWT payload for debugging
+          try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+              const payload = JSON.parse(
+                atob(parts[1])
+              );
+              console.log('[PDFify] Token payload:', payload);
+            }
+          } catch (decodeErr) {
+            console.error('[PDFify] Failed to decode token:', decodeErr);
+          }
+
           return token;
         } catch (err) {
-          console.error('Failed to get session token:', err);
+          console.error('[PDFify] Failed to get session token:', err);
           throw err;
         }
       }
@@ -1122,6 +1137,7 @@
       try {
         // First, test if shop is properly installed
         let isInstalled = false;
+        let needsInstall = false;
 
         try {
           console.log('[PDFify] Testing shop connection...');
@@ -1130,10 +1146,33 @@
           isInstalled = testRes.data.success && testRes.data.hasAccessToken;
         } catch (testErr) {
           console.error('[PDFify] Shop connection test failed:', testErr);
+          console.error('[PDFify] Error status:', testErr.response?.status);
+          console.error('[PDFify] Error data:', testErr.response?.data);
+
+          // 404 means shop not in database - needs installation
+          if (testErr.response?.status === 404) {
+            console.log('[PDFify] Shop not found in database (404), showing install screen');
+            needsInstall = true;
+          }
+          // 401 means auth error - show app with error message
+          else if (testErr.response?.status === 401) {
+            console.log('[PDFify] Auth failed (401), showing app with error');
+            isInstalled = false; // Will fall through to show app
+          }
+        }
+
+        if (needsInstall) {
+          // Show installation screen
+          console.log('[PDFify] Showing installation required screen');
+          document.getElementById('loading').classList.add('hidden');
+          document.getElementById('installRequired').classList.remove('hidden');
+          document.getElementById('installShopName').textContent = shop;
+          return;
         }
 
         if (!isInstalled) {
-          // Show installation screen
+          // Shop exists but no access token - needs reinstallation
+          console.log('[PDFify] Shop exists but no access token, showing install screen');
           document.getElementById('loading').classList.add('hidden');
           document.getElementById('installRequired').classList.remove('hidden');
           document.getElementById('installShopName').textContent = shop;
