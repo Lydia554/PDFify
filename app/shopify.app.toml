@@ -17,15 +17,15 @@ api_version = "2026-01"
   uri = "https://pdfify.pro/webhook/order-created"
 
   [[webhooks.subscriptions]]
-  compliance_topics = ["customers/data_request"]
+  topics = [ "customers/data_request" ]
   uri = "https://pdfify.pro/webhook/customers-data-request"
 
   [[webhooks.subscriptions]]
-  compliance_topics = ["customers/redact"]
+  topics = [ "customers/redact" ]
   uri = "https://pdfify.pro/webhook/customers-redact"
 
   [[webhooks.subscriptions]]
-  compliance_topics = ["shop/redact"]
+  topics = [ "shop/redact" ]
   uri = "https://pdfify.pro/webhook/shop-redact"
 
 [access_scopes]

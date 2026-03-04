@@ -63,7 +63,7 @@ function verifyShopifyWebhook(req, res, next) {
 
   // Verify HMAC signature using timing-safe comparison to prevent timing attacks
   const generatedHmac = crypto
-    .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
+    .createHmac("sha256", process.env.SHOPIFY_API_SECRET)
     .update(body)  // Use buffer directly, NOT "utf8" encoding!
     .digest("base64");
 
@@ -76,8 +76,8 @@ function verifyShopifyWebhook(req, res, next) {
     console.error(`   Generated HMAC: ${generatedHmac.substring(0, 30)}...`);
     console.error(`   Received HMAC:  ${hmacHeader.substring(0, 30)}...`);
     console.error(`   Match: NO`);
-    console.error(`   SHOPIFY_WEBHOOK_SECRET exists: ${!!process.env.SHOPIFY_WEBHOOK_SECRET}`);
-    console.error(`   SHOPIFY_WEBHOOK_SECRET length: ${process.env.SHOPIFY_WEBHOOK_SECRET?.length || 0}`);
+    console.error(`   SHOPIFY_API_SECRET exists: ${!!process.env.SHOPIFY_API_SECRET}`);
+    console.error(`   SHOPIFY_API_SECRET length: ${process.env.SHOPIFY_API_SECRET?.length || 0}`);
     console.error(`   Returning: 401 Unauthorized`);
     console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
     return res.status(401).send("Unauthorized");
