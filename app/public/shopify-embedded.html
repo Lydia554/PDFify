@@ -1204,6 +1204,7 @@
           // Show installation screen
           console.log('[PDFify] Showing installation required screen');
           document.getElementById('loading').classList.add('hidden');
+          document.getElementById('app').classList.remove('hidden'); // Show app container
           document.getElementById('installRequired').classList.remove('hidden');
           document.getElementById('installShopName').textContent = shop;
           return;
@@ -1213,6 +1214,7 @@
           // Shop exists but no access token - needs reinstallation
           console.log('[PDFify] Shop exists but no access token, showing install screen');
           document.getElementById('loading').classList.add('hidden');
+          document.getElementById('app').classList.remove('hidden'); // Show app container
           document.getElementById('installRequired').classList.remove('hidden');
           document.getElementById('installShopName').textContent = shop;
           return;
