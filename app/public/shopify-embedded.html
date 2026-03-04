@@ -1004,15 +1004,23 @@
 
     // Add session token to every request
     api.interceptors.request.use(async (config) => {
+      console.log('[PDFify] API interceptor called for:', config.url);
+      console.log('[PDFify] getSessionToken available?', typeof window.getSessionToken === 'function');
+
       try {
         // Wait for getSessionToken to be available
         if (typeof window.getSessionToken === 'function') {
+          console.log('[PDFify] Getting session token...');
           const token = await window.getSessionToken();
+          console.log('[PDFify] Session token received (length):', token?.length);
           config.headers['Authorization'] = `Bearer ${token}`;
+          console.log('[PDFify] Authorization header added');
+        } else {
+          console.warn('[PDFify] getSessionToken not available yet, request may fail');
         }
         return config;
       } catch (err) {
-        console.error('Failed to add session token to request:', err);
+        console.error('[PDFify] Failed to add session token to request:', err);
         return config;
       }
     });
@@ -1147,7 +1155,14 @@
         } catch (testErr) {
           console.error('[PDFify] Shop connection test failed:', testErr);
           console.error('[PDFify] Error status:', testErr.response?.status);
-          console.error('[PDFify] Error data:', testErr.response?.data);
+
+          // Log the full error response
+          if (testErr.response?.data) {
+            console.error('[PDFify] Error data:', testErr.response.data);
+            console.error('[PDFify] Error message:', testErr.response.data?.error || 'No error message');
+          } else {
+            console.error('[PDFify] No error data in response');
+          }
 
           // 404 means shop not in database - needs installation
           if (testErr.response?.status === 404) {
