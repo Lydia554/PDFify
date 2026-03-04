@@ -914,6 +914,19 @@
     const shop = urlParams.get('shop');
     const host = urlParams.get('host');
 
+    // Validate shop parameter
+    if (!shop) {
+      console.error('Missing shop parameter in URL');
+      document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        const msgEl = document.getElementById('message');
+        msgEl.textContent = 'Error: Missing shop parameter. Please open this app from Shopify Admin.';
+        msgEl.className = 'message error';
+        msgEl.style.display = 'block';
+      });
+    }
+
     // Global shop config
     let shopConfig = null;
     let shopEmail = null;
@@ -1104,15 +1117,19 @@
 
     // Load initial data
     async function loadInitialData() {
+      console.log('[PDFify] Starting to load initial data for shop:', shop);
+
       try {
         // First, test if shop is properly installed
         let isInstalled = false;
 
         try {
+          console.log('[PDFify] Testing shop connection...');
           const testRes = await api.get('/shopify/test-connection');
+          console.log('[PDFify] Connection test response:', testRes.data);
           isInstalled = testRes.data.success && testRes.data.hasAccessToken;
         } catch (testErr) {
-          console.error('Shop connection test failed:', testErr);
+          console.error('[PDFify] Shop connection test failed:', testErr);
         }
 
         if (!isInstalled) {
@@ -1124,7 +1141,9 @@
         }
 
         // Load shop config
+        console.log('[PDFify] Loading shop configuration...');
         const configRes = await api.get('/shopify/config');
+        console.log('[PDFify] Shop config loaded:', configRes.data);
         shopConfig = configRes.data;
         shopEmail = shopConfig.shopEmail;
 
@@ -1158,7 +1177,9 @@
         }
 
         // Load usage stats
+        console.log('[PDFify] Loading usage statistics...');
         const usageRes = await api.get('/shopify/usage-stats');
+        console.log('[PDFify] Usage stats loaded:', usageRes.data);
         if (usageRes.data) {
           document.getElementById('usageCount').textContent = usageRes.data.used || 0;
           document.getElementById('usageLimit').textContent = usageRes.data.limit === Infinity ? '∞' : (usageRes.data.limit || 30);
@@ -1212,15 +1233,21 @@
         }
 
         // Load orders
+        console.log('[PDFify] Loading orders...');
         await loadOrders();
+        console.log('[PDFify] Orders loaded successfully');
 
         // Hide loading, show app
+        console.log('[PDFify] Hiding loading screen and showing app');
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
 
       } catch (err) {
-        console.error('Failed to load initial data:', err);
-        showMessage('Failed to load settings. Please try again.', true);
+        console.error('[PDFify] Failed to load initial data:', err);
+        // Always hide loading screen on error
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        showMessage(`Failed to load settings: ${err.message || 'Unknown error'}. Please try again.`, true);
       }
     }
 
