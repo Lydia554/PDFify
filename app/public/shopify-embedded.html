@@ -8,6 +8,17 @@
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <!-- Shopify App Bridge -->
   <script src="https://cdn.shopify.com/shopifyapp/app-bridge.js"></script>
+  <script>
+    // IMMEDIATE debug - runs as soon as script loads
+    console.log('🚀 Script loaded!');
+    setTimeout(() => {
+      const debugEl = document.getElementById('debug-info');
+      if (debugEl) {
+        debugEl.textContent = 'Debug: Script executed!';
+        debugEl.style.background = 'purple';
+      }
+    }, 100);
+  </script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
@@ -428,15 +439,45 @@
       margin: 0 0 12px 0;
     }
   </style>
+  <script>
+    // IMMEDIATE debug - runs RIGHT NOW
+    console.log('🚀 HTML head script running!');
+    window.DEBUG_MODE = true;
+  </script>
 </head>
 <body>
   <!-- App Bridge Title Bar -->
   <div id="app-bridge-title"></div>
 
+  <!-- Test if HTML renders -->
+  <div style="position: fixed; top: 0; left: 0; background: brightred; color: white; padding: 5px; z-index: 99999;">
+    HTML LOADED!
+  </div>
+
   <!-- Debug info -->
   <div id="debug-info" style="position: fixed; top: 10px; right: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-size: 12px;">
     Debug: Loading...
   </div>
+
+  <!-- No JS warning -->
+  <noscript>
+    <div style="position: fixed; top: 50px; left: 0; background: red; color: white; padding: 20px; z-index: 99999;">
+      JAVASCRIPT IS DISABLED - Please enable JavaScript to use this app
+    </div>
+  </noscript>
+
+  <script>
+    // This runs IMMEDIATELY when body starts rendering
+    console.log('🚀 BODY script running!');
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('✅ DOMContentLoaded fired');
+      const debugEl = document.getElementById('debug-info');
+      if (debugEl) {
+        debugEl.textContent = 'Debug: DOM Ready!';
+        debugEl.style.background = 'blue';
+      }
+    });
+  </script>
 
   <div class="container">
     <div id="app" class="hidden">
