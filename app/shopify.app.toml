@@ -16,17 +16,10 @@ api_version = "2025-01"
   topics = [ "orders/create" ]
   uri = "https://pdfify.pro/webhook/order-created"
 
-  [[webhooks.subscriptions]]
-  topics = [ "customers/data_request" ]
-  uri = "https://pdfify.pro/webhook/customers-data-request"
-
-  [[webhooks.subscriptions]]
-  topics = [ "customers/redact" ]
-  uri = "https://pdfify.pro/webhook/customers-redact"
-
-  [[webhooks.subscriptions]]
-  topics = [ "shop/redact" ]
-  uri = "https://pdfify.pro/webhook/shop-redact"
+[webhooks.privacy_compliance]
+  [[webhooks.privacy_compliance.subscriptions]]
+  topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+  uri = "https://pdfify.pro/webhook"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
