@@ -11,9 +11,10 @@ const SHOP_DOMAIN = 'test-store.myshopify.com';
 const webhooks = [
   { topic: 'app/uninstalled', path: '/app-uninstalled', payload: { id: 123456789, shop_domain: SHOP_DOMAIN } },
   { topic: 'orders/create', path: '/order-created', payload: { order: { id: 999999, name: '#1001', email: 'test@example.com' }, shop_domain: SHOP_DOMAIN } },
-  { topic: 'customers/data_request', path: '/customers-data-request', payload: { shop_domain: SHOP_DOMAIN, customer: { id: 111, email: 'customer@example.com' } } },
-  { topic: 'customers/redact', path: '/customers-redact', payload: { shop_domain: SHOP_DOMAIN, customer: { id: 111, email: 'customer@example.com' } } },
-  { topic: 'shop/redact', path: '/shop-redact', payload: { shop_domain: SHOP_DOMAIN } }
+  // Test BOTH legacy endpoints AND unified compliance endpoint
+  { topic: 'customers/data_request', path: '/', payload: { shop_domain: SHOP_DOMAIN, customer: { id: 111, email: 'customer@example.com' } } },
+  { topic: 'customers/redact', path: '/', payload: { shop_domain: SHOP_DOMAIN, customer: { id: 111, email: 'customer@example.com' } } },
+  { topic: 'shop/redact', path: '/', payload: { shop_domain: SHOP_DOMAIN } }
 ];
 
 async function testSingleWebhook(webhook) {

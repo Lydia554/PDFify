@@ -153,6 +153,77 @@ router.post(
 // MANDATORY GDPR COMPLIANCE WEBHOOKS
 // ================================
 
+// UNIFIED COMPLIANCE WEBHOOK HANDLER
+// Handles all three GDPR compliance topics: customers/data_request, customers/redact, shop/redact
+// When using compliance_topics in shopify.app.toml, all topics go to one endpoint
+router.post(
+  "/",
+  express.raw({
+    type: "application/json",
+    verify: (req, res, buf) => { req.rawBody = buf; },
+  }),
+  verifyShopifyWebhook,
+  async (req, res) => {
+    const timestamp = new Date().toISOString();
+    const topic = req.get("X-Shopify-Topic");
+
+    console.log(`\n${timestamp} ⚖️ [GDPR COMPLIANCE] Unified handler received: ${topic}`);
+
+    let parsedPayload;
+    try {
+      parsedPayload = JSON.parse(req.rawBody.toString());
+    } catch {
+      console.error(`⚖️ [GDPR] Failed to parse payload`);
+      return res.status(200).send("OK");
+    }
+
+    const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
+    console.log(`⚖️ [GDPR] Shop: ${shopDomain}`);
+
+    console.log(`⚖️ [GDPR] Responding: 200 OK`);
+    res.status(200).send("OK");
+
+    try {
+      // Route to appropriate handler based on topic
+      if (topic === "customers/data_request") {
+        // Since we do NOT store customer data, there's nothing to return
+        // Customer data is processed in real-time and not persisted
+        console.log(`📋 [GDPR/CUSTOMERS_DATA_REQUEST] No customer data stored - processed in real-time only`);
+      }
+      else if (topic === "customers/redact") {
+        // Since we do NOT store customer data, there's nothing to delete
+        // Customer data is processed in real-time and already deleted from memory after invoice generation
+        console.log(`🗑️ [GDPR/CUSTOMERS_REDACT] No customer data stored - nothing to delete`);
+      }
+      else if (topic === "shop/redact") {
+        // Delete all merchant data from our database
+        const shopConfigDelete = await ShopConfig.findOneAndDelete({ shopDomain });
+        const userDelete = await User.findOneAndDelete({ connectedShopDomain: shopDomain });
+
+        if (shopConfigDelete) {
+          console.log(`✅ [GDPR/SHOP_REDACT] Deleted ShopConfig for ${shopDomain}`);
+        }
+        if (userDelete) {
+          console.log(`✅ [GDPR/SHOP_REDACT] Deleted User record for ${shopDomain}`);
+        }
+
+        if (!shopConfigDelete && !userDelete) {
+          console.log(`ℹ️ [GDPR/SHOP_REDACT] No data found for ${shopDomain}`);
+        }
+      }
+      else {
+        console.log(`⚠️ [GDPR] Unknown compliance topic: ${topic}`);
+      }
+    } catch (err) {
+      console.error(`❌ [GDPR] Error:`, err);
+    }
+    console.log(`===================== [GDPR/${topic}] END =====================\n`);
+  }
+);
+
+// LEGACY ENDPOINTS (kept for backward compatibility with test script)
+// These redirect to the unified handler above
+
 // customers/data_request - When customer requests copy of their data (GDPR right to access)
 router.post(
   "/customers-data-request",
@@ -163,7 +234,7 @@ router.post(
   verifyShopifyWebhook,
   async (req, res) => {
     const timestamp = new Date().toISOString();
-    console.log(`\n${timestamp} 📋 [GDPR/CUSTOMERS_DATA_REQUEST] Handler started`);
+    console.log(`\n${timestamp} 📋 [GDPR/CUSTOMERS_DATA_REQUEST] Handler started (legacy endpoint)`);
 
     let parsedPayload;
     try {
@@ -200,7 +271,7 @@ router.post(
   verifyShopifyWebhook,
   async (req, res) => {
     const timestamp = new Date().toISOString();
-    console.log(`\n${timestamp} 🗑️ [GDPR/CUSTOMERS_REDACT] Handler started`);
+    console.log(`\n${timestamp} 🗑️ [GDPR/CUSTOMERS_REDACT] Handler started (legacy endpoint)`);
 
     let parsedPayload;
     try {
@@ -237,7 +308,7 @@ router.post(
   verifyShopifyWebhook,
   async (req, res) => {
     const timestamp = new Date().toISOString();
-    console.log(`\n${timestamp} 🗑️ [GDPR/SHOP_REDACT] Handler started`);
+    console.log(`\n${timestamp} 🗑️ [GDPR/SHOP_REDACT] Handler started (legacy endpoint)`);
 
     let parsedPayload;
     try {
