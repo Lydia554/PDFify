@@ -54,8 +54,15 @@ router.post("/cleanup-webhooks", async (req, res) => {
       const allShops = await ShopConfig.find({ shopifyAccessToken: { $exists: true, $ne: null } });
       shopDomainList = allShops.map(s => s.shopDomain);
       console.log(`📋 [CLEANUP] Found ${shopDomainList.length} shop(s) to clean up`);
-    } else {
-      console.log(`\n🧹 [CLEANUP] Starting webhook cleanup for ${shopDomain}`);
+
+      // TODO: Implement cleanup for all shops
+      return res.json({
+        success: false,
+        error: "Cleanup for all shops not yet implemented. Please specify a shopDomain."
+      });
+    }
+
+    console.log(`\n🧹 [CLEANUP] Starting webhook cleanup for ${shopDomain}`);
 
     // Find the shop config to get access token
     const shopConfig = await ShopConfig.findOne({
