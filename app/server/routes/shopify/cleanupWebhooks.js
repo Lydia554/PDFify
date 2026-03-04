@@ -4,6 +4,32 @@ const ShopConfig = require("../../models/ShopConfig");
 const axios = require("axios");
 
 /**
+ * UTILITY ENDPOINT: List all shops in database
+ *
+ * Usage: GET /api/shopify/util/list-shops
+ */
+router.get("/list-shops", async (req, res) => {
+  try {
+    const shops = await ShopConfig.find({}).select('shopDomain companyName hasAccessToken');
+
+    res.json({
+      success: true,
+      count: shops.length,
+      shops: shops.map(s => ({
+        shopDomain: s.shopDomain,
+        companyName: s.companyName,
+        hasAccessToken: !!s.shopifyAccessToken
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * UTILITY ENDPOINT: Clean up and re-register Shopify webhooks
  *
  * This endpoint will:
@@ -13,19 +39,23 @@ const axios = require("axios");
  *
  * Usage: POST /api/shopify/util/cleanup-webhooks
  * Body: { "shopDomain": "mystore-123456789.myshopify.com" }
+ * OR no body to clean up ALL shops
  */
 router.post("/cleanup-webhooks", async (req, res) => {
   try {
     const { shopDomain } = req.body;
 
-    if (!shopDomain) {
-      return res.status(400).json({
-        success: false,
-        error: "shopDomain is required in request body"
-      });
-    }
+    // If no shopDomain provided, find all shops
+    let targetShop;
+    let shopDomainList = [];
 
-    console.log(`\n🧹 [CLEANUP] Starting webhook cleanup for ${shopDomain}`);
+    if (!shopDomain) {
+      console.log(`\n🧹 [CLEANUP] No shop specified, cleaning up ALL shops`);
+      const allShops = await ShopConfig.find({ shopifyAccessToken: { $exists: true, $ne: null } });
+      shopDomainList = allShops.map(s => s.shopDomain);
+      console.log(`📋 [CLEANUP] Found ${shopDomainList.length} shop(s) to clean up`);
+    } else {
+      console.log(`\n🧹 [CLEANUP] Starting webhook cleanup for ${shopDomain}`);
 
     // Find the shop config to get access token
     const shopConfig = await ShopConfig.findOne({
