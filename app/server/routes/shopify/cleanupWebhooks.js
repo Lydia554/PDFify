@@ -5,6 +5,41 @@ const User = require("../../models/User");
 const axios = require("axios");
 
 /**
+ * DEBUG ENDPOINT: List all users with their shopify-related fields
+ *
+ * Usage: GET /api/shopify/util/debug-users
+ */
+router.get("/debug-users", async (req, res) => {
+  try {
+    // Find all users that have Shopify connection data
+    const users = await User.find({
+      $or: [
+        { connectedShopDomain: { $exists: true } },
+        { shopifyAccessToken: { $exists: true } }
+      ]
+    }).select('email connectedShopDomain shopifyAccessToken planType isPremium');
+
+    res.json({
+      success: true,
+      count: users.length,
+      users: users.map(u => ({
+        email: u.email,
+        connectedShopDomain: u.connectedShopDomain,
+        hasAccessToken: !!u.shopifyAccessToken,
+        accessTokenPreview: u.shopifyAccessToken ? u.shopifyAccessToken.substring(0, 15) + '...' : 'N/A',
+        planType: u.planType || 'N/A',
+        isPremium: u.isPremium || false
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * UTILITY ENDPOINT: List all shops in database
  *
  * Usage: GET /api/shopify/util/list-shops
