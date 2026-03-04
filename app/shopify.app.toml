@@ -24,12 +24,6 @@ api_version = "2025-01"
 embedded = true
 
 [access_scopes]
-scopes = "read_locations,read_orders,read_products,read_themes"
-
-[auth]
-redirect_urls = [ "https://pdfify.pro/api/shopify/callback" ]
-
-[access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_locations,read_orders,read_products,read_themes"
 optional_scopes = [ ]
