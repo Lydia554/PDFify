@@ -51,43 +51,43 @@ function verifyShopifyWebhook(req, res, next) {
   console.log(`🔐 [Webhook] HMAC Header Present: ${hmacHeader ? 'YES' : 'NO'} (${hmacHeader ? hmacHeader.substring(0, 20) + '...' : 'N/A'})`);
   console.log(`🔐 [Webhook] Raw Body Length: ${body ? body.length : 0} bytes`);
 
-  if (!body) {
-    console.error(`❌ [Webhook] MISSING BODY`);
+  // CRITICAL: Reject requests without HMAC header
+  // Shopify's automated checker requires 401 for missing/invalid HMAC
+  if (!hmacHeader || !body) {
+    console.error(`❌ [Webhook] MISSING HMAC OR BODY`);
+    console.error(`   HMAC Header: ${hmacHeader ? 'Present' : 'MISSING'}`);
     console.error(`   Body: ${body ? `Present (${body.length} bytes)` : 'MISSING'}`);
-    console.error(`   Returning: 400 Bad Request`);
-    console.log(`===================== WEBHOOK REQUEST END (400) =====================\n`);
-    return res.status(400).send("Bad Request");
+    console.error(`   Returning: 401 Unauthorized (Shopify compliance requirement)`);
+    console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
+    return res.status(401).send("Unauthorized");
   }
 
-  // HMAC VERIFICATION STRATEGY:
-  // - Requests WITHOUT HMAC: Accept (automated checker tests these)
-  // - Requests WITH HMAC: Only accept if signature is valid
-  if (!hmacHeader) {
-    console.warn(`⚠️  [Webhook] No HMAC header - accepting for automated checker testing`);
-    console.log(`✅ [Webhook] PROCEEDING (no HMAC)`);
-    console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
-    next();
-  } else {
-    // HMAC present - verify it
-    const generatedHmac = crypto
-      .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
-      .update(body, "utf8")
-      .digest("base64");
+  // Verify HMAC signature
+  const generatedHmac = crypto
+    .createHmac("sha256", process.env.SHOPIFY_WEBHOOK_SECRET)
+    .update(body, "utf8")
+    .digest("base64");
 
-    if (generatedHmac !== hmacHeader) {
-      console.error(`❌ [Webhook] HMAC VERIFICATION FAILED`);
-      console.error(`   Generated HMAC: ${generatedHmac.substring(0, 30)}...`);
-      console.error(`   Received HMAC:  ${hmacHeader.substring(0, 30)}...`);
-      console.error(`   Match: NO`);
-      console.error(`   Returning: 401 Unauthorized (as required by Shopify)`);
-      console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
-      return res.status(401).send("Unauthorized");
-    }
+  // Use timing-safe comparison to prevent timing attacks
+  const hmacBuffer = Buffer.from(hmacHeader, "base64");
+  const generatedBuffer = Buffer.from(generatedHmac, "base64");
 
-    console.log(`✅ [Webhook] HMAC VERIFIED SUCCESSFULLY`);
-    console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
-    next();
+  if (hmacBuffer.length !== generatedBuffer.length || !crypto.timingSafeEqual(hmacBuffer, generatedBuffer)) {
+    console.error(`❌ [Webhook] HMAC VERIFICATION FAILED`);
+    console.error(`   Generated HMAC: ${generatedHmac.substring(0, 30)}...`);
+    console.error(`   Received HMAC:  ${hmacHeader.substring(0, 30)}...`);
+    console.error(`   Match: NO`);
+    console.error(`   SHOPIFY_WEBHOOK_SECRET exists: ${!!process.env.SHOPIFY_WEBHOOK_SECRET}`);
+    console.error(`   SHOPIFY_WEBHOOK_SECRET length: ${process.env.SHOPIFY_WEBHOOK_SECRET?.length || 0}`);
+    console.error(`   Returning: 401 Unauthorized`);
+    console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
+    return res.status(401).send("Unauthorized");
   }
+
+  console.log(`✅ [Webhook] HMAC VERIFIED SUCCESSFULLY`);
+  console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
+  next();
+}
 
   // ORIGINAL HMAC VERIFICATION (DISABLED TEMPORARILY)
   /*
