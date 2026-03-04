@@ -1046,7 +1046,6 @@
             'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
-            shopDomain: shop,
             plan
           }),
         });
@@ -1102,18 +1101,22 @@
     // Load initial data
     async function loadInitialData() {
       try {
+        console.log('🔄 Loading initial data...');
+
         // First, test if shop is properly installed
         let isInstalled = false;
 
         try {
-          const testRes = await api.get(`/shopify/test-connection?shop=${encodeURIComponent(shop)}`);
+          const testRes = await api.get('/shopify/test-connection');
+          console.log('✅ Connection test response:', testRes.data);
           isInstalled = testRes.data.success && testRes.data.hasAccessToken;
         } catch (testErr) {
-          console.log('Shop connection test failed:', testErr.response?.status);
+          console.log('❌ Shop connection test failed:', testErr.response?.status, testErr.response?.data);
         }
 
         if (!isInstalled) {
           // Show installation screen
+          console.log('⚠️ Shop not installed, showing install screen');
           document.getElementById('loading').classList.add('hidden');
           document.getElementById('installRequired').classList.remove('hidden');
           document.getElementById('installShopName').textContent = shop;
@@ -1121,7 +1124,8 @@
         }
 
         // Load shop config
-        const configRes = await api.get(`/shopify/config?shopDomain=${encodeURIComponent(shop)}`);
+        const configRes = await api.get('/shopify/config');
+        console.log('✅ Config loaded:', configRes.data);
         shopConfig = configRes.data;
         shopEmail = shopConfig.shopEmail;
 
@@ -1155,7 +1159,7 @@
         }
 
         // Load usage stats
-        const usageRes = await api.get(`/shopify/usage-stats?shopDomain=${encodeURIComponent(shop)}`);
+        const usageRes = await api.get('/shopify/usage-stats');
         if (usageRes.data) {
           document.getElementById('usageCount').textContent = usageRes.data.used || 0;
           document.getElementById('usageLimit').textContent = usageRes.data.limit === Infinity ? '∞' : (usageRes.data.limit || 30);
@@ -1227,7 +1231,7 @@
         const select = document.getElementById('orderSelector');
         select.innerHTML = '<option value="">Loading orders...</option>';
 
-        const res = await api.get(`/shopify/orders-public?shopDomain=${encodeURIComponent(shop)}`);
+        const res = await api.get('/shopify/orders-public');
         const orders = res.data.orders || [];
 
         orders.forEach(order => {
@@ -1258,7 +1262,7 @@
     // Test connection
     async function testConnection() {
       try {
-        const res = await api.get(`/shopify/test-connection?shop=${encodeURIComponent(shop)}`);
+        const res = await api.get('/shopify/test-connection');
         if (res.data.success) {
           showMessage('Connection successful! Your store is properly connected.');
         } else {
@@ -1283,7 +1287,6 @@
 
       try {
         await api.post('/shopify/settings', {
-          shopDomain: shop,
           allowCustomerPDF: allowCustomerPDF
         });
         showMessage('Settings saved successfully!');
@@ -1301,7 +1304,6 @@
 
       try {
         await api.post('/shopify/branding', {
-          shopDomain: shop,
           primaryColor,
           invoiceLanguage,
           companyName
@@ -1321,7 +1323,6 @@
 
       try {
         await api.post('/shopify/branding', {
-          shopDomain: shop,
           iban,
           bic,
           bankName
@@ -1349,7 +1350,6 @@
         const selectedLanguage = document.getElementById('invoiceLanguage').value;
         const selectedColor = document.getElementById('primaryColor').value;
         const res = await api.post('/shopify/invoice-public', {
-          shopDomain: shop,
           orderId,
           merchant: true,
           lang: selectedLanguage || 'en',
@@ -1430,7 +1430,6 @@
         const selectedLanguage = document.getElementById('invoiceLanguage').value;
         const selectedColor = document.getElementById('primaryColor').value;
         const res = await api.post('/shopify/invoices/zip-public', {
-          shopDomain: shop,
           from: fromDate,
           to: toDate,
           lang: selectedLanguage || 'en',
@@ -1499,7 +1498,6 @@
               'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-              shopDomain: shop,
               email: shopEmail,
               pack
             }),

@@ -3,6 +3,7 @@ const axios = require("axios");
 const crypto = require("crypto");
 const ShopConfig = require("../../models/ShopConfig");
 const User = require("../../models/User");
+const verifyShopifySession = require("../../middleware/verifyShopifySession");
 
 const router = express.Router();
 
@@ -12,20 +13,15 @@ require('dotenv').config();
  * Generate Shopify billing URL for subscription
  * POST /api/shopify/billing/subscribe
  */
-router.post("/subscribe", async (req, res) => {
+router.post("/subscribe", verifyShopifySession, async (req, res) => {
   try {
-    const { shopDomain, plan } = req.body;
+    const { plan } = req.body;
+    // shopDomain is extracted from session token by verifyShopifySession middleware
+    const normalizedShop = req.shopDomain;
+    const shopConfig = req.shop;
 
-    if (!shopDomain || !plan) {
-      return res.status(400).json({ error: "Missing shopDomain or plan" });
-    }
-
-    const normalizedShop = shopDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-    // Verify shop is installed
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
-    if (!shopConfig || !shopConfig.shopifyAccessToken) {
-      return res.status(404).json({ error: "Shop not installed. Please install the app first." });
+    if (!plan) {
+      return res.status(400).json({ error: "Missing plan" });
     }
 
     // Plan pricing and names (must match Shopify Partners dashboard)

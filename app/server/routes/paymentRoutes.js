@@ -1,12 +1,15 @@
 const express = require("express");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const axios = require("axios");
 const router = express.Router();
 
 // Debug: Log Stripe key (first 7 and last 4 chars only for security)
 console.log("[DEBUG] Stripe Secret Key loaded:", process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 7) + "..." + process.env.STRIPE_SECRET_KEY.slice(-4) : "NOT SET");
 const authenticate = require("../middleware/authenticate");
 const dualAuth = require("../middleware/dualAuth");
+const verifyShopifySession = require("../middleware/verifyShopifySession");
 const User = require("../models/User");
+const ShopConfig = require("../models/ShopConfig");
 
 const log = (msg, data = null) => {
   if (process.env.NODE_ENV !== "production") console.log(msg, data);
@@ -85,22 +88,42 @@ router.post("/buy-tokens", authenticate, async (req, res) => {
 });
 
 // --- Shopify-specific token purchase (using Stripe) ---
-router.post("/buy-tokens-shopify", async (req, res) => {
-  const { pack, shopDomain, email } = req.body;
+router.post("/buy-tokens-shopify", verifyShopifySession, async (req, res) => {
+  const { pack, email } = req.body;
+  // shopDomain is extracted from session token by verifyShopifySession middleware
+  const shopDomain = req.shopDomain;
+  const shopConfig = req.shop;
 
-  if (!pack || !shopDomain || !email) {
-    return res.status(400).json({ error: "Missing pack, shopDomain, or email" });
+  if (!pack) {
+    return res.status(400).json({ error: "Missing pack" });
   }
   if (!TOKEN_PRICE_IDS[pack]) return res.status(400).json({ error: "Invalid token pack" });
 
-  console.log("Creating Shopify checkout for:", email, "pack:", pack, "shop:", shopDomain);
+  // Fetch shop email if not provided
+  let shopEmail = email;
+  if (!shopEmail) {
+    try {
+      const shopDetails = await axios.get(
+        `https://${shopDomain}/admin/api/2023-10/shop.json`,
+        {
+          headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken }
+        }
+      );
+      shopEmail = shopDetails.data.shop.email;
+    } catch (err) {
+      console.error("Failed to fetch shop email:", err.message);
+      return res.status(400).json({ error: "Could not fetch shop email" });
+    }
+  }
+
+  console.log("Creating Shopify checkout for:", shopEmail, "pack:", pack, "shop:", shopDomain);
 
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [{ price: TOKEN_PRICE_IDS[pack], quantity: 1 }],
       mode: "payment",
-      customer_email: email,
+      customer_email: shopEmail,
       success_url: `https://pdfify.pro/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `https://${shopDomain}/admin/apps/pdfify-invoice-generator`,
       metadata: {
