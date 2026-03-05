@@ -1170,9 +1170,18 @@
       const installStatus = document.getElementById('installStatus');
       installStatus.textContent = 'Redirecting to Shopify...';
 
-      // Direct redirect to OAuth install endpoint
+      // Use App Bridge Redirect to break out of iframe for OAuth
       const installUrl = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
-      window.location.href = installUrl;
+
+      if (window.shopifyApp) {
+        const app = window.shopifyApp;
+        const Redirect = app.actions.Redirect;
+        const redirect = Redirect.create(app);
+        redirect.dispatch(Redirect.Action.REMOTE, installUrl);
+      } else {
+        // Fallback: redirect top window to break out of iframe
+        window.top.location.href = installUrl;
+      }
     }
 
     // Load initial data
@@ -1198,8 +1207,20 @@
           // This is required for embedded apps to fetch orders from Shopify Admin API
           if (!hasAccessToken) {
             console.log('[PDFify] ⚠️ No access token detected - redirecting to complete OAuth setup...');
-            console.log('[PDFify] Redirecting to:', `/api/shopify/install?shop=${encodeURIComponent(shop)}`);
-            window.location.href = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
+            const installUrl = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
+            console.log('[PDFify] Redirecting to:', installUrl);
+
+            // Use App Bridge Redirect to break out of iframe
+            if (window.shopifyApp) {
+              const app = window.shopifyApp;
+              const Redirect = app.actions.Redirect;
+              const redirect = Redirect.create(app);
+              redirect.dispatch(Redirect.Action.REMOTE, installUrl);
+            } else {
+              // Fallback if App Bridge not loaded
+              console.log('[PDFify] App Bridge not available, using direct redirect');
+              window.top.location.href = installUrl; // Use top.location to break out of iframe
+            }
             return; // Stop execution - redirecting
           }
         } catch (testErr) {
