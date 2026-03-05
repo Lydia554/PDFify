@@ -1445,19 +1445,15 @@
       const bic = document.getElementById('bic').value;
       const bankName = document.getElementById('bankName').value;
 
-      console.log('[PDFify] Saving payment details:', { iban, bic, bankName });
-
       try {
-        const res = await api.post('/shopify/branding', {
+        await api.post('/shopify/branding', {
           iban,
           bic,
           bankName
         });
-        console.log('[PDFify] Payment details saved successfully:', res.data);
         showMessage('Payment details saved successfully!');
       } catch (err) {
-        console.error('[PDFify] Failed to save payment details:', err);
-        console.error('[PDFify] Error response:', err.response?.data);
+        console.error('Failed to save payment details:', err);
         showMessage('Failed to save payment details. Please try again.', true);
       }
     }
