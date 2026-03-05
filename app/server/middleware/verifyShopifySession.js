@@ -81,14 +81,8 @@ async function verifyShopifySession(req, res, next) {
       shopDomain: shopDomain.toLowerCase()
     });
 
-    if (!shopConfig) {
-      return res.status(404).json({
-        success: false,
-        error: 'Shop not found. Please install the app first.'
-      });
-    }
-
-    // Attach shop info to request
+    // Don't require shop to exist - allow new installations
+    // Attach shop info to request (shopConfig may be null for new shops)
     req.shop = shopConfig;
     req.shopDomain = shopDomain;
 

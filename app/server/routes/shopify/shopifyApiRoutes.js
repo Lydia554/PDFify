@@ -708,7 +708,14 @@ router.get("/config", verifyShopifySession, async (req, res) => {
   const shopDomain = req.shopDomain;
 
   try {
-    const shopConfig = req.shop; // Already fetched by middleware
+    const shopConfig = req.shop; // Already fetched by middleware (may be null for new shops)
+
+    // If shop not in database, return error (needs installation)
+    if (!shopConfig) {
+      return res.status(404).json({
+        error: "Shop not found. Please install the app first."
+      });
+    }
 
     // Fetch shop details to get owner email
     let shopEmail = null;
@@ -1324,14 +1331,15 @@ router.get("/debug", async (req, res) => {
 router.get("/test-connection", verifyShopifySession, async (req, res) => {
   try {
     // shopDomain and shop are extracted from session token by verifyShopifySession middleware
-    const hasAccessToken = !!req.shop.shopifyAccessToken;
+    // shop may be null for new installations
+    const hasAccessToken = req.shop && !!req.shop.shopifyAccessToken;
 
     return res.json({
       success: true,
       shop: req.shopDomain,
-      isActive: req.shop.isActive || false,
+      isActive: req.shop?.isActive || false,
       hasAccessToken: hasAccessToken,
-      connectedAt: req.shop.connectedAt,
+      connectedAt: req.shop?.connectedAt,
       message: hasAccessToken
         ? "Shop is properly connected!"
         : "Shop found but no access token. Please reinstall the app."
