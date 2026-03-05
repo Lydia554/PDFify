@@ -72,6 +72,20 @@ MongoStore.create({
   console.error('❌ Session store error:', err);
 });
 
+// Session debugging middleware (only in non-production)
+if (process.env.NODE_ENV !== "production") {
+  app.use((req, res, next) => {
+    if (req.sessionID) {
+      console.log(`[Session] ${req.method} ${req.path}`, {
+        sessionID: req.sessionID,
+        hasUserId: !!(req.session && req.session.userId),
+        hasCookie: !!req.headers.cookie,
+      });
+    }
+    next();
+  });
+}
+
 // -------------------- Webhooks --------------------
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
 app.use("/webhook", shopifyWebhookRoutes);

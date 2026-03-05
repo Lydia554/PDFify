@@ -78,6 +78,8 @@ router.get("/verify-email", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
+  log("Login attempt for email:", email);
+
   try {
     const user = await User.findOne({ email });
 
@@ -96,17 +98,28 @@ router.post("/login", async (req, res) => {
 
     if (!user.isVerified) {
   return res.status(403).json({ error: "Please verify your email before logging in." });
-}
+    }
 
-
-   
     req.session.userId = user._id;
 
-    res.json({
-      message: "Login successful",
-      email: user.email,
-      apiKey: user.getDecryptedApiKey(),
-      isPremium: user.isPremium,
+    log("Session userId set:", user._id);
+    log("Session ID:", req.sessionID);
+
+    // Explicitly save session before responding to ensure it's persisted to MongoDB
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: "Failed to create session" });
+      }
+
+      log("Session saved successfully for user:", user.email);
+
+      res.json({
+        message: "Login successful",
+        email: user.email,
+        apiKey: user.getDecryptedApiKey(),
+        isPremium: user.isPremium,
+      });
     });
   } catch (error) {
     console.error("Login error:", error);
