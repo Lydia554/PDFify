@@ -1614,7 +1614,7 @@ router.get("/test-connection", verifyShopifySession, async (req, res) => {
       isActive: shopConfig?.isActive || false,
       hasAccessToken: hasAccessToken,
       connectedAt: shopConfig?.connectedAt,
-      isInstalled: true,  // Always true if ShopConfig exists
+      isInstalled: hasAccessToken,  // Only true if shop has access token
       usingSessionToken: !hasAccessToken,  // Indicates using session-based auth
       message: hasAccessToken
         ? "Shop is properly connected!"
