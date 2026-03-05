@@ -959,6 +959,60 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
 // ================================
 
 /**
+ * Check OAuth Status - Returns whether OAuth is needed and provides install URL
+ * GET /api/shopify/check-oauth?shop=...
+ */
+router.get("/check-oauth", async (req, res) => {
+  const { shop } = req.query;
+
+  if (!shop) {
+    return res.status(400).json({ error: "Missing shop parameter" });
+  }
+
+  const normalizedShop = shop.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+  try {
+    // Check if shop already has an access token
+    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    const hasToken = !!(shopConfig && shopConfig.shopifyAccessToken);
+
+    if (hasToken) {
+      console.log(`✅ Shop ${normalizedShop} already has access token`);
+      return res.json({
+        needsOAuth: false,
+        shop: normalizedShop
+      });
+    }
+
+    console.log(`⚠️ Shop ${normalizedShop} needs OAuth`);
+
+    // Generate OAuth install URL
+    const clientId = process.env.SHOPIFY_CLIENT_ID;
+    const scopes = "read_orders,write_orders,read_products,read_themes,read_locations";
+    const redirectUri = process.env.SHOPIFY_REDIRECT_URL || "https://pdfify.pro/api/shopify/callback";
+    const state = crypto.randomBytes(16).toString("hex");
+
+    const installUrl = `https://${normalizedShop}/admin/oauth/authorize?` +
+      `client_id=${clientId}&` +
+      `scope=${encodeURIComponent(scopes)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `state=${state}&` +
+      `response_type=code`;
+
+    return res.json({
+      needsOAuth: true,
+      shop: normalizedShop,
+      installUrl: installUrl
+    });
+
+  } catch (error) {
+    console.error("❌ Check OAuth error:", error);
+    return res.status(500).json({ error: "Failed to check OAuth status" });
+  }
+});
+
+/**
  * OAuth Install - Entry point from Shopify App Store
  * GET /api/shopify/install?shop=store.myshopify.com
  */
@@ -1725,13 +1779,17 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
     const shopConfig = req.shop;
 
     console.log(`📦 Shop config found: ${!!shopConfig}`);
-    console.log(`📦 Using session token for API call: ${!!req.sessionToken}`);
+    if (shopConfig) {
+      console.log(`📦 Has access token: ${!!shopConfig.shopifyAccessToken}`);
+    }
 
-    // For embedded apps, use session token instead of permanent access token
-    // Session tokens are provided by Shopify App Bridge and are valid for making API calls
-    if (!req.sessionToken) {
-      console.error(`❌ No session token available: ${normalizedShop}`);
-      return res.status(401).json({ error: "Session token not available. Please reload the app." });
+    // Check if we have a permanent access token
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
+      console.error(`❌ Shop not connected or no access token: ${normalizedShop}`);
+      return res.status(401).json({
+        error: "Shop not connected. Please reinstall the app.",
+        needsReinstall: true
+      });
     }
 
     // Fetch orders from Shopify
@@ -1744,9 +1802,9 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
 
     console.log(`📦 Calling Shopify API: ${shopifyOrdersUrl}`);
 
-    // Use session token (Authorization: Bearer) instead of permanent access token (X-Shopify-Access-Token)
+    // Use permanent access token for Admin API calls
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { "Authorization": `Bearer ${req.sessionToken}` },
+      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
     });
 
     console.log(`✅ Orders fetched successfully: ${response.data.orders?.length || 0} orders`);

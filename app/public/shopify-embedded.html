@@ -1370,9 +1370,21 @@
         }
       } catch (err) {
         console.error('Failed to load orders:', err);
+        console.error('Error response:', err.response?.data);
         const select = document.getElementById('orderSelector');
+
         if (err.response?.status === 401) {
-          select.innerHTML = '<option value="">⚠️ Unable to connect to Shopify. Please ensure the app is properly installed.</option>';
+          // Check if reinstall is needed
+          if (err.response?.data?.needsReinstall) {
+            select.innerHTML = '<option value="">⚠️ App installation required. Click the button below to complete setup.</option>';
+            // Show the install screen
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+            document.getElementById('installRequired').classList.remove('hidden');
+            document.getElementById('installShopName').textContent = shop;
+          } else {
+            select.innerHTML = '<option value="">⚠️ Unable to connect to Shopify. Please ensure the app is properly installed.</option>';
+          }
         } else if (err.response?.status === 404) {
           select.innerHTML = '<option value="">Shop not found. Please install the app first.</option>';
         } else {
