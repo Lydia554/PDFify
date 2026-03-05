@@ -664,6 +664,77 @@ router.get("/connection", authenticate, dualAuth, async (req, res) => {
   }
 });
 
+// DEBUG: List all shop configs in database
+router.get("/debug/shop-configs", async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+
+    const allConfigs = await ShopConfig.find({}).lean();
+    const dbInfo = {
+      database: mongoose.connection.name,
+      host: mongoose.connection.host,
+      port: mongoose.connection.port,
+      readyState: mongoose.connection.readyState,
+      collections: await mongoose.connection.db.listCollections().toArray()
+    };
+
+    res.json({
+      success: true,
+      count: allConfigs.length,
+      database: dbInfo,
+      configs: allConfigs.map(config => ({
+        shopDomain: config.shopDomain,
+        isActive: config.isActive,
+        connectedAt: config.connectedAt,
+        hasToken: !!config.shopifyAccessToken,
+        tokenLength: config.shopifyAccessToken?.length || 0
+      }))
+    });
+  } catch (err) {
+    console.error('Debug endpoint error:', err);
+    res.status(500).json({
+      error: err.message,
+      details: err.toString()
+    });
+  }
+});
+
+// DEBUG: Test database write
+router.post("/debug/test-write", async (req, res) => {
+  try {
+    const testShop = `test-${Date.now()}.myshopify.com`;
+
+    const testConfig = new ShopConfig({
+      shopDomain: testShop,
+      isActive: true,
+      connectedAt: new Date(),
+      shopifyAccessToken: 'test-token-' + Date.now()
+    });
+
+    const saved = await testConfig.save();
+
+    // Verify it was saved
+    const found = await ShopConfig.findOne({ shopDomain: testShop });
+
+    // Clean up
+    await ShopConfig.deleteOne({ shopDomain: testShop });
+
+    res.json({
+      success: true,
+      testShop,
+      savedId: saved._id,
+      foundAfterSave: !!found,
+      foundId: found?._id
+    });
+  } catch (err) {
+    console.error('Test write error:', err);
+    res.status(500).json({
+      error: err.message,
+      details: err.toString()
+    });
+  }
+});
+
 
 
 
@@ -1004,9 +1075,16 @@ router.get("/callback", async (req, res) => {
 
     // Step 4: Save shop configuration with access token to database
     console.log(`💾 Saving shop config to database...`);
+    console.log(`📊 MongoDB connection state: ${mongoose.connection.readyState}`);
+    console.log(`📊 MongoDB host: ${mongoose.connection.host}`);
+    console.log(`📊 MongoDB database: ${mongoose.connection.name}`);
 
     let shopConfig;
     try {
+      // First, try to find if it already exists
+      const existingShop = await ShopConfig.findOne({ shopDomain: normalizedShop });
+      console.log(`🔍 Existing shop check: ${existingShop ? 'Found' : 'Not found'}`);
+
       shopConfig = await ShopConfig.findOneAndUpdate(
         { shopDomain: normalizedShop },
         {
@@ -1015,11 +1093,15 @@ router.get("/callback", async (req, res) => {
           isActive: true,
           shopifyAccessToken: access_token  // Store access token for embedded app
         },
-        { upsert: true, new: true }
+        { upsert: true, new: true, runValidators: true }
       );
+
+      // Force MongoDB to acknowledge the write
+      await mongoose.connection.db.collection('shopconfigs').findOne({ shopDomain: normalizedShop });
 
       // Verify the document was actually created with the token
       if (!shopConfig || !shopConfig.shopifyAccessToken) {
+        console.error(`❌ ShopConfig validation failed - shopConfig:`, shopConfig);
         throw new Error('ShopConfig creation returned null or missing token');
       }
 
@@ -1027,9 +1109,13 @@ router.get("/callback", async (req, res) => {
       console.log(`   - Has access token: ${!!shopConfig.shopifyAccessToken}`);
       console.log(`   - Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
       console.log(`   - Full shopConfig:`, JSON.stringify(shopConfig.toObject(), null, 2));
+      console.log(`   - Document ID: ${shopConfig._id}`);
 
     } catch (dbErr) {
       console.error(`❌ Database error saving ShopConfig:`, dbErr);
+      console.error(`❌ Error name:`, dbErr.name);
+      console.error(`❌ Error message:`, dbErr.message);
+      if (dbErr.code) console.error(`❌ Error code:`, dbErr.code);
 
       // Fallback: Try explicit creation if findOneAndUpdate failed
       console.log(`🔄 Attempting explicit ShopConfig creation as fallback...`);
@@ -1062,6 +1148,8 @@ router.get("/callback", async (req, res) => {
 
       } catch (fallbackErr) {
         console.error(`❌ Fallback ShopConfig creation failed:`, fallbackErr);
+        console.error(`❌ Fallback error name:`, fallbackErr.name);
+        console.error(`❌ Fallback error message:`, fallbackErr.message);
         throw new Error(`Failed to save shop configuration after multiple attempts: ${fallbackErr.message}`);
       }
     }
