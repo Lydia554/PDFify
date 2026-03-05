@@ -178,20 +178,14 @@
     document.getElementById("loginForm").addEventListener("submit", async (event) => {
       event.preventDefault();
 
-      console.log("🔐 [FRONTEND] ========== LOGIN SUBMIT STARTED ==========");
+      console.log("[LOGIN] Attempting login...");
 
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      console.log("📧 [FRONTEND] Email:", email);
-      console.log("🔑 [FRONTEND] Password length:", password.length);
-
       // Cookie consent check
       const cookieConsent = localStorage.getItem("cookieConsent");
-      console.log("🍪 [FRONTEND] Cookie consent:", cookieConsent);
-
       if (!cookieConsent) {
-        console.log("❌ [FRONTEND] No cookie consent - blocking login");
         showMessage("You must accept cookies to continue.");
         return;
       }
@@ -201,51 +195,42 @@
       const passwordRegex = /^(?=.*[0-9]).{8,}$/;
 
       if (!email || !password) {
-        console.log("❌ [FRONTEND] Missing email or password");
         showMessage("Please enter both email and password.");
         return;
       }
 
       if (!emailRegex.test(email)) {
-        console.log("❌ [FRONTEND] Invalid email format");
         showMessage("Invalid email format.");
         return;
       }
 
       if (!passwordRegex.test(password)) {
-        console.log("❌ [FRONTEND] Password validation failed");
         showMessage("Password must be at least 8 characters long and include at least one number.");
         return;
       }
 
-      console.log("✅ [FRONTEND] All validations passed");
       setLoadingState(true);
 
       try {
-        console.log("🚀 [FRONTEND] Sending POST request to /api/auth/login");
-        console.log("🌐 [FRONTEND] Current URL:", window.location.href);
-        console.log("🌐 [FRONTEND] Origin:", window.location.origin);
-
+        console.log("[LOGIN] Sending request for:", email);
         const response = await axios.post("/api/auth/login", { email, password });
 
-        console.log("📨 [FRONTEND] Response received! Status:", response.status);
-        console.log("📦 [FRONTEND] Response data:", response.data);
+        console.log("[LOGIN] Response received:", response.data.message);
 
-        // Check if login was successful (either has apiKey or just success message)
+        // Check if login was successful
         if (response.data && response.data.message === "Login successful") {
-          console.log("✅ [FRONTEND] Login SUCCESSFUL!");
+          console.log("[LOGIN] ✅ Successful");
 
           // Store API key if present
           if (response.data.apiKey) {
             localStorage.setItem("apiKey", response.data.apiKey);
-            console.log("🔑 [FRONTEND] API key stored in localStorage:", response.data.apiKey.substring(0, 20) + "...");
+            console.log("[LOGIN] API key stored");
           } else {
-            console.log("⚠️ [FRONTEND] No API key in response, but login succeeded");
+            console.warn("[LOGIN] ⚠️ No API key in response");
           }
 
           // Update consent in background with timeout to prevent blocking
           if (localStorage.getItem("cookieConsent") === "true") {
-            console.log("🍪 [FRONTEND] Sending consent update in background...");
             Promise.race([
               fetch("/api/user/consent", {
                 method: "POST",
@@ -256,32 +241,27 @@
               new Promise((_, reject) =>
                 setTimeout(() => reject(new Error("Consent timeout")), 3000)
               ),
-            ])
-              .then(() => console.log("✅ [FRONTEND] Consent updated"))
-              .catch((err) => console.warn("⚠️ [FRONTEND] Consent update failed:", err.message));
+            ]).catch((err) => {
+              console.warn("[LOGIN] Consent update failed:", err.message);
+            });
           }
 
           showMessage("Login successful! Redirecting...", "success");
-          console.log("⏳ [FRONTEND] Will redirect to /pdf-generator-demo in 1 second...");
+          console.log("[LOGIN] Redirecting to /pdf-generator-demo...");
 
           setTimeout(() => {
-            console.log("🚀 [FRONTEND] Redirecting NOW to /pdf-generator-demo");
-            console.log("🔐 [FRONTEND] ========== LOGIN FLOW COMPLETE ==========");
+            console.log("[LOGIN] 🚀 Redirecting now");
             window.location.href = "/pdf-generator-demo";
           }, 1000);
         } else {
-          console.error("❌ [FRONTEND] Login failed - unexpected response:", response.data);
+          console.error("[LOGIN] ❌ Failed:", response.data);
           showMessage((response.data && response.data.error) || "Invalid email or password.");
         }
       } catch (error) {
-        console.error("💥 [FRONTEND] LOGIN ERROR!");
-        console.error("📋 [FRONTEND] Error object:", error);
+        console.error("[LOGIN] ❌ Error:", error.message);
 
         if (error && error.response) {
-          console.error("📡 [FRONTEND] Server responded with error:");
-          console.error("   Status:", error.response.status);
-          console.error("   Data:", error.response.data);
-          console.error("   Headers:", error.response.headers);
+          console.error("[LOGIN] Status:", error.response.status);
 
           if (error.response.status === 401 || error.response.status === 403) {
             showMessage("Invalid email or password.");
@@ -291,16 +271,13 @@
             showMessage("Login failed. Please try again.");
           }
         } else if (error && error.request) {
-          console.error("📡 [FRONTEND] No response received from server");
-          console.error("📋 [FRONTEND] Request:", error.request);
+          console.error("[LOGIN] No response from server");
           showMessage("No response from server. Please check your connection.");
         } else {
-          console.error("💥 [FRONTEND] Unexpected error:", error.message);
-          console.error("📋 [FRONTEND] Error stack:", error.stack);
+          console.error("[LOGIN] Unexpected error:", error);
           showMessage("An unexpected error occurred. Please try again.");
         }
       } finally {
-        console.log("🔐 [FRONTEND] ========== LOGIN FLOW ENDED ==========");
         setLoadingState(false);
       }
     });

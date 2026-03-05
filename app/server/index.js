@@ -78,20 +78,19 @@ MongoStore.create({
   console.error('❌ Session store error:', err);
 });
 
-// Session debugging middleware (ALWAYS log for now to debug session issues)
+// Session debugging middleware (minimal logging)
 app.use((req, res, next) => {
-  if (req.sessionID) {
+  // Only log session-related routes to reduce noise
+  if (req.sessionID && (req.path.includes('auth') || req.path.includes('user') || req.path.includes('pdf-generator'))) {
     const cookies = req.headers.cookie;
     const sessionCookie = cookies?.match(/connect\.sid=([^;]+)/);
 
-    console.log(`🔍 [SESSION] ${req.method} ${req.path}`, {
+    console.log(`[SESSION] ${req.method} ${req.path}`, {
       sessionID: req.sessionID,
       hasUserId: !!(req.session && req.session.userId),
       userId: req.session?.userId,
       hasCookie: !!cookies,
       sessionCookieValue: sessionCookie ? sessionCookie[1]?.substring(0, 20) + '...' : 'NOT FOUND',
-      origin: req.get('origin'),
-      host: req.get('host'),
     });
   }
   next();
@@ -127,16 +126,6 @@ app.use((req, res, next) => {
 
   // Content Security Policy
   res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *.myshopify.com admin.shopify.com cdn.shopify.com;");
-
-  // Log Set-Cookie headers for debugging
-  const originalJson = res.json;
-  res.json = function(data) {
-    const setCookie = res.getHeader('Set-Cookie');
-    if (setCookie) {
-      console.log("🍪 [SET-COOKIE] Response to", req.path, ":", Array.isArray(setCookie) ? setCookie : [setCookie]);
-    }
-    return originalJson.call(this, data);
-  };
 
   next();
 });
