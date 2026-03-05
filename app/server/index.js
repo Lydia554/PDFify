@@ -65,7 +65,8 @@ app.use(session({
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: 'lax',
-    domain: process.env.NODE_ENV === "production" ? '.pdfify.pro' : undefined, // Explicit domain for production
+    // DON'T set explicit domain - let browser use default (matches current domain exactly)
+    // domain: undefined, // This is the key fix!
     path: '/',
   },
 }));
@@ -103,6 +104,8 @@ app.use("/webhook", shopifyWebhookRoutes);
 // -------------------- CORS --------------------
 app.use(cors({
   origin: [
+    "https://pdfify.pro", // CRITICAL: Allow own domain!
+    "https://www.pdfify.pro",
     "https://food-trek.com",
     "https://woocommerce.portfolio.lidija-jokic.com",
     /.+\.myshopify\.com$/,     // Allow all Shopify stores
@@ -124,6 +127,16 @@ app.use((req, res, next) => {
 
   // Content Security Policy
   res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *.myshopify.com admin.shopify.com cdn.shopify.com;");
+
+  // Log Set-Cookie headers for debugging
+  const originalJson = res.json;
+  res.json = function(data) {
+    const setCookie = res.getHeader('Set-Cookie');
+    if (setCookie) {
+      console.log("🍪 [SET-COOKIE] Response to", req.path, ":", Array.isArray(setCookie) ? setCookie : [setCookie]);
+    }
+    return originalJson.call(this, data);
+  };
 
   next();
 });

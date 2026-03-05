@@ -169,14 +169,20 @@ router.post("/login", async (req, res) => {
       }
 
       console.log("📦 [BACKEND] Sending response:", JSON.stringify(responseData, null, 2));
-      console.log("🍪 [BACKEND] Session cookie being set:");
+      console.log("🍪 [BACKEND] Session cookie details:");
       console.log("   - Session ID:", req.sessionID);
       console.log("   - Cookie name:", req.sessionID ? 'connect.sid' : 'N/A');
-      console.log("   - Cookie domain:", req.session.cookie.domain);
+      console.log("   - Cookie domain:", req.session.cookie.domain || '(default)');
       console.log("   - Cookie secure:", req.session.cookie.secure);
       console.log("   - Cookie httpOnly:", req.session.cookie.httpOnly);
       console.log("   - Cookie sameSite:", req.session.cookie.sameSite);
       console.log("   - Cookie path:", req.session.cookie.path);
+      console.log("   - Cookie maxAge:", req.session.cookie.maxAge);
+
+      // Log Set-Cookie header that will be sent
+      const cookieHeader = res.getHeader('Set-Cookie');
+      console.log("🍪 [BACKEND] Set-Cookie header:", cookieHeader ? cookieHeader : 'NOT SET YET');
+
       console.log("🔐 [BACKEND] ========== LOGIN COMPLETE ==========");
 
       res.json(responseData);
