@@ -943,8 +943,15 @@ router.post("/invoices/zip", authenticate, dualAuth, async (req, res) => {
 router.get("/install", (req, res) => {
   const { shop } = req.query;
 
+  console.log("🚀========================================");
+  console.log("🚀 INSTALL ROUTE CALLED");
+  console.log("🚀========================================");
+  console.log(`📦 Shop parameter: ${shop}`);
+  console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+
   // Validate shop parameter
   if (!shop) {
+    console.error("❌ Missing shop parameter");
     return res.status(400).send("Missing shop parameter. Please use the link from Shopify App Store.");
   }
 
@@ -952,6 +959,7 @@ router.get("/install", (req, res) => {
   const normalizedShop = shop.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
 
   if (!normalizedShop.endsWith('.myshopify.com') && !normalizedShop.endsWith('.myshopify.io')) {
+    console.error(`❌ Invalid shop domain: ${normalizedShop}`);
     return res.status(400).send("Invalid shop domain. Must be a *.myshopify.com or *.myshopify.io domain.");
   }
 
@@ -962,6 +970,10 @@ router.get("/install", (req, res) => {
   const scopes = "read_orders,write_orders,read_products,read_themes,read_locations";
   const redirectUri = process.env.SHOPIFY_REDIRECT_URL || "https://pdfify.pro/api/shopify/callback";
   const clientId = process.env.SHOPIFY_CLIENT_ID;
+
+  console.log(`🔑 Client ID: ${clientId}`);
+  console.log(`🔗 Redirect URI: ${redirectUri}`);
+  console.log(`🎲 State: ${state}`);
 
   if (!clientId) {
     console.error("❌ SHOPIFY_CLIENT_ID not set in environment variables");
@@ -975,7 +987,10 @@ router.get("/install", (req, res) => {
     `state=${state}&` +
     `response_type=code`;
 
-  console.log(`🔗 Redirecting to Shopify OAuth for shop: ${normalizedShop}`);
+  console.log(`🚀 Redirecting to Shopify OAuth for shop: ${normalizedShop}`);
+  console.log(`🚀 Install URL: ${installUrl}`);
+  console.log("🚀========================================\n");
+
   res.redirect(installUrl);
 });
 
@@ -986,7 +1001,15 @@ router.get("/install", (req, res) => {
 router.get("/callback", async (req, res) => {
   const { shop, code, hmac, state } = req.query;
 
-  console.log("🔐 OAuth callback received:", { shop, hasCode: !!code, hasHmac: !!hmac });
+  console.log("🔐========================================");
+  console.log("🔐 OAUTH CALLBACK RECEIVED");
+  console.log("🔐========================================");
+  console.log(`📦 Shop: ${shop}`);
+  console.log(`🔑 Has Code: ${!!code}`);
+  console.log(`🔐 Has HMAC: ${!!hmac}`);
+  console.log(`🎲 State: ${state}`);
+  console.log(`📅 Timestamp: ${new Date().toISOString()}`);
+  console.log("🔐========================================\n");
 
   // Validate required parameters
   if (!shop || !code || !hmac) {
