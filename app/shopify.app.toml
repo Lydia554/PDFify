@@ -13,10 +13,6 @@ api_version = "2025-01"
   uri = "https://pdfify.pro/webhook/app-uninstalled"
 
   [[webhooks.subscriptions]]
-  topics = [ "orders/create" ]
-  uri = "https://pdfify.pro/webhook/order-created"
-
-  [[webhooks.subscriptions]]
   compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
   uri = "https://pdfify.pro/webhook"
 
@@ -24,7 +20,7 @@ api_version = "2025-01"
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_locations,read_orders,read_products,read_themes"
 optional_scopes = [ ]
-use_legacy_install_flow = false
+use_legacy_install_flow = true
 
 [auth]
 redirect_urls = [ "https://pdfify.pro/api/shopify/callback" ]
