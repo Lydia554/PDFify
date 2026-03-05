@@ -1110,8 +1110,9 @@ router.get("/callback", async (req, res) => {
 
   try {
     // Step 1: Verify HMAC signature for security
+    // Exclude hmac, signature, and host (host is added by embedded app frame, not part of Shopify's HMAC)
     const message = Object.keys(req.query)
-      .filter(key => key !== 'hmac')
+      .filter(key => key !== 'hmac' && key !== 'signature' && key !== 'host')
       .sort()
       .map(key => `${key}=${req.query[key]}`)
       .join('&');
