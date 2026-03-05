@@ -1713,10 +1713,11 @@ router.post("/payment-details", async (req, res) => {
  * GET /api/shopify/orders-public
  */
 router.get("/orders-public", verifyShopifySession, async (req, res) => {
+  // shopDomain is extracted from session token by verifyShopifySession middleware
+  const normalizedShop = req.shopDomain;
+
   try {
     const { from, to } = req.query;
-    // shopDomain and shop are extracted from session token by verifyShopifySession middleware
-    const normalizedShop = req.shopDomain;
 
     console.log(`📦 Fetching orders for: ${normalizedShop}`);
 
