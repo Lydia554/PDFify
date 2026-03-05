@@ -1194,12 +1194,13 @@
           const hasAccessToken = testRes.data.hasAccessToken;
           console.log('[PDFify] isInstalled:', isInstalled, '(hasAccessToken:', hasAccessToken, ')');
 
-          // If shop exists but no access token, automatically trigger OAuth
-          if (isInstalled && !hasAccessToken) {
-            console.log('[PDFify] Shop exists but no access token - automatically triggering OAuth');
-            const installUrl = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
-            window.location.href = installUrl;
-            return; // Stop execution here - we're redirecting
+          // CRITICAL: If shop exists but no access token, automatically trigger OAuth
+          // This is required for embedded apps to fetch orders from Shopify Admin API
+          if (!hasAccessToken) {
+            console.log('[PDFify] ⚠️ No access token detected - redirecting to complete OAuth setup...');
+            console.log('[PDFify] Redirecting to:', `/api/shopify/install?shop=${encodeURIComponent(shop)}`);
+            window.location.href = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
+            return; // Stop execution - redirecting
           }
         } catch (testErr) {
           console.error('[PDFify] Shop connection test failed:', testErr);
@@ -1226,8 +1227,8 @@
         }
 
         if (needsInstall) {
-          // Show installation screen
-          console.log('[PDFify] Showing installation required screen');
+          // Show installation screen (only if shop doesn't exist in DB at all)
+          console.log('[PDFify] Shop not found in database - showing install screen');
           document.getElementById('loading').classList.add('hidden');
           document.getElementById('app').classList.remove('hidden'); // Show app container
           document.getElementById('installRequired').classList.remove('hidden');
@@ -1235,15 +1236,7 @@
           return;
         }
 
-        if (!isInstalled) {
-          // Shop exists but no access token - needs reinstallation
-          console.log('[PDFify] Shop exists but no access token, showing install screen');
-          document.getElementById('loading').classList.add('hidden');
-          document.getElementById('app').classList.remove('hidden'); // Show app container
-          document.getElementById('installRequired').classList.remove('hidden');
-          document.getElementById('installShopName').textContent = shop;
-          return;
-        }
+        // If we get here, shop is installed (hasAccessToken check above handles redirect to OAuth)
 
         // Load shop config
         console.log('[PDFify] Loading shop configuration...');
