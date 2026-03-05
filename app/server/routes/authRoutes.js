@@ -169,6 +169,14 @@ router.post("/login", async (req, res) => {
       }
 
       console.log("📦 [BACKEND] Sending response:", JSON.stringify(responseData, null, 2));
+      console.log("🍪 [BACKEND] Session cookie being set:");
+      console.log("   - Session ID:", req.sessionID);
+      console.log("   - Cookie name:", req.sessionID ? 'connect.sid' : 'N/A');
+      console.log("   - Cookie domain:", req.session.cookie.domain);
+      console.log("   - Cookie secure:", req.session.cookie.secure);
+      console.log("   - Cookie httpOnly:", req.session.cookie.httpOnly);
+      console.log("   - Cookie sameSite:", req.session.cookie.sameSite);
+      console.log("   - Cookie path:", req.session.cookie.path);
       console.log("🔐 [BACKEND] ========== LOGIN COMPLETE ==========");
 
       res.json(responseData);

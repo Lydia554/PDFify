@@ -44,6 +44,9 @@ const betaRegistrationRoutes = require("./routes/betaRegistrationRoutes");
 
 const app = express();
 
+// -------------------- Trust Proxy (CRITICAL for sessions behind proxy/load balancer) --------------------
+app.set('trust proxy', 1); // Trust first proxy
+
 // -------------------- Session --------------------
 app.use(session({
   secret: process.env.SESSION_SECRET || "fallbackSecretKey",
@@ -62,6 +65,8 @@ app.use(session({
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: 'lax',
+    domain: process.env.NODE_ENV === "production" ? '.pdfify.pro' : undefined, // Explicit domain for production
+    path: '/',
   },
 }));
 
@@ -72,21 +77,24 @@ MongoStore.create({
   console.error('❌ Session store error:', err);
 });
 
-// Session debugging middleware (only in non-production)
-if (process.env.NODE_ENV !== "production") {
-  app.use((req, res, next) => {
-    if (req.sessionID) {
-      console.log(`🔍 [SESSION] ${req.method} ${req.path}`, {
-        sessionID: req.sessionID,
-        hasUserId: !!(req.session && req.session.userId),
-        userId: req.session?.userId,
-        hasCookie: !!req.headers.cookie,
-        origin: req.get('origin'),
-      });
-    }
-    next();
-  });
-}
+// Session debugging middleware (ALWAYS log for now to debug session issues)
+app.use((req, res, next) => {
+  if (req.sessionID) {
+    const cookies = req.headers.cookie;
+    const sessionCookie = cookies?.match(/connect\.sid=([^;]+)/);
+
+    console.log(`🔍 [SESSION] ${req.method} ${req.path}`, {
+      sessionID: req.sessionID,
+      hasUserId: !!(req.session && req.session.userId),
+      userId: req.session?.userId,
+      hasCookie: !!cookies,
+      sessionCookieValue: sessionCookie ? sessionCookie[1]?.substring(0, 20) + '...' : 'NOT FOUND',
+      origin: req.get('origin'),
+      host: req.get('host'),
+    });
+  }
+  next();
+});
 
 // -------------------- Webhooks --------------------
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
