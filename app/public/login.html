@@ -199,27 +199,44 @@
       try {
         const response = await axios.post("/api/auth/login", { email, password });
 
-        if (response.data && response.data.apiKey) {
-          localStorage.setItem("apiKey", response.data.apiKey);
+        console.log("[Login] Response received:", response.data);
 
+        // Check if login was successful (either has apiKey or just success message)
+        if (response.data && response.data.message === "Login successful") {
+          // Store API key if present
+          if (response.data.apiKey) {
+            localStorage.setItem("apiKey", response.data.apiKey);
+            console.log("[Login] API key stored in localStorage");
+          } else {
+            console.warn("[Login] No API key in response, but login succeeded");
+          }
+
+          // Update consent in background with timeout to prevent blocking
           if (localStorage.getItem("cookieConsent") === "true") {
-            try {
-              await fetch("/api/user/consent", {
+            Promise.race([
+              fetch("/api/user/consent", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 credentials: "include",
                 body: JSON.stringify({ consent: true }),
-              });
-            } catch (err) {
-              console.warn("Failed to update consent on backend:", err);
-            }
+              }),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("Consent timeout")), 3000)
+              ),
+            ]).catch((err) => {
+              console.warn("Failed to update consent on backend:", err.message);
+            });
           }
 
           showMessage("Login successful! Redirecting...", "success");
+          console.log("[Login] Redirecting to /pdf-generator-demo in 1 second...");
+
           setTimeout(() => {
+            console.log("[Login] Redirecting now!");
             window.location.href = "/pdf-generator-demo";
           }, 1000);
         } else {
+          console.error("[Login] Login failed:", response.data);
           showMessage((response.data && response.data.error) || "Invalid email or password.");
         }
       } catch (error) {

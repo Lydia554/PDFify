@@ -105,6 +105,17 @@ router.post("/login", async (req, res) => {
     log("Session userId set:", user._id);
     log("Session ID:", req.sessionID);
 
+    // Get decrypted API key with error handling
+    let decryptedApiKey;
+    try {
+      decryptedApiKey = user.getDecryptedApiKey();
+      log("API key decrypted successfully");
+    } catch (decryptError) {
+      console.error("Failed to decrypt API key:", decryptError);
+      // Continue without API key - user can still log in
+      decryptedApiKey = null;
+    }
+
     // Explicitly save session before responding to ensure it's persisted to MongoDB
     req.session.save((err) => {
       if (err) {
@@ -114,12 +125,19 @@ router.post("/login", async (req, res) => {
 
       log("Session saved successfully for user:", user.email);
 
-      res.json({
+      const responseData = {
         message: "Login successful",
         email: user.email,
-        apiKey: user.getDecryptedApiKey(),
         isPremium: user.isPremium,
-      });
+      };
+
+      // Only include apiKey if decryption succeeded
+      if (decryptedApiKey) {
+        responseData.apiKey = decryptedApiKey;
+      }
+
+      log("Sending login response");
+      res.json(responseData);
     });
   } catch (error) {
     console.error("Login error:", error);
