@@ -69,8 +69,10 @@ app.use(cors({
   origin: [
     "https://food-trek.com",
     "https://woocommerce.portfolio.lidija-jokic.com",
-    /.+\.myshopify\.com$/,  // Allow all Shopify stores
-    /admin\.shopify\.com/,    // Allow Shopify Admin
+    /.+\.myshopify\.com$/,     // Allow all Shopify stores
+    /admin\.shopify\.com/,      // Allow Shopify Admin
+    "https://cdn.shopify.com", // Shopify embedded app CDN
+    null,                       // Allow local development
   ],
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -79,12 +81,13 @@ app.use(cors({
 
 // -------------------- Security Headers for Shopify Embedded App --------------------
 app.use((req, res, next) => {
-  // Allow Shopify to embed this app in an iframe (Content Security Policy)
-  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *.myshopify.com admin.shopify.com;");
+  // CRITICAL: Allow Shopify to embed this app in an iframe
+  // Must be set BEFORE any other headers
+  res.removeHeader('X-Frame-Options');
+  res.setHeader('X-Frame-Options', 'ALLOWFROM https://*.myshopify.com');
 
-  // Legacy fallback for older browsers
-  res.setHeader('X-Frame-Options', 'ALLOWFROM');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Content Security Policy
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' *.myshopify.com admin.shopify.com cdn.shopify.com;");
 
   next();
 });
@@ -102,6 +105,16 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((error) => console.error("MongoDB connection error:", error));
 
 // -------------------- API Routes --------------------
+
+// Request logging middleware (for debugging)
+app.use("/api", (req, res, next) => {
+  console.log(`[API] ${req.method} ${req.path}`, {
+    origin: req.get('origin'),
+    shop: req.get('X-Shopify-Shop-Domain') || req.query?.shop,
+    hasAuth: !!req.get('Authorization')
+  });
+  next();
+});
 
 // Auth routes
 app.use("/api/auth", authRoutes);
