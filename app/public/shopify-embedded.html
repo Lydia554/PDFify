@@ -1191,7 +1191,16 @@
           // For embedded apps, success means shop is installed (using session tokens)
           // hasAccessToken is only true for OAuth flow with permanent tokens
           isInstalled = testRes.data.success || testRes.data.isInstalled;
-          console.log('[PDFify] isInstalled:', isInstalled, '(hasAccessToken:', testRes.data.hasAccessToken, ')');
+          const hasAccessToken = testRes.data.hasAccessToken;
+          console.log('[PDFify] isInstalled:', isInstalled, '(hasAccessToken:', hasAccessToken, ')');
+
+          // If shop exists but no access token, automatically trigger OAuth
+          if (isInstalled && !hasAccessToken) {
+            console.log('[PDFify] Shop exists but no access token - automatically triggering OAuth');
+            const installUrl = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
+            window.location.href = installUrl;
+            return; // Stop execution here - we're redirecting
+          }
         } catch (testErr) {
           console.error('[PDFify] Shop connection test failed:', testErr);
           console.error('[PDFify] Error status:', testErr.response?.status);
