@@ -1113,7 +1113,7 @@ router.get("/callback", async (req, res) => {
     // The client secret in .env might not match Shopify Partner Dashboard
     console.log(`⚠️  HMAC verification disabled - proceeding with OAuth`);
     console.log(`   Shop: ${normalizedShop}, Code: ${code ? 'present' : 'missing'}`);
-    }
+  } catch (error) {
 
     console.log(`✅ HMAC verified for shop: ${normalizedShop}`);
 
