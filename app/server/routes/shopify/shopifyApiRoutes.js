@@ -1724,15 +1724,13 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
     const shopConfig = req.shop;
 
     console.log(`📦 Shop config found: ${!!shopConfig}`);
-    if (shopConfig) {
-      console.log(`📦 Has access token: ${!!shopConfig.shopifyAccessToken}`);
-      console.log(`📦 Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
-      console.log(`📦 Token prefix: ${shopConfig.shopifyAccessToken?.substring(0, 15)}...`);
-    }
+    console.log(`📦 Using session token for API call: ${!!req.sessionToken}`);
 
-    if (!shopConfig || !shopConfig.shopifyAccessToken) {
-      console.error(`❌ Shop not connected: ${normalizedShop}`);
-      return res.status(404).json({ error: "Shop not connected. Please install the app first." });
+    // For embedded apps, use session token instead of permanent access token
+    // Session tokens are provided by Shopify App Bridge and are valid for making API calls
+    if (!req.sessionToken) {
+      console.error(`❌ No session token available: ${normalizedShop}`);
+      return res.status(401).json({ error: "Session token not available. Please reload the app." });
     }
 
     // Fetch orders from Shopify
@@ -1743,10 +1741,11 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
     if (to) params.push(`created_at_max=${encodeURIComponent(to + "T23:59:59Z")}`);
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
-    console.log(`📦 Calling Shopify API: ${shopifyOrdersUrl.replace(shopConfig.shopifyAccessToken, '***TOKEN***')}`);
+    console.log(`📦 Calling Shopify API: ${shopifyOrdersUrl}`);
 
+    // Use session token (Authorization: Bearer) instead of permanent access token (X-Shopify-Access-Token)
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
+      headers: { "Authorization": `Bearer ${req.sessionToken}` },
     });
 
     console.log(`✅ Orders fetched successfully: ${response.data.orders?.length || 0} orders`);
@@ -1798,21 +1797,16 @@ router.post("/invoice-public", verifyShopifySession, async (req, res) => {
     const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
 
     console.log(`🧾 [invoice-public] ShopConfig found: ${!!shopConfig}`);
-    if (shopConfig) {
-      console.log(`🧾 [invoice-public] Has access token: ${!!shopConfig.shopifyAccessToken}`);
-      console.log(`🧾 [invoice-public] Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
-      console.log(`🧾 [invoice-public] isActive: ${shopConfig.isActive}`);
-      console.log(`🧾 [invoice-public] connectedAt: ${shopConfig.connectedAt}`);
-    }
+    console.log(`🧾 [invoice-public] Using session token for API call: ${!!req.sessionToken}`);
 
-    if (!shopConfig || !shopConfig.shopifyAccessToken) {
-      console.error(`❌ [invoice-public] Shop not connected or missing token: ${normalizedShop}`);
+    // For embedded apps, use session token instead of permanent access token
+    if (!req.sessionToken) {
+      console.error(`❌ [invoice-public] No session token available: ${normalizedShop}`);
       return res.status(401).json({
-        error: "Shop not connected. Please reinstall the app.",
+        error: "Session token not available. Please reload the app.",
         debug: {
           shop: normalizedShop,
           hasShopConfig: !!shopConfig,
-          hasAccessToken: !!shopConfig?.shopifyAccessToken,
           isActive: shopConfig?.isActive,
           connectedAt: shopConfig?.connectedAt
         }
@@ -1825,8 +1819,9 @@ router.post("/invoice-public", verifyShopifySession, async (req, res) => {
       actualOrderId = actualOrderId.split("/").pop();
     }
 
+    // Use session token (Authorization: Bearer) instead of permanent access token
     const orderResp = await axios.get(`https://${normalizedShop}/admin/api/2023-10/orders/${actualOrderId}.json`, {
-      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
+      headers: { "Authorization": `Bearer ${req.sessionToken}` },
     });
     const order = orderResp.data.order;
 
@@ -1864,7 +1859,8 @@ router.post("/invoice-public", verifyShopifySession, async (req, res) => {
     const effectiveShopConfig = { ...shopConfig.toObject(), primaryColor: effectiveColor };
 
     // Use the proper merchant invoice generation logic (Java service for ALL users)
-    const invoiceData = await mapOrderToPdfData(order, effectiveShopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
+    // Use session token instead of permanent access token for embedded apps
+    const invoiceData = await mapOrderToPdfData(order, effectiveShopConfig, user, req.sessionToken, normalizedShop, lang);
     console.log(`🧾 [Shopify Public] invoiceData.primaryColor: "${invoiceData.primaryColor}"`);
     console.log(`🧾 [Shopify Public] invoiceData.customerName: "${invoiceData.customerName}"`);
     console.log(`🧾 [Shopify Public] invoiceData.paymentTerms: "${invoiceData.paymentTerms}"`);
@@ -2003,8 +1999,9 @@ router.post("/invoices/zip-public", verifyShopifySession, async (req, res) => {
     if (to) params.push(`created_at_max=${encodeURIComponent(to + "T23:59:59Z")}`);
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
+    // Use session token (Authorization: Bearer) instead of permanent access token
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
+      headers: { "Authorization": `Bearer ${req.sessionToken}` },
     });
     const orders = response.data.orders;
 
@@ -2038,7 +2035,8 @@ router.post("/invoices/zip-public", verifyShopifySession, async (req, res) => {
     // Process orders
     for (const order of orders) {
       // Build invoice data using mapOrderToPdfData
-      const invoiceData = await mapOrderToPdfData(order, effectiveShopConfig, user, shopConfig.shopifyAccessToken, normalizedShop, lang);
+      // Use session token instead of permanent access token for embedded apps
+      const invoiceData = await mapOrderToPdfData(order, effectiveShopConfig, user, req.sessionToken, normalizedShop, lang);
 
       // Add ZUGFeRD XML ONLY for paying customers
       if (isPayingCustomer) {
@@ -2077,7 +2075,8 @@ router.post("/invoices/zip-public", verifyShopifySession, async (req, res) => {
 
       // Fetch logo from Shopify
       try {
-        const logoUrl = await getShopLogoUrl(normalizedShop, shopConfig.shopifyAccessToken);
+        // Use session token instead of permanent access token for embedded apps
+        const logoUrl = await getShopLogoUrl(normalizedShop, req.sessionToken);
         if (logoUrl) {
           const logoBase64 = await getBase64Image(logoUrl);
           if (logoBase64 && logoBase64.length > 0) {

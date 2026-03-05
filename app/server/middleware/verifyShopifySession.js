@@ -85,6 +85,7 @@ async function verifyShopifySession(req, res, next) {
     // Attach shop info to request (shopConfig may be null for new shops)
     req.shop = shopConfig;
     req.shopDomain = shopDomain;
+    req.sessionToken = token; // Attach session token for API calls
 
     next();
   } catch (error) {
