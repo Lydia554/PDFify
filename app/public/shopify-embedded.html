@@ -1378,18 +1378,8 @@
         }
       } catch (err) {
         console.error('Failed to load orders:', err);
-        console.error('Error response:', err.response?.data);
         const select = document.getElementById('orderSelector');
-
-        if (err.response?.status === 401) {
-          // Explain that orders require OAuth completion
-          select.innerHTML = '<option value="">ℹ️ Orders feature requires completing OAuth setup (optional).</option>';
-          console.log('[PDFify] ℹ️ Orders feature is unavailable without OAuth - this is OK for app submission');
-        } else if (err.response?.status === 404) {
-          select.innerHTML = '<option value="">Shop not found. Please install the app first.</option>';
-        } else {
-          select.innerHTML = '<option value="">⚠️ Unable to load orders right now. Please try again.</option>';
-        }
+        select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
       }
     }
 
