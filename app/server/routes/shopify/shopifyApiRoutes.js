@@ -1110,14 +1110,24 @@ router.get("/callback", async (req, res) => {
 
   try {
     // Step 1: Verify HMAC signature for security
-    // Exclude hmac, signature, and host (host is added by embedded app frame, not part of Shopify's HMAC)
-    const message = Object.keys(req.query)
-      .filter(key => key !== 'hmac' && key !== 'signature' && key !== 'host')
-      .sort()
-      .map(key => `${key}=${req.query[key]}`)
+    // Use the original query string and remove hmac, signature, and host parameters
+    const originalUrl = req.originalUrl || req.url;
+    const queryString = originalUrl.split('?')[1];
+
+    // Parse query string and exclude hmac, signature, and host
+    const params = new URLSearchParams(queryString);
+    params.delete('hmac');
+    params.delete('signature');
+    params.delete('host');
+
+    // Sort parameters and reconstruct the message
+    const message = Array.from(params.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
       .join('&');
 
     console.log(`🔍 HMAC Verification Debug:`);
+    console.log(`   Original query string: ${queryString}`);
     console.log(`   Message to hash: ${message}`);
     console.log(`   Client Secret: ${process.env.SHOPIFY_CLIENT_SECRET ? process.env.SHOPIFY_CLIENT_SECRET.substring(0, 10) + '...' : 'MISSING'}`);
     console.log(`   Received HMAC: ${hmac}`);
