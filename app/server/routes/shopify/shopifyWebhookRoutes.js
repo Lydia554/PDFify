@@ -10,74 +10,30 @@ const { enrichLineItemsWithImages } = require("./shopifyHelpers");
 const { resolveLanguage } = require("../../utils/resolveLanguage");
 const { incrementUsage } = require("../../utils/usageUtils");
 
-// ================================
-// REQUEST LOGGING MIDDLEWARE
-// Logs EVERY request to webhook endpoints
-// ================================
-router.use((req, res, next) => {
-  const timestamp = new Date().toISOString();
-  console.log(`\n${timestamp} ⚡ [WEBHOOK MIDDLEWARE] Incoming request`);
-  console.log(`⚡ [WEBHOOK MIDDLEWARE] Method: ${req.method}`);
-  console.log(`⚡ [WEBHOOK MIDDLEWARE] Path: ${req.path}`);
-  console.log(`⚡ [WEBHOOK MIDDLEWARE] URL: ${req.originalUrl}`);
-  console.log(`⚡ [WEBHOOK MIDDLEWARE] IP: ${req.ip}`);
-  console.log(`⚡ [WEBHOOK MIDDLEWARE] Headers:`, JSON.stringify({
-    "x-shopify-hmac-sha256": req.get("X-Shopify-Hmac-Sha256") ? 'Present' : 'Missing',
-    "x-shopify-shop-domain": req.get("X-Shopify-Shop-Domain") || 'Not provided',
-    "x-shopify-topic": req.get("X-Shopify-Topic") || 'Not provided',
-    "x-shopify-api-version": req.get("X-Shopify-Api-Version") || 'Not provided',
-    "content-type": req.get("Content-Type"),
-    "user-agent": req.get("User-Agent"),
-    "host": req.get("host")
-  }, null, 2));
-  next();
-});
-
-// Shopify webhook verification (ALWAYS verify, even in development)
+// Shopify webhook verification
 function verifyShopifyWebhook(req, res, next) {
-  const timestamp = new Date().toISOString();
   const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
   const body = req.rawBody;
-  const shopDomain = req.get("X-Shopify-Shop-Domain");
 
-  // EXTENSIVE LOGGING for debugging
-  console.log(`\n${timestamp} ===================== WEBHOOK REQUEST START =====================`);
-  console.log(`🔐 [Webhook] Path: ${req.method} ${req.path}`);
-  console.log(`🔐 [Webhook] Shop Domain: ${shopDomain || 'NOT PROVIDED'}`);
-  console.log(`🔐 [Webhook] X-Shopify-Topic: ${req.get("X-Shopify-Topic") || 'NOT PROVIDED'}`);
-  console.log(`🔐 [Webhook] X-Shopify-Api-Version: ${req.get("X-Shopify-Api-Version") || 'NOT PROVIDED'}`);
-  console.log(`🔐 [Webhook] Content-Type: ${req.get("Content-Type")}`);
-  console.log(`🔐 [Webhook] User-Agent: ${req.get("User-Agent")}`);
-  console.log(`🔐 [Webhook] HMAC Header Present: ${hmacHeader ? 'YES' : 'NO'} (${hmacHeader ? hmacHeader.substring(0, 20) + '...' : 'N/A'})`);
-  console.log(`🔐 [Webhook] Raw Body Length: ${body ? body.length : 0} bytes`);
-
-  // CRITICAL: Reject requests without HMAC header or body (Shopify compliance requirement)
   if (!hmacHeader || !body) {
-    console.error(`❌ [Webhook] MISSING HMAC OR BODY`);
-    console.error(`   HMAC Present: ${!!hmacHeader}`);
-    console.error(`   Body Present: ${!!body}`);
-    console.error(`   Returning: 401 Unauthorized (Shopify compliance requirement)`);
-    console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
     return res.status(401).send("Unauthorized");
   }
 
-  // Verify HMAC signature using timing-safe comparison to prevent timing attacks
   const generatedHmac = crypto
     .createHmac("sha256", process.env.SHOPIFY_API_SECRET)
-    .update(body)  // Use buffer directly, NOT "utf8" encoding!
+    .update(body)
     .digest("base64");
 
-  // Use timing-safe comparison to prevent timing attacks
   const hmacBuffer = Buffer.from(hmacHeader, "base64");
   const generatedBuffer = Buffer.from(generatedHmac, "base64");
 
-  if (hmacBuffer.length !== generatedBuffer.length || !crypto.timingSafeEqual(hmacBuffer, generatedBuffer)) {
-    console.error(`❌ [Webhook] HMAC VERIFICATION FAILED`);
-    console.error(`   Generated HMAC: ${generatedHmac.substring(0, 30)}...`);
-    console.error(`   Received HMAC:  ${hmacHeader.substring(0, 30)}...`);
-    console.error(`   Match: NO`);
-    console.error(`   SHOPIFY_API_SECRET exists: ${!!process.env.SHOPIFY_API_SECRET}`);
-    console.error(`   SHOPIFY_API_SECRET length: ${process.env.SHOPIFY_API_SECRET?.length || 0}`);
+  if (!crypto.timingSafeEqual(hmacBuffer, generatedBuffer)) {
+    console.error(`[Webhook] HMAC verification failed for ${req.get("X-Shopify-Topic")}`);
+    return res.status(401).send("Unauthorized");
+  }
+
+  next();
+}
     console.error(`   Returning: 401 Unauthorized`);
     console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
     return res.status(401).send("Unauthorized");
@@ -97,33 +53,20 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
-    const timestamp = new Date().toISOString();
-    console.log(`\n${timestamp} 📦 [ORDER/CREATED] Handler started`);
-    console.log(`📦 [ORDER/CREATED] Headers:`, JSON.stringify({
-      "x-shopify-shop-domain": req.get("X-Shopify-Shop-Domain"),
-      "x-shopify-topic": req.get("X-Shopify-Topic"),
-      "x-shopify-api-version": req.get("X-Shopify-Api-Version")
-    }, null, 2));
-
     let parsedPayload;
     try {
       parsedPayload = JSON.parse(req.rawBody.toString());
-      console.log(`📦 [ORDER/CREATED] Payload parsed successfully`);
     } catch (err) {
-      console.error(`📦 [ORDER/CREATED] Failed to parse payload:`, err.message);
       return res.status(200).send("OK");
     }
 
     const order = parsedPayload.order || parsedPayload;
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
     if (!shopDomain) {
-      console.error(`📦 [ORDER/CREATED] No shop domain found`);
       return res.status(200).send("OK");
     }
 
-    console.log(`📦 [ORDER/CREATED] Shop: ${shopDomain}, Order: ${order.name || order.id}`);
-    console.log(`📦 [ORDER/CREATED] Responding: 200 OK`);
-    res.status(200).send("Webhook received");
+    res.status(200).send("OK");
 
     try {
       const user = await User.findOne({ connectedShopDomain: shopDomain });
@@ -141,11 +84,9 @@ router.post(
         lang,
         allowCustomerPDF: shopConfig?.allowCustomerPDF || false
       });
-      console.log(`📦 [ORDER/CREATED] Async processing completed`);
     } catch (err) {
-      console.error(`❌ [ORDER/CREATED] Error in webhook handler:`, err);
+      console.error(`[Order Created] Error:`, err);
     }
-    console.log(`===================== [ORDER/CREATED] END =====================\n`);
   }
 );
 
@@ -155,7 +96,6 @@ router.post(
 
 // UNIFIED COMPLIANCE WEBHOOK HANDLER
 // Handles all three GDPR compliance topics: customers/data_request, customers/redact, shop/redact
-// When using compliance_topics in shopify.app.toml, all topics go to one endpoint
 router.post(
   "/",
   express.raw({
@@ -164,18 +104,27 @@ router.post(
   }),
   verifyShopifyWebhook,
   async (req, res) => {
-    const timestamp = new Date().toISOString();
     const topic = req.get("X-Shopify-Topic");
+    const shopDomain = (req.get("X-Shopify-Shop-Domain") || req.body?.shop_domain)?.trim().toLowerCase();
 
-    console.log(`\n${timestamp} ⚖️ [GDPR COMPLIANCE] Unified handler received: ${topic}`);
+    res.status(200).send("OK");
 
-    let parsedPayload;
     try {
-      parsedPayload = JSON.parse(req.rawBody.toString());
-    } catch {
-      console.error(`⚖️ [GDPR] Failed to parse payload`);
-      return res.status(200).send("OK");
+      if (topic === "customers/data_request") {
+        // No customer data stored
+      }
+      else if (topic === "customers/redact") {
+        // No customer data stored
+      }
+      else if (topic === "shop/redact") {
+        await ShopConfig.findOneAndDelete({ shopDomain: shopDomain });
+        await User.findOneAndDelete({ connectedShopDomain: shopDomain });
+      }
+    } catch (err) {
+      console.error(`[GDPR ${topic}] Error:`, err);
     }
+  }
+);
 
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
     console.log(`⚖️ [GDPR] Shop: ${shopDomain}`);
