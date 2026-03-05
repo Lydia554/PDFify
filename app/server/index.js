@@ -76,10 +76,12 @@ MongoStore.create({
 if (process.env.NODE_ENV !== "production") {
   app.use((req, res, next) => {
     if (req.sessionID) {
-      console.log(`[Session] ${req.method} ${req.path}`, {
+      console.log(`🔍 [SESSION] ${req.method} ${req.path}`, {
         sessionID: req.sessionID,
         hasUserId: !!(req.session && req.session.userId),
+        userId: req.session?.userId,
         hasCookie: !!req.headers.cookie,
+        origin: req.get('origin'),
       });
     }
     next();
@@ -227,9 +229,11 @@ app.get("/shopify/app", (req, res) =>
 app.get("/woocommerce", authProtect, (req, res) =>
   res.sendFile(path.join(__dirname, "../public/woocommerce.html"))
 );
-app.get("/pdf-generator-demo", authProtect, (req, res) =>
-  res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html"))
-);
+app.get("/pdf-generator-demo", authProtect, (req, res) => {
+  console.log("📄 [SERVER] Serving pdf-generator-demo.html");
+  console.log("👤 [SERVER] Authenticated user ID:", req.session?.userId);
+  res.sendFile(path.join(__dirname, "../public/pdf-generator-demo.html"));
+});
 
 // Optional unprotected pages
 app.get("/user-creation", (req, res) =>
@@ -242,6 +246,18 @@ app.get("/api/get-stripe-key", (req, res) => {
     return res.status(500).json({ error: "Stripe publishable key not set" });
   }
   res.json({ stripePublishableKey: process.env.STRIPE_PUBLISHABLE_KEY });
+});
+
+// -------------------- Debug session endpoint --------------------
+app.get("/api/debug-session", (req, res) => {
+  console.log("🔍 [DEBUG] Session check requested");
+  res.json({
+    sessionExists: !!req.session,
+    sessionId: req.sessionID,
+    userId: req.session?.userId,
+    hasCookie: !!req.headers.cookie,
+    cookieHeader: req.headers.cookie,
+  });
 });
 
 // -------------------- Cron Job --------------------

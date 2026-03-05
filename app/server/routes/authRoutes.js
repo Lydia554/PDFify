@@ -78,52 +78,81 @@ router.get("/verify-email", async (req, res) => {
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
-  log("Login attempt for email:", email);
+  console.log("🔐 [BACKEND] ========== LOGIN REQUEST ==========");
+  console.log("📧 [BACKEND] Email:", email);
+  console.log("🔑 [BACKEND] Password provided:", !!password);
+  console.log("🍪 [BACKEND] Session ID:", req.sessionID);
+  console.log("🍪 [BACKEND] Existing session:", req.session);
+  console.log("🌐 [BACKEND] Origin:", req.get('origin'));
+  console.log("🌐 [BACKEND] User-Agent:", req.get('user-agent'));
 
   try {
+    console.log("🔍 [BACKEND] Looking up user in database...");
     const user = await User.findOne({ email });
 
     if (!user) {
+      console.log("❌ [BACKEND] User NOT found in database");
       return res.status(404).json({ error: "User not found" });
     }
 
+    console.log("✅ [BACKEND] User found:", user.email);
+    console.log("🆔 [BACKEND] User ID:", user._id);
+    console.log("✅ [BACKEND] Is verified:", user.isVerified);
+    console.log("💎 [BACKEND] Is premium:", user.isPremium);
+    console.log("📋 [BACKEND] Has password:", !!user.password);
+
     if (!user.password) {
+      console.log("❌ [BACKEND] User has no password set");
       return res.status(400).json({ error: "User has no password set" });
     }
 
+    console.log("🔐 [BACKEND] Comparing password...");
     const isPasswordValid = await bcrypt.compare(password, user.password);
+
     if (!isPasswordValid) {
+      console.log("❌ [BACKEND] Password INVALID");
       return res.status(401).json({ error: "Invalid password" });
     }
 
+    console.log("✅ [BACKEND] Password VALID");
+
     if (!user.isVerified) {
-  return res.status(403).json({ error: "Please verify your email before logging in." });
+      console.log("❌ [BACKEND] User NOT verified");
+      return res.status(403).json({ error: "Please verify your email before logging in." });
     }
 
+    console.log("✅ [BACKEND] User verified - proceeding with login");
+
+    // Set session
     req.session.userId = user._id;
 
-    log("Session userId set:", user._id);
-    log("Session ID:", req.sessionID);
+    console.log("🍪 [BACKEND] Session userId set to:", user._id);
+    console.log("🆔 [BACKEND] Session ID:", req.sessionID);
+    console.log("🍪 [BACKEND] Full session object:", JSON.stringify(req.session, null, 2));
 
     // Get decrypted API key with error handling
     let decryptedApiKey;
     try {
+      console.log("🔑 [BACKEND] Attempting to decrypt API key...");
       decryptedApiKey = user.getDecryptedApiKey();
-      log("API key decrypted successfully");
+      console.log("✅ [BACKEND] API key decrypted successfully:", decryptedApiKey ? decryptedApiKey.substring(0, 20) + "..." : "null");
     } catch (decryptError) {
-      console.error("Failed to decrypt API key:", decryptError);
+      console.error("❌ [BACKEND] Failed to decrypt API key:", decryptError);
+      console.error("📋 [BACKEND] Decrypt error stack:", decryptError.stack);
       // Continue without API key - user can still log in
       decryptedApiKey = null;
     }
 
     // Explicitly save session before responding to ensure it's persisted to MongoDB
+    console.log("💾 [BACKEND] Saving session to MongoDB...");
     req.session.save((err) => {
       if (err) {
-        console.error("Session save error:", err);
+        console.error("❌ [BACKEND] Session save ERROR:", err);
+        console.error("📋 [BACKEND] Error stack:", err.stack);
         return res.status(500).json({ error: "Failed to create session" });
       }
 
-      log("Session saved successfully for user:", user.email);
+      console.log("✅ [BACKEND] Session saved successfully to MongoDB");
 
       const responseData = {
         message: "Login successful",
@@ -134,13 +163,19 @@ router.post("/login", async (req, res) => {
       // Only include apiKey if decryption succeeded
       if (decryptedApiKey) {
         responseData.apiKey = decryptedApiKey;
+        console.log("📦 [BACKEND] Response includes API key");
+      } else {
+        console.log("⚠️ [BACKEND] Response does NOT include API key (decryption failed)");
       }
 
-      log("Sending login response");
+      console.log("📦 [BACKEND] Sending response:", JSON.stringify(responseData, null, 2));
+      console.log("🔐 [BACKEND] ========== LOGIN COMPLETE ==========");
+
       res.json(responseData);
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("💥 [BACKEND] Login ERROR:", error);
+    console.error("📋 [BACKEND] Error stack:", error.stack);
     res.status(500).json({ error: "Internal server error" });
   }
 });
