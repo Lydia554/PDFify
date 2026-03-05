@@ -117,28 +117,6 @@ router.post(
   }
 );
 
-    const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
-
-    try {
-      if (topic === "customers/data_request") {
-        // No customer data stored
-      }
-      else if (topic === "customers/redact") {
-        // No customer data stored
-      }
-      else if (topic === "shop/redact") {
-        // Delete all merchant data from our database
-        await ShopConfig.findOneAndDelete({ shopDomain });
-        await User.findOneAndDelete({ connectedShopDomain: shopDomain });
-      }
-    } catch (err) {
-      console.error(`[GDPR ${topic}] Error:`, err);
-    }
-
-    res.status(200).send("OK");
-  }
-);
-
 // LEGACY ENDPOINTS (kept for backward compatibility with test script)
 // These redirect to the unified handler above
 
