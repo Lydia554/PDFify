@@ -1005,21 +1005,66 @@ router.get("/callback", async (req, res) => {
     // Step 4: Save shop configuration with access token to database
     console.log(`💾 Saving shop config to database...`);
 
-    const shopConfig = await ShopConfig.findOneAndUpdate(
-      { shopDomain: normalizedShop },
-      {
-        shopDomain: normalizedShop,
-        connectedAt: new Date(),
-        isActive: true,
-        shopifyAccessToken: access_token  // Store access token for embedded app
-      },
-      { upsert: true, new: true }
-    );
+    let shopConfig;
+    try {
+      shopConfig = await ShopConfig.findOneAndUpdate(
+        { shopDomain: normalizedShop },
+        {
+          shopDomain: normalizedShop,
+          connectedAt: new Date(),
+          isActive: true,
+          shopifyAccessToken: access_token  // Store access token for embedded app
+        },
+        { upsert: true, new: true }
+      );
 
-    console.log(`✅ Shop config saved for: ${normalizedShop}`);
-    console.log(`   - Has access token: ${!!shopConfig.shopifyAccessToken}`);
-    console.log(`   - Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
-    console.log(`   - Full shopConfig:`, JSON.stringify(shopConfig.toObject(), null, 2));
+      // Verify the document was actually created with the token
+      if (!shopConfig || !shopConfig.shopifyAccessToken) {
+        throw new Error('ShopConfig creation returned null or missing token');
+      }
+
+      console.log(`✅ Shop config saved for: ${normalizedShop}`);
+      console.log(`   - Has access token: ${!!shopConfig.shopifyAccessToken}`);
+      console.log(`   - Token length: ${shopConfig.shopifyAccessToken?.length || 0}`);
+      console.log(`   - Full shopConfig:`, JSON.stringify(shopConfig.toObject(), null, 2));
+
+    } catch (dbErr) {
+      console.error(`❌ Database error saving ShopConfig:`, dbErr);
+
+      // Fallback: Try explicit creation if findOneAndUpdate failed
+      console.log(`🔄 Attempting explicit ShopConfig creation as fallback...`);
+      try {
+        // Check if shop config already exists
+        const existing = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+        if (existing) {
+          // Update existing config
+          existing.shopifyAccessToken = access_token;
+          existing.connectedAt = new Date();
+          existing.isActive = true;
+          shopConfig = await existing.save();
+          console.log(`✅ Updated existing ShopConfig for: ${normalizedShop}`);
+        } else {
+          // Create new config explicitly
+          const newShopConfig = new ShopConfig({
+            shopDomain: normalizedShop,
+            connectedAt: new Date(),
+            isActive: true,
+            shopifyAccessToken: access_token
+          });
+          shopConfig = await newShopConfig.save();
+          console.log(`✅ Explicit ShopConfig created for: ${normalizedShop}`);
+        }
+
+        if (!shopConfig || !shopConfig.shopifyAccessToken) {
+          throw new Error('Fallback ShopConfig creation also failed');
+        }
+
+      } catch (fallbackErr) {
+        console.error(`❌ Fallback ShopConfig creation failed:`, fallbackErr);
+        throw new Error(`Failed to save shop configuration after multiple attempts: ${fallbackErr.message}`);
+      }
+    }
 
     // Verify the token was actually saved by reading it back
     const verifyConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });

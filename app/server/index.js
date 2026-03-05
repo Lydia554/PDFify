@@ -51,14 +51,26 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    ttl: 2 * 60 * 60, // 2 hours
+    ttl: 24 * 60 * 60, // 24 hours
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    autoRemove: 'native',
+    touchAfter: 24 * 3600, // Only update session once per day
   }),
   cookie: {
-    maxAge: null,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
+    sameSite: 'lax',
   },
 }));
+
+// MongoDB session store connection monitoring
+MongoStore.create({
+  mongoUrl: process.env.MONGODB_URI,
+}).on('error', function (err) {
+  console.error('❌ Session store error:', err);
+});
 
 // -------------------- Webhooks --------------------
 app.use("/api/stripe/webhook", express.raw({ type: "*/*" }), stripeRoutes);
@@ -101,8 +113,33 @@ mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-.then(() => console.log("MongoDB connected"))
+.then(async () => {
+  console.log("MongoDB connected");
+
+  // Health check after 5 seconds to verify connection is stable
+  setTimeout(async () => {
+    try {
+      await mongoose.connection.db.admin().ping();
+      console.log("✅ MongoDB connection verified - health check passed");
+    } catch (err) {
+      console.error("❌ MongoDB connection health check failed:", err);
+    }
+  }, 5000);
+})
 .catch((error) => console.error("MongoDB connection error:", error));
+
+// Monitor MongoDB connection events
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.warn('⚠️ MongoDB disconnected - attempting to reconnect...');
+});
+
+mongoose.connection.on('reconnected', () => {
+  console.log('✅ MongoDB reconnected');
+});
 
 // -------------------- API Routes --------------------
 
