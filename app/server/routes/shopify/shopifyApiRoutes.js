@@ -1116,13 +1116,22 @@ router.get("/callback", async (req, res) => {
       .map(key => `${key}=${req.query[key]}`)
       .join('&');
 
+    console.log(`🔍 HMAC Verification Debug:`);
+    console.log(`   Message to hash: ${message}`);
+    console.log(`   Client Secret: ${process.env.SHOPIFY_CLIENT_SECRET ? process.env.SHOPIFY_CLIENT_SECRET.substring(0, 10) + '...' : 'MISSING'}`);
+    console.log(`   Received HMAC: ${hmac}`);
+
     const expectedHmac = crypto
       .createHmac('sha256', process.env.SHOPIFY_CLIENT_SECRET)
       .update(message)
       .digest('hex');
 
+    console.log(`   Expected HMAC: ${expectedHmac}`);
+    console.log(`   HMAC Match: ${hmac === expectedHmac}`);
+
     if (hmac !== expectedHmac) {
       console.error("❌ HMAC verification failed for shop:", normalizedShop);
+      console.error("   This usually means the request didn't come from Shopify or there's a configuration issue.");
       return res.status(400).send("Security verification failed. Please try again.");
     }
 
