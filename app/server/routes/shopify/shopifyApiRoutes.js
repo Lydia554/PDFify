@@ -1071,6 +1071,19 @@ router.get("/install", (req, res) => {
 });
 
 /**
+ * Test endpoint to verify callback route is accessible
+ * GET /api/shopify/test-callback
+ */
+router.get("/test-callback", (req, res) => {
+  console.log("🧪 TEST CALLBACK ROUTE HIT!");
+  res.json({
+    success: true,
+    message: "Callback route is accessible!",
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
  * OAuth Callback - Handles the callback after merchant approves the app
  * GET /api/shopify/callback?shop=...&code=...&hmac=...&state=...
  */
