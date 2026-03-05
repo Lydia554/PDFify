@@ -1078,7 +1078,7 @@ router.get("/callback", async (req, res) => {
   const { shop, code, hmac, state } = req.query;
 
   console.log("🔐========================================");
-  console.log("🔐 OAUTH CALLBACK RECEIVED");
+  console.log("🔐 OAUTH CALLBACK RECEIVED - ROUTE HIT!");
   console.log("🔐========================================");
   console.log(`📦 Shop: ${shop}`);
   console.log(`🔑 Has Code: ${!!code}`);
