@@ -118,46 +118,24 @@ router.post(
 );
 
     const shopDomain = (req.headers["x-shopify-shop-domain"] || parsedPayload.shopDomain)?.trim().toLowerCase();
-    console.log(`⚖️ [GDPR] Shop: ${shopDomain}`);
-
-    console.log(`⚖️ [GDPR] Responding: 200 OK`);
-    res.status(200).send("OK");
 
     try {
-      // Route to appropriate handler based on topic
       if (topic === "customers/data_request") {
-        // Since we do NOT store customer data, there's nothing to return
-        // Customer data is processed in real-time and not persisted
-        console.log(`📋 [GDPR/CUSTOMERS_DATA_REQUEST] No customer data stored - processed in real-time only`);
+        // No customer data stored
       }
       else if (topic === "customers/redact") {
-        // Since we do NOT store customer data, there's nothing to delete
-        // Customer data is processed in real-time and already deleted from memory after invoice generation
-        console.log(`🗑️ [GDPR/CUSTOMERS_REDACT] No customer data stored - nothing to delete`);
+        // No customer data stored
       }
       else if (topic === "shop/redact") {
         // Delete all merchant data from our database
-        const shopConfigDelete = await ShopConfig.findOneAndDelete({ shopDomain });
-        const userDelete = await User.findOneAndDelete({ connectedShopDomain: shopDomain });
-
-        if (shopConfigDelete) {
-          console.log(`✅ [GDPR/SHOP_REDACT] Deleted ShopConfig for ${shopDomain}`);
-        }
-        if (userDelete) {
-          console.log(`✅ [GDPR/SHOP_REDACT] Deleted User record for ${shopDomain}`);
-        }
-
-        if (!shopConfigDelete && !userDelete) {
-          console.log(`ℹ️ [GDPR/SHOP_REDACT] No data found for ${shopDomain}`);
-        }
-      }
-      else {
-        console.log(`⚠️ [GDPR] Unknown compliance topic: ${topic}`);
+        await ShopConfig.findOneAndDelete({ shopDomain });
+        await User.findOneAndDelete({ connectedShopDomain: shopDomain });
       }
     } catch (err) {
-      console.error(`❌ [GDPR] Error:`, err);
+      console.error(`[GDPR ${topic}] Error:`, err);
     }
-    console.log(`===================== [GDPR/${topic}] END =====================\n`);
+
+    res.status(200).send("OK");
   }
 );
 
