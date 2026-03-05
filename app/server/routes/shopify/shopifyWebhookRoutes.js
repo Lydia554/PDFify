@@ -34,15 +34,6 @@ function verifyShopifyWebhook(req, res, next) {
 
   next();
 }
-    console.error(`   Returning: 401 Unauthorized`);
-    console.log(`===================== WEBHOOK REQUEST END (401) =====================\n`);
-    return res.status(401).send("Unauthorized");
-  }
-
-  console.log(`✅ [Webhook] HMAC VERIFIED SUCCESSFULLY`);
-  console.log(`===================== WEBHOOK REQUEST START (Proceeding to handler) =====================\n`);
-  next();
-}
 
 // Webhook for new orders
 router.post(
