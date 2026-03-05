@@ -1188,7 +1188,10 @@
           console.log('[PDFify] Testing shop connection...');
           const testRes = await api.get('/shopify/test-connection');
           console.log('[PDFify] Connection test response:', testRes.data);
-          isInstalled = testRes.data.success && testRes.data.hasAccessToken;
+          // For embedded apps, success means shop is installed (using session tokens)
+          // hasAccessToken is only true for OAuth flow with permanent tokens
+          isInstalled = testRes.data.success || testRes.data.isInstalled;
+          console.log('[PDFify] isInstalled:', isInstalled, '(hasAccessToken:', testRes.data.hasAccessToken, ')');
         } catch (testErr) {
           console.error('[PDFify] Shop connection test failed:', testErr);
           console.error('[PDFify] Error status:', testErr.response?.status);
