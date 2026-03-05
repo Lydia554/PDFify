@@ -779,22 +779,44 @@ router.get("/config", verifyShopifySession, async (req, res) => {
   const shopDomain = req.shopDomain;
 
   try {
-    const shopConfig = req.shop; // Already fetched by middleware (may be null for new shops)
+    let shopConfig = req.shop; // Already fetched by middleware (may be null for new shops)
+    const normalizedShop = shopDomain.toLowerCase();
 
-    // If shop not in database, return error (needs installation)
+    // AUTO-CREATE ShopConfig for new installations (embedded app flow)
     if (!shopConfig) {
-      return res.status(404).json({
-        error: "Shop not found. Please install the app first."
-      });
+      console.log("🆕 Auto-creating ShopConfig in /config endpoint for:", normalizedShop);
+
+      try {
+        shopConfig = new ShopConfig({
+          shopDomain: normalizedShop,
+          isActive: true,
+          connectedAt: new Date(),
+        });
+
+        await shopConfig.save();
+        console.log(`✅ ShopConfig created in /config: ${shopConfig._id}`);
+      } catch (createErr) {
+        console.error("❌ Failed to create ShopConfig in /config:", createErr);
+
+        // Check race condition
+        const retryFind = await ShopConfig.findOne({ shopDomain: normalizedShop });
+        if (retryFind) {
+          shopConfig = retryFind;
+        } else {
+          throw createErr;
+        }
+      }
     }
 
-    // Fetch shop details to get owner email
+    // Fetch shop details to get owner email (only if we have access token)
     let shopEmail = null;
-    try {
-      const shopDetails = await getShopDetails(req.shopDomain, shopConfig.shopifyAccessToken);
-      shopEmail = shopDetails?.email;
-    } catch (err) {
-      console.warn("Could not fetch shop email:", err.message);
+    if (shopConfig.shopifyAccessToken) {
+      try {
+        const shopDetails = await getShopDetails(req.shopDomain, shopConfig.shopifyAccessToken);
+        shopEmail = shopDetails?.email;
+      } catch (err) {
+        console.warn("Could not fetch shop email:", err.message);
+      }
     }
 
     res.json({
@@ -1486,19 +1508,63 @@ router.get("/debug", async (req, res) => {
  */
 router.get("/test-connection", verifyShopifySession, async (req, res) => {
   try {
+    console.log("🔍 Test connection called for shop:", req.shopDomain);
+    console.log("🔍 Shop config exists:", !!req.shop);
+
     // shopDomain and shop are extracted from session token by verifyShopifySession middleware
-    // shop may be null for new installations
-    const hasAccessToken = req.shop && !!req.shop.shopifyAccessToken;
+    let shopConfig = req.shop;
+    const normalizedShop = req.shopDomain.toLowerCase();
+
+    // AUTO-CREATE ShopConfig for new installations (embedded app flow)
+    if (!shopConfig) {
+      console.log("🆕 New installation detected - creating ShopConfig...");
+
+      try {
+        // Create new ShopConfig with session-based access
+        shopConfig = new ShopConfig({
+          shopDomain: normalizedShop,
+          isActive: true,
+          connectedAt: new Date(),
+          // Note: We don't have the permanent access token yet in embedded flow
+          // The app will work with session-based tokens
+        });
+
+        await shopConfig.save();
+
+        console.log(`✅ Auto-created ShopConfig for: ${normalizedShop}`);
+        console.log(`   Document ID: ${shopConfig._id}`);
+        console.log(`   Active: ${shopConfig.isActive}`);
+      } catch (createErr) {
+        console.error("❌ Failed to create ShopConfig:", createErr);
+
+        // Check if it was a race condition (another request created it)
+        const retryFind = await ShopConfig.findOne({ shopDomain: normalizedShop });
+        if (retryFind) {
+          console.log("✅ ShopConfig found after retry (race condition)");
+          shopConfig = retryFind;
+        } else {
+          throw createErr;
+        }
+      }
+    } else {
+      console.log("✅ Existing ShopConfig found");
+      console.log(`   Has access token: ${!!shopConfig.shopifyAccessToken}`);
+      console.log(`   Active: ${shopConfig.isActive}`);
+    }
+
+    const hasAccessToken = shopConfig && !!shopConfig.shopifyAccessToken;
 
     return res.json({
       success: true,
       shop: req.shopDomain,
-      isActive: req.shop?.isActive || false,
+      isActive: shopConfig?.isActive || false,
       hasAccessToken: hasAccessToken,
-      connectedAt: req.shop?.connectedAt,
+      connectedAt: shopConfig?.connectedAt,
       message: hasAccessToken
         ? "Shop is properly connected!"
-        : "Shop found but no access token. Please reinstall the app."
+        : shopConfig
+        ? "Shop configured with session-based access."
+        : "Shop configuration created successfully!"
     });
   } catch (error) {
     console.error("❌ Connection test error:", error);
