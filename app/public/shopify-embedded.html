@@ -6,8 +6,8 @@
   <title>PDFify Pro - Invoice Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <!-- Shopify App Bridge - Using unpkg CDN (latest version) -->
-  <script src="https://unpkg.com/@shopify/app-bridge@3.7.8/index.js"></script>
+  <!-- Shopify App Bridge - Official Shopify CDN -->
+  <script src="https://cdn.shopify.com/shopifycloud/app-bridge/latest/index.js"></script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
@@ -942,11 +942,15 @@
     // Wait for DOM to be ready before initializing App Bridge
     document.addEventListener('DOMContentLoaded', function() {
       // Check if App Bridge is loaded (try multiple possible global names)
-      const appBridge = window['app-bridge'] || window['appbridge'] || window['ShopifyApp'];
-      const createApp = appBridge?.default || appBridge;
+      // Shopify's CDN creates 'app' global, older versions use different names
+      const createApp = window.app?.createApp ||
+                        window['app-bridge']?.default ||
+                        window['appbridge']?.default ||
+                        window['ShopifyApp']?.default;
 
       if (!createApp || typeof createApp !== 'function') {
-        console.error('App Bridge failed to load - using fallback token from URL');
+        console.error('❌ App Bridge failed to load - using fallback token from URL');
+        console.log('   Available globals:', Object.keys(window).filter(k => k.includes('app') || k.includes('App')));
         // Use fallback token from URL
         if (fallbackToken) {
           window.getSessionToken = async function() {
@@ -968,7 +972,7 @@
         return;
       }
 
-      console.log('[PDFify] App Bridge loaded successfully!');
+      console.log('✅ [PDFify] App Bridge loaded successfully!');
 
       // Initialize Shopify App Bridge
       const app = createApp({
@@ -977,10 +981,18 @@
         host: host,
       });
 
-      // Create session token fetcher
-      const SessionToken = appBridge.SessionToken || appBridge.actions?.SessionToken;
+      // Create session token fetcher - detect based on global name
+      let SessionToken;
+      if (window.app?.actions) {
+        SessionToken = window.app.actions.SessionToken;
+      } else if (window['app-bridge']?.SessionToken) {
+        SessionToken = window['app-bridge'].SessionToken;
+      } else if (window['appbridge']?.actions?.SessionToken) {
+        SessionToken = window['appbridge'].actions.SessionToken;
+      }
+
       if (!SessionToken) {
-        console.error('[PDFify] SessionToken not available in App Bridge');
+        console.error('❌ [PDFify] SessionToken not available in App Bridge');
         // Fall back to URL token
         window.getSessionToken = async function() {
           return fallbackToken;
