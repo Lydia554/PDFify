@@ -21,6 +21,7 @@ const ShopConfigSchema = new mongoose.Schema({
 
   // Branding settings
   primaryColor: { type: String, default: "#00a6cc" },
+  invoiceLanguage: { type: String, default: "en" },
   companyName: { type: String, default: "" },
   bankName: { type: String, default: "" },
 
