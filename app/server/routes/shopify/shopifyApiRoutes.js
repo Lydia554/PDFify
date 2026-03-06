@@ -1690,6 +1690,9 @@ router.post("/branding", verifyShopifySession, async (req, res) => {
     const { primaryColor, invoiceLanguage, companyName, bankName, iban, bic } = req.body;
     // shopDomain is extracted from session token by verifyShopifySession middleware
 
+    console.log('🎨 [BRANDING] Saving branding for shop:', req.shopDomain);
+    console.log('   Received:', { primaryColor, invoiceLanguage, companyName });
+
     // Validate language is one of the supported locales
     const validLanguages = ['en', 'de', 'sl'];
     const validatedLanguage = validLanguages.includes(invoiceLanguage) ? invoiceLanguage : 'en';
@@ -1707,6 +1710,8 @@ router.post("/branding", verifyShopifySession, async (req, res) => {
     if (iban && iban.trim()) updateData.iban = iban;
     if (bic && bic.trim()) updateData.bic = bic;
 
+    console.log('   Update data:', updateData);
+
     const shopConfig = await ShopConfig.findOneAndUpdate(
       { shopDomain: req.shopDomain },
       updateData,
@@ -1714,8 +1719,15 @@ router.post("/branding", verifyShopifySession, async (req, res) => {
     );
 
     if (!shopConfig) {
+      console.error('❌ [BRANDING] Shop not found:', req.shopDomain);
       return res.status(404).json({ error: "Shop not found" });
     }
+
+    console.log('✅ [BRANDING] Saved:', {
+      primaryColor: shopConfig.primaryColor,
+      invoiceLanguage: shopConfig.invoiceLanguage,
+      companyName: shopConfig.companyName
+    });
 
     return res.json({
       message: "Branding saved successfully",
