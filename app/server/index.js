@@ -9,7 +9,20 @@ const dotenv = require("dotenv");
 const fs = require("fs");
 
 // Load .env from root directory
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Check NODE_ENV first, then default to .env
+const nodeEnv = process.env.NODE_ENV || 'development';
+console.log(`🔧 [CONFIG] Loading environment: ${nodeEnv}`);
+
+// Load the appropriate env file
+let envPath;
+if (nodeEnv === 'development') {
+  envPath = path.join(__dirname, '../../.env.development');
+} else {
+  envPath = path.join(__dirname, '../../.env');
+}
+
+dotenv.config({ path: envPath });
+console.log(`🔧 [CONFIG] Loaded env file: ${envPath}`);
 
 if (!fs.existsSync(process.env.PDFA_ICC_PROFILE)) {
   console.warn("[WARN] ICC profile not found at path:", process.env.PDFA_ICC_PROFILE);
