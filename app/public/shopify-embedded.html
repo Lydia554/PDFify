@@ -1392,7 +1392,10 @@
         select.innerHTML = '<option value="">Loading orders...</option>';
 
         const res = await api.get('/shopify/orders-public');
+        console.log('[DEBUG] Orders API response:', res.data);
         const orders = res.data.orders || [];
+        console.log('[DEBUG] Orders array:', orders);
+        console.log('[DEBUG] Orders length:', orders.length);
 
         orders.forEach(order => {
           const option = document.createElement('option');
