@@ -1800,16 +1800,7 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
       console.log(`📦 Has access token: ${!!shopConfig.shopifyAccessToken}`);
     }
 
-    // Check if we have a permanent access token
-    if (!shopConfig || !shopConfig.shopifyAccessToken) {
-      console.error(`❌ Shop not connected or no access token: ${normalizedShop}`);
-      return res.status(401).json({
-        error: "Shop not connected. Please reinstall the app.",
-        needsReinstall: true
-      });
-    }
-
-    // Fetch orders from Shopify
+    // Fetch orders from Shopify using session token
     let shopifyOrdersUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=250&status=any&fields=id,name,created_at,total_price,currency`;
 
     const params = [];
@@ -1818,10 +1809,11 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
     console.log(`📦 Calling Shopify API: ${shopifyOrdersUrl}`);
+    console.log(`📦 Using session token for Shopify API call`);
 
-    // Use permanent access token for Admin API calls
+    // Use session token for Admin API calls (embedded app pattern)
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
+      headers: { "Authorization": `Bearer ${req.sessionToken}` },
     });
 
     console.log(`✅ Orders fetched successfully: ${response.data.orders?.length || 0} orders`);
@@ -1869,8 +1861,31 @@ router.post("/invoice-public", verifyShopifySession, async (req, res) => {
 
     console.log(`🧾 [invoice-public] Request for shop: ${normalizedShop}, orderId: ${orderId}`);
 
-    // Verify shop is connected via OAuth
-    const shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+    // Get or create shopConfig (embedded app flow - don't require OAuth)
+    let shopConfig = await ShopConfig.findOne({ shopDomain: normalizedShop });
+
+    // Auto-create shopConfig if it doesn't exist
+    if (!shopConfig) {
+      console.log("🆕 [invoice-public] Auto-creating ShopConfig...");
+      try {
+        shopConfig = new ShopConfig({
+          shopDomain: normalizedShop,
+          isActive: true,
+          connectedAt: new Date(),
+        });
+        await shopConfig.save();
+        console.log(`✅ [invoice-public] ShopConfig created for: ${normalizedShop}`);
+      } catch (createErr) {
+        console.error("❌ Failed to create ShopConfig:", createErr);
+        // Check race condition
+        const retryFind = await ShopConfig.findOne({ shopDomain: normalizedShop });
+        if (retryFind) {
+          shopConfig = retryFind;
+        } else {
+          throw createErr;
+        }
+      }
+    }
 
     console.log(`🧾 [invoice-public] ShopConfig found: ${!!shopConfig}`);
     console.log(`🧾 [invoice-public] Using session token for API call: ${!!req.sessionToken}`);
@@ -2047,8 +2062,30 @@ router.post("/invoices/zip-public", verifyShopifySession, async (req, res) => {
     // shopDomain is extracted from session token by verifyShopifySession middleware
     const normalizedShop = req.shopDomain;
 
-    // shopConfig is already fetched by verifyShopifySession middleware
-    const shopConfig = req.shop;
+    // Get or create shopConfig (embedded app flow - don't require OAuth)
+    let shopConfig = req.shop;
+
+    // Auto-create shopConfig if it doesn't exist
+    if (!shopConfig) {
+      console.log("🆕 [ZIP] Auto-creating ShopConfig...");
+      try {
+        shopConfig = new ShopConfig({
+          shopDomain: normalizedShop,
+          isActive: true,
+          connectedAt: new Date(),
+        });
+        await shopConfig.save();
+        console.log(`✅ [ZIP] ShopConfig created for: ${normalizedShop}`);
+      } catch (createErr) {
+        console.error("❌ Failed to create ShopConfig:", createErr);
+        const retryFind = await ShopConfig.findOne({ shopDomain: normalizedShop });
+        if (retryFind) {
+          shopConfig = retryFind;
+        } else {
+          throw createErr;
+        }
+      }
+    }
 
     // Check if there's an associated user with a plan for usage limits
     const user = await User.findOne({ connectedShopDomain: normalizedShop });
