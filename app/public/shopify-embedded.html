@@ -1400,8 +1400,7 @@
         console.log('[DEBUG] First order:', orders[0]);
 
         // Clear existing options first
-        const select = document.getElementById('orderSelector');
-        select.innerHTML = '<option value="">Loading orders...</option>';
+        select.innerHTML = '';
 
         orders.forEach(order => {
           const option = document.createElement('option');
@@ -1428,7 +1427,9 @@
       } catch (err) {
         console.error('Failed to load orders:', err);
         const select = document.getElementById('orderSelector');
-        select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
+        if (select) {
+          select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
+        }
       }
     }
 
