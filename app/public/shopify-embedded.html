@@ -1393,11 +1393,43 @@
 
         const res = await api.get('/shopify/orders-public');
         console.log('[DEBUG] Orders API response:', res.data);
+        console.log('[DEBUG] Orders API response keys:', Object.keys(res.data));
         const orders = res.data.orders || [];
         console.log('[DEBUG] Orders array:', orders);
         console.log('[DEBUG] Orders length:', orders.length);
+        console.log('[DEBUG] First order:', orders[0]);
+
+        // Clear existing options first
+        const select = document.getElementById('orderSelector');
+        select.innerHTML = '<option value="">Loading orders...</option>';
 
         orders.forEach(order => {
+          const option = document.createElement('option');
+          option.value = order.id;
+          option.textContent = `${order.name} - ${order.total_price} ${order.currency || 'USD'}`;
+          select.appendChild(option);
+        console.log('[DEBUG] Adding order to dropdown:', order.name, order.id);
+        });
+
+        // Log final dropdown state
+        console.log('[DEBUG] Dropdown has', select.options.length, 'options:');
+        Array.from(select.options).forEach((opt, idx) => {
+          console.log(`  Option ${idx}: value="${opt.value}", text="${opt.textContent}"`);
+        });
+
+        if (orders.length === 0) {
+          const option = document.createElement('option');
+          option.textContent = 'No orders found';
+          select.appendChild(option);
+          console.log('[DEBUG] No orders found - added "No orders found" option');
+        } else {
+          console.log(`[DEBUG] Found ${orders.length} orders - showing in dropdown`);
+        }
+      } catch (err) {
+        console.error('Failed to load orders:', err);
+        const select = document.getElementById('orderSelector');
+        select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
+      }
           const option = document.createElement('option');
           option.value = order.id;
           option.textContent = `${order.name} - ${order.total_price} ${order.currency || 'USD'}`;
