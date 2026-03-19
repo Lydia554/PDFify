@@ -1810,11 +1810,19 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
     console.log(`📦 Calling Shopify API: ${shopifyOrdersUrl}`);
-    console.log(`📦 Using session token for Shopify API call`);
 
-    // Use session token for Admin API calls (embedded app pattern)
+    // Use permanent access token if available, otherwise fall back to session token
+    // Session tokens only work for YOUR API, not Shopify's Admin API
+    const accessToken = shopConfig.shopifyAccessToken || req.sessionToken;
+    const authHeader = accessToken === req.sessionToken
+      ? `Bearer ${accessToken}`  // Session token format for your API
+      : accessToken;  // Raw token format for Shopify Admin API
+    const authHeaderKey = accessToken === req.sessionToken ? "Authorization" : "X-Shopify-Access-Token";
+
+    console.log(`📦 Using ${accessToken === req.sessionToken ? 'session token' : 'permanent access token'} for Shopify API call`);
+
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { "Authorization": `Bearer ${req.sessionToken}` },
+      headers: { [authHeaderKey]: authHeader },
     });
 
     console.log(`✅ Orders fetched successfully: ${response.data.orders?.length || 0} orders`);
