@@ -65,9 +65,9 @@ async function verifyShopifySession(req, res, next) {
 
     console.log('📋 [SESSION] Token header algorithm:', header.alg);
 
-    // Verify algorithm is RS256 (Shopify uses RS256 for session tokens)
-    if (header.alg !== 'RS256') {
-      console.log('❌ [SESSION] Invalid algorithm, expected RS256, got:', header.alg);
+    // Verify algorithm is HS256 (Shopify uses HS256 for session tokens)
+    if (header.alg !== 'HS256') {
+      console.log('❌ [SESSION] Invalid algorithm, expected HS256, got:', header.alg);
       return res.status(401).json({
         success: false,
         error: 'Invalid token algorithm'
