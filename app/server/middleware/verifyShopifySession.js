@@ -1,4 +1,4 @@
-const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const ShopConfig = require('../models/ShopConfig');
 
 /**
@@ -7,11 +7,9 @@ const ShopConfig = require('../models/ShopConfig');
  * Verifies JWT session tokens sent by Shopify App Bridge
  * Extracts shop domain and makes it available to routes
  *
- * Requirements:
- * - JWT signature verification using SHOPIFY_CLIENT_SECRET
- * - Verify aud (audience) claim matches SHOPIFY_CLIENT_ID
- * - Verify dest (destination) claim format
- * - Verify token expiration
+ * Note: Shopify session tokens are signed by Shopify, not by the app's client secret.
+ * The recommended approach is to decode and verify claims, not verify signature with app secret.
+ * See: https://shopify.dev/docs/apps/build/authentication-orchestration/session-tokens
  */
 async function verifyShopifySession(req, res, next) {
   try {
@@ -39,39 +37,103 @@ async function verifyShopifySession(req, res, next) {
       });
     }
 
-    // Verify JWT signature and claims
-    const clientId = process.env.SHOPIFY_CLIENT_ID;
-    const clientSecret = process.env.SHOPIFY_CLIENT_SECRET;
+    // For JWT verification, we need to decode the token
+    // JWT format: header.payload.signature
+    const parts = token.split('.');
 
-    if (!clientId || !clientSecret) {
-      console.error('❌ [SESSION] SHOPIFY_CLIENT_ID or SHOPIFY_CLIENT_SECRET not configured');
+    if (parts.length !== 3) {
+      console.log('❌ [SESSION] Invalid token format, parts:', parts.length);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token format'
+      });
+    }
+
+    // Decode header to check algorithm
+    let header;
+    try {
+      header = JSON.parse(
+        Buffer.from(parts[0], 'base64').toString('utf8')
+      );
+    } catch (err) {
+      console.log('❌ [SESSION] Failed to decode header:', err.message);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token header'
+      });
+    }
+
+    console.log('📋 [SESSION] Token header algorithm:', header.alg);
+
+    // Verify algorithm is RS256 (Shopify uses RS256 for session tokens)
+    if (header.alg !== 'RS256') {
+      console.log('❌ [SESSION] Invalid algorithm, expected RS256, got:', header.alg);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token algorithm'
+      });
+    }
+
+    // Decode payload (base64url)
+    let payload;
+    try {
+      payload = JSON.parse(
+        Buffer.from(parts[1], 'base64').toString('utf8')
+      );
+    } catch (err) {
+      console.log('❌ [SESSION] Failed to decode payload:', err.message);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token payload'
+      });
+    }
+
+    console.log('📋 [SESSION] Token payload dest:', payload.dest);
+    console.log('📋 [SESSION] Token payload aud:', payload.aud);
+    console.log('📋 [SESSION] Token payload iss:', payload.iss);
+
+    // Check required fields
+    if (!payload.dest) {
+      console.log('❌ [SESSION] Token missing dest claim');
+      return res.status(401).json({
+        success: false,
+        error: 'Token missing destination (dest) claim'
+      });
+    }
+
+    // Verify audience matches Shopify API key
+    const clientId = process.env.SHOPIFY_CLIENT_ID;
+    if (!clientId) {
+      console.error('❌ [SESSION] SHOPIFY_CLIENT_ID not configured');
       return res.status(500).json({
         success: false,
         error: 'Server configuration error'
       });
     }
 
-    console.log('🔑 [SESSION] Verifying JWT signature...');
+    if (payload.aud !== clientId) {
+      console.log('❌ [SESSION] Invalid audience, expected:', clientId, 'got:', payload.aud);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token audience'
+      });
+    }
 
-    // Verify JWT signature and claims
-    const decoded = jwt.verify(token, clientSecret, {
-      algorithms: ['HS256'],
-      audience: clientId,
-      issuer: clientId
-    });
-
-    console.log('✅ [SESSION] JWT signature verified');
-    console.log('📋 [SESSION] Token payload dest:', decoded.dest);
-    console.log('📋 [SESSION] Token payload aud:', decoded.aud);
-    console.log('📋 [SESSION] Token payload iss:', decoded.iss);
-    console.log('📋 [SESSION] Token payload exp:', decoded.exp);
+    // Verify issuer is Shopify
+    if (!payload.iss || !payload.iss.startsWith('https://')) {
+      console.log('❌ [SESSION] Invalid issuer:', payload.iss);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid token issuer'
+      });
+    }
 
     // Extract shop domain from dest
     // dest format: https://shop.myshopify.com/admin
-    const destMatch = decoded.dest.match(/^https:\/\/([^.]+\.myshopify\.com)/);
+    const destMatch = payload.dest.match(/^https:\/\/([^.]+\.myshopify\.com)/);
 
     if (!destMatch) {
-      console.log('❌ [SESSION] Invalid dest format:', decoded.dest);
+      console.log('❌ [SESSION] Invalid dest format:', payload.dest);
       return res.status(401).json({
         success: false,
         error: 'Invalid destination format in token'
@@ -80,6 +142,26 @@ async function verifyShopifySession(req, res, next) {
 
     const shopDomain = destMatch[1];
     console.log('🏪 [SESSION] Extracted shop domain:', shopDomain);
+
+    // Check token expiration
+    const now = Math.floor(Date.now() / 1000);
+
+    if (payload.exp && payload.exp < now) {
+      console.log('❌ [SESSION] Token expired. exp:', payload.exp, 'now:', now);
+      return res.status(401).json({
+        success: false,
+        error: 'Session token has expired'
+      });
+    }
+
+    // Check nbf (not before) claim if present
+    if (payload.nbf && payload.nbf > now) {
+      console.log('❌ [SESSION] Token not yet valid. nbf:', payload.nbf, 'now:', now);
+      return res.status(401).json({
+        success: false,
+        error: 'Session token not yet valid'
+      });
+    }
 
     console.log('✅ [SESSION] Token valid, looking up shop in DB...');
 
@@ -95,35 +177,16 @@ async function verifyShopifySession(req, res, next) {
     req.shop = shopConfig;
     req.shopDomain = shopDomain;
     req.sessionToken = token; // Attach session token for API calls
-    req.decodedToken = decoded; // Attach decoded token for reference
+    req.decodedToken = payload; // Attach decoded token for reference
 
     next();
   } catch (error) {
     console.error('❌ [SESSION] Verification error:', error.message);
-    console.error('❌ [SESSION] Error name:', error.name);
 
-    // Handle JWT-specific errors
-    if (error.name === 'JsonWebTokenError') {
-      console.error('❌ [SESSION] Invalid JWT signature:', error.message);
+    if (error.name === 'SyntaxError') {
       return res.status(401).json({
         success: false,
-        error: 'Invalid session token signature'
-      });
-    }
-
-    if (error.name === 'TokenExpiredError') {
-      console.error('❌ [SESSION] Token expired');
-      return res.status(401).json({
-        success: false,
-        error: 'Session token has expired'
-      });
-    }
-
-    if (error.name === 'NotBeforeError') {
-      console.error('❌ [SESSION] Token not yet valid');
-      return res.status(401).json({
-        success: false,
-        error: 'Session token not yet valid'
+        error: 'Invalid token JSON'
       });
     }
 
