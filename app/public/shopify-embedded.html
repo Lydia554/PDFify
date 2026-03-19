@@ -1430,22 +1430,6 @@
         const select = document.getElementById('orderSelector');
         select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
       }
-          const option = document.createElement('option');
-          option.value = order.id;
-          option.textContent = `${order.name} - ${order.total_price} ${order.currency || 'USD'}`;
-          select.appendChild(option);
-        });
-
-        if (orders.length === 0) {
-          const option = document.createElement('option');
-          option.textContent = 'No orders found';
-          select.appendChild(option);
-        }
-      } catch (err) {
-        console.error('Failed to load orders:', err);
-        const select = document.getElementById('orderSelector');
-        select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
-      }
     }
 
     // Test connection
