@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 
 const ShopConfig = require("../../models/ShopConfig");
 const User = require("../../models/User");
