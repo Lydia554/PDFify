@@ -1967,6 +1967,7 @@ router.post("/invoice-public", verifyShopifySession, async (req, res) => {
 
     // Add ZUGFeRD XML ONLY for paying customers (premium/pro)
     if (isPayingCustomer) {
+    if (isPayingCustomer) {
       try {
         console.log(`🧾 [Shopify Public] Generating ZUGFeRD XML for ${userPlan} user...`);
         const zugferdData = {
