@@ -1471,6 +1471,33 @@
         }
       } catch (err) {
         console.error('Failed to load orders:', err);
+
+        // Check if error is due to missing OAuth (needsOAuth flag in response)
+        if (err.response?.data?.needsOAuth) {
+          console.log('[PDFify] OAuth setup required - showing OAuth completion button');
+          const oauthBtn = document.getElementById('completeOauthBtn');
+          if (oauthBtn) {
+            oauthBtn.classList.remove('hidden');
+          }
+
+          // Add warning message
+          const orderSection = document.querySelector('#dashboard-section');
+          if (orderSection && !document.getElementById('oauth-warning')) {
+            const warningDiv = document.createElement('div');
+            warningDiv.id = 'oauth-warning';
+            warningDiv.style.cssText = 'background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #fde047; font-size: 13px;';
+            warningDiv.innerHTML = '⚠️ <strong>OAuth Setup Required:</strong> Your shop is connected but needs to complete OAuth to fetch orders. Click the "Complete OAuth Setup" button below.';
+            orderSection.insertBefore(warningDiv, orderSection.firstChild);
+          }
+
+          const select = document.getElementById('orderSelector');
+          if (select) {
+            select.innerHTML = '<option value="">OAuth setup required to fetch orders</option>';
+          }
+          return;
+        }
+
+        // Generic error handling
         const select = document.getElementById('orderSelector');
         if (select) {
           select.innerHTML = '<option value="">Failed to load orders. Please try again.</option>';
@@ -1586,6 +1613,25 @@
           try {
             const errorJson = JSON.parse(text);
             errorDetails = errorJson.error || errorJson.details || text;
+
+            // Check if OAuth is required
+            if (errorJson.needsOAuth) {
+              console.log('[PDFify] OAuth setup required - showing OAuth completion button');
+              const oauthBtn = document.getElementById('completeOauthBtn');
+              if (oauthBtn) {
+                oauthBtn.classList.remove('hidden');
+              }
+
+              // Add warning message
+              const orderSection = document.querySelector('#dashboard-section');
+              if (orderSection && !document.getElementById('oauth-warning')) {
+                const warningDiv = document.createElement('div');
+                warningDiv.id = 'oauth-warning';
+                warningDiv.style.cssText = 'background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #fde047; font-size: 13px;';
+                warningDiv.innerHTML = '⚠️ <strong>OAuth Setup Required:</strong> Your shop is connected but needs to complete OAuth to generate invoices. Click the "Complete OAuth Setup" button below.';
+                orderSection.insertBefore(warningDiv, orderSection.firstChild);
+              }
+            }
           } catch {
             errorDetails = text.substring(0, 200);
           }
@@ -1665,6 +1711,25 @@
           try {
             const errorJson = JSON.parse(text);
             errorDetails = errorJson.error || errorJson.details || text;
+
+            // Check if OAuth is required
+            if (errorJson.needsOAuth) {
+              console.log('[PDFify] OAuth setup required - showing OAuth completion button');
+              const oauthBtn = document.getElementById('completeOauthBtn');
+              if (oauthBtn) {
+                oauthBtn.classList.remove('hidden');
+              }
+
+              // Add warning message
+              const orderSection = document.querySelector('#dashboard-section');
+              if (orderSection && !document.getElementById('oauth-warning')) {
+                const warningDiv = document.createElement('div');
+                warningDiv.id = 'oauth-warning';
+                warningDiv.style.cssText = 'background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; color: #fde047; font-size: 13px;';
+                warningDiv.innerHTML = '⚠️ <strong>OAuth Setup Required:</strong> Your shop is connected but needs to complete OAuth to generate invoices. Click the "Complete OAuth Setup" button below.';
+                orderSection.insertBefore(warningDiv, orderSection.firstChild);
+              }
+            }
           } catch {
             errorDetails = text.substring(0, 300);
           }

@@ -1801,7 +1801,25 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
       console.log(`📦 Has access token: ${!!shopConfig.shopifyAccessToken}`);
     }
 
-    // Fetch orders from Shopify using session token
+    // Permanent access token is REQUIRED for Shopify Admin API
+    // Session tokens only work for YOUR API (pdfify.pro), NOT Shopify's Admin API
+    if (!shopConfig || !shopConfig.shopifyAccessToken) {
+      console.error(`❌ No permanent access token for ${normalizedShop}`);
+      return res.status(401).json({
+        error: "Shopify OAuth setup incomplete",
+        details: "Please complete OAuth setup to access your orders",
+        needsOAuth: true,
+        debug: {
+          shop: normalizedShop,
+          hasShopConfig: !!shopConfig,
+          hasSessionToken: !!req.sessionToken,
+          isActive: shopConfig?.isActive,
+          connectedAt: shopConfig?.connectedAt
+        }
+      });
+    }
+
+    // Fetch orders from Shopify using permanent access token
     let shopifyOrdersUrl = `https://${normalizedShop}/admin/api/2023-10/orders.json?limit=250&status=any&fields=id,name,created_at,total_price,currency`;
 
     const params = [];
@@ -1810,19 +1828,10 @@ router.get("/orders-public", verifyShopifySession, async (req, res) => {
     if (params.length) shopifyOrdersUrl += `&${params.join("&")}`;
 
     console.log(`📦 Calling Shopify API: ${shopifyOrdersUrl}`);
-
-    // Use permanent access token if available, otherwise fall back to session token
-    // Session tokens only work for YOUR API, not Shopify's Admin API
-    const accessToken = shopConfig.shopifyAccessToken || req.sessionToken;
-    const authHeader = accessToken === req.sessionToken
-      ? `Bearer ${accessToken}`  // Session token format for your API
-      : accessToken;  // Raw token format for Shopify Admin API
-    const authHeaderKey = accessToken === req.sessionToken ? "Authorization" : "X-Shopify-Access-Token";
-
-    console.log(`📦 Using ${accessToken === req.sessionToken ? 'session token' : 'permanent access token'} for Shopify API call`);
+    console.log(`📦 Using permanent access token for Shopify Admin API call`);
 
     const response = await axios.get(shopifyOrdersUrl, {
-      headers: { [authHeaderKey]: authHeader },
+      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
     });
 
     console.log(`✅ Orders fetched successfully: ${response.data.orders?.length || 0} orders`);
@@ -1899,14 +1908,20 @@ router.post("/invoice-public", verifyShopifySession, async (req, res) => {
     console.log(`🧾 [invoice-public] ShopConfig found: ${!!shopConfig}`);
     console.log(`🧾 [invoice-public] Using session token for API call: ${!!req.sessionToken}`);
 
-    // For embedded apps, use session token instead of permanent access token
-    if (!req.sessionToken) {
-      console.error(`❌ [invoice-public] No session token available: ${normalizedShop}`);
+    // For embedded apps, permanent access token is REQUIRED for Shopify Admin API
+    // Session tokens only work for YOUR API (pdfify.pro), NOT Shopify's Admin API
+    const hasPermanentToken = !!shopConfig.shopifyAccessToken;
+
+    if (!hasPermanentToken) {
+      console.error(`❌ [invoice-public] No permanent access token available: ${normalizedShop}`);
       return res.status(401).json({
-        error: "Session token not available. Please reload the app.",
+        error: "Shopify OAuth setup incomplete",
+        details: "Please complete OAuth setup to access your orders and generate invoices",
+        needsOAuth: true,
         debug: {
           shop: normalizedShop,
           hasShopConfig: !!shopConfig,
+          hasSessionToken: !!req.sessionToken,
           isActive: shopConfig?.isActive,
           connectedAt: shopConfig?.connectedAt
         }
@@ -1919,9 +1934,11 @@ router.post("/invoice-public", verifyShopifySession, async (req, res) => {
       actualOrderId = actualOrderId.split("/").pop();
     }
 
-    // Use session token (Authorization: Bearer) instead of permanent access token
+    console.log(`🧾 [invoice-public] Using permanent access token for Shopify Admin API call`);
+
+    // Use permanent access token for Shopify Admin API (X-Shopify-Access-Token header)
     const orderResp = await axios.get(`https://${normalizedShop}/admin/api/2023-10/orders/${actualOrderId}.json`, {
-      headers: { "Authorization": `Bearer ${req.sessionToken}` },
+      headers: { "X-Shopify-Access-Token": shopConfig.shopifyAccessToken },
     });
     const order = orderResp.data.order;
 
