@@ -986,13 +986,14 @@
       console.log('   createApp function:', typeof createApp);
 
       // Initialize Shopify App Bridge
+      // For embedded apps using session tokens, DO NOT pass apiKey
       const app = createApp({
-        apiKey: 'e07548c088f572af4bbf103e4dee46bb',
         shop: shop,
         host: host,
       });
 
       console.log('📱 [PDFify] App initialized:', app);
+      console.log('📱 [PDFify] App mode: Embedded (session tokens)');
 
       // Create session token fetcher - detect based on global name
       let SessionToken;
