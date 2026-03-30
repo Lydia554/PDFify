@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <!-- Shopify App Bridge - Official Shopify CDN -->
-  <script src="https://cdn.shopify.com/shopifycloud/app-bridge/latest/index.js"></script>
+  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'San Francisco', 'Segoe UI', Roboto, sans-serif;
@@ -942,19 +942,34 @@
       );
       console.log('🔍 [PDFify] Available app/shopify globals:', appGlobals);
 
-      // Check if App Bridge is loaded (try multiple possible global names)
-      // Shopify's CDN creates various globals depending on version
-      const createApp = window.app?.createApp ||
-                        window.createApp ||
-                        window['app-bridge']?.default ||
-                        window['app-bridge']?.app?.createApp ||
-                        window['appbridge']?.default ||
-                        window['ShopifyApp']?.default;
+      // Check if App Bridge is loaded - try the standard v3 API
+      let appBridge = null;
+      let createApp = null;
 
-      if (!createApp || typeof createApp !== 'function') {
+      // Try different possible global names for App Bridge v3
+      if (window.app && typeof window.app.createApp === 'function') {
+        createApp = window.app.createApp;
+        console.log('✅ Found App Bridge via window.app.createApp');
+      } else if (window.createApp && typeof window.createApp === 'function') {
+        createApp = window.createApp;
+        console.log('✅ Found App Bridge via window.createApp');
+      } else if (window.Shopify && window.Shopify.createApp && typeof window.Shopify.createApp === 'function') {
+        createApp = window.Shopify.createApp;
+        console.log('✅ Found App Bridge via window.Shopify.createApp');
+      }
+
+      // For backwards compatibility with older App Bridge versions
+      if (!createApp && window.appBridge) {
+        appBridge = window.appBridge;
+        console.log('✅ Found App Bridge via window.appBridge (legacy)');
+      }
+
+      if (!createApp && !appBridge) {
         console.error('❌ App Bridge failed to load');
-        console.log('   Searched for: window.app?.createApp, window.createApp, window[app-bridge], etc.');
         console.log('   Available globals:', appGlobals);
+        console.log('   All window keys starting with app or shopify:', Object.keys(window).filter(k =>
+          k.toLowerCase().includes('app') || k.toLowerCase().includes('shopify')
+        ).slice(0, 20));
         // Show error to user
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
@@ -966,11 +981,10 @@
       }
 
       console.log('✅ [PDFify] App Bridge loaded successfully!');
-      console.log('   createApp function:', typeof createApp);
 
-      // Initialize Shopify App Bridge
-      // For embedded apps using session tokens, DO NOT pass apiKey
+      // Initialize Shopify App Bridge using v3 API
       const app = createApp({
+        apiKey: 'e07548c088f572af4bbf103e4dee46bb',
         shop: shop,
         host: host,
       });
@@ -978,33 +992,34 @@
       console.log('📱 [PDFify] App initialized:', app);
       console.log('📱 [PDFify] App mode: Embedded (session tokens)');
 
-      // Create session token fetcher - detect based on global name
-      let SessionToken;
-      if (window.app?.actions?.SessionToken) {
-        SessionToken = window.app.actions.SessionToken;
-      } else if (window.app?.SessionToken) {
-        SessionToken = window.app.SessionToken;
-      } else if (window['app-bridge']?.SessionToken) {
-        SessionToken = window['app-bridge'].SessionToken;
-      } else if (window['appbridge']?.actions?.SessionToken) {
-        SessionToken = window['appbridge'].actions.SessionToken;
-      }
+      // Create session token fetcher using App Bridge v3 API
+      // In v3, we can use app.auth or similar mechanisms
+      const sessionTokenProvider = {
+        getToken: async function() {
+          try {
+            // Try using app.idToken() first (v3 style)
+            if (typeof app.idToken === 'function') {
+              const idToken = await app.idToken();
+              console.log('[PDFify] Got ID token from app.idToken()');
+              return idToken;
+            }
 
-      console.log('🔑 [PDFify] SessionToken found:', !!SessionToken);
+            // Try using app.session.token (another v3 style)
+            if (app.session && app.session.token) {
+              console.log('[PDFify] Got token from app.session.token');
+              return app.session.token;
+            }
 
-      if (!SessionToken) {
-        console.error('❌ [PDFify] SessionToken not available in App Bridge');
-        console.log('   Checked: window.app.actions.SessionToken, window.app.SessionToken, etc.');
-        // Show error to user
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
-        const msgEl = document.getElementById('message');
-        msgEl.textContent = 'Error: SessionToken not available in App Bridge. Please refresh the page.';
-        msgEl.className = 'message error';
-        msgEl.style.display = 'block';
-        return;
-      }
-      const sessionTokenProvider = SessionToken(app);
+            // Try legacy approach
+            throw new Error('No token method found');
+          } catch (err) {
+            console.error('[PDFify] Failed to get token:', err);
+            throw err;
+          }
+        }
+      };
+
+      console.log('🔑 [PDFify] SessionToken provider created');
 
       // Get session token for authentication
       async function getSessionToken() {
@@ -1032,12 +1047,16 @@
         }
       }
 
-      // Initialize App Bridge components
-      const TitleBar = appBridge.TitleBar || appBridge.components.TitleBar;
-      if (TitleBar) {
-        const titleBar = TitleBar.create(app, {
-          title: 'PDFify Pro',
-        });
+      // Initialize App Bridge TitleBar (if available)
+      try {
+        if (app.TitleBar && typeof app.TitleBar === 'function') {
+          const titleBar = app.TitleBar.create(app, {
+            title: 'PDFify Pro',
+          });
+          console.log('✅ TitleBar initialized');
+        }
+      } catch (err) {
+        console.warn('⚠️ TitleBar initialization failed:', err);
       }
 
       // Make app and getSessionToken globally available
@@ -1159,11 +1178,16 @@
 
         showMessage(`Redirecting to Shopify billing...`);
 
-        // Use App Bridge Redirect for navigation
+        // Use App Bridge Redirect for navigation (v3 API)
         const app = window.shopifyApp;
-        const Redirect = app.actions.Redirect;
-        const redirect = Redirect.create(app);
-        redirect.dispatch(Redirect.Action.REMOTE, confirmationUrl);
+        if (app && app.redirect && typeof app.redirect === 'function') {
+          app.redirect(confirmationUrl);
+        } else if (app && app.window && app.window.open && typeof app.window.open === 'function') {
+          app.window.open(confirmationUrl);
+        } else {
+          // Fallback: open in new tab
+          window.open(confirmationUrl, '_blank');
+        }
       } catch (err) {
         console.error("Unexpected error:", err);
         showMessage('❌ An unexpected error occurred. Please try again.', true);
@@ -1184,14 +1208,13 @@
       const installStatus = document.getElementById('installStatus');
       installStatus.textContent = 'Redirecting to Shopify...';
 
-      // Use App Bridge Redirect to break out of iframe for OAuth
+      // Use App Bridge to break out of iframe for OAuth (v3 API)
       const installUrl = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
 
-      if (window.shopifyApp) {
-        const app = window.shopifyApp;
-        const Redirect = app.actions.Redirect;
-        const redirect = Redirect.create(app);
-        redirect.dispatch(Redirect.Action.REMOTE, installUrl);
+      if (window.shopifyApp && window.shopifyApp.redirect) {
+        window.shopifyApp.redirect(installUrl);
+      } else if (window.shopifyApp && window.shopifyApp.window && window.shopifyApp.window.open) {
+        window.shopifyApp.window.open(installUrl);
       } else {
         // Fallback: redirect top window to break out of iframe
         window.top.location.href = installUrl;
@@ -1676,11 +1699,16 @@
             return;
           }
 
-          // Use App Bridge Redirect for Stripe checkout
+          // Use App Bridge Redirect for Stripe checkout (v3 API)
           const app = window.shopifyApp;
-          const Redirect = app.actions.Redirect;
-          const redirect = Redirect.create(app);
-          redirect.dispatch(Redirect.Action.REMOTE, url);
+          if (app && app.redirect) {
+            app.redirect(url);
+          } else if (app && app.window && app.window.open) {
+            app.window.open(url);
+          } else {
+            // Fallback: open in new tab
+            window.open(url, '_blank');
+          }
         } catch (err) {
           console.error("Unexpected error:", err);
           resultEl.textContent = '❌ An unexpected error occurred. Please try again.';
