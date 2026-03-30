@@ -964,20 +964,38 @@
         console.log('✅ Found App Bridge via window.appBridge (legacy)');
       }
 
+      // If App Bridge not loaded, use id_token from URL as fallback
+      // This allows app to work even if App Bridge fails to load
       if (!createApp && !appBridge) {
-        console.error('❌ App Bridge failed to load');
-        console.log('   Available globals:', appGlobals);
-        console.log('   All window keys starting with app or shopify:', Object.keys(window).filter(k =>
-          k.toLowerCase().includes('app') || k.toLowerCase().includes('shopify')
-        ).slice(0, 20));
-        // Show error to user
-        document.getElementById('loading').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
-        const msgEl = document.getElementById('message');
-        msgEl.textContent = 'Error: Shopify App Bridge failed to load. Please refresh the page.';
-        msgEl.className = 'message error';
-        msgEl.style.display = 'block';
-        return;
+        console.warn('⚠️ App Bridge not loaded, using id_token from URL as fallback');
+        const urlParams = new URLSearchParams(window.location.search);
+        const idToken = urlParams.get('id_token');
+
+        if (idToken) {
+          console.log('✅ Using id_token from URL for authentication');
+          window.getSessionToken = async function() {
+            return idToken;
+          };
+
+          // Create a minimal mock app object for redirects
+          window.shopifyApp = {
+            redirect: function(url) {
+              window.top.location.href = url;
+            }
+          };
+
+          // Load initial data immediately - DON'T block the app!
+          loadInitialData().catch(err => {
+            console.error('Fatal error in loadInitialData:', err);
+          });
+          return;
+        } else {
+          console.warn('⚠️ No App Bridge and no id_token - app will have limited functionality');
+          // Still try to load the app with minimal functionality
+          window.getSessionToken = async function() {
+            throw new Error('No authentication token available');
+          };
+        }
       }
 
       console.log('✅ [PDFify] App Bridge loaded successfully!');
@@ -1178,11 +1196,11 @@
 
         showMessage(`Redirecting to Shopify billing...`);
 
-        // Use App Bridge Redirect for navigation (v3 API)
+        // Use App Bridge or fallback redirect
         const app = window.shopifyApp;
-        if (app && app.redirect && typeof app.redirect === 'function') {
+        if (app && typeof app.redirect === 'function') {
           app.redirect(confirmationUrl);
-        } else if (app && app.window && app.window.open && typeof app.window.open === 'function') {
+        } else if (app && app.window && typeof app.window.open === 'function') {
           app.window.open(confirmationUrl);
         } else {
           // Fallback: open in new tab
@@ -1208,12 +1226,12 @@
       const installStatus = document.getElementById('installStatus');
       installStatus.textContent = 'Redirecting to Shopify...';
 
-      // Use App Bridge to break out of iframe for OAuth (v3 API)
+      // Use App Bridge or fallback redirect
       const installUrl = `/api/shopify/install?shop=${encodeURIComponent(shop)}`;
 
-      if (window.shopifyApp && window.shopifyApp.redirect) {
+      if (window.shopifyApp && typeof window.shopifyApp.redirect === 'function') {
         window.shopifyApp.redirect(installUrl);
-      } else if (window.shopifyApp && window.shopifyApp.window && window.shopifyApp.window.open) {
+      } else if (window.shopifyApp && window.shopifyApp.window && typeof window.shopifyApp.window.open === 'function') {
         window.shopifyApp.window.open(installUrl);
       } else {
         // Fallback: redirect top window to break out of iframe
@@ -1699,11 +1717,11 @@
             return;
           }
 
-          // Use App Bridge Redirect for Stripe checkout (v3 API)
+          // Use App Bridge or fallback redirect
           const app = window.shopifyApp;
-          if (app && app.redirect) {
+          if (app && typeof app.redirect === 'function') {
             app.redirect(url);
-          } else if (app && app.window && app.window.open) {
+          } else if (app && app.window && typeof app.window.open === 'function') {
             app.window.open(url);
           } else {
             // Fallback: open in new tab
