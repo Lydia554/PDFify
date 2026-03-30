@@ -918,13 +918,13 @@
 
     // Validate shop parameter
     if (!shop) {
-      console.error('Missing shop parameter in URL');
+      console.warn('⚠️ No shop parameter in URL - opening directly');
       document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('loading').classList.add('hidden');
         document.getElementById('app').classList.remove('hidden');
         const msgEl = document.getElementById('message');
-        msgEl.textContent = 'Error: Missing shop parameter. Please open this app from Shopify Admin.';
-        msgEl.className = 'message error';
+        msgEl.textContent = 'Warning: Opening app directly. For full functionality, open through Shopify Admin.';
+        msgEl.className = 'message warning';
         msgEl.style.display = 'block';
       });
     }
