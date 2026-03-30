@@ -913,7 +913,8 @@
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const host = urlParams.get('host');
-    const idToken = urlParams.get('id_token'); // JWT token from URL
+    // NOTE: We DON'T use id_token from URL because it's stale/expired
+    // We only use session tokens from App Bridge which are always fresh
 
     // Validate shop parameter
     if (!shop) {
