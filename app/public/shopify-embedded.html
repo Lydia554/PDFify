@@ -933,13 +933,6 @@
     let shopConfig = null;
     let shopEmail = null;
 
-    // Fallback: Use id_token from URL if App Bridge fails
-    let fallbackToken = null;
-    if (idToken) {
-      console.log('[PDFify] Found id_token in URL, will use as fallback');
-      fallbackToken = idToken;
-    }
-
     // Wait for DOM to be ready before initializing App Bridge
     document.addEventListener('DOMContentLoaded', function() {
       // Debug: Log all available globals
@@ -959,27 +952,16 @@
                         window['ShopifyApp']?.default;
 
       if (!createApp || typeof createApp !== 'function') {
-        console.error('❌ App Bridge failed to load - using fallback token from URL');
+        console.error('❌ App Bridge failed to load');
         console.log('   Searched for: window.app?.createApp, window.createApp, window[app-bridge], etc.');
         console.log('   Available globals:', appGlobals);
-        // Use fallback token from URL
-        if (fallbackToken) {
-          window.getSessionToken = async function() {
-            console.log('[PDFify] Using fallback token from URL');
-            return fallbackToken;
-          };
-          loadInitialData().catch(err => {
-            console.error('Fatal error in loadInitialData:', err);
-          });
-        } else {
-          // No token available at all
-          document.getElementById('loading').classList.add('hidden');
-          document.getElementById('app').classList.remove('hidden');
-          const msgEl = document.getElementById('message');
-          msgEl.textContent = 'Error: Unable to authenticate. No valid token found.';
-          msgEl.className = 'message error';
-          msgEl.style.display = 'block';
-        }
+        // Show error to user
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        const msgEl = document.getElementById('message');
+        msgEl.textContent = 'Error: Shopify App Bridge failed to load. Please refresh the page.';
+        msgEl.className = 'message error';
+        msgEl.style.display = 'block';
         return;
       }
 
@@ -1013,13 +995,13 @@
       if (!SessionToken) {
         console.error('❌ [PDFify] SessionToken not available in App Bridge');
         console.log('   Checked: window.app.actions.SessionToken, window.app.SessionToken, etc.');
-        // Fall back to URL token
-        window.getSessionToken = async function() {
-          return fallbackToken;
-        };
-        loadInitialData().catch(err => {
-          console.error('Fatal error in loadInitialData:', err);
-        });
+        // Show error to user
+        document.getElementById('loading').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        const msgEl = document.getElementById('message');
+        msgEl.textContent = 'Error: SessionToken not available in App Bridge. Please refresh the page.';
+        msgEl.className = 'message error';
+        msgEl.style.display = 'block';
         return;
       }
       const sessionTokenProvider = SessionToken(app);
